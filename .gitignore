@@ -6,3 +6,5 @@ binInt/
 #visual studio
 **.user
 .vs/
+
+dependences/
