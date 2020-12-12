@@ -4,9 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <GL/glew.h>
 
-
-#include "Shader.h"
-#include "Camera.h"
+#include <gl3d.h>
 
 int w = 840;
 int h = 640;
@@ -68,7 +66,7 @@ int main()
 	camera.position = { 0.f,0.f,2.f };
 
 	int timeBeg = clock();
-
+	 
 	while (!glfwWindowShouldClose(wind))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
