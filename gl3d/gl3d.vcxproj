@@ -183,6 +183,9 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="imgui\imgui.cpp" />
+    <ClCompile Include="imgui\imgui_draw.cpp" />
+    <ClCompile Include="imgui\imgui_impl_glfw_gl3.cpp" />
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\Shader.cpp" />

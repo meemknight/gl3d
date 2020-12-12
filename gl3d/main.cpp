@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <GL/glew.h>
 
+#include <imgui.h>
+#include <imgui_impl_glfw_gl3.h>
 #include <gl3d.h>
 
 int w = 840;
@@ -26,6 +28,12 @@ int main()
 	{
 		std::cout << "err initializing glew";
 	}
+
+	ImGui::CreateContext();
+	ImGui_ImplGlfwGL3_Init(wind, true);
+	ImGui::StyleColorsDark();
+
+
 #pragma endregion
 
 
@@ -76,6 +84,30 @@ int main()
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
 		
+	#pragma region imgui
+
+		ImGui_ImplGlfwGL3_NewFrame();
+
+		ImGui::Begin("gl3d");
+		ImGui::SetWindowFontScale(1.2f);
+
+
+		static float f;
+		static glm::vec3 color;
+		ImGui::Text("Editor");                  
+		ImGui::SliderFloat("f", &f, -10.0f, 10.0f);       
+		ImGui::ColorEdit3("color", (float *)&color); 
+		ImGui::NewLine();
+
+		ImGui::End();
+
+
+	#pragma endregion
+
+
+
+
+
 	#pragma region camera
 
 		float speed = 4;
@@ -148,8 +180,17 @@ int main()
 
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
+
+	#pragma region render and events
+
+		ImGui::Render();
+		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+
 		glfwSwapBuffers(wind);
 		glfwPollEvents();
+
+	#pragma endregion
+
 	}
 
 
