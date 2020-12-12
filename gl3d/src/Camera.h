@@ -30,10 +30,16 @@ namespace gl3d
 
 
 		glm::vec3 position = {};
+		glm::vec3 viewDirection = {0,0,-1};
 
 		glm::mat4x4 getProjectionMatrix();
 
 		glm::mat4x4 getWorldToViewMatrix();
+
+		void rotateCamera(const glm::vec2 delta);
+
+		void moveFPS(glm::vec3 direction);
+
 
 	};
 
