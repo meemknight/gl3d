@@ -5,7 +5,8 @@
 #include <GL/glew.h>
 
 #include <imgui.h>
-#include <imgui_impl_glfw_gl3.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 #include <gl3d.h>
 
 int w = 840;
@@ -23,6 +24,7 @@ int main()
 
 	GLFWwindow *wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
 	glfwMakeContextCurrent(wind);
+	glfwSwapInterval(1);
 
 	if (glewInit() != GLEW_OK)
 	{
@@ -30,8 +32,28 @@ int main()
 	}
 
 	ImGui::CreateContext();
-	ImGui_ImplGlfwGL3_Init(wind, true);
 	ImGui::StyleColorsDark();
+
+	ImGuiIO &io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+	//io.ConfigViewportsNoAutoMerge = true;
+	//io.ConfigViewportsNoTaskBarIcon = true;
+
+	ImGuiStyle &style = ImGui::GetStyle();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		style.WindowRounding = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+	}
+
+	ImGui_ImplGlfw_InitForOpenGL(wind, true);
+	ImGui_ImplOpenGL3_Init("#version 130");
+
+	
+
 
 
 #pragma endregion
@@ -86,20 +108,38 @@ int main()
 		
 	#pragma region imgui
 
-		ImGui_ImplGlfwGL3_NewFrame();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
-		ImGui::Begin("gl3d");
-		ImGui::SetWindowFontScale(1.2f);
+		//ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+		//window_flags |= ImGuiWindowFlags_NoBackground;
+		//static bool open = true;
+		//ImGui::Begin("DockSpace Demo", &open, window_flags);
+		//static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+		//dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
+		//ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+		//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+		//
+		//ImGui::End();
 
+		//ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+		ImGuiWindowFlags flags = {};
 
-		static float f;
-		static glm::vec3 color;
-		ImGui::Text("Editor");                  
-		ImGui::SliderFloat("f", &f, -10.0f, 10.0f);       
-		ImGui::ColorEdit3("color", (float *)&color); 
-		ImGui::NewLine();
+		{
+			ImGui::Begin("gl3d", nullptr, flags);
+			ImGui::SetWindowFontScale(1.2f);
 
-		ImGui::End();
+			static float f;
+			static glm::vec3 color;
+			ImGui::Text("Editor");
+			ImGui::SliderFloat("f", &f, -10.0f, 10.0f);
+			ImGui::ColorEdit3("color", (float *)&color);
+			ImGui::NewLine();
+
+			ImGui::End();
+		}
+
 
 
 	#pragma endregion
@@ -183,11 +223,28 @@ int main()
 
 	#pragma region render and events
 
+
 		ImGui::Render();
-		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+		int display_w, display_h;
+		glfwGetFramebufferSize(wind, &display_w, &display_h);
+		glViewport(0, 0, display_w, display_h);
+		//glClear(GL_COLOR_BUFFER_BIT);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		// Update and Render additional Platform Windows
+		// (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+		//  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			GLFWwindow *backup_current_context = glfwGetCurrentContext();
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+			glfwMakeContextCurrent(backup_current_context);
+		}
 
 		glfwSwapBuffers(wind);
 		glfwPollEvents();
+		glViewport(0, 0, w, h);
 
 	#pragma endregion
 
