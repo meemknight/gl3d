@@ -1,7 +1,8 @@
 import os
 from datetime import date
 
-files = ["Shader", "Camera"]
+files = ["Core", "Shader", "Camera", "GraphicModel",\
+     ]
 
 initialtext = \
 """////////////////////////////////////////////////

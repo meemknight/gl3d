@@ -5,6 +5,36 @@
 
 
 ////////////////////////////////////////////////
+//Core.h
+////////////////////////////////////////////////
+#pragma region Core
+#pragma once
+
+namespace gl3d
+{
+	
+	void assertFunc(const char *expression,
+	const char *file_name,
+	unsigned const line_number,
+	const char *comment = "---");
+
+
+};
+
+#define gl3dAssert(expression) (void)(											\
+			(!!(expression)) ||												\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0)	\
+		)
+
+#define gl3dAssertComment(expression, comment) (void)(								\
+			(!!(expression)) ||														\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0, comment)	\
+		)
+
+#pragma endregion
+
+
+////////////////////////////////////////////////
 //Shader.h
 ////////////////////////////////////////////////
 #pragma region Shader
@@ -77,6 +107,40 @@ namespace gl3d
 
 		void moveFPS(glm::vec3 direction);
 
+
+	};
+
+};
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//GraphicModel.h
+////////////////////////////////////////////////
+#pragma region GraphicModel
+#pragma once
+#include "GL/glew.h"
+
+namespace gl3d
+{
+
+	//todo this will dissapear and become an struct of arrays or sthing
+	struct GraphicModel
+	{
+
+		GLuint vertexArray = 0;
+
+		GLuint vertexBuffer = 0;
+		GLuint indexBuffer = 0;
+
+		GLsizei primitiveCount = 0;
+
+		void loadFromData(size_t vertexSize,
+			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr);
+
+		void clear();
+
+		void draw();
 
 	};
 

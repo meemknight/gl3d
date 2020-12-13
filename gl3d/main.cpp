@@ -7,7 +7,12 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
-#include <gl3d.h>
+
+#include "src/Core.h"
+#include "src/Camera.h"
+#include "src/Shader.h"
+#include "src/GraphicModel.h"
+
 
 #include <ctime>
 
@@ -47,8 +52,9 @@ int main()
 	ImGuiStyle &style = ImGui::GetStyle();
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-		style.WindowRounding = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		//style.WindowRounding = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 0.f;
+		style.Colors[ImGuiCol_DockingEmptyBg].w = 0.f;
 	}
 
 	ImGui_ImplGlfw_InitForOpenGL(wind, true);
@@ -76,6 +82,10 @@ int main()
 
 #pragma endregion
 
+	//VertexArrayContext va;
+	//va.create();
+
+
 	float bufferData[] =
 	{
 		0.f, 0.5f, 0.f,
@@ -84,15 +94,14 @@ int main()
 	};
 
 
-	GLuint vertexBuffer = 0;
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	gl3d::GraphicModel model;
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(bufferData), bufferData, GL_STATIC_DRAW);
+	model.loadFromData(sizeof(bufferData), bufferData);
 
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
+
+	
+	
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
@@ -124,29 +133,38 @@ int main()
 		//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		//
 		//ImGui::End();
+		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-		//ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-		ImGuiWindowFlags flags = {};
-
+		static bool basicEditor;
+	
 		{
-			static bool open = true;
-			ImGui::Begin("gl3d", 0, flags);
-			ImGui::SetWindowFontScale(1.2f);
-
-			static float f;
-			static glm::vec3 color;
-			ImGui::Text("Editor");
-			ImGui::SliderFloat("f", &f, -10.0f, 10.0f);
-			ImGui::ColorEdit3("color", (float *)&color);
-			ImGui::NewLine();
-
+			ImGui::Begin("Menu");
+			
+			ImGui::Checkbox("Basic Editor##check", &basicEditor);
+		
 			ImGui::End();
 		}
 
 
 
-	#pragma endregion
+		ImGuiWindowFlags flags = {};
+			
+		if(basicEditor)
+		{
+			ImGui::Begin("Basic Editor", &basicEditor, flags);
+			ImGui::SetWindowFontScale(1.2f);
+		
+			static glm::vec3 color;
+			ImGui::ColorEdit3("Object Color", (float *)&color);
+			ImGui::NewLine();
+		
+			ImGui::End();
+		}
 
+
+		//ImGui::ShowDemoWindow(0);
+
+	#pragma endregion
 
 
 
@@ -220,8 +238,11 @@ int main()
 		auto viewProjMat = projMat * viewMat;
 
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+		
+		
 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		model.draw();
+
 
 
 	#pragma region render and events
