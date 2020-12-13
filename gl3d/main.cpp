@@ -58,9 +58,8 @@ int main()
 	}
 
 	ImGui_ImplGlfw_InitForOpenGL(wind, true);
-	ImGui_ImplOpenGL3_Init("#version 130");
+	ImGui_ImplOpenGL3_Init("#version 330");
 
-	
 
 
 
@@ -68,16 +67,31 @@ int main()
 
 
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 
 #pragma region shader
 	gl3d::Shader shader;
-	shader.loadShaderProgramFromFile("shaders/main.vert", "shaders/main.frag");
+	shader.loadShaderProgramFromFile("shaders/color.vert", "shaders/color.frag");
 	shader.bind();
 	GLint location = glGetUniformLocation(shader.id, "u_transform");
 
 	if (location == -1)
 	{
 		std::cout << "uniform error u_transform\n";
+	}
+
+	gl3d::Shader normalShader;
+	normalShader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
+	normalShader.bind();
+	GLint normalShaderLocation = glGetUniformLocation(normalShader.id, "u_transform");
+	if (normalShaderLocation == -1)
+	{
+		std::cout << "uniform error u_transform\n";
+	}
+	GLint normalShaderLightposLocation = glGetUniformLocation(normalShader.id, "u_lightPosition");
+	if (normalShaderLightposLocation == -1)
+	{
+		std::cout << "uniform error u_lightPosition\n";
 	}
 
 #pragma endregion
@@ -100,45 +114,132 @@ int main()
 		0.5f, -0.5f, 0-1.f,
 	};
 
-	float cubeSize = 0.2;
-	float cubePositions[] =
-	{
-		//front
-		-1* cubeSize, 1* cubeSize, 1* cubeSize,
-		-1* cubeSize, -1* cubeSize, 1* cubeSize,
-		1*cubeSize, -1*cubeSize, 1*cubeSize,
-		1*cubeSize, 1 *cubeSize, 1*cubeSize,
-
-		//back
-		-1*cubeSize,  1*cubeSize, -1*cubeSize,
-		-1*cubeSize, -1*cubeSize, -1*cubeSize,
-		 1*cubeSize, -1*cubeSize, -1*cubeSize,
-		 1*cubeSize,  1*cubeSize, -1*cubeSize,
+	float cubePositions[] = {
+		-1.0f, +1.0f, +1.0f, // 0
+		+1.0f, +0.0f, +0.0f, // Color
+		+1.0f, +1.0f, +1.0f, // 1
+		+1.0f, +0.0f, +0.0f, // Color
+		+1.0f, +1.0f, -1.0f, // 2
+		+1.0f, +0.0f, +0.0f, // Color
+		-1.0f, +1.0f, -1.0f, // 3
+		+1.0f, +0.0f, +0.0f, // Color
+		-1.0f, +1.0f, -1.0f, // 4
+		+0.0f, +1.0f, +0.0f, // Color
+		+1.0f, +1.0f, -1.0f, // 5
+		+0.0f, +1.0f, +0.0f, // Color
+		+1.0f, -1.0f, -1.0f, // 6
+		+0.0f, +1.0f, +0.0f, // Color
+		-1.0f, -1.0f, -1.0f, // 7
+		+0.0f, +1.0f, +0.0f, // Color
+		+1.0f, +1.0f, -1.0f, // 8
+		+0.0f, +0.0f, +1.0f, // Color
+		+1.0f, +1.0f, +1.0f, // 9
+		+0.0f, +0.0f, +1.0f, // Color
+		+1.0f, -1.0f, +1.0f, // 10
+		+0.0f, +0.0f, +1.0f, // Color
+		+1.0f, -1.0f, -1.0f, // 11
+		+0.0f, +0.0f, +1.0f, // Color
+		-1.0f, +1.0f, +1.0f, // 12
+		+1.0f, +1.0f, +0.0f, // Color
+		-1.0f, +1.0f, -1.0f, // 13
+		+1.0f, +1.0f, +0.0f, // Color
+		-1.0f, -1.0f, -1.0f, // 14
+		+1.0f, +1.0f, +0.0f, // Color
+		-1.0f, -1.0f, +1.0f, // 15
+		+1.0f, +1.0f, +0.0f, // Color
+		+1.0f, +1.0f, +1.0f, // 16
+		+0.0f, +1.0f, +1.0f, // Color
+		-1.0f, +1.0f, +1.0f, // 17
+		+0.0f, +1.0f, +1.0f, // Color
+		-1.0f, -1.0f, +1.0f, // 18
+		+0.0f, +1.0f, +1.0f, // Color
+		+1.0f, -1.0f, +1.0f, // 19
+		+0.0f, +1.0f, +1.0f, // Color
+		+1.0f, -1.0f, -1.0f, // 20
+		+1.0f, +0.0f, +1.0f, // Color
+		-1.0f, -1.0f, -1.0f, // 21
+		+1.0f, +0.0f, +1.0f, // Color
+		-1.0f, -1.0f, +1.0f, // 22
+		+1.0f, +0.0f, +1.0f, // Color
+		+1.0f, -1.0f, +1.0f, // 23
+		+1.0f, +0.0f, +1.0f, // Color
 	};
 
-	unsigned int cubeindexes[] = 
-	{
-		0,1,3, 3,1,2, //front
-		7,5,4, 6,5,7, //back
+	float cubePositionsNormals[] = {
+		-1.0f, +1.0f, +1.0f, // 0
+		+0.0f, +1.0f, +0.0f, // Normal
+		+1.0f, +1.0f, +1.0f, // 1
+		+0.0f, +1.0f, +0.0f, // Normal
+		+1.0f, +1.0f, -1.0f, // 2
+		+0.0f, +1.0f, +0.0f, // Normal
+		-1.0f, +1.0f, -1.0f, // 3
+		+0.0f, +1.0f, +0.0f, // Normal
 
-		0,4,1, 4,5,1, // left
-		2,6,7, 3,2,7, // right
+		-1.0f, +1.0f, -1.0f, // 4
+		 0.0f, +0.0f, -1.0f, // Normal
+		+1.0f, +1.0f, -1.0f, // 5
+		 0.0f, +0.0f, -1.0f, // Normal
+		+1.0f, -1.0f, -1.0f, // 6
+		 0.0f, +0.0f, -1.0f, // Normal
+		-1.0f, -1.0f, -1.0f, // 7
+		 0.0f, +0.0f, -1.0f, // Normal
+
+		+1.0f, +1.0f, -1.0f, // 8
+		+1.0f, +0.0f, +0.0f, // Normal
+		+1.0f, +1.0f, +1.0f, // 9
+		+1.0f, +0.0f, +0.0f, // Normal
+		+1.0f, -1.0f, +1.0f, // 10
+		+1.0f, +0.0f, +0.0f, // Normal
+		+1.0f, -1.0f, -1.0f, // 11
+		+1.0f, +0.0f, +0.0f, // Normal
+
+		-1.0f, +1.0f, +1.0f, // 12
+		-1.0f, +0.0f, +0.0f, // Normal
+		-1.0f, +1.0f, -1.0f, // 13
+		-1.0f, +0.0f, +0.0f, // Normal
+		-1.0f, -1.0f, -1.0f, // 14
+		-1.0f, +0.0f, +0.0f, // Normal
+		-1.0f, -1.0f, +1.0f, // 15
+		-1.0f, +0.0f, +0.0f, // Normal
+
+		+1.0f, +1.0f, +1.0f, // 16
+		+0.0f, +0.0f, +1.0f, // Normal
+		-1.0f, +1.0f, +1.0f, // 17
+		+0.0f, +0.0f, +1.0f, // Normal
+		-1.0f, -1.0f, +1.0f, // 18
+		+0.0f, +0.0f, +1.0f, // Normal
+		+1.0f, -1.0f, +1.0f, // 19
+		+0.0f, +0.0f, +1.0f, // Normal
+
+		+1.0f, -1.0f, -1.0f, // 20
+		+0.0f, -1.0f, +0.0f, // Normal
+		-1.0f, -1.0f, -1.0f, // 21
+		+0.0f, -1.0f, +0.0f, // Normal
+		-1.0f, -1.0f, +1.0f, // 22
+		+0.0f, -1.0f, +0.0f, // Normal
+		+1.0f, -1.0f, +1.0f, // 23
+		+0.0f, -1.0f, +0.0f, // Normal
+	};
+
+	unsigned int cubeIndices[] = {
+	0,   1,  2,  0,  2,  3, // Top
+	4,   5,  6,  4,  6,  7, // Back
+	8,   9, 10,  8, 10, 11, // Right
+	12, 13, 14, 12, 14, 15, // Left
+	16, 17, 18, 16, 18, 19, // Front
+	20, 22, 21, 20, 23, 22, // Bottom
+	};
+
 	
-		0,3,7, 7,4,0, //top
-		6,2,1, 1,5,6, //bottom
-	};
-
-	gl3d::GraphicModel model;
-	model.loadFromData(sizeof(bufferData), bufferData);
-
-	gl3d::GraphicModel model2;
-	model2.loadFromData(sizeof(bufferData2), bufferData2);
-
+	gl3d::GraphicModel lightCube;
+	lightCube.loadFromData(sizeof(cubePositions), cubePositions,
+		sizeof(cubeIndices), cubeIndices);
+	lightCube.scale = glm::vec3(0.1);
+	
 	gl3d::GraphicModel cube;
-	cube.loadFromData(sizeof(cubePositions), cubePositions,
-		sizeof(cubeindexes), cubeindexes);
+	cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
+		sizeof(cubeIndices), cubeIndices);
 
-	
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
@@ -172,12 +273,14 @@ int main()
 		//ImGui::End();
 		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-		static bool basicEditor;
+		static bool lightEditor = 1;
+		static bool cubeEditor = 1;
 	
 		{
 			ImGui::Begin("Menu");
 			
-			ImGui::Checkbox("Basic Editor##check", &basicEditor);
+			ImGui::Checkbox("Light Editor##check", &lightEditor);
+			ImGui::Checkbox("Cube Editor##check", &cubeEditor);
 		
 			ImGui::End();
 		}
@@ -186,23 +289,45 @@ int main()
 
 		ImGuiWindowFlags flags = {};
 			
-		if(basicEditor)
+		if(lightEditor)
 		{
-			ImGui::Begin("Basic Editor", &basicEditor, flags);
+			ImGui::Begin("Light Editor", &lightEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 		
 			static glm::vec3 color;
-			ImGui::ColorEdit3("Object Color", (float *)&color);
+			ImGui::ColorEdit3("Light Color", (float *)&color);
 			ImGui::NewLine();
 		
-			ImGui::Text("light");
-			ImGui::SliderFloat3("position", &cube.position[0], -10, 10);
-			ImGui::SliderFloat3("rotation", &cube.rotation[0], 0, glm::radians(360.f));
-			ImGui::SliderFloat3("scale", &cube.scale[0], 0.1, 5);
+			ImGui::Text("Light 1");
+			ImGui::SliderFloat3("position", &lightCube.position[0], -10, 10);
 
 			ImGui::End();
 		}
 
+		if (cubeEditor)
+		{
+			ImGui::Begin("Cube Editor", &cubeEditor, flags);
+			ImGui::SetWindowFontScale(1.2f);
+
+			static glm::vec3 color;
+			ImGui::ColorEdit3("Object Color", (float *)&color);
+			ImGui::NewLine();
+
+			ImGui::Text("Cube");
+			ImGui::SliderFloat3("position", &cube.position[0], -10, 10);
+			ImGui::SliderFloat3("rotation", &cube.rotation[0], 0, glm::radians(360.f));
+			ImGui::SliderFloat3("scale", &cube.scale[0], 0.1, 5);
+			ImGui::SameLine();
+			float s = 0;
+			ImGui::InputFloat("sameScale", &s);
+
+			if (s > 0)
+			{
+				cube.scale = glm::vec3(s);
+			}
+
+			ImGui::End();
+		}
 
 		//ImGui::ShowDemoWindow(0);
 
@@ -273,19 +398,21 @@ int main()
 
 
 		auto projMat = camera.getProjectionMatrix();
-
 		auto viewMat = camera.getWorldToViewMatrix();
-
-		auto transformMat = cube.getTransformMatrix();
+		auto transformMat = lightCube.getTransformMatrix();
 
 		auto viewProjMat = projMat * viewMat * transformMat;
-
+		shader.bind();
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-		
+		lightCube.draw();
 
-		//model.draw();
 
-		//model2.draw();
+		transformMat = cube.getTransformMatrix();
+
+		viewProjMat = projMat * viewMat * transformMat;
+		normalShader.bind();
+		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
 		
 		cube.draw();
 

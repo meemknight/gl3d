@@ -11,8 +11,6 @@ namespace gl3d
 		gl3dAssertComment(vertexSize % 3 == 0, "Index count must be multiple of 3");
 		if (vertexSize % 3 != 0)return;
 
-	
-
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -22,7 +20,9 @@ namespace gl3d
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
 
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) (3*sizeof(float)) );
 
 		if (indexSize && indexes)
 		{
@@ -59,9 +59,9 @@ namespace gl3d
 	{
 		glBindVertexArray(vertexArray);
 
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-
+		//glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+		//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)(3 * sizeof(float)));
 
 		if (indexBuffer)
 		{
