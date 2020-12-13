@@ -9,6 +9,8 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <gl3d.h>
 
+#include <ctime>
+
 int w = 840;
 int h = 640;
 
@@ -189,7 +191,7 @@ int main()
 				glm::dvec2 currentMousePos = {};
 				glfwGetCursorPos(wind, &currentMousePos.x, &currentMousePos.y);
 
-				float speed = 0.4;
+				float speed = 0.4f;
 
 				glm::vec2 delta = lastMousePos - currentMousePos;
 				delta *= speed * deltaTime;
