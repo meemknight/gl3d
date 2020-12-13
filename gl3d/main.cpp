@@ -105,7 +105,7 @@ int main()
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
-		
+
 	#pragma region imgui
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -127,7 +127,8 @@ int main()
 		ImGuiWindowFlags flags = {};
 
 		{
-			ImGui::Begin("gl3d", nullptr, flags);
+			static bool open = true;
+			ImGui::Begin("gl3d", 0, flags);
 			ImGui::SetWindowFontScale(1.2f);
 
 			static float f;
