@@ -67,7 +67,7 @@ int main()
 #pragma endregion
 
 
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 
 #pragma region shader
 	gl3d::Shader shader;
@@ -100,13 +100,44 @@ int main()
 		0.5f, -0.5f, 0-1.f,
 	};
 
+	float cubeSize = 0.2;
+	float cubePositions[] =
+	{
+		//front
+		-1* cubeSize, 1* cubeSize, 1* cubeSize,
+		-1* cubeSize, -1* cubeSize, 1* cubeSize,
+		1*cubeSize, -1*cubeSize, 1*cubeSize,
+		1*cubeSize, 1 *cubeSize, 1*cubeSize,
+
+		//back
+		-1*cubeSize,  1*cubeSize, -1*cubeSize,
+		-1*cubeSize, -1*cubeSize, -1*cubeSize,
+		 1*cubeSize, -1*cubeSize, -1*cubeSize,
+		 1*cubeSize,  1*cubeSize, -1*cubeSize,
+	};
+
+	unsigned int cubeindexes[] = 
+	{
+		0,1,3, 3,1,2, //front
+		7,5,4, 6,5,7, //back
+
+		0,4,1, 4,5,1, // left
+		2,6,7, 3,2,7, // right
+	
+		0,3,7, 7,4,0, //top
+		6,2,1, 1,5,6, //bottom
+	};
+
 	gl3d::GraphicModel model;
 	model.loadFromData(sizeof(bufferData), bufferData);
 
 	gl3d::GraphicModel model2;
 	model2.loadFromData(sizeof(bufferData2), bufferData2);
 
-	
+	gl3d::GraphicModel cube;
+	cube.loadFromData(sizeof(cubePositions), cubePositions,
+		sizeof(cubeindexes), cubeindexes);
+
 	
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
@@ -164,6 +195,11 @@ int main()
 			ImGui::ColorEdit3("Object Color", (float *)&color);
 			ImGui::NewLine();
 		
+			ImGui::Text("light");
+			ImGui::SliderFloat3("position", &cube.position[0], -10, 10);
+			ImGui::SliderFloat3("rotation", &cube.rotation[0], 0, glm::radians(360.f));
+			ImGui::SliderFloat3("scale", &cube.scale[0], 0.1, 5);
+
 			ImGui::End();
 		}
 
@@ -171,7 +207,6 @@ int main()
 		//ImGui::ShowDemoWindow(0);
 
 	#pragma endregion
-
 
 
 
@@ -241,14 +276,18 @@ int main()
 
 		auto viewMat = camera.getWorldToViewMatrix();
 
-		auto viewProjMat = projMat * viewMat;
+		auto transformMat = cube.getTransformMatrix();
+
+		auto viewProjMat = projMat * viewMat * transformMat;
 
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
 		
 
-		model.draw();
+		//model.draw();
 
-		model2.draw();
+		//model2.draw();
+		
+		cube.draw();
 
 
 	#pragma region render and events
