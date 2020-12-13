@@ -20,13 +20,13 @@ namespace gl3d
 
 			glGenBuffers(1, &vertexBuffer);
 			glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-
 			glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
-
+			
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
 			primitiveCount = vertexSize / sizeof(float);
+
 
 			glBindVertexArray(0);
 
@@ -52,6 +52,9 @@ namespace gl3d
 	void GraphicModel::draw()
 	{
 		glBindVertexArray(vertexArray);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
 
 		if (indexBuffer)

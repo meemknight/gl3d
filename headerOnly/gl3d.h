@@ -128,6 +128,7 @@ namespace gl3d
 	struct GraphicModel
 	{
 
+		//todo probably this will disapear
 		GLuint vertexArray = 0;
 
 		GLuint vertexBuffer = 0;

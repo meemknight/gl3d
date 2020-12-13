@@ -88,17 +88,23 @@ int main()
 
 	float bufferData[] =
 	{
-		0.f, 0.5f, 0.f,
-		-0.5f, -0.5f, 0.f,
-		0.5f, -0.5f, 0.f,
+		0.f, 1.5f, 0.f,
+		-0.5f, 0.5f, 0.f,
+		0.5f, 0.5f, 0.f,
 	};
 
+	float bufferData2[] =
+	{
+		0.f, 0.5f, -1.f,
+		-0.5f, -0.5f, -1.f,
+		0.5f, -0.5f, 0-1.f,
+	};
 
 	gl3d::GraphicModel model;
-
 	model.loadFromData(sizeof(bufferData), bufferData);
 
-
+	gl3d::GraphicModel model2;
+	model2.loadFromData(sizeof(bufferData2), bufferData2);
 
 	
 	
@@ -239,10 +245,10 @@ int main()
 
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
 		
-		
 
 		model.draw();
 
+		model2.draw();
 
 
 	#pragma region render and events
