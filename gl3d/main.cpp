@@ -88,6 +88,13 @@ int main()
 	{
 		std::cout << "uniform error u_transform\n";
 	}
+
+	GLint normalShaderNormalTransformLocation = glGetUniformLocation(normalShader.id, "u_normalTransform");
+	if (normalShaderNormalTransformLocation == -1)
+	{
+		std::cout << "uniform error u_normalTransform\n";
+	}
+
 	GLint normalShaderLightposLocation = glGetUniformLocation(normalShader.id, "u_lightPosition");
 	if (normalShaderLightposLocation == -1)
 	{
@@ -235,7 +242,8 @@ int main()
 	lightCube.loadFromData(sizeof(cubePositions), cubePositions,
 		sizeof(cubeIndices), cubeIndices);
 	lightCube.scale = glm::vec3(0.1);
-	
+	lightCube.position = glm::vec3(0, 1.6, 0.5);
+
 	gl3d::GraphicModel cube;
 	cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
 		sizeof(cubeIndices), cubeIndices);
@@ -412,8 +420,9 @@ int main()
 		viewProjMat = projMat * viewMat * transformMat;
 		normalShader.bind();
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
-		
+
 		cube.draw();
 
 
