@@ -89,16 +89,22 @@ int main()
 		std::cout << "uniform error u_transform\n";
 	}
 
-	GLint normalShaderNormalTransformLocation = glGetUniformLocation(normalShader.id, "u_normalTransform");
+	GLint normalShaderNormalTransformLocation = glGetUniformLocation(normalShader.id, "u_modelTransform");
 	if (normalShaderNormalTransformLocation == -1)
 	{
-		std::cout << "uniform error u_normalTransform\n";
+		std::cout << "uniform error u_modelTransform\n";
 	}
 
 	GLint normalShaderLightposLocation = glGetUniformLocation(normalShader.id, "u_lightPosition");
 	if (normalShaderLightposLocation == -1)
 	{
 		std::cout << "uniform error u_lightPosition\n";
+	}
+
+	GLint eyePositionLocation = glGetUniformLocation(normalShader.id, "u_eyePosition");
+	if (eyePositionLocation == -1)
+	{
+		std::cout << "uniform error u_eyePosition\n";
 	}
 
 #pragma endregion
@@ -422,6 +428,8 @@ int main()
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
+		glUniform3fv(eyePositionLocation, 1, &camera.position[0]);
+
 
 		cube.draw();
 
