@@ -12,7 +12,7 @@ void main()
 {
 	float ka = 0.1;
 	float kd = 0.3;
-	float ks = 0.1;
+	float ks = 0.6;
 
 	vec3 lightDirection = u_lightPosition - v_position;
 	lightDirection = normalize(lightDirection);
