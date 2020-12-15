@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-14
+//built on 2020-12-15
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -72,6 +72,58 @@ void gl3d::assertFunc(const char *expression,
 
 }
 
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//Texture.cpp
+////////////////////////////////////////////////
+#pragma region Texture
+
+#include <stb_image.h>
+#include <iostream>
+
+namespace gl3d
+{
+
+	void Texture::loadTextureFromFile(const char *file)
+	{
+		int w, h, nrChannels;
+		stbi_set_flip_vertically_on_load(true);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 0);
+
+		if (!data)
+		{
+			//todo err messages
+			std::cout << "err: " << file << "\n";
+		}
+		else
+		{
+			loadTextureFromMemory(data, w, h);
+			stbi_image_free(data);
+		}
+
+
+	}
+
+	void Texture::loadTextureFromMemory(void *data, int w, int h)
+	{
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_2D, id);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+
+	}
+
+};
 #pragma endregion
 
 
@@ -306,7 +358,7 @@ namespace gl3d
 {
 
 	void GraphicModel::loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize, unsigned int *indexes)
+			float *vercies, size_t indexSize, unsigned int *indexes, bool noTexture)
 	{
 
 		gl3dAssertComment(vertexSize % 3 == 0, "Index count must be multiple of 3");
@@ -320,10 +372,23 @@ namespace gl3d
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
 
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) (3*sizeof(float)) );
+		if(noTexture)
+		{
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+		}else
+		{
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+		}
+
+
 
 		if (indexSize && indexes)
 		{

@@ -22,7 +22,8 @@ namespace gl3d
 
 		//todo check if indexes can be uint
 		void loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr);
+			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr, bool noTexture = false);
+
 
 		void clear();
 

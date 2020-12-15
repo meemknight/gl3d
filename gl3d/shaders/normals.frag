@@ -4,9 +4,12 @@ out layout(location = 0) vec4 a_outColor;
 
 in vec3 v_normals;
 in vec3 v_position;	//world space
+in vec2 v_texCoord;
 
 uniform vec3 u_lightPosition;
 uniform vec3 u_eyePosition;
+
+uniform sampler2D u_albedoSampler;
 
 void main()
 {
@@ -33,7 +36,7 @@ void main()
 	specularLight *= ks;
 	if(difuseLight == 0) specularLight = 0;
 
-	vec3 color = vec3(1,1,1);
+	vec3 color = texture2D(u_albedoSampler, v_texCoord).xyz;
 	vec3 difuseVec = vec3(difuseLight,difuseLight,difuseLight);
 	vec3 ambientVec = vec3(ka,ka,ka);
 

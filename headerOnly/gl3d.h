@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-14
+//built on 2020-12-15
 ////////////////////////////////////////////////
 
 
@@ -31,6 +31,30 @@ namespace gl3d
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0, comment)	\
 		)
 
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//Texture.h
+////////////////////////////////////////////////
+#pragma region Texture
+#pragma once
+#include <GL/glew.h>
+
+namespace gl3d
+{
+
+	struct Texture
+	{
+		GLuint id = 0;
+
+		void loadTextureFromFile(const char *file);
+		void loadTextureFromMemory(void *data, int w, int h);
+
+
+	};
+
+};
 #pragma endregion
 
 
@@ -142,7 +166,8 @@ namespace gl3d
 
 		//todo check if indexes can be uint
 		void loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr);
+			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr, bool noTexture = false);
+
 
 		void clear();
 

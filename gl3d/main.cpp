@@ -1,6 +1,9 @@
 #include <Windows.h>
 #include <iostream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <GLFW/glfw3.h>
 #include <GL/glew.h>
 
@@ -9,10 +12,10 @@
 #include <backends/imgui_impl_opengl3.h>
 
 #include "src/Core.h"
+#include "src/Texture.h"
 #include "src/Camera.h"
 #include "src/Shader.h"
 #include "src/GraphicModel.h"
-
 
 #include <ctime>
 
@@ -106,8 +109,23 @@ int main()
 	{
 		std::cout << "uniform error u_eyePosition\n";
 	}
+	GLint TextureSamplerLocation = glGetUniformLocation(normalShader.id, "u_albedoSampler");
+	if (TextureSamplerLocation == -1)
+	{
+		std::cout << "uniform error u_albedoSampler\n";
+	}
+
 
 #pragma endregion
+
+#pragma region texture
+
+	gl3d::Texture texture;
+	texture.loadTextureFromFile("resources/texture.jpg");
+
+#pragma endregion
+
+
 
 	//VertexArrayContext va;
 	//va.create();
@@ -181,57 +199,82 @@ int main()
 	float cubePositionsNormals[] = {
 		-1.0f, +1.0f, +1.0f, // 0
 		+0.0f, +1.0f, +0.0f, // Normal
+		0, 0,				 //uv
 		+1.0f, +1.0f, +1.0f, // 1
 		+0.0f, +1.0f, +0.0f, // Normal
+		1, 0,				 //uv
 		+1.0f, +1.0f, -1.0f, // 2
 		+0.0f, +1.0f, +0.0f, // Normal
+		1, 1,				 //uv
 		-1.0f, +1.0f, -1.0f, // 3
 		+0.0f, +1.0f, +0.0f, // Normal
+		0, 1,				 //uv
+
 
 		-1.0f, +1.0f, -1.0f, // 4
 		 0.0f, +0.0f, -1.0f, // Normal
+		 0, 1,				 //uv
 		+1.0f, +1.0f, -1.0f, // 5
 		 0.0f, +0.0f, -1.0f, // Normal
+		 1, 1,				 //uv
 		+1.0f, -1.0f, -1.0f, // 6
 		 0.0f, +0.0f, -1.0f, // Normal
+		 1, 0,				 //uv
 		-1.0f, -1.0f, -1.0f, // 7
 		 0.0f, +0.0f, -1.0f, // Normal
+		 0, 0,				 //uv
 
 		+1.0f, +1.0f, -1.0f, // 8
 		+1.0f, +0.0f, +0.0f, // Normal
+		1, 0,				 //uv
 		+1.0f, +1.0f, +1.0f, // 9
 		+1.0f, +0.0f, +0.0f, // Normal
+		1, 1,				 //uv
 		+1.0f, -1.0f, +1.0f, // 10
 		+1.0f, +0.0f, +0.0f, // Normal
+		0, 1,				 //uv
 		+1.0f, -1.0f, -1.0f, // 11
 		+1.0f, +0.0f, +0.0f, // Normal
+		0, 0,				 //uv
 
 		-1.0f, +1.0f, +1.0f, // 12
 		-1.0f, +0.0f, +0.0f, // Normal
+		1, 1,				 //uv
 		-1.0f, +1.0f, -1.0f, // 13
 		-1.0f, +0.0f, +0.0f, // Normal
+		1, 0,				 //uv
 		-1.0f, -1.0f, -1.0f, // 14
 		-1.0f, +0.0f, +0.0f, // Normal
+		0, 0,				 //uv
 		-1.0f, -1.0f, +1.0f, // 15
 		-1.0f, +0.0f, +0.0f, // Normal
+		0, 1,				 //uv
 
 		+1.0f, +1.0f, +1.0f, // 16
 		+0.0f, +0.0f, +1.0f, // Normal
+		1, 1,				 //uv
 		-1.0f, +1.0f, +1.0f, // 17
 		+0.0f, +0.0f, +1.0f, // Normal
+		0, 1,				 //uv
 		-1.0f, -1.0f, +1.0f, // 18
 		+0.0f, +0.0f, +1.0f, // Normal
+		0, 0,				 //uv
 		+1.0f, -1.0f, +1.0f, // 19
 		+0.0f, +0.0f, +1.0f, // Normal
+		1, 0,				 //uv
 
 		+1.0f, -1.0f, -1.0f, // 20
 		+0.0f, -1.0f, +0.0f, // Normal
+		1, 0,				 //uv
 		-1.0f, -1.0f, -1.0f, // 21
 		+0.0f, -1.0f, +0.0f, // Normal
+		0, 0,				 //uv
 		-1.0f, -1.0f, +1.0f, // 22
 		+0.0f, -1.0f, +0.0f, // Normal
+		0, 1,				 //uv
 		+1.0f, -1.0f, +1.0f, // 23
 		+0.0f, -1.0f, +0.0f, // Normal
+		1, 1,				 //uv
 	};
 
 	unsigned int cubeIndices[] = {
@@ -246,7 +289,7 @@ int main()
 	
 	gl3d::GraphicModel lightCube;
 	lightCube.loadFromData(sizeof(cubePositions), cubePositions,
-		sizeof(cubeIndices), cubeIndices);
+		sizeof(cubeIndices), cubeIndices, true);
 	lightCube.scale = glm::vec3(0.1);
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
@@ -429,7 +472,10 @@ int main()
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
 		glUniform3fv(eyePositionLocation, 1, &camera.position[0]);
-
+		glUniform1i(TextureSamplerLocation, 0);
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture.id);
 
 		cube.draw();
 
