@@ -3,6 +3,8 @@
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
 in layout(location = 2) vec2 a_texCoord;
+in layout(location = 3) vec3 aTangent;
+in layout(location = 4) vec3 aBitangent;  
 
 uniform mat4 u_transform;
 uniform mat4 u_modelTransform;

@@ -109,11 +109,18 @@ int main()
 	{
 		std::cout << "uniform error u_eyePosition\n";
 	}
-	GLint TextureSamplerLocation = glGetUniformLocation(normalShader.id, "u_albedoSampler");
-	if (TextureSamplerLocation == -1)
+	GLint textureSamplerLocation = glGetUniformLocation(normalShader.id, "u_albedoSampler");
+	if (textureSamplerLocation == -1)
 	{
 		std::cout << "uniform error u_albedoSampler\n";
 	}
+	GLint normalMapSamplerLocation = glGetUniformLocation(normalShader.id, "u_normalSampler");
+	if (normalMapSamplerLocation == -1)
+	{
+		std::cout << "uniform error u_normalSampler\n";
+	}
+
+
 
 
 #pragma endregion
@@ -121,7 +128,11 @@ int main()
 #pragma region texture
 
 	gl3d::Texture texture;
-	texture.loadTextureFromFile("resources/texture.jpg");
+	texture.loadTextureFromFile("resources/crate.png");
+
+	gl3d::Texture normalTexture;
+	normalTexture.loadTextureFromFile("resources/crateNormal.png");
+
 
 #pragma endregion
 
@@ -196,86 +207,158 @@ int main()
 		+1.0f, +0.0f, +1.0f, // Color
 	};
 
+	float uv = 0.5;
 	float cubePositionsNormals[] = {
 		-1.0f, +1.0f, +1.0f, // 0
 		+0.0f, +1.0f, +0.0f, // Normal
 		0, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		+1.0f, +1.0f, +1.0f, // 1
 		+0.0f, +1.0f, +0.0f, // Normal
-		1, 0,				 //uv
+		1* uv, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+		
 		+1.0f, +1.0f, -1.0f, // 2
 		+0.0f, +1.0f, +0.0f, // Normal
-		1, 1,				 //uv
+		1* uv, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+		
 		-1.0f, +1.0f, -1.0f, // 3
 		+0.0f, +1.0f, +0.0f, // Normal
-		0, 1,				 //uv
+		0, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 
 
 		-1.0f, +1.0f, -1.0f, // 4
 		 0.0f, +0.0f, -1.0f, // Normal
-		 0, 1,				 //uv
+		 0, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		+1.0f, +1.0f, -1.0f, // 5
 		 0.0f, +0.0f, -1.0f, // Normal
-		 1, 1,				 //uv
-		+1.0f, -1.0f, -1.0f, // 6
+		 1* uv, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
+		 +1.0f, -1.0f, -1.0f, // 6
 		 0.0f, +0.0f, -1.0f, // Normal
-		 1, 0,				 //uv
+		 1* uv, 0,				 //uv
+		 0,0,0,				 //tangent
+		 0,0,0,				 //btangent
+
 		-1.0f, -1.0f, -1.0f, // 7
 		 0.0f, +0.0f, -1.0f, // Normal
 		 0, 0,				 //uv
+		 0,0,0,				 //tangent
+		0,0,0,				 //btangent
 
 		+1.0f, +1.0f, -1.0f, // 8
 		+1.0f, +0.0f, +0.0f, // Normal
-		1, 0,				 //uv
+		1* uv, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		+1.0f, +1.0f, +1.0f, // 9
 		+1.0f, +0.0f, +0.0f, // Normal
-		1, 1,				 //uv
+		1* uv, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		+1.0f, -1.0f, +1.0f, // 10
 		+1.0f, +0.0f, +0.0f, // Normal
-		0, 1,				 //uv
+		0, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		+1.0f, -1.0f, -1.0f, // 11
 		+1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
 
 		-1.0f, +1.0f, +1.0f, // 12
 		-1.0f, +0.0f, +0.0f, // Normal
-		1, 1,				 //uv
+		1* uv, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		-1.0f, +1.0f, -1.0f, // 13
 		-1.0f, +0.0f, +0.0f, // Normal
-		1, 0,				 //uv
+		1* uv, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		-1.0f, -1.0f, -1.0f, // 14
 		-1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		-1.0f, -1.0f, +1.0f, // 15
 		-1.0f, +0.0f, +0.0f, // Normal
-		0, 1,				 //uv
+		0, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 
 		+1.0f, +1.0f, +1.0f, // 16
 		+0.0f, +0.0f, +1.0f, // Normal
-		1, 1,				 //uv
+		1* uv, 1* uv,				 //uv
+		0,0,0,				 //tangent
+		0,0,0,				 //btangent
+
 		-1.0f, +1.0f, +1.0f, // 17
 		+0.0f, +0.0f, +1.0f, // Normal
-		0, 1,				 //uv
+		0, 1* uv,				 //uv
+		0, 0, 0,				 //tangent
+		0, 0, 0,				 //btangent
+
 		-1.0f, -1.0f, +1.0f, // 18
 		+0.0f, +0.0f, +1.0f, // Normal
 		0, 0,				 //uv
+		0, 0, 0,				 //tangent
+		0, 0, 0,				 //btangent
+
 		+1.0f, -1.0f, +1.0f, // 19
 		+0.0f, +0.0f, +1.0f, // Normal
-		1, 0,				 //uv
+		1* uv, 0,				 //uv
+		0, 0, 0,				 //tangent
+		0, 0, 0,				 //btangent
+
 
 		+1.0f, -1.0f, -1.0f, // 20
 		+0.0f, -1.0f, +0.0f, // Normal
-		1, 0,				 //uv
+		1* uv, 0,				 //uv
+			0, 0, 0,				 //tangent
+			0, 0, 0,				 //btangent
+
 		-1.0f, -1.0f, -1.0f, // 21
 		+0.0f, -1.0f, +0.0f, // Normal
 		0, 0,				 //uv
+		0, 0, 0,				 //tangent
+		0, 0, 0,				 //btangent
+
 		-1.0f, -1.0f, +1.0f, // 22
 		+0.0f, -1.0f, +0.0f, // Normal
-		0, 1,				 //uv
+		0, 1* uv,				 //uv
+		0, 0, 0,				 //tangent
+		0, 0, 0,				 //btangent
+
 		+1.0f, -1.0f, +1.0f, // 23
 		+0.0f, -1.0f, +0.0f, // Normal
-		1, 1,				 //uv
+		1* uv, 1* uv,				 //uv
+		 0, 0, 0,				 //tangent
+		 0, 0, 0,				 //btangent
+
 	};
+	
 
 	unsigned int cubeIndices[] = {
 	0,   1,  2,  0,  2,  3, // Top
@@ -472,10 +555,14 @@ int main()
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
 		glUniform3fv(eyePositionLocation, 1, &camera.position[0]);
-		glUniform1i(TextureSamplerLocation, 0);
+		glUniform1i(textureSamplerLocation, 0);
+		glUniform1i(normalMapSamplerLocation, 1);
 		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture.id);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
 
 		cube.draw();
 

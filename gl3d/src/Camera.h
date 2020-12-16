@@ -25,7 +25,7 @@ namespace gl3d
 		float aspectRatio = 1;
 		float fovRadians = glm::radians(100.f);
 
-		float closePlane = 0.1f;
+		float closePlane = 0.01f;
 		float farPlane = 100.f;
 
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-15
+//built on 2020-12-16
 ////////////////////////////////////////////////
 
 
@@ -116,7 +116,7 @@ namespace gl3d
 		float aspectRatio = 1;
 		float fovRadians = glm::radians(100.f);
 
-		float closePlane = 0.1f;
+		float closePlane = 0.01f;
 		float farPlane = 100.f;
 
 
