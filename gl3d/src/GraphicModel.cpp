@@ -5,8 +5,8 @@
 namespace gl3d 
 {
 
-	void GraphicModel::loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize, unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize,
+		const unsigned int * indexes, bool noTexture)
 	{
 
 		gl3dAssertComment(vertexSize % 3 == 0, "Index count must be multiple of 3");
@@ -56,6 +56,56 @@ namespace gl3d
 
 	}
 
+	//deprecated
+	void GraphicModel::loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV, size_t indexesCount, unsigned int *indexes)
+	{
+		gl3dAssertComment(vertices, "Vertices are not optional");
+		gl3dAssertComment(normals, "Normals are not optional"); //todo compute
+		if (!vertices || !normals) { return; }
+
+		std::vector<float> dataForModel;
+
+		dataForModel.reserve(vertexCount * 8);
+		for (unsigned int i = 0; i < vertexCount; i++)
+		{
+			//positions normals uv
+
+			dataForModel.push_back(vertices[(8*i)+0]);
+			dataForModel.push_back(vertices[(8*i)+1]);
+			dataForModel.push_back(vertices[(8*i)+2]);
+
+			dataForModel.push_back(normals[(8 * i) + 3]);
+			dataForModel.push_back(normals[(8 * i) + 4]);
+			dataForModel.push_back(normals[(8 * i) + 5]);
+
+			if (textureUV)
+			{
+				dataForModel.push_back(normals[(8 * i) + 6]);
+				dataForModel.push_back(normals[(8 * i) + 7]);
+			}
+			else
+			{
+				dataForModel.push_back(0.f);
+				dataForModel.push_back(0.f);
+			}
+
+		}
+
+		this->loadFromComputedData(vertexCount * 4,
+ &dataForModel[0],
+			indexesCount * 4, &indexes[0], (textureUV == nullptr));
+	}
+
+	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
+	{
+		auto &mesh = model.loader.LoadedMeshes[0];
+		loadFromComputedData(mesh.Vertices.size() * 8 * 4,
+			 (float *)&mesh.Vertices[0],
+			mesh.Indices.size() * 4, &mesh.Indices[0]);
+
+	}
+
+	//deprecated
 	void GraphicModel::loadFromFile(const char *fileName)
 	{
 		objl::Loader loader;
@@ -91,7 +141,8 @@ namespace gl3d
 			indicesForModel.push_back(mesh.Indices[i]);
 		}
 
-		this->loadFromData(dataForModel.size() * 4, &dataForModel[0],
+		this->loadFromComputedData(dataForModel.size() * 4,
+ &dataForModel[0],
 			indicesForModel.size() * 4, &indicesForModel[0]);
 
 
@@ -168,5 +219,10 @@ namespace gl3d
 	}
 
 
+
+	void LoadedModelData::load(const char *file)
+	{
+		loader.LoadFile(file);
+	}
 
 };

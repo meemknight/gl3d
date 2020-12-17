@@ -125,4 +125,41 @@ namespace gl3d
 		glUseProgram(id);
 	}
 
+	void LightShader::create()
+	{
+		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
+		shader.bind();
+
+		auto getUniform = [](GLuint id, const char *name) 
+		{
+			GLint uniform = glGetUniformLocation(id, name);
+			if (uniform == -1)
+			{
+				std::cout << "uniform error "<< name << "\n";
+			}
+			return uniform;
+		};
+
+		normalShaderLocation = getUniform(shader.id, "u_transform");
+		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
+		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
+		textureSamplerLocation = getUniform(shader.id, "u_albedoSampler");
+		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
+		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
+
+	}
+
+	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition
+		)
+	{
+		shader.bind();
+		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
+		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
+		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
+		glUniform1i(textureSamplerLocation, 0);
+		glUniform1i(normalMapSamplerLocation, 1);
+	}
+
 };

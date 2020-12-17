@@ -64,6 +64,7 @@ namespace gl3d
 #pragma region Shader
 #pragma once
 #include "GL/glew.h"
+#include <glm\mat4x4.hpp>
 
 namespace gl3d
 {
@@ -79,6 +80,27 @@ namespace gl3d
 
 		void bind();
 
+
+		//todo clear
+	};
+
+	//todo this will probably dissapear
+	struct LightShader
+	{
+		void create();
+		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition);
+
+		Shader shader;
+
+		GLint normalShaderLocation = -1;
+		GLint normalShaderNormalTransformLocation = -1;
+		GLint normalShaderLightposLocation = -1;
+		GLint textureSamplerLocation = -1; 
+		GLint normalMapSamplerLocation = -1;
+		GLint eyePositionLocation = -1;
+
+		//todo clear
 	};
 
 };
@@ -149,8 +171,21 @@ namespace gl3d
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
+#include <OBJ_Loader.h>
+
 namespace gl3d
 {
+
+	struct LoadedModelData
+	{
+		LoadedModelData() = default;
+		LoadedModelData(const char *file) { load(file); }
+
+		void load(const char *file);
+
+		objl::Loader loader;
+	};
+
 
 	//todo this will dissapear and become an struct of arrays or sthing
 	struct GraphicModel
@@ -165,9 +200,15 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		//todo check if indexes can be uint
-		void loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr, bool noTexture = false);
+		void loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize = 0, const unsigned int * indexes = nullptr, bool noTexture = false);
 
+		//deprecated
+		void loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV,
+		size_t indexesCount = 0, unsigned int *indexes = nullptr);
+
+		void loadFromModelMeshIndex(const LoadedModelData &model, int index);
+
+		//deprecated
 		void loadFromFile(const char *fileName);
 
 		void clear();
@@ -181,6 +222,27 @@ namespace gl3d
 		
 		glm::mat4 getTransformMatrix();
 	};
+
+};
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//gl3d.h
+////////////////////////////////////////////////
+#pragma region gl3d
+#pragma once
+
+#include <Core.h>
+#include <Texture.h>
+#include <Shader.h>
+#include <Camera.h>
+#include <GraphicModel.h>
+
+namespace gl3d
+{
+	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
+		Texture texture, Texture normalTexture);
 
 };
 #pragma endregion

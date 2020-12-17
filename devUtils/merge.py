@@ -2,7 +2,7 @@ import os
 from datetime import date
 
 files = ["Core", "Texture", "Shader", "Camera", "GraphicModel",\
-     ]
+     "gl3d"]
 
 initialtext = \
 """////////////////////////////////////////////////

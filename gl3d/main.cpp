@@ -11,11 +11,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
-#include "src/Core.h"
-#include "src/Texture.h"
-#include "src/Camera.h"
-#include "src/Shader.h"
-#include "src/GraphicModel.h"
+#include "src/gl3d.h"
 
 #include <ctime>
 
@@ -83,45 +79,9 @@ int main()
 		std::cout << "uniform error u_transform\n";
 	}
 
-	gl3d::Shader normalShader;
-	normalShader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
-	normalShader.bind();
-	GLint normalShaderLocation = glGetUniformLocation(normalShader.id, "u_transform");
-	if (normalShaderLocation == -1)
-	{
-		std::cout << "uniform error u_transform\n";
-	}
-
-	GLint normalShaderNormalTransformLocation = glGetUniformLocation(normalShader.id, "u_modelTransform");
-	if (normalShaderNormalTransformLocation == -1)
-	{
-		std::cout << "uniform error u_modelTransform\n";
-	}
-
-	GLint normalShaderLightposLocation = glGetUniformLocation(normalShader.id, "u_lightPosition");
-	if (normalShaderLightposLocation == -1)
-	{
-		std::cout << "uniform error u_lightPosition\n";
-	}
-
-	GLint eyePositionLocation = glGetUniformLocation(normalShader.id, "u_eyePosition");
-	if (eyePositionLocation == -1)
-	{
-		std::cout << "uniform error u_eyePosition\n";
-	}
-	GLint textureSamplerLocation = glGetUniformLocation(normalShader.id, "u_albedoSampler");
-	if (textureSamplerLocation == -1)
-	{
-		std::cout << "uniform error u_albedoSampler\n";
-	}
-	GLint normalMapSamplerLocation = glGetUniformLocation(normalShader.id, "u_normalSampler");
-	if (normalMapSamplerLocation == -1)
-	{
-		std::cout << "uniform error u_normalSampler\n";
-	}
-
-
-
+	
+	gl3d::LightShader lightShader;
+	lightShader.create();
 
 #pragma endregion
 
@@ -371,17 +331,21 @@ int main()
 
 	
 	gl3d::GraphicModel lightCube;
-	lightCube.loadFromData(sizeof(cubePositions), cubePositions,
+	lightCube.loadFromComputedData(sizeof(cubePositions),
+ cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
 	lightCube.scale = glm::vec3(0.1);
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
 	gl3d::GraphicModel cube;
-	//cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
+	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
 	//	sizeof(cubeIndices), cubeIndices);
 	//cube.loadFromFile("resources/obj/sphere.obj");
-	cube.loadFromFile("resources/other/barrel.obj");
+	//cube.loadFromFile("resources/other/barrel.obj");
 
+	gl3d::LoadedModelData barelModel("resources/other/barrel.obj");
+	cube.loadFromModelMeshIndex(barelModel, 0);
+	cube.scale = glm::vec3(0.1);
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
@@ -537,6 +501,7 @@ int main()
 
 	#pragma endregion
 
+		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
 
 		auto projMat = camera.getProjectionMatrix();
@@ -549,24 +514,7 @@ int main()
 		lightCube.draw();
 
 
-		transformMat = cube.getTransformMatrix();
-
-		viewProjMat = projMat * viewMat * transformMat;
-		normalShader.bind();
-		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
-		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
-		glUniform3fv(eyePositionLocation, 1, &camera.position[0]);
-		glUniform1i(textureSamplerLocation, 0);
-		glUniform1i(normalMapSamplerLocation, 1);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture.id);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
-
-		cube.draw();
+		gl3d::renderLightModel(cube, camera, lightCube.position, lightShader, texture, normalTexture);
 
 
 	#pragma region render and events

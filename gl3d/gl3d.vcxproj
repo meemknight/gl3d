@@ -183,6 +183,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\gl3d.cpp" />
     <ClCompile Include="src\Core.cpp" />
     <ClCompile Include="src\GraphicModel.cpp" />
     <ClCompile Include="imgui\imguiImpl.cpp" />
@@ -192,6 +193,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\gl3d.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\GraphicModel.h" />
     <ClInclude Include="src\Camera.h" />
