@@ -355,6 +355,7 @@ namespace gl3d
 #pragma region GraphicModel
 
 
+#include <OBJ_Loader.h>
 
 namespace gl3d 
 {
@@ -383,17 +384,13 @@ namespace gl3d
 		}else
 		{
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
 			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(3 * sizeof(float)));
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
 			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(6 * sizeof(float)));
-			glEnableVertexAttribArray(3);
-			glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(8 * sizeof(float)));
-			glEnableVertexAttribArray(4);
-			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(11 * sizeof(float)));
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+		
 		}
-
 
 
 		if (indexSize && indexes)
@@ -412,6 +409,70 @@ namespace gl3d
 	
 		glBindVertexArray(0);
 
+	}
+
+	void GraphicModel::loadFromFile(const char *fileName)
+	{
+		objl::Loader loader;
+		loader.LoadFile(fileName);
+
+
+		std::vector<float> dataForModel;
+
+		auto &mesh = loader.LoadedMeshes[0];
+
+		dataForModel.reserve(mesh.Vertices.size() * 8);
+		for (unsigned int i = 0; i < mesh.Vertices.size(); i++)
+		{
+			//positions normals uv
+
+			dataForModel.push_back(mesh.Vertices[i].Position.X);
+			dataForModel.push_back(mesh.Vertices[i].Position.Y);
+			dataForModel.push_back(mesh.Vertices[i].Position.Z);
+			
+			dataForModel.push_back(mesh.Vertices[i].Normal.X);
+			dataForModel.push_back(mesh.Vertices[i].Normal.Y);
+			dataForModel.push_back(mesh.Vertices[i].Normal.Z);
+
+			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.X);
+			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.Y);
+		}
+
+		std::vector<unsigned int> indicesForModel;
+		indicesForModel.reserve(mesh.Indices.size());
+
+		for (unsigned int i = 0; i < mesh.Indices.size(); i++)
+		{
+			indicesForModel.push_back(mesh.Indices[i]);
+		}
+
+		this->loadFromData(dataForModel.size() * 4, &dataForModel[0],
+			indicesForModel.size() * 4, &indicesForModel[0]);
+
+
+		//vb = vertexBuffer(dataForModel.data(), dataForModel.size() * sizeof(float), GL_STATIC_DRAW);
+		//ib = indexBuffer(indicesForModel.data(), indicesForModel.size() * sizeof(unsigned int));
+		//va = std::move(vertexAttribute{ 3, 2, 3 });
+		//
+		//
+		//if (model.m.LoadedMaterials.size() > 0)
+		//{
+		//
+		//	material.ka = glm::vec3(model.m.LoadedMaterials[0].Ka.X, model.m.LoadedMaterials[0].Ka.Y, model.m.LoadedMaterials[0].Ka.Z);
+		//	material.kd = glm::vec3(model.m.LoadedMaterials[0].Kd.X, model.m.LoadedMaterials[0].Kd.Y, model.m.LoadedMaterials[0].Kd.Z);
+		//	material.ks = glm::vec3(model.m.LoadedMaterials[0].Ks.X, model.m.LoadedMaterials[0].Ks.Y, model.m.LoadedMaterials[0].Ks.Z);
+		//	material.shiny = model.m.LoadedMaterials[0].Ns;
+		//	if (material.shiny == 0) { material.shiny = 1; }
+		//
+		//	if (model.m.LoadedMaterials[0].map_Kd != "")
+		//	{
+		//
+		//		texture = manager->getData(model.m.LoadedMaterials[0].map_Kd.c_str());
+		//
+		//	}
+		//}
+
+	
 	}
 
 	void GraphicModel::clear()

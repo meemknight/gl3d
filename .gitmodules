@@ -1,3 +1,6 @@
 [submodule "submodules/imgui"]
 	path = submodules/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "submodules/objLoader"]
+	path = submodules/objLoader
+	url = https://github.com/Bly7/OBJ-Loader

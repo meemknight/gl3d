@@ -128,10 +128,10 @@ int main()
 #pragma region texture
 
 	gl3d::Texture texture;
-	texture.loadTextureFromFile("resources/container2.png");
+	texture.loadTextureFromFile("resources/other/barrel.png");
 
 	gl3d::Texture normalTexture;
-	normalTexture.loadTextureFromFile("resources/container2Normal.png");
+	normalTexture.loadTextureFromFile("resources/other/barrelNormal.png");
 
 
 #pragma endregion
@@ -212,150 +212,150 @@ int main()
 		-1.0f, +1.0f, +1.0f, // 0
 		+0.0f, +1.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, +1.0f, // 1
 		+0.0f, +1.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 		
 		+1.0f, +1.0f, -1.0f, // 2
 		+0.0f, +1.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 		
 		-1.0f, +1.0f, -1.0f, // 3
 		+0.0f, +1.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 
 
 		-1.0f, +1.0f, -1.0f, // 4
 		 0.0f, +0.0f, -1.0f, // Normal
 		 0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, -1.0f, // 5
 		 0.0f, +0.0f, -1.0f, // Normal
 		 1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		 +1.0f, -1.0f, -1.0f, // 6
 		 0.0f, +0.0f, -1.0f, // Normal
 		 1* uv, 0,				 //uv
-		 0,0,0,				 //tangent
-		 0,0,0,				 //btangent
+		 //0,0,0,				 //tangent
+		 //0,0,0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 7
 		 0.0f, +0.0f, -1.0f, // Normal
 		 0, 0,				 //uv
-		 0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, -1.0f, // 8
 		+1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, +1.0f, // 9
 		+1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 10
 		+1.0f, +0.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, -1.0f, -1.0f, // 11
 		+1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, +1.0f, // 12
 		-1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, -1.0f, // 13
 		-1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 14
 		-1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 15
 		-1.0f, +0.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 
 		+1.0f, +1.0f, +1.0f, // 16
 		+0.0f, +0.0f, +1.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, +1.0f, // 17
 		+0.0f, +0.0f, +1.0f, // Normal
 		0, 1* uv,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 18
 		+0.0f, +0.0f, +1.0f, // Normal
 		0, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 19
 		+0.0f, +0.0f, +1.0f, // Normal
 		1* uv, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 
 		+1.0f, -1.0f, -1.0f, // 20
 		+0.0f, -1.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-			0, 0, 0,				 //tangent
-			0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 21
 		+0.0f, -1.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 22
 		+0.0f, -1.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 23
 		+0.0f, -1.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		 0, 0, 0,				 //tangent
-		 0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 	};
 	
@@ -377,8 +377,10 @@ int main()
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
 	gl3d::GraphicModel cube;
-	cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
-		sizeof(cubeIndices), cubeIndices);
+	//cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
+	//	sizeof(cubeIndices), cubeIndices);
+	//cube.loadFromFile("resources/obj/sphere.obj");
+	cube.loadFromFile("resources/other/barrel.obj");
 
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));

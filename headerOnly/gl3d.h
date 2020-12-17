@@ -168,6 +168,7 @@ namespace gl3d
 		void loadFromData(size_t vertexSize,
 			float *vercies, size_t indexSize = 0, unsigned int *indexes = nullptr, bool noTexture = false);
 
+		void loadFromFile(const char *fileName);
 
 		void clear();
 
