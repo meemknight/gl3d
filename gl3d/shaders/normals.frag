@@ -31,7 +31,7 @@ mat3x3 NormalToRotation(in vec3 normal)
 
 void main()
 {
-	float ka = 0.25;
+	float ka = 0.15;
 	float kd = 0.45;
 	float ks = 0.9;
 

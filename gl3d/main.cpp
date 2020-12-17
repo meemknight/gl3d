@@ -128,10 +128,10 @@ int main()
 #pragma region texture
 
 	gl3d::Texture texture;
-	texture.loadTextureFromFile("resources/crate.png");
+	texture.loadTextureFromFile("resources/container2.png");
 
 	gl3d::Texture normalTexture;
-	normalTexture.loadTextureFromFile("resources/crateNormal.png");
+	normalTexture.loadTextureFromFile("resources/container2Normal.png");
 
 
 #pragma endregion
@@ -207,7 +207,7 @@ int main()
 		+1.0f, +0.0f, +1.0f, // Color
 	};
 
-	float uv = 0.5;
+	float uv = 1;
 	float cubePositionsNormals[] = {
 		-1.0f, +1.0f, +1.0f, // 0
 		+0.0f, +1.0f, +0.0f, // Normal
