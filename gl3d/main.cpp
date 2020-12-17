@@ -87,11 +87,11 @@ int main()
 
 #pragma region texture
 
-	gl3d::Texture texture;
-	texture.loadTextureFromFile("resources/other/barrel.png");
+	gl3d::Texture texture("resources/other/barrel.png");
+	gl3d::Texture normalTexture("resources/other/barrelNormal.png");
 
-	gl3d::Texture normalTexture;
-	normalTexture.loadTextureFromFile("resources/other/barrelNormal.png");
+	gl3d::Texture rockTexture("resources/other/boulder.png");
+	gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
 
 
 #pragma endregion
@@ -330,6 +330,7 @@ int main()
 	};
 
 	
+
 	gl3d::GraphicModel lightCube;
 	lightCube.loadFromComputedData(sizeof(cubePositions),
  cubePositions,
@@ -337,24 +338,48 @@ int main()
 	lightCube.scale = glm::vec3(0.1);
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
-	gl3d::GraphicModel cube;
+	//gl3d::GraphicModel cube;
 	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
 	//	sizeof(cubeIndices), cubeIndices);
 	//cube.loadFromFile("resources/obj/sphere.obj");
 	//cube.loadFromFile("resources/other/barrel.obj");
 
+
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj");
-	cube.loadFromModelMeshIndex(barelModel, 0);
-	cube.scale = glm::vec3(0.1);
+	gl3d::LoadedModelData rockModel("resources/other/boulder.obj");
+	//cube.loadFromModelMeshIndex(barelModel, 0);
+	//cube.scale = glm::vec3(0.1);
+
+	std::vector< gl3d::GraphicModel > models;
+	{
+		gl3d::GraphicModel model;
+		model.loadFromModelMeshIndex(barelModel, 0);
+		model.scale = glm::vec3(0.1);
+		models.push_back(model);
+	}
+
+	static const char *items[] = {
+				"Barrel",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"", };
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
+
 
 	int timeBeg = clock();
 	 
 	while (!glfwWindowShouldClose(wind))
 	{
 		glfwGetWindowSize(wind, &w, &h);
+		w = std::max(w, 1);
+		h = std::max(h, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		int timeEnd = clock();
@@ -386,7 +411,7 @@ int main()
 			ImGui::Begin("Menu");
 			
 			ImGui::Checkbox("Light Editor##check", &lightEditor);
-			ImGui::Checkbox("Cube Editor##check", &cubeEditor);
+			ImGui::Checkbox("Object Editor##check", &cubeEditor);
 		
 			ImGui::End();
 		}
@@ -412,24 +437,53 @@ int main()
 
 		if (cubeEditor)
 		{
-			ImGui::Begin("Cube Editor", &cubeEditor, flags);
+		
+
+
+			ImGui::Begin("Object Editor", &cubeEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
+
+
+			
+
+			static int item_current = 0;
+			ImGui::ListBox("listbox\n(single select)", &item_current, items, models.size(), 4);
+
+			if (ImGui::Button("Add barrel") && models.size() < 9)
+			{
+				items[models.size()] = "Barrel";
+				gl3d::GraphicModel model;
+				model.loadFromModelMeshIndex(barelModel, 0);
+				model.scale = glm::vec3(0.1);
+				models.push_back(model);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Add rock") && models.size() < 9)
+			{
+				items[models.size()] = "Rock";
+				gl3d::GraphicModel model;
+				model.loadFromModelMeshIndex(rockModel, 0);
+				model.scale = glm::vec3(0.1);
+				models.push_back(model);
+			}
+
+			ImGui::NewLine();
 
 			static glm::vec3 color;
 			ImGui::ColorEdit3("Object Color", (float *)&color);
 			ImGui::NewLine();
 
-			ImGui::Text("Cube");
-			ImGui::SliderFloat3("position", &cube.position[0], -10, 10);
-			ImGui::SliderFloat3("rotation", &cube.rotation[0], 0, glm::radians(360.f));
-			ImGui::SliderFloat3("scale", &cube.scale[0], 0.1, 5);
+			ImGui::Text("Object transform");
+			ImGui::SliderFloat3("position", &models[item_current].position[0], -10, 10);
+			ImGui::SliderFloat3("rotation", &models[item_current].rotation[0], 0, glm::radians(360.f));
+			ImGui::SliderFloat3("scale",	&models[item_current].scale[0], 0.1, 5);
 			ImGui::SameLine();
 			float s = 0;
 			ImGui::InputFloat("sameScale", &s);
 
 			if (s > 0)
 			{
-				cube.scale = glm::vec3(s);
+				models[item_current].scale = glm::vec3(s);
 			}
 
 			ImGui::End();
@@ -513,8 +567,22 @@ int main()
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
 		lightCube.draw();
 
+		for (int i = 0; i < models.size(); i++)
+		{
+			if (items[i] == "Barrel")
+			{
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture);
 
-		gl3d::renderLightModel(cube, camera, lightCube.position, lightShader, texture, normalTexture);
+			}else if(items[i] == "Rock")
+			{
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture);
+			}
+
+
+		}
+
+		
+
 
 
 	#pragma region render and events
