@@ -338,9 +338,11 @@ namespace gl3d
 	}
 
 	void SkyBox::draw(const glm::mat4 &viewProjMat)
-	{glDepthFunc(GL_LEQUAL);
+	{
+		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(vertexArray);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		bindCubeMap();
 
 		shader.bind();
 
@@ -352,6 +354,12 @@ namespace gl3d
 		glDepthFunc(GL_LESS);
 
 		glBindVertexArray(0);
+	}
+
+	void SkyBox::bindCubeMap()
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	}
 
 };

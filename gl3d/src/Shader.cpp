@@ -141,13 +141,13 @@ namespace gl3d
 		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
 		shader.bind();
 
-	
 		normalShaderLocation = getUniform(shader.id, "u_transform");
 		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
 		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
 		textureSamplerLocation = getUniform(shader.id, "u_albedoSampler");
 		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
+		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 
 	}
 
@@ -162,6 +162,7 @@ namespace gl3d
 		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
+		glUniform1i(skyBoxSamplerLocation, 2);
 	}
 
 };

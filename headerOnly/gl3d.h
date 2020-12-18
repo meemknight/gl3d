@@ -104,6 +104,7 @@ namespace gl3d
 		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
+		GLint skyBoxSamplerLocation = -1;
 
 		//todo clear
 	};
@@ -240,6 +241,8 @@ namespace gl3d
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
 
+		void bindCubeMap();
+
 		Shader shader;
 		GLuint texture;
 
@@ -279,7 +282,7 @@ namespace gl3d
 namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture);
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture);
 
 };
 #pragma endregion

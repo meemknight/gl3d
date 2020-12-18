@@ -69,6 +69,8 @@ namespace gl3d
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
 
+		void bindCubeMap();
+
 		Shader shader;
 		GLuint texture;
 

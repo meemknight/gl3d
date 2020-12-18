@@ -276,13 +276,13 @@ namespace gl3d
 		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
 		shader.bind();
 
-	
 		normalShaderLocation = getUniform(shader.id, "u_transform");
 		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
 		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
 		textureSamplerLocation = getUniform(shader.id, "u_albedoSampler");
 		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
+		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 
 	}
 
@@ -297,6 +297,7 @@ namespace gl3d
 		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
+		glUniform1i(skyBoxSamplerLocation, 2);
 	}
 
 };
@@ -732,9 +733,11 @@ namespace gl3d
 	}
 
 	void SkyBox::draw(const glm::mat4 &viewProjMat)
-	{glDepthFunc(GL_LEQUAL);
+	{
+		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(vertexArray);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		bindCubeMap();
 
 		shader.bind();
 
@@ -746,6 +749,12 @@ namespace gl3d
 		glDepthFunc(GL_LESS);
 
 		glBindVertexArray(0);
+	}
+
+	void SkyBox::bindCubeMap()
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	}
 
 };
@@ -763,7 +772,7 @@ namespace gl3d
 
 
 	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture)
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture)
 	{
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
@@ -779,6 +788,9 @@ namespace gl3d
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
 		model.draw();
 

@@ -64,8 +64,7 @@ int main()
 
 #pragma endregion
 
-
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 #pragma region shader
@@ -586,11 +585,13 @@ int main()
 		{
 			if (items[i] == "Barrel")
 			{
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture);
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture,
+					skyBox.texture);
 
 			}else if(items[i] == "Rock")
 			{
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture);
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
+					skyBox.texture);
 			}
 
 		}

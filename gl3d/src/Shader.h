@@ -37,6 +37,7 @@ namespace gl3d
 		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
+		GLint skyBoxSamplerLocation = -1;
 
 		//todo clear
 	};

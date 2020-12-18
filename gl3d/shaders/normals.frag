@@ -11,6 +11,8 @@ uniform vec3 u_eyePosition;
 
 uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
+uniform samplerCube u_skybox;
+
 
 //https://gamedev.stackexchange.com/questions/22204/from-normal-to-rotation-matrix#:~:text=Therefore%2C%20if%20you%20want%20to,the%20first%20and%20second%20columns.
 mat3x3 NormalToRotation(in vec3 normal)
@@ -31,16 +33,23 @@ mat3x3 NormalToRotation(in vec3 normal)
 
 void main()
 {
-	float ka = 0.15;
+
+
+	float ka = 1;
 	float kd = 0.45;
-	float ks = 0.9;
+	float ks = 1;
 
-
+	//get normal map data
 	vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
 	normal = normalize(2*normal - 1.f);
-
 	mat3 rotMat = NormalToRotation(v_normals);
 	normal = rotMat * normal;
+	normal = v_normals;
+
+	vec3 I = normalize(v_position - u_eyePosition);
+	vec3 R = reflect(I, normalize(normal));
+	vec3 skyBoxColor = texture(u_skybox, R).rgb;
+	vec3 skyBoxIntensity = vec3((skyBoxColor.r * skyBoxColor.g + skyBoxColor.b) /3);
 
 
 	vec3 lightDirection = u_lightPosition - v_position;
@@ -65,10 +74,17 @@ void main()
 
 	vec3 color = texture2D(u_albedoSampler, v_texCoord).xyz;
 	vec3 difuseVec = vec3(difuseLight,difuseLight,difuseLight);
-	vec3 ambientVec = vec3(ka,ka,ka);
+	vec3 ambientVec = color * ka;
+	vec3 specularVec = vec3(specularLight,specularLight,specularLight);
 
-	color *= ambientVec + difuseVec + specularLight;
+	//ambientVec *= mix(skyBoxColor.rgb, skyBoxIntensity.rgb, 0.5);
+	ambientVec = mix(ambientVec, skyBoxColor, 0.5);
+	//ambientVec *= skyBoxColor;
 
+	color *= (ambientVec + difuseVec + specularVec);
+	
+
+	//color = skyBoxColor;
 
 	a_outColor = clamp(vec4(color,1), 0, 1);
 

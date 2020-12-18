@@ -9,6 +9,6 @@
 namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture);
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture);
 
 };
