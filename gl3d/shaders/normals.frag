@@ -44,7 +44,7 @@ void main()
 	normal = normalize(2*normal - 1.f);
 	mat3 rotMat = NormalToRotation(v_normals);
 	normal = rotMat * normal;
-	normal = v_normals;
+	//normal = v_normals;
 
 	vec3 I = normalize(v_position - u_eyePosition);
 	vec3 R = reflect(I, normalize(normal));

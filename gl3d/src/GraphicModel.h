@@ -66,6 +66,7 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
+		void loadTexture(const char *name);
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
 

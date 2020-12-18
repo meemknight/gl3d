@@ -98,20 +98,19 @@ int main()
 	gl3d::SkyBox skyBox;
 	{
 		const char *names[6] = 
-		{	"resources/skyBox/ocean/right.jpg",
-			"resources/skyBox/ocean/left.jpg",
-			"resources/skyBox/ocean/top.jpg",
-			"resources/skyBox/ocean/bottom.jpg",
-			"resources/skyBox/ocean/front.jpg",
-			"resources/skyBox/ocean/back.jpg" };
+		{	"resources/skyBoxes/ocean/right.jpg",
+			"resources/skyBoxes/ocean/left.jpg",
+			"resources/skyBoxes/ocean/top.jpg",
+			"resources/skyBoxes/ocean/bottom.jpg",
+			"resources/skyBoxes/ocean/front.jpg",
+			"resources/skyBoxes/ocean/back.jpg" };
 
 		skyBox.createGpuData();
 		skyBox.loadTexture(names);
+		//skyBox.loadTexture("resources/skyBoxes/ocean.png");
 	
 	}
 	
-
-
 	//VertexArrayContext va;
 	//va.create();
 
