@@ -20,6 +20,8 @@ namespace gl3d
 		//todo clear
 	};
 
+	GLint getUniform(GLuint id, const char *name);
+
 	//todo this will probably dissapear
 	struct LightShader
 	{

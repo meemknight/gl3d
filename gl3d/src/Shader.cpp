@@ -125,21 +125,23 @@ namespace gl3d
 		glUseProgram(id);
 	}
 
+	GLint getUniform(GLuint id, const char *name)
+	{
+		GLint uniform = glGetUniformLocation(id, name);
+		if (uniform == -1)
+		{
+			std::cout << "uniform error " << name << "\n";
+		}
+		return uniform;
+	};
+
+
 	void LightShader::create()
 	{
 		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
 		shader.bind();
 
-		auto getUniform = [](GLuint id, const char *name) 
-		{
-			GLint uniform = glGetUniformLocation(id, name);
-			if (uniform == -1)
-			{
-				std::cout << "uniform error "<< name << "\n";
-			}
-			return uniform;
-		};
-
+	
 		normalShaderLocation = getUniform(shader.id, "u_transform");
 		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
 		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");

@@ -96,6 +96,21 @@ int main()
 
 #pragma endregion
 
+	gl3d::SkyBox skyBox;
+	{
+		const char *names[6] = 
+		{	"resources/skyBox/ocean/right.jpg",
+			"resources/skyBox/ocean/left.jpg",
+			"resources/skyBox/ocean/top.jpg",
+			"resources/skyBox/ocean/bottom.jpg",
+			"resources/skyBox/ocean/front.jpg",
+			"resources/skyBox/ocean/back.jpg" };
+
+		skyBox.createGpuData();
+		skyBox.loadTexture(names);
+	
+	}
+	
 
 
 	//VertexArrayContext va;
@@ -578,11 +593,19 @@ int main()
 				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture);
 			}
 
-
 		}
 
-		
+		{
 
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			viewMat = glm::mat4(glm::mat3(viewMat));
+
+			auto viewProjMat = projMat * viewMat;
+
+			skyBox.draw(viewProjMat);
+
+		}
 
 
 	#pragma region render and events

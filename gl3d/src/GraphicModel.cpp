@@ -1,6 +1,7 @@
 #include "GraphicModel.h"
 #include "Core.h"
 #include <OBJ_Loader.h>
+#include <stb_image.h>
 
 namespace gl3d 
 {
@@ -142,7 +143,7 @@ namespace gl3d
 		}
 
 		this->loadFromComputedData(dataForModel.size() * 4,
- &dataForModel[0],
+			&dataForModel[0],
 			indicesForModel.size() * 4, &indicesForModel[0]);
 
 
@@ -204,6 +205,7 @@ namespace gl3d
 
 
 		glBindVertexArray(0);
+
 	}
 
 	glm::mat4 GraphicModel::getTransformMatrix()
@@ -223,6 +225,133 @@ namespace gl3d
 	void LoadedModelData::load(const char *file)
 	{
 		loader.LoadFile(file);
+	}
+
+	float skyboxVertices[] = {
+	// positions          
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+	};
+
+	void SkyBox::createGpuData()
+	{
+		shader.loadShaderProgramFromFile("shaders/skyBox.vert", "shaders/skyBox.frag");
+
+		samplerUniformLocation = getUniform(shader.id, "u_skybox");
+		modelViewUniformLocation = getUniform(shader.id, "u_viewProjection");
+
+
+		glGenVertexArrays(1, &vertexArray);
+		glBindVertexArray(vertexArray);
+		
+		glGenBuffers(1, &vertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+
+		
+		glBindVertexArray(0);
+	}
+
+	void SkyBox::loadTexture(const char *names[6])
+	{
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		int width, height, nrChannels;
+		unsigned char *data;
+		for (unsigned int i = 0; i <6; i++)
+		{
+			stbi_set_flip_vertically_on_load(false);
+			data = stbi_load(names[i], &width, &height, &nrChannels, 3);
+
+			if (data)
+			{
+				glTexImage2D(
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+							0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				);
+
+				stbi_image_free(data);
+			}
+			else
+			{
+				std::cout << "err loading " << names[i] << "\n";
+			}
+
+			
+		}
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+
+	}
+
+	void SkyBox::clearGpuData()
+	{
+	}
+
+	void SkyBox::draw(const glm::mat4 &viewProjMat)
+	{glDepthFunc(GL_LEQUAL);
+		glBindVertexArray(vertexArray);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		shader.bind();
+
+		glUniformMatrix4fv(modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniform1i(samplerUniformLocation, 0);
+
+		glDepthFunc(GL_LEQUAL);
+		glDrawArrays(GL_TRIANGLES, 0, 6*6);
+		glDepthFunc(GL_LESS);
+
+		glBindVertexArray(0);
 	}
 
 };
