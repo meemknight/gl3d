@@ -3,7 +3,10 @@
 #include <Windows.h>
 #include <signal.h>
 
-void gl3d::assertFunc(const char *expression,
+namespace gl3d 
+{
+
+void assertFunc(const char *expression,
 	const char *file_name,
 	unsigned const line_number,
 	const char *comment)
@@ -60,3 +63,6 @@ void gl3d::assertFunc(const char *expression,
 	
 
 }
+
+
+};

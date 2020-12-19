@@ -1,0 +1,13 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl Material.001
+Ns 454.901961
+Ka 0.400000 0.005000 0.005000
+Kd 0.800000 0.010265 0.009551
+Ks 0.961909 1.000000 0.513372
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures//porcelain.jpg 

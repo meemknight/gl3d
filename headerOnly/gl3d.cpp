@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-17
+//built on 2020-12-19
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -14,7 +14,10 @@
 #include <Windows.h>
 #include <signal.h>
 
-void gl3d::assertFunc(const char *expression,
+namespace gl3d 
+{
+
+void assertFunc(const char *expression,
 	const char *file_name,
 	unsigned const line_number,
 	const char *comment)
@@ -72,6 +75,9 @@ void gl3d::assertFunc(const char *expression,
 
 }
 
+
+};
+
 #pragma endregion
 
 
@@ -82,6 +88,7 @@ void gl3d::assertFunc(const char *expression,
 
 #include <stb_image.h>
 #include <iostream>
+#include <glm\vec3.hpp>
 
 namespace gl3d
 {
@@ -124,6 +131,134 @@ namespace gl3d
 
 
 	}
+
+	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel)
+	{
+		unsigned char *newImage = new unsigned char[w * h * 3];
+
+
+		//todo refactor refactor refactor
+		//todo actually compute this on the gpu
+
+		auto horiz = [&](int kernel)
+		{
+		//horizontal blur
+			for (int y = 0; y < h; y++)
+			{
+				for (int x = 0; x < w; x++)
+				{
+					glm::tvec3<int> colors = {};
+
+					int beg = std::max(0, x - kernel);
+					int end = std::min(x + kernel + 1, w);
+
+					for (int i = beg; i < end; i++)
+					{
+						colors.r += data[(i + y * w) * 3 + 0];
+						colors.g += data[(i + y * w) * 3 + 1];
+						colors.b += data[(i + y * w) * 3 + 2];
+					}
+
+					if (x - kernel < 0)
+						for (int i = kernel - x - 1; i >= 0; i--)
+						{
+							colors.r += data[(i + y * w) * 3 + 0];
+							colors.g += data[(i + y * w) * 3 + 1];
+							colors.b += data[(i + y * w) * 3 + 2];
+						}
+
+					if (x + kernel >= w)
+						for (int i = w - 1; i >= w - (x + kernel - w + 1); i--)
+						{
+							colors.r += data[(i + y * w) * 3 + 0];
+							colors.g += data[(i + y * w) * 3 + 1];
+							colors.b += data[(i + y * w) * 3 + 2];
+						}
+
+					colors /= kernel * 2 + 1;
+
+
+					//colors /= end - beg;
+
+					newImage[(x + y * w) * 3 + 0] = colors.r;
+					newImage[(x + y * w) * 3 + 1] = colors.g;
+					newImage[(x + y * w) * 3 + 2] = colors.b;
+
+				}
+
+			}
+		};
+
+		auto vert = [&](int kernel)
+		{
+			//vertical blur
+			for (int x = 0; x < w; x++)
+			{
+				for (int y = 0; y < h; y++)
+				{
+					glm::tvec3<int> colors = {};
+
+					int beg = std::max(0, y - kernel);
+					int end = std::min(y + kernel + 1, h);
+
+					for (int j = beg; j < end; j++)
+					{
+						colors.r += data[(x + j * w) * 3 + 0];
+						colors.g += data[(x + j * w) * 3 + 1];
+						colors.b += data[(x + j * w) * 3 + 2];
+					}
+
+					if (y - kernel < 0)
+						for (int j = kernel - y - 1; j >= 0; j--)
+						{
+							colors.r += data[(x + j * w) * 3 + 0];
+							colors.g += data[(x + j * w) * 3 + 1];
+							colors.b += data[(x + j * w) * 3 + 2];
+						}
+
+					if (y + kernel >= h)
+						for (int j = h - 1; j >= h - (y + kernel - h + 1); j--)
+						{
+							colors.r += data[(x + j * w) * 3 + 0];
+							colors.g += data[(x + j * w) * 3 + 1];
+							colors.b += data[(x + j * w) * 3 + 2];
+						}
+
+					colors /= kernel * 2 + 1;
+
+					//colors /= end - beg;
+
+					newImage[(x + y * w) * 3 + 0] = colors.r;
+					newImage[(x + y * w) * 3 + 1] = colors.g;
+					newImage[(x + y * w) * 3 + 2] = colors.b;
+
+				}
+
+			}
+
+		};
+
+		int iterations = 2;
+
+		for(int i=0;i<iterations;i++)
+		{
+			horiz(kernel);
+			vert(kernel);
+		}
+
+		
+		
+		
+
+		for (int i = 0; i < w * h * 3; i++)
+		{
+			data[i] = newImage[i];
+		}
+
+		delete newImage;
+	}
+
+	
 
 };
 #pragma endregion
@@ -260,6 +395,46 @@ namespace gl3d
 		glUseProgram(id);
 	}
 
+	GLint getUniform(GLuint id, const char *name)
+	{
+		GLint uniform = glGetUniformLocation(id, name);
+		if (uniform == -1)
+		{
+			std::cout << "uniform error " << name << "\n";
+		}
+		return uniform;
+	};
+
+
+	void LightShader::create()
+	{
+		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
+		shader.bind();
+
+		normalShaderLocation = getUniform(shader.id, "u_transform");
+		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
+		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
+		textureSamplerLocation = getUniform(shader.id, "u_albedoSampler");
+		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
+		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
+		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
+
+	}
+
+	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition
+		)
+	{
+		shader.bind();
+		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
+		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
+		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
+		glUniform1i(textureSamplerLocation, 0);
+		glUniform1i(normalMapSamplerLocation, 1);
+		glUniform1i(skyBoxSamplerLocation, 2);
+	}
+
 };
 
 #pragma endregion
@@ -355,12 +530,15 @@ namespace gl3d
 #pragma region GraphicModel
 
 
+#include <OBJ_Loader.h>
+#include <stb_image.h>
+
 
 namespace gl3d 
 {
 
-	void GraphicModel::loadFromData(size_t vertexSize,
-			float *vercies, size_t indexSize, unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize,
+		const unsigned int * indexes, bool noTexture)
 	{
 
 		gl3dAssertComment(vertexSize % 3 == 0, "Index count must be multiple of 3");
@@ -383,17 +561,13 @@ namespace gl3d
 		}else
 		{
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
 			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(3 * sizeof(float)));
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
 			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(6 * sizeof(float)));
-			glEnableVertexAttribArray(3);
-			glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(8 * sizeof(float)));
-			glEnableVertexAttribArray(4);
-			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(11 * sizeof(float)));
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+		
 		}
-
 
 
 		if (indexSize && indexes)
@@ -412,6 +586,121 @@ namespace gl3d
 	
 		glBindVertexArray(0);
 
+	}
+
+	//deprecated
+	void GraphicModel::loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV, size_t indexesCount, unsigned int *indexes)
+	{
+		gl3dAssertComment(vertices, "Vertices are not optional");
+		gl3dAssertComment(normals, "Normals are not optional"); //todo compute
+		if (!vertices || !normals) { return; }
+
+		std::vector<float> dataForModel;
+
+		dataForModel.reserve(vertexCount * 8);
+		for (unsigned int i = 0; i < vertexCount; i++)
+		{
+			//positions normals uv
+
+			dataForModel.push_back(vertices[(8*i)+0]);
+			dataForModel.push_back(vertices[(8*i)+1]);
+			dataForModel.push_back(vertices[(8*i)+2]);
+
+			dataForModel.push_back(normals[(8 * i) + 3]);
+			dataForModel.push_back(normals[(8 * i) + 4]);
+			dataForModel.push_back(normals[(8 * i) + 5]);
+
+			if (textureUV)
+			{
+				dataForModel.push_back(normals[(8 * i) + 6]);
+				dataForModel.push_back(normals[(8 * i) + 7]);
+			}
+			else
+			{
+				dataForModel.push_back(0.f);
+				dataForModel.push_back(0.f);
+			}
+
+		}
+
+		this->loadFromComputedData(vertexCount * 4,
+ &dataForModel[0],
+			indexesCount * 4, &indexes[0], (textureUV == nullptr));
+	}
+
+	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
+	{
+		auto &mesh = model.loader.LoadedMeshes[0];
+		loadFromComputedData(mesh.Vertices.size() * 8 * 4,
+			 (float *)&mesh.Vertices[0],
+			mesh.Indices.size() * 4, &mesh.Indices[0]);
+
+	}
+
+	//deprecated
+	void GraphicModel::loadFromFile(const char *fileName)
+	{
+		objl::Loader loader;
+		loader.LoadFile(fileName);
+
+
+		std::vector<float> dataForModel;
+
+		auto &mesh = loader.LoadedMeshes[0];
+
+		dataForModel.reserve(mesh.Vertices.size() * 8);
+		for (unsigned int i = 0; i < mesh.Vertices.size(); i++)
+		{
+			//positions normals uv
+
+			dataForModel.push_back(mesh.Vertices[i].Position.X);
+			dataForModel.push_back(mesh.Vertices[i].Position.Y);
+			dataForModel.push_back(mesh.Vertices[i].Position.Z);
+			
+			dataForModel.push_back(mesh.Vertices[i].Normal.X);
+			dataForModel.push_back(mesh.Vertices[i].Normal.Y);
+			dataForModel.push_back(mesh.Vertices[i].Normal.Z);
+
+			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.X);
+			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.Y);
+		}
+
+		std::vector<unsigned int> indicesForModel;
+		indicesForModel.reserve(mesh.Indices.size());
+
+		for (unsigned int i = 0; i < mesh.Indices.size(); i++)
+		{
+			indicesForModel.push_back(mesh.Indices[i]);
+		}
+
+		this->loadFromComputedData(dataForModel.size() * 4,
+			&dataForModel[0],
+			indicesForModel.size() * 4, &indicesForModel[0]);
+
+
+		//vb = vertexBuffer(dataForModel.data(), dataForModel.size() * sizeof(float), GL_STATIC_DRAW);
+		//ib = indexBuffer(indicesForModel.data(), indicesForModel.size() * sizeof(unsigned int));
+		//va = std::move(vertexAttribute{ 3, 2, 3 });
+		//
+		//
+		//if (model.m.LoadedMaterials.size() > 0)
+		//{
+		//
+		//	material.ka = glm::vec3(model.m.LoadedMaterials[0].Ka.X, model.m.LoadedMaterials[0].Ka.Y, model.m.LoadedMaterials[0].Ka.Z);
+		//	material.kd = glm::vec3(model.m.LoadedMaterials[0].Kd.X, model.m.LoadedMaterials[0].Kd.Y, model.m.LoadedMaterials[0].Kd.Z);
+		//	material.ks = glm::vec3(model.m.LoadedMaterials[0].Ks.X, model.m.LoadedMaterials[0].Ks.Y, model.m.LoadedMaterials[0].Ks.Z);
+		//	material.shiny = model.m.LoadedMaterials[0].Ns;
+		//	if (material.shiny == 0) { material.shiny = 1; }
+		//
+		//	if (model.m.LoadedMaterials[0].map_Kd != "")
+		//	{
+		//
+		//		texture = manager->getData(model.m.LoadedMaterials[0].map_Kd.c_str());
+		//
+		//	}
+		//}
+
+	
 	}
 
 	void GraphicModel::clear()
@@ -447,6 +736,7 @@ namespace gl3d
 
 
 		glBindVertexArray(0);
+
 	}
 
 	glm::mat4 GraphicModel::getTransformMatrix()
@@ -463,8 +753,274 @@ namespace gl3d
 
 
 
+	void LoadedModelData::load(const char *file)
+	{
+		loader.LoadFile(file);
+	}
+
+	float skyboxVertices[] = {
+	// positions          
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+	};
+
+	void SkyBox::createGpuData()
+	{
+		shader.loadShaderProgramFromFile("shaders/skyBox.vert", "shaders/skyBox.frag");
+
+		samplerUniformLocation = getUniform(shader.id, "u_skybox");
+		modelViewUniformLocation = getUniform(shader.id, "u_viewProjection");
+
+
+		glGenVertexArrays(1, &vertexArray);
+		glBindVertexArray(vertexArray);
+		
+		glGenBuffers(1, &vertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+
+		
+		glBindVertexArray(0);
+	}
+
+	void SkyBox::loadTexture(const char *names[6])
+	{
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		int w, h, nrChannels;
+		unsigned char *data;
+		for (unsigned int i = 0; i <6; i++)
+		{
+			stbi_set_flip_vertically_on_load(false);
+			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
+
+			if (data)
+			{
+
+				//gausianBlurRGB(data, w, h, 10);
+
+				glTexImage2D(
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+							0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				);
+
+				stbi_image_free(data);
+			}
+			else
+			{
+				std::cout << "err loading " << names[i] << "\n";
+			}
+
+			
+		}
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+
+	}
+
+	void SkyBox::loadTexture(const char *name)
+	{
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		int width, height, nrChannels;
+		unsigned char *data;
+
+
+		stbi_set_flip_vertically_on_load(false);
+		data = stbi_load(name, &width, &height, &nrChannels, 3);
+
+		//right
+		//left
+		//top
+		//bottom
+		//front
+		//back
+
+		auto getPixel = [&](int x, int y, unsigned char *data)
+		{
+			return data + 3 * (x + y * width);
+		};
+
+		glm::ivec2 paddings[6] =
+		{
+			{(width / 4) * 2, (height / 3) * 1, },
+			{(width / 4) * 0, (height / 3) * 1, },
+			{(width / 4) * 1, (height / 3) * 0, },
+			{(width / 4) * 1, (height / 3) * 2, },
+			{(width / 4) * 1, (height / 3) * 1, },
+			{(width / 4) * 3, (height / 3) * 1, },
+		};
+
+		if (data)
+		{
+			for (unsigned int i = 0; i < 6; i++)
+			{
+				unsigned char *extractedData = new unsigned char[3 * (width / 4) * (height / 3)];
+
+				int index = 0;
+
+				int paddingX = paddings[i].x;
+				int paddingY = paddings[i].y;
+
+				for (int j = 0; j < height / 3; j++)
+					for (int i = 0; i < width / 4; i++)
+					{
+						extractedData[index] = *getPixel(i + paddingX, j + paddingY, data);
+						extractedData[index + 1] = *(getPixel(i + paddingX, j + paddingY, data)+1);
+						extractedData[index + 2] = *(getPixel(i + paddingX, j + paddingY, data)+2);
+						//extractedData[index] = 100;
+						//extractedData[index + 1] = 100;
+						//extractedData[index + 2] = 100;
+						index += 3;
+					}
+
+					glTexImage2D(
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+								0, GL_RGB, width/4, height/3, 0, GL_RGB, GL_UNSIGNED_BYTE, extractedData
+					);
+
+
+
+				delete[] extractedData;
+			}
+
+			stbi_image_free(data);
+
+		}else
+		{
+			std::cout << "err loading " << name << "\n";
+		}
+
+	
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+
+	}
+
+	void SkyBox::clearGpuData()
+	{
+	}
+
+	void SkyBox::draw(const glm::mat4 &viewProjMat)
+	{
+		glDepthFunc(GL_LEQUAL);
+		glBindVertexArray(vertexArray);
+
+		bindCubeMap();
+
+		shader.bind();
+
+		glUniformMatrix4fv(modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniform1i(samplerUniformLocation, 0);
+
+		glDepthFunc(GL_LEQUAL);
+		glDrawArrays(GL_TRIANGLES, 0, 6*6);
+		glDepthFunc(GL_LESS);
+
+		glBindVertexArray(0);
+	}
+
+	void SkyBox::bindCubeMap()
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	}
+
 };
 
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//gl3d.cpp
+////////////////////////////////////////////////
+#pragma region gl3d
+
+namespace gl3d
+{
+
+
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture)
+	{
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		auto transformMat = model.getTransformMatrix();
+
+		auto viewProjMat = projMat * viewMat * transformMat;
+
+
+		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture.id);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
+
+		model.draw();
+
+	}
+
+};
 #pragma endregion
 
 

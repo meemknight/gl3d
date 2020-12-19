@@ -96,7 +96,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>false</ExceptionHandling>
@@ -142,7 +142,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -164,7 +164,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>false</ExceptionHandling>
@@ -183,6 +183,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\gl3d.cpp" />
     <ClCompile Include="src\Core.cpp" />
     <ClCompile Include="src\GraphicModel.cpp" />
     <ClCompile Include="imgui\imguiImpl.cpp" />
@@ -192,6 +193,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\gl3d.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\GraphicModel.h" />
     <ClInclude Include="src\Camera.h" />
@@ -203,6 +205,8 @@
     <None Include="shaders\color.vert" />
     <None Include="shaders\normals.frag" />
     <None Include="shaders\normals.vert" />
+    <None Include="shaders\skyBox.frag" />
+    <None Include="shaders\skyBox.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

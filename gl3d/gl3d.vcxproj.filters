@@ -36,6 +36,9 @@
     <ClCompile Include="src\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\gl3d.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h">
@@ -53,11 +56,16 @@
     <ClInclude Include="src\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\gl3d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
     <None Include="shaders\normals.frag" />
     <None Include="shaders\normals.vert" />
+    <None Include="shaders\skyBox.vert" />
+    <None Include="shaders\skyBox.frag" />
   </ItemGroup>
 </Project>

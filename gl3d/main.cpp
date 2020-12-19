@@ -11,11 +11,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
-#include "src/Core.h"
-#include "src/Texture.h"
-#include "src/Camera.h"
-#include "src/Shader.h"
-#include "src/GraphicModel.h"
+#include "src/gl3d.h"
 
 #include <ctime>
 
@@ -68,8 +64,7 @@ int main()
 
 #pragma endregion
 
-
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 #pragma region shader
@@ -83,61 +78,39 @@ int main()
 		std::cout << "uniform error u_transform\n";
 	}
 
-	gl3d::Shader normalShader;
-	normalShader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
-	normalShader.bind();
-	GLint normalShaderLocation = glGetUniformLocation(normalShader.id, "u_transform");
-	if (normalShaderLocation == -1)
-	{
-		std::cout << "uniform error u_transform\n";
-	}
-
-	GLint normalShaderNormalTransformLocation = glGetUniformLocation(normalShader.id, "u_modelTransform");
-	if (normalShaderNormalTransformLocation == -1)
-	{
-		std::cout << "uniform error u_modelTransform\n";
-	}
-
-	GLint normalShaderLightposLocation = glGetUniformLocation(normalShader.id, "u_lightPosition");
-	if (normalShaderLightposLocation == -1)
-	{
-		std::cout << "uniform error u_lightPosition\n";
-	}
-
-	GLint eyePositionLocation = glGetUniformLocation(normalShader.id, "u_eyePosition");
-	if (eyePositionLocation == -1)
-	{
-		std::cout << "uniform error u_eyePosition\n";
-	}
-	GLint textureSamplerLocation = glGetUniformLocation(normalShader.id, "u_albedoSampler");
-	if (textureSamplerLocation == -1)
-	{
-		std::cout << "uniform error u_albedoSampler\n";
-	}
-	GLint normalMapSamplerLocation = glGetUniformLocation(normalShader.id, "u_normalSampler");
-	if (normalMapSamplerLocation == -1)
-	{
-		std::cout << "uniform error u_normalSampler\n";
-	}
-
-
-
+	
+	gl3d::LightShader lightShader;
+	lightShader.create();
 
 #pragma endregion
 
 #pragma region texture
 
-	gl3d::Texture texture;
-	texture.loadTextureFromFile("resources/container2.png");
+	gl3d::Texture texture("resources/other/barrel.png");
+	gl3d::Texture normalTexture("resources/other/barrelNormal.png");
 
-	gl3d::Texture normalTexture;
-	normalTexture.loadTextureFromFile("resources/container2Normal.png");
+	gl3d::Texture rockTexture("resources/other/boulder.png");
+	gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
 
 
 #pragma endregion
 
+	gl3d::SkyBox skyBox;
+	{
+		const char *names[6] = 
+		{	"resources/skyBoxes/ocean/right.jpg",
+			"resources/skyBoxes/ocean/left.jpg",
+			"resources/skyBoxes/ocean/top.jpg",
+			"resources/skyBoxes/ocean/bottom.jpg",
+			"resources/skyBoxes/ocean/front.jpg",
+			"resources/skyBoxes/ocean/back.jpg" };
 
-
+		skyBox.createGpuData();
+		skyBox.loadTexture(names);
+		//skyBox.loadTexture("resources/skyBoxes/lava.png");
+	
+	}
+	
 	//VertexArrayContext va;
 	//va.create();
 
@@ -212,150 +185,150 @@ int main()
 		-1.0f, +1.0f, +1.0f, // 0
 		+0.0f, +1.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, +1.0f, // 1
 		+0.0f, +1.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 		
 		+1.0f, +1.0f, -1.0f, // 2
 		+0.0f, +1.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 		
 		-1.0f, +1.0f, -1.0f, // 3
 		+0.0f, +1.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 
 
 		-1.0f, +1.0f, -1.0f, // 4
 		 0.0f, +0.0f, -1.0f, // Normal
 		 0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, -1.0f, // 5
 		 0.0f, +0.0f, -1.0f, // Normal
 		 1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		 +1.0f, -1.0f, -1.0f, // 6
 		 0.0f, +0.0f, -1.0f, // Normal
 		 1* uv, 0,				 //uv
-		 0,0,0,				 //tangent
-		 0,0,0,				 //btangent
+		 //0,0,0,				 //tangent
+		 //0,0,0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 7
 		 0.0f, +0.0f, -1.0f, // Normal
 		 0, 0,				 //uv
-		 0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, -1.0f, // 8
 		+1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, +1.0f, +1.0f, // 9
 		+1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 10
 		+1.0f, +0.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		+1.0f, -1.0f, -1.0f, // 11
 		+1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, +1.0f, // 12
 		-1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, -1.0f, // 13
 		-1.0f, +0.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 14
 		-1.0f, +0.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 15
 		-1.0f, +0.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 
 		+1.0f, +1.0f, +1.0f, // 16
 		+0.0f, +0.0f, +1.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		0,0,0,				 //tangent
-		0,0,0,				 //btangent
+		//0,0,0,				 //tangent
+		//0,0,0,				 //btangent
 
 		-1.0f, +1.0f, +1.0f, // 17
 		+0.0f, +0.0f, +1.0f, // Normal
 		0, 1* uv,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 18
 		+0.0f, +0.0f, +1.0f, // Normal
 		0, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 19
 		+0.0f, +0.0f, +1.0f, // Normal
 		1* uv, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 
 		+1.0f, -1.0f, -1.0f, // 20
 		+0.0f, -1.0f, +0.0f, // Normal
 		1* uv, 0,				 //uv
-			0, 0, 0,				 //tangent
-			0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, -1.0f, // 21
 		+0.0f, -1.0f, +0.0f, // Normal
 		0, 0,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		-1.0f, -1.0f, +1.0f, // 22
 		+0.0f, -1.0f, +0.0f, // Normal
 		0, 1* uv,				 //uv
-		0, 0, 0,				 //tangent
-		0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 		+1.0f, -1.0f, +1.0f, // 23
 		+0.0f, -1.0f, +0.0f, // Normal
 		1* uv, 1* uv,				 //uv
-		 0, 0, 0,				 //tangent
-		 0, 0, 0,				 //btangent
+		//0, 0, 0,				 //tangent
+		//0, 0, 0,				 //btangent
 
 	};
 	
@@ -370,25 +343,56 @@ int main()
 	};
 
 	
+
 	gl3d::GraphicModel lightCube;
-	lightCube.loadFromData(sizeof(cubePositions), cubePositions,
+	lightCube.loadFromComputedData(sizeof(cubePositions),
+ cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
 	lightCube.scale = glm::vec3(0.1);
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
-	gl3d::GraphicModel cube;
-	cube.loadFromData(sizeof(cubePositionsNormals), cubePositionsNormals,
-		sizeof(cubeIndices), cubeIndices);
+	//gl3d::GraphicModel cube;
+	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
+	//	sizeof(cubeIndices), cubeIndices);
+	//cube.loadFromFile("resources/obj/sphere.obj");
+	//cube.loadFromFile("resources/other/barrel.obj");
 
+
+	gl3d::LoadedModelData barelModel("resources/other/barrel.obj");
+	gl3d::LoadedModelData rockModel("resources/other/boulder.obj");
+	//cube.loadFromModelMeshIndex(barelModel, 0);
+	//cube.scale = glm::vec3(0.1);
+
+	std::vector< gl3d::GraphicModel > models;
+	{
+		gl3d::GraphicModel model;
+		model.loadFromModelMeshIndex(barelModel, 0);
+		model.scale = glm::vec3(0.1);
+		models.push_back(model);
+	}
+
+	static const char *items[] = {
+				"Barrel",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"", };
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
+
 
 	int timeBeg = clock();
 	 
 	while (!glfwWindowShouldClose(wind))
 	{
 		glfwGetWindowSize(wind, &w, &h);
+		w = std::max(w, 1);
+		h = std::max(h, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		int timeEnd = clock();
@@ -420,7 +424,7 @@ int main()
 			ImGui::Begin("Menu");
 			
 			ImGui::Checkbox("Light Editor##check", &lightEditor);
-			ImGui::Checkbox("Cube Editor##check", &cubeEditor);
+			ImGui::Checkbox("Object Editor##check", &cubeEditor);
 		
 			ImGui::End();
 		}
@@ -446,24 +450,53 @@ int main()
 
 		if (cubeEditor)
 		{
-			ImGui::Begin("Cube Editor", &cubeEditor, flags);
+		
+
+
+			ImGui::Begin("Object Editor", &cubeEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
+
+
+			
+
+			static int item_current = 0;
+			ImGui::ListBox("listbox\n(single select)", &item_current, items, models.size(), 4);
+
+			if (ImGui::Button("Add barrel") && models.size() < 9)
+			{
+				items[models.size()] = "Barrel";
+				gl3d::GraphicModel model;
+				model.loadFromModelMeshIndex(barelModel, 0);
+				model.scale = glm::vec3(0.1);
+				models.push_back(model);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Add rock") && models.size() < 9)
+			{
+				items[models.size()] = "Rock";
+				gl3d::GraphicModel model;
+				model.loadFromModelMeshIndex(rockModel, 0);
+				model.scale = glm::vec3(0.1);
+				models.push_back(model);
+			}
+
+			ImGui::NewLine();
 
 			static glm::vec3 color;
 			ImGui::ColorEdit3("Object Color", (float *)&color);
 			ImGui::NewLine();
 
-			ImGui::Text("Cube");
-			ImGui::SliderFloat3("position", &cube.position[0], -10, 10);
-			ImGui::SliderFloat3("rotation", &cube.rotation[0], 0, glm::radians(360.f));
-			ImGui::SliderFloat3("scale", &cube.scale[0], 0.1, 5);
+			ImGui::Text("Object transform");
+			ImGui::SliderFloat3("position", &models[item_current].position[0], -10, 10);
+			ImGui::SliderFloat3("rotation", &models[item_current].rotation[0], 0, glm::radians(360.f));
+			ImGui::SliderFloat3("scale",	&models[item_current].scale[0], 0.1, 5);
 			ImGui::SameLine();
 			float s = 0;
 			ImGui::InputFloat("sameScale", &s);
 
 			if (s > 0)
 			{
-				cube.scale = glm::vec3(s);
+				models[item_current].scale = glm::vec3(s);
 			}
 
 			ImGui::End();
@@ -535,6 +568,7 @@ int main()
 
 	#pragma endregion
 
+		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
 
 		auto projMat = camera.getProjectionMatrix();
@@ -546,25 +580,32 @@ int main()
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
 		lightCube.draw();
 
+		for (int i = 0; i < models.size(); i++)
+		{
+			if (items[i] == "Barrel")
+			{
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture,
+					skyBox.texture);
 
-		transformMat = cube.getTransformMatrix();
+			}else if(items[i] == "Rock")
+			{
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
+					skyBox.texture);
+			}
 
-		viewProjMat = projMat * viewMat * transformMat;
-		normalShader.bind();
-		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
-		glUniform3fv(normalShaderLightposLocation, 1, &lightCube.position[0]);
-		glUniform3fv(eyePositionLocation, 1, &camera.position[0]);
-		glUniform1i(textureSamplerLocation, 0);
-		glUniform1i(normalMapSamplerLocation, 1);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture.id);
+		}
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
+		{
 
-		cube.draw();
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			viewMat = glm::mat4(glm::mat3(viewMat));
+
+			auto viewProjMat = projMat * viewMat;
+
+			skyBox.draw(viewProjMat);
+
+		}
 
 
 	#pragma region render and events
