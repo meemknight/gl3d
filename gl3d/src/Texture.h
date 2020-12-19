@@ -17,4 +17,8 @@ namespace gl3d
 
 	};
 
+
+	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel);
+
+
 };

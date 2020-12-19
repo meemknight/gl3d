@@ -107,7 +107,7 @@ int main()
 
 		skyBox.createGpuData();
 		skyBox.loadTexture(names);
-		//skyBox.loadTexture("resources/skyBoxes/ocean.png");
+		//skyBox.loadTexture("resources/skyBoxes/lava.png");
 	
 	}
 	

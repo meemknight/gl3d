@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-18
+//built on 2020-12-19
 ////////////////////////////////////////////////
 
 
@@ -56,6 +56,10 @@ namespace gl3d
 
 
 	};
+
+
+	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel);
+
 
 };
 #pragma endregion

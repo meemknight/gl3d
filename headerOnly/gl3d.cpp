@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-18
+//built on 2020-12-19
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -14,7 +14,10 @@
 #include <Windows.h>
 #include <signal.h>
 
-void gl3d::assertFunc(const char *expression,
+namespace gl3d 
+{
+
+void assertFunc(const char *expression,
 	const char *file_name,
 	unsigned const line_number,
 	const char *comment)
@@ -72,6 +75,9 @@ void gl3d::assertFunc(const char *expression,
 
 }
 
+
+};
+
 #pragma endregion
 
 
@@ -82,6 +88,7 @@ void gl3d::assertFunc(const char *expression,
 
 #include <stb_image.h>
 #include <iostream>
+#include <glm\vec3.hpp>
 
 namespace gl3d
 {
@@ -124,6 +131,134 @@ namespace gl3d
 
 
 	}
+
+	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel)
+	{
+		unsigned char *newImage = new unsigned char[w * h * 3];
+
+
+		//todo refactor refactor refactor
+		//todo actually compute this on the gpu
+
+		auto horiz = [&](int kernel)
+		{
+		//horizontal blur
+			for (int y = 0; y < h; y++)
+			{
+				for (int x = 0; x < w; x++)
+				{
+					glm::tvec3<int> colors = {};
+
+					int beg = std::max(0, x - kernel);
+					int end = std::min(x + kernel + 1, w);
+
+					for (int i = beg; i < end; i++)
+					{
+						colors.r += data[(i + y * w) * 3 + 0];
+						colors.g += data[(i + y * w) * 3 + 1];
+						colors.b += data[(i + y * w) * 3 + 2];
+					}
+
+					if (x - kernel < 0)
+						for (int i = kernel - x - 1; i >= 0; i--)
+						{
+							colors.r += data[(i + y * w) * 3 + 0];
+							colors.g += data[(i + y * w) * 3 + 1];
+							colors.b += data[(i + y * w) * 3 + 2];
+						}
+
+					if (x + kernel >= w)
+						for (int i = w - 1; i >= w - (x + kernel - w + 1); i--)
+						{
+							colors.r += data[(i + y * w) * 3 + 0];
+							colors.g += data[(i + y * w) * 3 + 1];
+							colors.b += data[(i + y * w) * 3 + 2];
+						}
+
+					colors /= kernel * 2 + 1;
+
+
+					//colors /= end - beg;
+
+					newImage[(x + y * w) * 3 + 0] = colors.r;
+					newImage[(x + y * w) * 3 + 1] = colors.g;
+					newImage[(x + y * w) * 3 + 2] = colors.b;
+
+				}
+
+			}
+		};
+
+		auto vert = [&](int kernel)
+		{
+			//vertical blur
+			for (int x = 0; x < w; x++)
+			{
+				for (int y = 0; y < h; y++)
+				{
+					glm::tvec3<int> colors = {};
+
+					int beg = std::max(0, y - kernel);
+					int end = std::min(y + kernel + 1, h);
+
+					for (int j = beg; j < end; j++)
+					{
+						colors.r += data[(x + j * w) * 3 + 0];
+						colors.g += data[(x + j * w) * 3 + 1];
+						colors.b += data[(x + j * w) * 3 + 2];
+					}
+
+					if (y - kernel < 0)
+						for (int j = kernel - y - 1; j >= 0; j--)
+						{
+							colors.r += data[(x + j * w) * 3 + 0];
+							colors.g += data[(x + j * w) * 3 + 1];
+							colors.b += data[(x + j * w) * 3 + 2];
+						}
+
+					if (y + kernel >= h)
+						for (int j = h - 1; j >= h - (y + kernel - h + 1); j--)
+						{
+							colors.r += data[(x + j * w) * 3 + 0];
+							colors.g += data[(x + j * w) * 3 + 1];
+							colors.b += data[(x + j * w) * 3 + 2];
+						}
+
+					colors /= kernel * 2 + 1;
+
+					//colors /= end - beg;
+
+					newImage[(x + y * w) * 3 + 0] = colors.r;
+					newImage[(x + y * w) * 3 + 1] = colors.g;
+					newImage[(x + y * w) * 3 + 2] = colors.b;
+
+				}
+
+			}
+
+		};
+
+		int iterations = 2;
+
+		for(int i=0;i<iterations;i++)
+		{
+			horiz(kernel);
+			vert(kernel);
+		}
+
+		
+		
+		
+
+		for (int i = 0; i < w * h * 3; i++)
+		{
+			data[i] = newImage[i];
+		}
+
+		delete newImage;
+	}
+
+	
 
 };
 #pragma endregion
@@ -397,6 +532,7 @@ namespace gl3d
 
 #include <OBJ_Loader.h>
 #include <stb_image.h>
+
 
 namespace gl3d 
 {
@@ -694,18 +830,21 @@ namespace gl3d
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
-		int width, height, nrChannels;
+		int w, h, nrChannels;
 		unsigned char *data;
 		for (unsigned int i = 0; i <6; i++)
 		{
 			stbi_set_flip_vertically_on_load(false);
-			data = stbi_load(names[i], &width, &height, &nrChannels, 3);
+			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
 
 			if (data)
 			{
+
+				//gausianBlurRGB(data, w, h, 10);
+
 				glTexImage2D(
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-							0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+							0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
 				);
 
 				stbi_image_free(data);
