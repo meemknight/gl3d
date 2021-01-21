@@ -1,4 +1,5 @@
 #pragma once
+#include <glm\vec4.hpp>
 
 namespace gl3d
 {
@@ -8,6 +9,22 @@ namespace gl3d
 	unsigned const line_number,
 	const char *comment = "---");
 
+	//todo move
+	struct Material
+	{
+		glm::vec4 ka; //= 0.5; //w component not used
+		glm::vec4 kd; //= 0.45;//w component not used
+		glm::vec4 ks; //= 1;	 ;//w component is the specular exponent
+
+		Material setDefaultMaterial()
+		{
+			ka = glm::vec4(0.2);
+			kd = glm::vec4(0.45);
+			ks = glm::vec4(1);
+			ks.w = 32;
+			return *this;
+		}
+	};
 
 };
 
@@ -18,5 +35,5 @@ namespace gl3d
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0, comment)	\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)	\
 		)

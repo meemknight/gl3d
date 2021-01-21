@@ -1,12 +1,25 @@
 #version 330
+#pragma debug(on)
 
-out vec4 fragColor;
+out vec4 a_outColor;
 
 in vec3 v_texCoords;
 
 uniform samplerCube u_skybox;
 
+uniform float u_gama;
+
+vec3 applyGama(in vec3 v)
+{
+	return v.rgb = pow(v.rgb, vec3(1.0/u_gama));
+}
+
+
 void main()
 {    
-    fragColor = texture(u_skybox, v_texCoords);
+
+	a_outColor = textureCube(u_skybox, v_texCoords);
+
+
+	a_outColor.rgb = applyGama(a_outColor.rgb);
 }

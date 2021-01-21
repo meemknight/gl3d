@@ -135,6 +135,15 @@ namespace gl3d
 		return uniform;
 	};
 
+	GLuint getUniformBlock(GLuint id, const char *name)
+	{
+		GLuint uniform = glGetUniformBlockIndex(id, name);
+		if (uniform == GL_INVALID_INDEX)
+		{
+			std::cout << "uniform block error " << name << "\n";
+		}
+		return uniform;
+	};
 
 	void LightShader::create()
 	{
@@ -148,12 +157,28 @@ namespace gl3d
 		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
+		gamaLocation = getUniform(shader.id, "u_gama");
+		
+		
+		materialBlockLocation = getUniformBlock(shader.id, "u_material");
+
+		int size = 0;
+		glGetActiveUniformBlockiv(shader.id, materialBlockLocation,
+			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+
+
+		glGenBuffers(1, &materialBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
+	
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_STATIC_DRAW);
+
+		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
+
 
 	}
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition
-		)
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
 	{
 		shader.bind();
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
@@ -163,6 +188,12 @@ namespace gl3d
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
+		glUniform1f(gamaLocation, gama);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
+
+
 	}
 
 };

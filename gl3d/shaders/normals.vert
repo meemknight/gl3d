@@ -1,4 +1,5 @@
 #version 330
+#pragma debug(on)
 
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
@@ -18,6 +19,7 @@ void main()
 
 	gl_Position = u_transform * vec4(a_positions, 1.f);
 
+
 	v_position = (u_modelTransform * vec4(a_positions,1)).xyz;
 	//v_normals = (u_modelTransform * vec4(a_normals,0)).xyz; //uniform scale
 	v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
@@ -25,5 +27,5 @@ void main()
 	v_normals = normalize(v_normals);
 
 	v_texCoord = a_texCoord;
-
+	
 }

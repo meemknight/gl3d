@@ -158,11 +158,7 @@ namespace gl3d
 			horiz(kernel);
 			vert(kernel);
 		}
-
 		
-		
-		
-
 		for (int i = 0; i < w * h * 3; i++)
 		{
 			data[i] = newImage[i];

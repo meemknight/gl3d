@@ -1,6 +1,7 @@
 #pragma once
 #include "GL/glew.h"
 #include <glm\mat4x4.hpp>
+#include <Core.h>
 
 namespace gl3d
 {
@@ -27,9 +28,9 @@ namespace gl3d
 	{
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition);
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
+		, const Material &material);
 
-		Shader shader;
 
 		GLint normalShaderLocation = -1;
 		GLint normalShaderNormalTransformLocation = -1;
@@ -38,6 +39,13 @@ namespace gl3d
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
+		GLint gamaLocation = -1;
+
+		GLuint materialBlockLocation = -1;
+		GLuint materialBlockBuffer = 0;
+
+		Shader shader;
+
 
 		//todo clear
 	};

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-19
+//built on 2021-01-21
 ////////////////////////////////////////////////
 
 
@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////
 #pragma region Core
 #pragma once
+#include <glm\vec4.hpp>
 
 namespace gl3d
 {
@@ -18,6 +19,22 @@ namespace gl3d
 	unsigned const line_number,
 	const char *comment = "---");
 
+	//todo move
+	struct Material
+	{
+		glm::vec4 ka; //= 0.5; //w component not used
+		glm::vec4 kd; //= 0.45;//w component not used
+		glm::vec4 ks; //= 1;	 ;//w component is the specular exponent
+
+		Material setDefaultMaterial()
+		{
+			ka = glm::vec4(0.2);
+			kd = glm::vec4(0.45);
+			ks = glm::vec4(1);
+			ks.w = 32;
+			return *this;
+		}
+	};
 
 };
 
@@ -28,7 +45,7 @@ namespace gl3d
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0, comment)	\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)	\
 		)
 
 #pragma endregion
@@ -72,6 +89,7 @@ namespace gl3d
 #pragma once
 #include "GL/glew.h"
 #include <glm\mat4x4.hpp>
+#include <Core.h>
 
 namespace gl3d
 {
@@ -98,9 +116,9 @@ namespace gl3d
 	{
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition);
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
+		, const Material &material);
 
-		Shader shader;
 
 		GLint normalShaderLocation = -1;
 		GLint normalShaderNormalTransformLocation = -1;
@@ -109,6 +127,13 @@ namespace gl3d
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
+		GLint gamaLocation = -1;
+
+		GLuint materialBlockLocation = -1;
+		GLuint materialBlockBuffer = 0;
+
+		Shader shader;
+
 
 		//todo clear
 	};
@@ -191,13 +216,13 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file) { load(file); }
+		LoadedModelData(const char *file, float scale = 1.f) { load(file, scale); }
 
-		void load(const char *file);
+		void load(const char *file, float scale = 1.f);
 
 		objl::Loader loader;
 	};
-
+	
 
 	//todo this will dissapear and become an struct of arrays or sthing
 	struct GraphicModel
@@ -219,6 +244,8 @@ namespace gl3d
 		size_t indexesCount = 0, unsigned int *indexes = nullptr);
 
 		void loadFromModelMeshIndex(const LoadedModelData &model, int index);
+
+		void loadFromModelMesh(const LoadedModelData &model);
 
 		//deprecated
 		void loadFromFile(const char *fileName);
@@ -242,9 +269,9 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name);
+		void loadTexture(const char *name, int format = 0); //todo add enum
 		void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat);
+		void draw(const glm::mat4 &viewProjMat, float gama);
 
 		void bindCubeMap();
 
@@ -253,6 +280,7 @@ namespace gl3d
 
 		GLuint samplerUniformLocation;
 		GLuint modelViewUniformLocation;
+		GLuint gamaUniformLocation;
 
 	};
 
@@ -268,7 +296,7 @@ namespace gl3d
 	*/
 
 
-};
+};;;
 #pragma endregion
 
 
@@ -287,7 +315,10 @@ namespace gl3d
 namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture, GLuint skyBoxTexture);
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
+		const Material &material);
+
+	
 
 };
 #pragma endregion

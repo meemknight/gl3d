@@ -1,4 +1,5 @@
 #version 330
+#pragma debug(on)
 
 in layout(location = 0) vec3 positions;
 in layout(location = 1) vec3 colors;

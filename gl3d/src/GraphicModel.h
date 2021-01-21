@@ -15,13 +15,13 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file) { load(file); }
+		LoadedModelData(const char *file, float scale = 1.f) { load(file, scale); }
 
-		void load(const char *file);
+		void load(const char *file, float scale = 1.f);
 
 		objl::Loader loader;
 	};
-
+	
 
 	//todo this will dissapear and become an struct of arrays or sthing
 	struct GraphicModel
@@ -43,6 +43,8 @@ namespace gl3d
 		size_t indexesCount = 0, unsigned int *indexes = nullptr);
 
 		void loadFromModelMeshIndex(const LoadedModelData &model, int index);
+
+		void loadFromModelMesh(const LoadedModelData &model);
 
 		//deprecated
 		void loadFromFile(const char *fileName);
@@ -66,9 +68,9 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name);
+		void loadTexture(const char *name, int format = 0); //todo add enum
 		void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat);
+		void draw(const glm::mat4 &viewProjMat, float gama);
 
 		void bindCubeMap();
 
@@ -77,6 +79,7 @@ namespace gl3d
 
 		GLuint samplerUniformLocation;
 		GLuint modelViewUniformLocation;
+		GLuint gamaUniformLocation;
 
 	};
 
@@ -92,4 +95,4 @@ namespace gl3d
 	*/
 
 
-};
+};;;

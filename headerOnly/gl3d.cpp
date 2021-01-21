@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2020-12-19
+//built on 2021-01-21
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -245,11 +245,7 @@ namespace gl3d
 			horiz(kernel);
 			vert(kernel);
 		}
-
 		
-		
-		
-
 		for (int i = 0; i < w * h * 3; i++)
 		{
 			data[i] = newImage[i];
@@ -405,6 +401,15 @@ namespace gl3d
 		return uniform;
 	};
 
+	GLuint getUniformBlock(GLuint id, const char *name)
+	{
+		GLuint uniform = glGetUniformBlockIndex(id, name);
+		if (uniform == GL_INVALID_INDEX)
+		{
+			std::cout << "uniform block error " << name << "\n";
+		}
+		return uniform;
+	};
 
 	void LightShader::create()
 	{
@@ -418,12 +423,28 @@ namespace gl3d
 		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
+		gamaLocation = getUniform(shader.id, "u_gama");
+		
+		
+		materialBlockLocation = getUniformBlock(shader.id, "u_material");
+
+		int size = 0;
+		glGetActiveUniformBlockiv(shader.id, materialBlockLocation,
+			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+
+
+		glGenBuffers(1, &materialBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
+	
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_STATIC_DRAW);
+
+		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
+
 
 	}
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition
-		)
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
 	{
 		shader.bind();
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
@@ -433,6 +454,12 @@ namespace gl3d
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
+		glUniform1f(gamaLocation, gama);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
+
+
 	}
 
 };
@@ -541,8 +568,8 @@ namespace gl3d
 		const unsigned int * indexes, bool noTexture)
 	{
 
-		gl3dAssertComment(vertexSize % 3 == 0, "Index count must be multiple of 3");
-		if (vertexSize % 3 != 0)return;
+		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
+		if (indexSize % 3 != 0)return;
 
 
 		glGenVertexArrays(1, &vertexArray);
@@ -635,6 +662,15 @@ namespace gl3d
 			 (float *)&mesh.Vertices[0],
 			mesh.Indices.size() * 4, &mesh.Indices[0]);
 
+	}
+
+	void GraphicModel::loadFromModelMesh(const LoadedModelData &model)
+	{
+		auto &mesh = model.loader.LoadedVertices;
+		loadFromComputedData(mesh.size() * 8 * 4,
+			 (float *)&mesh[0],
+			model.loader.LoadedIndices.size() * 4,
+			&model.loader.LoadedIndices[0]);
 	}
 
 	//deprecated
@@ -753,9 +789,27 @@ namespace gl3d
 
 
 
-	void LoadedModelData::load(const char *file)
+	void LoadedModelData::load(const char *file, float scale)
 	{
 		loader.LoadFile(file);
+		
+		for (auto &i : loader.LoadedMeshes)
+		{
+			for(auto &j : i.Vertices)
+			{
+				j.Position.X *= scale;
+				j.Position.Y *= scale;
+				j.Position.Z *= scale;
+			}
+		}
+
+		for (auto &j : loader.LoadedVertices)
+		{
+			j.Position.X *= scale;
+			j.Position.Y *= scale;
+			j.Position.Z *= scale;
+		}
+
 	}
 
 	float skyboxVertices[] = {
@@ -809,6 +863,7 @@ namespace gl3d
 
 		samplerUniformLocation = getUniform(shader.id, "u_skybox");
 		modelViewUniformLocation = getUniform(shader.id, "u_viewProjection");
+		gamaUniformLocation = getUniform(shader.id, "u_gama");
 
 
 		glGenVertexArrays(1, &vertexArray);
@@ -840,12 +895,18 @@ namespace gl3d
 			if (data)
 			{
 
-				//gausianBlurRGB(data, w, h, 10);
-
 				glTexImage2D(
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
 							0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
 				);
+
+				//gausianBlurRGB(data, w, h, 10);
+
+				//glTexImage2D(
+				//			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				//			1, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				//);
+
 
 				stbi_image_free(data);
 			}
@@ -867,7 +928,9 @@ namespace gl3d
 
 	}
 
-	void SkyBox::loadTexture(const char *name)
+
+
+	void SkyBox::loadTexture(const char *name, int format)
 	{
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
@@ -891,29 +954,56 @@ namespace gl3d
 			return data + 3 * (x + y * width);
 		};
 
-		glm::ivec2 paddings[6] =
+		glm::ivec2 paddings[6];
+		glm::ivec2 immageRatio = {};
+
+		if(format == 0)
 		{
-			{(width / 4) * 2, (height / 3) * 1, },
-			{(width / 4) * 0, (height / 3) * 1, },
-			{(width / 4) * 1, (height / 3) * 0, },
-			{(width / 4) * 1, (height / 3) * 2, },
-			{(width / 4) * 1, (height / 3) * 1, },
-			{(width / 4) * 3, (height / 3) * 1, },
-		};
+			immageRatio = { 4, 3 };
+			glm::ivec2 paddingscopy[6] = 
+			{
+				{ (width / 4) * 2, (height / 3) * 1, },
+				{ (width / 4) * 0, (height / 3) * 1, },
+				{ (width / 4) * 1, (height / 3) * 0, },
+				{ (width / 4) * 1, (height / 3) * 2, },
+				{ (width / 4) * 1, (height / 3) * 1, },
+				{ (width / 4) * 3, (height / 3) * 1, },
+			};
+			
+			memcpy(paddings, paddingscopy, sizeof(paddings));
+
+		}else if (format == 1)
+		{
+			immageRatio = { 3, 4 };
+			glm::ivec2 paddingscopy[6] =
+			{
+				{ (width / 3) * 2, (height / 4) * 1, },
+				{ (width / 3) * 0, (height / 4) * 1, },
+				{ (width / 3) * 1, (height / 4) * 0, },
+				{ (width / 3) * 1, (height / 4) * 2, },
+				{ (width / 3) * 1, (height / 4) * 3, },
+				{ (width / 3) * 1, (height / 4) * 1, },
+			};
+
+			memcpy(paddings, paddingscopy, sizeof(paddings));
+			
+		}
+	
 
 		if (data)
 		{
 			for (unsigned int i = 0; i < 6; i++)
 			{
-				unsigned char *extractedData = new unsigned char[3 * (width / 4) * (height / 3)];
+				unsigned char *extractedData = new unsigned char[3 * 
+					(width / immageRatio.x) * (height / immageRatio.y)];
 
 				int index = 0;
 
 				int paddingX = paddings[i].x;
 				int paddingY = paddings[i].y;
 
-				for (int j = 0; j < height / 3; j++)
-					for (int i = 0; i < width / 4; i++)
+				for (int j = 0; j < height / immageRatio.y; j++)
+					for (int i = 0; i < width / immageRatio.x; i++)
 					{
 						extractedData[index] = *getPixel(i + paddingX, j + paddingY, data);
 						extractedData[index + 1] = *(getPixel(i + paddingX, j + paddingY, data)+1);
@@ -925,8 +1015,9 @@ namespace gl3d
 					}
 
 					glTexImage2D(
-								GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-								0, GL_RGB, width/4, height/3, 0, GL_RGB, GL_UNSIGNED_BYTE, extractedData
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+						0, GL_RGB, width/ immageRatio.x, height/ immageRatio.y, 0,
+						GL_RGB, GL_UNSIGNED_BYTE, extractedData
 					);
 
 
@@ -941,8 +1032,10 @@ namespace gl3d
 			std::cout << "err loading " << name << "\n";
 		}
 
-	
+		//glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -956,7 +1049,7 @@ namespace gl3d
 	{
 	}
 
-	void SkyBox::draw(const glm::mat4 &viewProjMat)
+	void SkyBox::draw(const glm::mat4 &viewProjMat, float gama)
 	{
 		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(vertexArray);
@@ -967,6 +1060,7 @@ namespace gl3d
 
 		glUniformMatrix4fv(modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(samplerUniformLocation, 0);
+		glUniform1f(gamaUniformLocation, gama);
 
 		glDepthFunc(GL_LEQUAL);
 		glDrawArrays(GL_TRIANGLES, 0, 6*6);
@@ -996,7 +1090,8 @@ namespace gl3d
 
 
 	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture, GLuint skyBoxTexture)
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama
+	, const Material &material)
 	{
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
@@ -1004,8 +1099,7 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat * transformMat;
 
-
-		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position);
+		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture.id);

@@ -14,9 +14,13 @@
 #include "src/gl3d.h"
 
 #include <ctime>
+#include <functional>
 
 int w = 840;
 int h = 640;
+
+gl3d::Material material = gl3d::Material().setDefaultMaterial();
+
 
 int main()
 {
@@ -27,6 +31,8 @@ int main()
 	{
 		std::cout << "err initializing glfw";
 	}
+
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	GLFWwindow *wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
 	glfwMakeContextCurrent(wind);
@@ -64,7 +70,6 @@ int main()
 
 #pragma endregion
 
-	//glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 #pragma region shader
@@ -89,8 +94,14 @@ int main()
 	gl3d::Texture texture("resources/other/barrel.png");
 	gl3d::Texture normalTexture("resources/other/barrelNormal.png");
 
+	gl3d::Texture crateTexture("resources/other/crate.png");
+	gl3d::Texture crateNormalTexture("resources/other/crateNormal.png");
+
+
 	gl3d::Texture rockTexture("resources/other/boulder.png");
 	gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
+
+	gl3d::Texture levelTexture("resources/obj/level.png");
 
 
 #pragma endregion
@@ -107,7 +118,8 @@ int main()
 
 		skyBox.createGpuData();
 		skyBox.loadTexture(names);
-		//skyBox.loadTexture("resources/skyBoxes/lava.png");
+		//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
+		//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
 	
 	}
 	
@@ -348,7 +360,7 @@ int main()
 	lightCube.loadFromComputedData(sizeof(cubePositions),
  cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
-	lightCube.scale = glm::vec3(0.1);
+	lightCube.scale = glm::vec3(0.05);
 	lightCube.position = glm::vec3(0, 1.6, 0.5);
 
 	//gl3d::GraphicModel cube;
@@ -358,29 +370,17 @@ int main()
 	//cube.loadFromFile("resources/other/barrel.obj");
 
 
-	gl3d::LoadedModelData barelModel("resources/other/barrel.obj");
-	gl3d::LoadedModelData rockModel("resources/other/boulder.obj");
+	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
+	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
+	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
+	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
 	std::vector< gl3d::GraphicModel > models;
-	{
-		gl3d::GraphicModel model;
-		model.loadFromModelMeshIndex(barelModel, 0);
-		model.scale = glm::vec3(0.1);
-		models.push_back(model);
-	}
+	
 
-	static const char *items[] = {
-				"Barrel",
-				"",
-				"",
-				"",
-				"",
-				"",
-				"",
-				"",
-				"", };
+	static std::vector < const char* > items = {};
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
@@ -400,6 +400,8 @@ int main()
 		timeBeg = clock();
 
 	#pragma region imgui
+
+		static float gamaCorection = 1;
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -422,13 +424,51 @@ int main()
 	
 		{
 			ImGui::Begin("Menu");
-			
+			ImGui::SetWindowFontScale(1.2f);
+
 			ImGui::Checkbox("Light Editor##check", &lightEditor);
 			ImGui::Checkbox("Object Editor##check", &cubeEditor);
-		
+			ImGui::NewLine();
+			ImGui::Text("Settings");
+			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
+			static bool antiAliasing = 0;
+			ImGui::Checkbox("Anti aliasing", &antiAliasing);
+			
+			if (antiAliasing)
+			{
+				glEnable(GL_MULTISAMPLE);
+			}
+			else
+			{
+				glDisable(GL_MULTISAMPLE);
+			}
+
+			static bool sampleShading = 0;
+			ImGui::Checkbox("Sample Shading", &sampleShading);
+
+			if (sampleShading)
+			{
+				glEnable(GL_SAMPLE_SHADING);
+			}
+			else
+			{
+				glDisable(GL_SAMPLE_SHADING);
+			}
+
+			static bool cullFace = 0;
+			ImGui::Checkbox("CullFace", &cullFace);
+
+			if (cullFace)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
+
 			ImGui::End();
 		}
-
 
 
 		ImGuiWindowFlags flags = {};
@@ -457,47 +497,68 @@ int main()
 			ImGui::SetWindowFontScale(1.2f);
 
 
-			
-
 			static int item_current = 0;
-			ImGui::ListBox("listbox\n(single select)", &item_current, items, models.size(), 4);
+			ImGui::ListBox("listbox\n(single select)", &item_current, items.data(), models.size(), 4);
 
-			if (ImGui::Button("Add barrel") && models.size() < 9)
+			if (ImGui::Button("Add barrel"))
 			{
-				items[models.size()] = "Barrel";
+				items.push_back("Barrel");
 				gl3d::GraphicModel model;
 				model.loadFromModelMeshIndex(barelModel, 0);
-				model.scale = glm::vec3(0.1);
 				models.push_back(model);
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Add rock") && models.size() < 9)
+			if (ImGui::Button("Add rock"))
 			{
-				items[models.size()] = "Rock";
+				items.push_back("Rock");
 				gl3d::GraphicModel model;
 				model.loadFromModelMeshIndex(rockModel, 0);
-				model.scale = glm::vec3(0.1);
 				models.push_back(model);
 			}
-
-			ImGui::NewLine();
-
-			static glm::vec3 color;
-			ImGui::ColorEdit3("Object Color", (float *)&color);
-			ImGui::NewLine();
-
-			ImGui::Text("Object transform");
-			ImGui::SliderFloat3("position", &models[item_current].position[0], -10, 10);
-			ImGui::SliderFloat3("rotation", &models[item_current].rotation[0], 0, glm::radians(360.f));
-			ImGui::SliderFloat3("scale",	&models[item_current].scale[0], 0.1, 5);
 			ImGui::SameLine();
-			float s = 0;
-			ImGui::InputFloat("sameScale", &s);
-
-			if (s > 0)
+			if (ImGui::Button("Add crate"))
 			{
-				models[item_current].scale = glm::vec3(s);
+				items.push_back("Crate");
+				gl3d::GraphicModel model;
+				model.loadFromModelMesh(levelModel);
+				models.push_back(model);
 			}
+			if (ImGui::Button("Remove object") && item_current < items.size() )
+			{
+				items.erase(items.begin() + item_current);
+				models[item_current].clear();
+				models.erase(models.begin() + item_current);
+				if(item_current) item_current--;
+			}
+
+			ImGui::NewLine();
+
+			if(!models.empty() && item_current < items.size())
+			{
+				static glm::vec3 color;
+				ImGui::ColorEdit3("Object Color", (float *)&color);
+				ImGui::NewLine();
+
+				ImGui::Text("Object transform");
+				ImGui::SliderFloat3("position", &models[item_current].position[0], -10, 10);
+				ImGui::SliderFloat3("rotation", &models[item_current].rotation[0], 0, glm::radians(360.f));
+				ImGui::SliderFloat3("scale", &models[item_current].scale[0], 0.01, 5);
+				float s = 0;
+				ImGui::InputFloat("sameScale", &s);
+
+				if (s > 0)
+				{
+					models[item_current].scale = glm::vec3(s);
+				}
+
+				ImGui::Text("Object material");
+				ImGui::ColorEdit3("difuse", &material.kd[0]);
+				ImGui::ColorEdit3("specular", &material.ks[0]);
+				ImGui::ColorEdit3("ambience", &material.ka[0]);
+				ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
+			}
+
+			
 
 			ImGui::End();
 		}
@@ -585,16 +646,23 @@ int main()
 			if (items[i] == "Barrel")
 			{
 				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture,
-					skyBox.texture);
+					skyBox.texture, gamaCorection, material);
 
 			}else if(items[i] == "Rock")
 			{
 				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
-					skyBox.texture);
+					skyBox.texture, gamaCorection, material);
+			}
+			else if (items[i] == "Crate")
+			{
+				//todo fix normal here
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, crateTexture, crateNormalTexture,
+					skyBox.texture, gamaCorection, material);
 			}
 
 		}
 
+		
 		{
 
 			auto projMat = camera.getProjectionMatrix();
@@ -603,7 +671,7 @@ int main()
 
 			auto viewProjMat = projMat * viewMat;
 
-			skyBox.draw(viewProjMat);
+			skyBox.draw(viewProjMat, gamaCorection);
 
 		}
 
@@ -636,9 +704,8 @@ int main()
 	#pragma endregion
 
 	}
+	
 
-
-
-
+	
 	return 0;
 }

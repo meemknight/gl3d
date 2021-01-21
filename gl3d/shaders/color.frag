@@ -1,4 +1,5 @@
 #version 330
+#pragma debug(on)
 
 out layout(location = 0) vec4 outColor;
 

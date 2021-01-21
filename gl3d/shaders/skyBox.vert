@@ -1,4 +1,5 @@
 #version 330
+#pragma debug(on)
 
 layout (location = 0) in vec3 aPos;
 
