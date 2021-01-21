@@ -16,6 +16,7 @@ uniform sampler2D u_normalSampler;
 uniform samplerCube u_skybox;
 uniform float u_gama;
 
+
 layout(std140) uniform u_material
 {
 	vec4 ka; //= 0.5; //w component not used
@@ -52,9 +53,6 @@ void main()
 {
 	vec3 noMappedNorals = normalize(v_normals);
 
-	//float ka = 0.5;
-	//float kd = 0.45;
-	//float ks = 1;
 
 	//get normal map data
 	vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;

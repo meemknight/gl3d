@@ -42,7 +42,12 @@ namespace gl3d
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8);
 
+	}
 
+	void Texture::clear()
+	{
+		glDeleteTextures(1, &id);
+		id = 0;
 	}
 
 	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel)

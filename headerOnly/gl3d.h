@@ -71,7 +71,7 @@ namespace gl3d
 		void loadTextureFromFile(const char *file);
 		void loadTextureFromMemory(void *data, int w, int h);
 
-
+		void clear();
 	};
 
 
@@ -209,6 +209,7 @@ namespace gl3d
 #include <OBJ_Loader.h>
 
 #include "Shader.h"
+#include "Texture.h"
 
 namespace gl3d
 {
@@ -221,6 +222,7 @@ namespace gl3d
 		void load(const char *file, float scale = 1.f);
 
 		objl::Loader loader;
+		std::string path;
 	};
 	
 
@@ -260,6 +262,12 @@ namespace gl3d
 		glm::vec3 scale = {1,1,1};
 		
 		glm::mat4 getTransformMatrix();
+
+		//todo probably teporarily add this things
+		Texture albedoTexture;
+		Texture normalMapTexture;
+		Material material;
+
 	};
 
 	struct SkyBox

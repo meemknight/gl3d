@@ -129,7 +129,12 @@ namespace gl3d
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8);
 
+	}
 
+	void Texture::clear()
+	{
+		glDeleteTextures(1, &id);
+		id = 0;
 	}
 
 	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel)
@@ -657,10 +662,30 @@ namespace gl3d
 
 	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
 	{
-		auto &mesh = model.loader.LoadedMeshes[0];
+		auto &mesh = model.loader.LoadedMeshes[index];
 		loadFromComputedData(mesh.Vertices.size() * 8 * 4,
 			 (float *)&mesh.Vertices[0],
 			mesh.Indices.size() * 4, &mesh.Indices[0]);
+
+
+		if(model.loader.LoadedMaterials.size() <= index)
+		{
+			material.setDefaultMaterial();
+			
+		}else
+		{
+			auto &mat = model.loader.LoadedMaterials[index];
+
+			material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
+			material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
+			material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+
+			albedoTexture.clear();
+			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+
+		}
+
+	
 
 	}
 
@@ -746,6 +771,9 @@ namespace gl3d
 
 		glDeleteVertexArrays(1, &vertexArray);
 
+		albedoTexture.clear();
+		normalMapTexture.clear();
+
 		vertexBuffer = 0;
 		indexBuffer = 0;
 		primitiveCount = 0;
@@ -788,11 +816,20 @@ namespace gl3d
 	}
 
 
-
 	void LoadedModelData::load(const char *file, float scale)
 	{
 		loader.LoadFile(file);
-		
+
+		//parse path
+		path = file;
+		while (!path.empty() &&
+			*(path.end() - 1) != '\\' &&
+			*(path.end() - 1) != '/'
+			)
+		{
+			path.pop_back();
+		}
+
 		for (auto &i : loader.LoadedMeshes)
 		{
 			for(auto &j : i.Vertices)

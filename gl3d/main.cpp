@@ -372,8 +372,8 @@ int main()
 
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
-	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
-	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
+	gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
+	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -520,7 +520,7 @@ int main()
 			{
 				items.push_back("Crate");
 				gl3d::GraphicModel model;
-				model.loadFromModelMesh(levelModel);
+				model.loadFromModelMeshIndex(levelModel, 0);
 				models.push_back(model);
 			}
 			if (ImGui::Button("Remove object") && item_current < items.size() )
@@ -656,7 +656,7 @@ int main()
 			else if (items[i] == "Crate")
 			{
 				//todo fix normal here
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, crateTexture, crateNormalTexture,
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, models[i].albedoTexture, crateNormalTexture,
 					skyBox.texture, gamaCorection, material);
 			}
 
