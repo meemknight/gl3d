@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-21
+//built on 2021-01-22
 ////////////////////////////////////////////////
 
 
@@ -230,7 +230,7 @@ namespace gl3d
 	struct GraphicModel
 	{
 
-		//todo probably this will disapear
+		//todo this might disapear
 		GLuint vertexArray = 0;
 
 		GLuint vertexBuffer = 0;
@@ -269,6 +269,37 @@ namespace gl3d
 		Material material;
 
 	};
+
+	
+	//todo this will defenetly dissapear it is just for qucik render
+	struct MultipleGraphicModels
+	{
+		std::vector < GraphicModel >models;
+
+		void loadFromModel(const LoadedModelData &model);
+
+		void clear();
+
+		glm::vec3 position = {};
+		glm::vec3 rotation = {};
+		glm::vec3 scale = { 1,1,1 };
+
+
+		//todo move into a standalone function
+		glm::mat4 getTransformMatrix()
+		{
+			auto s = glm::scale(scale);
+			auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+				glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+				glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+			auto t = glm::translate(position);
+
+			return t * r * s;
+
+		}
+
+	};
+
 
 	struct SkyBox
 	{
@@ -326,6 +357,8 @@ namespace gl3d
 		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
 		const Material &material);
 
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+		GLuint skyBoxTexture, float gama);
 	
 
 };

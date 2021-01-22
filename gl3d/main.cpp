@@ -377,7 +377,7 @@ int main()
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
-	std::vector< gl3d::GraphicModel > models;
+	std::vector< gl3d::MultipleGraphicModels > models;
 	
 
 	static std::vector < const char* > items = {};
@@ -503,24 +503,24 @@ int main()
 			if (ImGui::Button("Add barrel"))
 			{
 				items.push_back("Barrel");
-				gl3d::GraphicModel model;
-				model.loadFromModelMeshIndex(barelModel, 0);
+				gl3d::MultipleGraphicModels model;
+				model.loadFromModel(barelModel);
 				models.push_back(model);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add rock"))
 			{
 				items.push_back("Rock");
-				gl3d::GraphicModel model;
-				model.loadFromModelMeshIndex(rockModel, 0);
+				gl3d::MultipleGraphicModels model;
+				model.loadFromModel(rockModel);
 				models.push_back(model);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add crate"))
 			{
 				items.push_back("Crate");
-				gl3d::GraphicModel model;
-				model.loadFromModelMeshIndex(levelModel, 0);
+				gl3d::MultipleGraphicModels model;
+				model.loadFromModel(levelModel);
 				models.push_back(model);
 			}
 			if (ImGui::Button("Remove object") && item_current < items.size() )
@@ -643,21 +643,29 @@ int main()
 
 		for (int i = 0; i < models.size(); i++)
 		{
+			models[i].models[0].position = models[i].position;
+			models[i].models[0].scale = models[i].scale;
+			models[i].models[0].rotation = models[i].rotation;
+
 			if (items[i] == "Barrel")
-			{
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, texture, normalTexture,
+			{	
+				models[i].models[0].position = models[i].position;
+				models[i].models[0].scale = models[i].scale;
+				models[i].models[0].rotation = models[i].rotation;
+
+				gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
 					skyBox.texture, gamaCorection, material);
 
 			}else if(items[i] == "Rock")
 			{
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
+				gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
 					skyBox.texture, gamaCorection, material);
 			}
 			else if (items[i] == "Crate")
 			{
 				//todo fix normal here
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader, models[i].albedoTexture, crateNormalTexture,
-					skyBox.texture, gamaCorection, material);
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+					skyBox.texture, gamaCorection);
 			}
 
 		}

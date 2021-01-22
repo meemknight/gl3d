@@ -106,24 +106,14 @@ namespace gl3d
 			mesh.Indices.size() * 4, &mesh.Indices[0]);
 
 
-		if(model.loader.LoadedMaterials.size() <= index)
-		{
-			material.setDefaultMaterial();
-			
-		}else
-		{
-			auto &mat = model.loader.LoadedMaterials[index];
+		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 
-			material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
-			material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
-			material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
+		material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
+		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
 
-			albedoTexture.clear();
-			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
-
-		}
-
-	
+		albedoTexture.clear();
+		albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
 
 	}
 
@@ -548,6 +538,34 @@ namespace gl3d
 	{
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	}
+
+	void MultipleGraphicModels::loadFromModel(const LoadedModelData &model)
+	{
+		clear();
+
+		int s = model.loader.LoadedMeshes.size();
+		models.reserve(s);
+
+		for(int i=0;i<s;i++)
+		{
+			GraphicModel gm;
+			gm.loadFromModelMeshIndex(model, i);
+		
+			models.push_back(gm);
+
+		}
+
+	}
+
+	void MultipleGraphicModels::clear()
+	{
+		for(auto &i : models)
+		{
+			i.clear();
+		}
+
+		models.clear();
 	}
 
 };

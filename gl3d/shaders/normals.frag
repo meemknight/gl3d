@@ -60,7 +60,7 @@ void main()
 	mat3 rotMat = NormalToRotation(noMappedNorals);
 	normal = rotMat * normal;
 	normal = normalize(normal);
-	//normal = noMappedNorals; //remove normal mapping
+	normal = noMappedNorals; //remove normal mapping
 
 	vec3 I = normalize(v_position - u_eyePosition);
 	vec3 R = reflect(I, normal);

@@ -12,6 +12,8 @@ namespace gl3d
 		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
 		const Material &material);
 
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+		GLuint skyBoxTexture, float gama);
 	
 
 };

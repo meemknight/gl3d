@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-21
+//built on 2021-01-22
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -668,24 +668,16 @@ namespace gl3d
 			mesh.Indices.size() * 4, &mesh.Indices[0]);
 
 
-		if(model.loader.LoadedMaterials.size() <= index)
-		{
-			material.setDefaultMaterial();
-			
-		}else
-		{
-			auto &mat = model.loader.LoadedMaterials[index];
 
-			material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
-			material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
-			material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 
-			albedoTexture.clear();
-			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
+		material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
+		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
 
-		}
+		albedoTexture.clear();
+		albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
 
-	
 
 	}
 
@@ -1112,6 +1104,34 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	}
 
+	void MultipleGraphicModels::loadFromModel(const LoadedModelData &model)
+	{
+		clear();
+
+		int s = model.loader.LoadedMeshes.size();
+		models.reserve(s);
+
+		for(int i=0;i<s;i++)
+		{
+			GraphicModel gm;
+			gm.loadFromModelMeshIndex(model, i);
+		
+			models.push_back(gm);
+
+		}
+
+	}
+
+	void MultipleGraphicModels::clear()
+	{
+		for(auto &i : models)
+		{
+			i.clear();
+		}
+
+		models.clear();
+	}
+
 };
 
 #pragma endregion
@@ -1124,12 +1144,9 @@ namespace gl3d
 
 namespace gl3d
 {
-
-
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama
-	, const Material &material)
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const Material &material)
 	{
+
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
 		auto transformMat = model.getTransformMatrix();
@@ -1149,6 +1166,43 @@ namespace gl3d
 
 		model.draw();
 
+
+	}
+
+
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+	GLuint skyBoxTexture, float gama)
+	{
+		if(model.models.empty())
+		{
+			return;
+		}
+
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		auto transformMat = model.getTransformMatrix();
+
+		auto viewProjMat = projMat * viewMat * transformMat;
+
+		for(auto &i : model.models)
+		{
+		
+			lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, i.material);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
+
+			i.draw();
+
+		}
+
+		
 	}
 
 };
