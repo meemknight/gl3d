@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-22
+//built on 2021-01-23
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -120,8 +120,8 @@ namespace gl3d
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -668,7 +668,6 @@ namespace gl3d
 			mesh.Indices.size() * 4, &mesh.Indices[0]);
 
 
-
 		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 
 		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
@@ -676,7 +675,17 @@ namespace gl3d
 		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
 
 		albedoTexture.clear();
-		albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+		normalMapTexture.clear();
+
+		if (!mat.map_Kd.empty())
+		{
+			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+		}
+
+		if (!mat.map_Kn.empty())
+		{
+			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
+		}
 
 
 	}

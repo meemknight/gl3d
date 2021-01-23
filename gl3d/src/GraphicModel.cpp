@@ -113,7 +113,18 @@ namespace gl3d
 		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
 
 		albedoTexture.clear();
-		albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+		normalMapTexture.clear();
+
+		if (!mat.map_Kd.empty())
+		{
+			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+		}
+
+		if (!mat.map_Kn.empty())
+		{
+			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
+		}
+
 
 	}
 

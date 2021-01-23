@@ -91,8 +91,6 @@ int main()
 
 #pragma region texture
 
-	gl3d::Texture texture("resources/other/barrel.png");
-	gl3d::Texture normalTexture("resources/other/barrelNormal.png");
 
 	gl3d::Texture crateTexture("resources/other/crate.png");
 	gl3d::Texture crateNormalTexture("resources/other/crateNormal.png");
@@ -101,7 +99,7 @@ int main()
 	gl3d::Texture rockTexture("resources/other/boulder.png");
 	gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
 
-	gl3d::Texture levelTexture("resources/obj/level.png");
+	//gl3d::Texture levelTexture("resources/obj/level.png");
 
 
 #pragma endregion
@@ -372,8 +370,9 @@ int main()
 
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
-	gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
-	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
+	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
+	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
+	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -483,7 +482,7 @@ int main()
 			ImGui::NewLine();
 		
 			ImGui::Text("Light 1");
-			ImGui::SliderFloat3("position", &lightCube.position[0], -10, 10);
+			ImGui::SliderFloat3("position", &lightCube.position[0], -15, 15);
 
 			ImGui::End();
 		}
@@ -550,6 +549,8 @@ int main()
 				{
 					models[item_current].scale = glm::vec3(s);
 				}
+
+				auto &material = models[item_current].models[0].material;
 
 				ImGui::Text("Object material");
 				ImGui::ColorEdit3("difuse", &material.kd[0]);
@@ -649,17 +650,17 @@ int main()
 
 			if (items[i] == "Barrel")
 			{	
-				models[i].models[0].position = models[i].position;
-				models[i].models[0].scale = models[i].scale;
-				models[i].models[0].rotation = models[i].rotation;
-
-				gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
-					skyBox.texture, gamaCorection, material);
+				//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
+				//	skyBox.texture, gamaCorection, material);
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+				skyBox.texture, gamaCorection);
 
 			}else if(items[i] == "Rock")
 			{
-				gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
-					skyBox.texture, gamaCorection, material);
+				//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
+				//	skyBox.texture, gamaCorection, material);
+				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+				skyBox.texture, gamaCorection);
 			}
 			else if (items[i] == "Crate")
 			{

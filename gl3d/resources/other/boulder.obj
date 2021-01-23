@@ -1,6 +1,9 @@
 # Blender v2.67 (sub 0) OBJ File: ''
 # www.blender.org
+mtllib boulder.mtl
+
 o Stone_F_3_LOD1
+usemtl Material__0
 v -1.916053 -3.630385 1.916053
 v -1.774122 -3.027584 2.466601
 v -2.670772 -3.076572 2.670771

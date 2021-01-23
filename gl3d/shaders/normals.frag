@@ -60,7 +60,7 @@ void main()
 	mat3 rotMat = NormalToRotation(noMappedNorals);
 	normal = rotMat * normal;
 	normal = normalize(normal);
-	normal = noMappedNorals; //remove normal mapping
+	//normal = noMappedNorals; //remove normal mapping
 
 	vec3 I = normalize(v_position - u_eyePosition);
 	vec3 R = reflect(I, normal);
@@ -94,7 +94,7 @@ void main()
 	//specularLight *= ks;
 	//if(difuseTest <= 0.001) specularLight = 0;
 
-	vec3 color = texture2D(u_albedoSampler, v_texCoord).xyz;
+	vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
 	vec3 difuseVec =  vec3(kd) * difuseLight;
 	vec3 ambientVec = vec3(ka);
 	vec3 specularVec = vec3(ks) * specularLight;
@@ -105,8 +105,12 @@ void main()
 	//ambientVec = mix(ambientVec, skyBoxSpecular, 0.5);
 	//ambientVec *= skyBoxSpecular;
 	
-	color *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
-	vec3 caleidoscop = mix(skyBoxSpecular, color, cross(normal, eyeDirection)); 
+	color.rgb *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
+
+	if(color.w <= 0.1)
+	discard;
+
+	vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, eyeDirection)); 
 	float dotNormalEye = dot(normal, eyeDirection);
 	dotNormalEye = clamp(dotNormalEye, 0, 1);
 	
@@ -115,7 +119,7 @@ void main()
 
 	//color = caleidoscop;
 
-	a_outColor = clamp(vec4(color,1), 0, 1);
+	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
 
 
 
