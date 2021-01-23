@@ -3,14 +3,13 @@
 
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
-in layout(location = 2) vec2 a_texCoord;
+//in layout(location = 2) vec2 a_texCoord;
 
 uniform mat4 u_transform;
 uniform mat4 u_modelTransform;
 
 out vec3 v_normals;
 out vec3 v_position;
-out vec2 v_texCoord;
 
 void main()
 {
@@ -24,6 +23,5 @@ void main()
 
 	v_normals = normalize(v_normals);
 
-	v_texCoord = a_texCoord;
 	
 }

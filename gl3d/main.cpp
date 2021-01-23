@@ -384,6 +384,7 @@ int main()
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
 
+	static int item_current = 0;
 
 	int timeBeg = clock();
 	 
@@ -392,8 +393,9 @@ int main()
 		glfwGetWindowSize(wind, &w, &h);
 		w = std::max(w, 1);
 		h = std::max(h, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		glStencilMask(0xFF);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
@@ -490,13 +492,10 @@ int main()
 		if (cubeEditor)
 		{
 		
-
-
 			ImGui::Begin("Object Editor", &cubeEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 
 
-			static int item_current = 0;
 			ImGui::ListBox("listbox\n(single select)", &item_current, items.data(), models.size(), 4);
 
 			if (ImGui::Button("Add barrel"))
@@ -644,31 +643,74 @@ int main()
 
 		for (int i = 0; i < models.size(); i++)
 		{
-			models[i].models[0].position = models[i].position;
-			models[i].models[0].scale = models[i].scale;
-			models[i].models[0].rotation = models[i].rotation;
+			//models[i].models[0].position = models[i].position;
+			//models[i].models[0].scale = models[i].scale;
+			//models[i].models[0].rotation = models[i].rotation;
+			//if (items[i] == "Barrel")
+			//{	
+			//	//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
+			//	//	skyBox.texture, gamaCorection, material);
+			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+			//	skyBox.texture, gamaCorection);
+			//
+			//}else if(items[i] == "Rock")
+			//{
+			//	//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
+			//	//	skyBox.texture, gamaCorection, material);
+			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+			//	skyBox.texture, gamaCorection);
+			//}
+			//else if (items[i] == "Crate")
+			//{
+			//	//todo fix normal here
+			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+			//		skyBox.texture, gamaCorection);
+			//}
 
-			if (items[i] == "Barrel")
+			if(item_current == i)
+			{
+				glEnable(GL_STENCIL_TEST);
+				glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+				glStencilFunc(GL_ALWAYS, 1, 0xFF);
+				glStencilMask(0xFF);
+			}
+
+			gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
+				skyBox.texture, gamaCorection);
+
+			if (item_current == i)
 			{	
-				//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
-				//	skyBox.texture, gamaCorection, material);
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-				skyBox.texture, gamaCorection);
+				glDepthFunc(GL_ALWAYS);
+				glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+				glStencilMask(0x00);
+				
+				auto &m = models[i].models[0];
+				auto projMat = camera.getProjectionMatrix();
+				auto viewMat = camera.getWorldToViewMatrix();
+				auto modelCopy = models[i];
+				
+				modelCopy.scale *= 1.05;
+				
+				auto transformMat = modelCopy.getTransformMatrix();
+				
+				auto viewProjMat = projMat * viewMat * transformMat;
+				
+				shader.bind();
+				glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+				
+				glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+				
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+				glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
+				
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
+				glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
 
-			}else if(items[i] == "Rock")
-			{
-				//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
-				//	skyBox.texture, gamaCorection, material);
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-				skyBox.texture, gamaCorection);
+				//glStencilFunc(GL_ALWAYS, 0, 0xFF);
+				glDisable(GL_STENCIL_TEST);
+				glDepthFunc(GL_LESS);
 			}
-			else if (items[i] == "Crate")
-			{
-				//todo fix normal here
-				gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-					skyBox.texture, gamaCorection);
-			}
-
 		}
 
 		
@@ -692,7 +734,6 @@ int main()
 		int display_w, display_h;
 		glfwGetFramebufferSize(wind, &display_w, &display_h);
 		glViewport(0, 0, display_w, display_h);
-		//glClear(GL_COLOR_BUFFER_BIT);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// Update and Render additional Platform Windows

@@ -1,6 +1,9 @@
 # Blender v2.67 (sub 0) OBJ File: ''
 # www.blender.org
+mtllib crate.mtl
+
 o Wood_container1
+usemtl Material__0
 v -83.000000 -83.000015 95.999985
 v 83.000000 -83.000015 95.999985
 v 83.000000 82.999985 96.000015
