@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-23
+//built on 2021-01-24
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1089,7 +1089,6 @@ namespace gl3d
 
 	void SkyBox::draw(const glm::mat4 &viewProjMat, float gama)
 	{
-		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(vertexArray);
 
 		bindCubeMap();

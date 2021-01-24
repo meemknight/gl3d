@@ -527,7 +527,6 @@ namespace gl3d
 
 	void SkyBox::draw(const glm::mat4 &viewProjMat, float gama)
 	{
-		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(vertexArray);
 
 		bindCubeMap();

@@ -679,39 +679,49 @@ int main()
 				skyBox.texture, gamaCorection);
 
 			if (item_current == i)
-			{	
-				glDepthFunc(GL_ALWAYS);
-				glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-				glStencilMask(0x00);
-				
-				auto &m = models[i].models[0];
-				auto projMat = camera.getProjectionMatrix();
-				auto viewMat = camera.getWorldToViewMatrix();
-				auto modelCopy = models[i];
-				
-				modelCopy.scale *= 1.05;
-				
-				auto transformMat = modelCopy.getTransformMatrix();
-				
-				auto viewProjMat = projMat * viewMat * transformMat;
-				
-				shader.bind();
-				glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-				
-				glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
-				
-				glEnableVertexAttribArray(0);
-				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-				glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
-				
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
-				glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
-
-				//glStencilFunc(GL_ALWAYS, 0, 0xFF);
+			{
 				glDisable(GL_STENCIL_TEST);
-				glDepthFunc(GL_LESS);
 			}
+
+		
 		}
+
+		
+		if (item_current < models.size())
+		{
+			glEnable(GL_STENCIL_TEST);
+			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+			glDepthFunc(GL_ALWAYS);
+			glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+			glStencilMask(0x00);
+
+			auto &m = models[item_current].models[0];
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto modelCopy = models[item_current];
+
+			modelCopy.scale *= 1.05;
+
+			auto transformMat = modelCopy.getTransformMatrix();
+
+			auto viewProjMat = projMat * viewMat * transformMat;
+
+			shader.bind();
+			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+
+			glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+			glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
+			glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
+
+			glDisable(GL_STENCIL_TEST);
+			glDepthFunc(GL_LESS);
+		}
+
 
 		
 		{
