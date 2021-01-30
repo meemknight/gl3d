@@ -286,6 +286,7 @@ namespace gl3d
 			j.Position.Z *= scale;
 		}
 
+		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
 	}
 
 	float skyboxVertices[] = {
@@ -561,7 +562,12 @@ namespace gl3d
 		{
 			GraphicModel gm;
 			gm.loadFromModelMeshIndex(model, i);
-		
+			gm.name = model.loader.LoadedMeshes[i].MeshName;
+
+			char *c = new char[gm.name.size() + 1];
+			strcpy(c, gm.name.c_str());
+
+			subModelsNames.push_back(c);
 			models.push_back(gm);
 
 		}
@@ -575,6 +581,12 @@ namespace gl3d
 			i.clear();
 		}
 
+		for (auto &i : subModelsNames)
+		{
+			delete[] i;
+		}
+
+		subModelsNames.clear();
 		models.clear();
 	}
 

@@ -28,6 +28,7 @@ namespace gl3d
 	//todo this will dissapear and become an struct of arrays or sthing
 	struct GraphicModel
 	{
+		std::string name = {};
 
 		//todo this might disapear
 		GLuint vertexArray = 0;
@@ -74,6 +75,7 @@ namespace gl3d
 	struct MultipleGraphicModels
 	{
 		std::vector < GraphicModel >models;
+		std::vector < char *> subModelsNames;
 
 		void loadFromModel(const LoadedModelData &model);
 

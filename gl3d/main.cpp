@@ -10,6 +10,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <glm/gtx/transform.hpp>
 
 #include "src/gl3d.h"
 
@@ -392,8 +393,10 @@ int main()
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
 	camera.position = { 0.f,0.f,2.f };
 
-	static int item_current = 0;
-	static int borderItem = 0;
+	static int itemCurrent = 0;
+	static int subItemCurent = 0;
+	static int borderItem = 1;
+	static int showNormals = 1;
 
 	int timeBeg = clock();
 	 
@@ -504,8 +507,7 @@ int main()
 			ImGui::Begin("Object Editor", &cubeEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 
-
-			ImGui::ListBox("listbox\n(single select)", &item_current, items.data(), models.size(), 4);
+			ImGui::ListBox("World objects", &itemCurrent, items.data(), models.size(), 4);
 
 			if (ImGui::Button("Add barrel"))
 			{
@@ -530,41 +532,57 @@ int main()
 				model.loadFromModel(levelModel);
 				models.push_back(model);
 			}
-			if (ImGui::Button("Remove object") && item_current < items.size() )
+			if (ImGui::Button("Remove object") && itemCurrent < items.size() )
 			{
-				items.erase(items.begin() + item_current);
-				models[item_current].clear();
-				models.erase(models.begin() + item_current);
-				if(item_current) item_current--;
+				items.erase(items.begin() + itemCurrent);
+				models[itemCurrent].clear();
+				models.erase(models.begin() + itemCurrent);
+				if(itemCurrent) itemCurrent--;
+			}
+			
+			if (itemCurrent < models.size())
+			{
+			
+				int subitemsCount = models[itemCurrent].subModelsNames.size();
+
+				ImGui::ListBox("Object components", &subItemCurent, 
+					models[itemCurrent].subModelsNames.data(), subitemsCount);
+
 			}
 
 			ImGui::NewLine();
 
-			if(!models.empty() && item_current < items.size())
+			
+
+			if(!models.empty() && itemCurrent < items.size())
 			{
 				static glm::vec3 color;
 				ImGui::ColorEdit3("Object Color", (float *)&color);
 				ImGui::NewLine();
 
 				ImGui::Text("Object transform");
-				ImGui::SliderFloat3("position", &models[item_current].position[0], -10, 10);
-				ImGui::SliderFloat3("rotation", &models[item_current].rotation[0], 0, glm::radians(360.f));
-				ImGui::SliderFloat3("scale", &models[item_current].scale[0], 0.01, 5);
+				ImGui::SliderFloat3("position", &models[itemCurrent].position[0], -10, 10);
+				ImGui::SliderFloat3("rotation", &models[itemCurrent].rotation[0], 0, glm::radians(360.f));
+				ImGui::SliderFloat3("scale", &models[itemCurrent].scale[0], 0.01, 5);
 				float s = 0;
 				ImGui::InputFloat("sameScale", &s);
 
 				if (s > 0)
 				{
-					models[item_current].scale = glm::vec3(s);
+					models[itemCurrent].scale = glm::vec3(s);
 				}
 
-				auto &material = models[item_current].models[0].material;
+				if(subItemCurent < models[itemCurrent].models.size())
+				{
+					auto &material = models[itemCurrent].models[subItemCurent].material;
 
-				ImGui::Text("Object material");
-				ImGui::ColorEdit3("difuse", &material.kd[0]);
-				ImGui::ColorEdit3("specular", &material.ks[0]);
-				ImGui::ColorEdit3("ambience", &material.ka[0]);
-				ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
+					ImGui::Text("Object material");
+					ImGui::ColorEdit3("difuse", &material.kd[0]);
+					ImGui::ColorEdit3("specular", &material.ks[0]);
+					ImGui::ColorEdit3("ambience", &material.ka[0]);
+					ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
+				}
+			
 			}
 
 			
@@ -676,71 +694,88 @@ int main()
 			//		skyBox.texture, gamaCorection);
 			//}
 
-			if(item_current == i && borderItem)
-			{
-				glEnable(GL_STENCIL_TEST);
-				glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-				glStencilFunc(GL_ALWAYS, 1, 0xFF);
-				glStencilMask(0xFF);
-			}
 
 			gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
 				skyBox.texture, gamaCorection);
 
-			if (!models[i].models.empty())
-			{
-				showNormalsShader.bind();
-
-				auto projMat = camera.getProjectionMatrix();
-				auto viewMat = camera.getWorldToViewMatrix();
-				auto transformMat = models[i].getTransformMatrix();
-				
-				auto viewTransformMat =  viewMat * transformMat;
-
-				glUniformMatrix4fv(normalsModelTransformLocation,
-					1, GL_FALSE, &viewTransformMat[0][0]);
-
-				glUniformMatrix4fv(normalsProjectionLocation,
-					1, GL_FALSE, &projMat[0][0]);
-
-				for (auto &i : models[i].models)
-				{
-
-
-					i.draw();
-
-				}
-			}
-
-			
-
-			if (item_current == i && borderItem)
-			{
-				glDisable(GL_STENCIL_TEST);
-			}
-
 		
 		}
 
-		
-		if (item_current < models.size() && borderItem)
+
+		if (itemCurrent	< models.size() &&
+			!models[itemCurrent].models.empty() && showNormals 
+			&& subItemCurent < models[itemCurrent].models.size())
 		{
+			showNormalsShader.bind();
+
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto transformMat = models[itemCurrent].getTransformMatrix();
+
+			auto viewTransformMat = viewMat * transformMat;
+
+			glUniformMatrix4fv(normalsModelTransformLocation,
+				1, GL_FALSE, &viewTransformMat[0][0]);
+
+			glUniformMatrix4fv(normalsProjectionLocation,
+				1, GL_FALSE, &projMat[0][0]);
+
+			models[itemCurrent].models[subItemCurent].draw();
+
+		}
+		
+		if (itemCurrent < models.size() && borderItem && 
+			models[itemCurrent].models.size() > subItemCurent)
+		{
+			
+			glEnable(GL_STENCIL_TEST);
+			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+			glStencilFunc(GL_ALWAYS, 1, 0xFF);
+			glStencilMask(0xFF);	
+
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto transformMat = models[0].getTransformMatrix();
+
+			auto viewProjMat = projMat * viewMat * transformMat;
+
+
+			lightShader.bind(viewProjMat, transformMat,
+				lightCube.position, camera.position, gamaCorection,
+				models[itemCurrent].models[subItemCurent].material);
+
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			models[itemCurrent].models[subItemCurent].draw();
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+			glDisable(GL_STENCIL_TEST);
+
+
 			glEnable(GL_STENCIL_TEST);
 			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
 			glDepthFunc(GL_ALWAYS);
 			glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
 			glStencilMask(0x00);
 
-			auto &m = models[item_current].models[0];
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
-			auto modelCopy = models[item_current];
+			auto &m = models[itemCurrent].models[subItemCurent];
+			projMat = camera.getProjectionMatrix();
+			viewMat = camera.getWorldToViewMatrix();
 
-			modelCopy.scale *= 1.05;
+			auto rotation = models[itemCurrent].rotation;
+			auto scale = models[itemCurrent].scale;
+			scale *= 1.05;
+			auto position = models[itemCurrent].position;
 
-			auto transformMat = modelCopy.getTransformMatrix();
 
-			auto viewProjMat = projMat * viewMat * transformMat;
+			auto s = glm::scale(scale);
+			auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+				glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+				glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+			auto t = glm::translate(position);
+
+			transformMat = t * r * s;
+
+			viewProjMat = projMat * viewMat * transformMat;
 
 			shader.bind();
 			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
