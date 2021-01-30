@@ -204,7 +204,10 @@
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
     <None Include="shaders\normals.frag" />
+    <None Include="shaders\showNormals.geom" />
     <None Include="shaders\normals.vert" />
+    <None Include="shaders\showNormals.frag" />
+    <None Include="shaders\showNormals.vert" />
     <None Include="shaders\skyBox.frag" />
     <None Include="shaders\skyBox.vert" />
     <None Include="shaders\stencil.frag" />

@@ -25,6 +25,12 @@ layout(std140) uniform u_material
 
 };
 
+vec3 normal; //the normal of the object (can be normal mapped or not)
+vec3 noMappedNorals; //this is the original non normal mapped normal
+vec3 lightDirection;
+vec3 eyeDirection;
+float difuseTest;  // used to check if object is in the light
+vec4 color; //texture color
 
 //https://gamedev.stackexchange.com/questions/22204/from-normal-to-rotation-matrix#:~:text=Therefore%2C%20if%20you%20want%20to,the%20first%20and%20second%20columns.
 mat3x3 NormalToRotation(in vec3 normal)
@@ -49,57 +55,75 @@ vec3 applyGama(in vec3 v)
 }
 
 
-void main()
+vec3 getNormalMap(in vec3 v)
 {
-	vec3 noMappedNorals = normalize(v_normals);
-
-
-	//get normal map data
 	vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
 	normal = normalize(2*normal - 1.f);
-	mat3 rotMat = NormalToRotation(noMappedNorals);
+	mat3 rotMat = NormalToRotation(v);
 	normal = rotMat * normal;
 	normal = normalize(normal);
-	//normal = noMappedNorals; //remove normal mapping
+	return normal;
+}
 
-	vec3 I = normalize(v_position - u_eyePosition);
-	vec3 R = reflect(I, normal);
-	vec3 skyBoxSpecular = textureCubeLod(u_skybox, R, 0).rgb;
-	vec3 skyBoxDiffuse = textureCubeLod(u_skybox, normal, 0).rgb; //todo
-
-
-	vec3 lightDirection = u_lightPosition - v_position;
-	lightDirection = normalize(lightDirection);
-
-	float difuseTest = dot(noMappedNorals, lightDirection);
-	float difuseLight = dot(normal, lightDirection);
-	difuseLight = max(difuseLight, 0);
-
-	vec3 eyeDirection = u_eyePosition - v_position;
-	eyeDirection = normalize(eyeDirection);
-	
+vec3 computeSpecular()
+{
 	//Blinn-Phong
 	vec3 halfwayDir = normalize(lightDirection + eyeDirection);
 	float specularLight = dot(halfwayDir, normal);
 
+	//phong
+	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
+	//float specularLight = dot(reflectedLightVector, eyeDirection);
+
 	if(difuseTest <= 0.001) specularLight = 0;
 	specularLight = max(specularLight,0);
 	specularLight = pow(specularLight, ks.w);
-
-	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
-	//float specularLight = dot(reflectedLightVector, eyeDirection);
-	//specularLight = max(specularLight,0);
-	//
-	//specularLight = pow(specularLight, 32);
-	//specularLight *= ks;
-	//if(difuseTest <= 0.001) specularLight = 0;
-
-	vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-	vec3 difuseVec =  vec3(kd) * difuseLight;
-	vec3 ambientVec = vec3(ka);
-	vec3 specularVec = vec3(ks) * specularLight;
 	
-	specularVec *= skyBoxSpecular;
+	return specularLight * vec3(ks);
+}
+
+vec3 computeDifuse()
+{
+
+	float difuseLight = dot(normal, lightDirection);
+	difuseLight = max(difuseLight, 0);
+	return vec3(kd) * difuseLight;
+}
+
+
+void main()
+{
+	{	//general data
+
+		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
+		if(color.w <= 0.1)
+			discard;
+
+		noMappedNorals = normalize(v_normals);
+		normal = getNormalMap(noMappedNorals);
+		normal = noMappedNorals; //remove normal mapping
+
+		lightDirection = u_lightPosition - v_position;
+		lightDirection = normalize(lightDirection);
+
+		eyeDirection = u_eyePosition - v_position;
+		eyeDirection = normalize(eyeDirection);
+
+		difuseTest = dot(noMappedNorals, lightDirection); // used to check if object is in the light
+		
+	}
+
+	vec3 I = normalize(v_position - u_eyePosition); //looking direction (towards eye)
+	vec3 R = reflect(I, normal);	//reflected vector
+	vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;
+	vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //todo check
+
+
+	vec3 difuseVec = computeDifuse();
+	vec3 specularVec = computeSpecular();
+	vec3 ambientVec = vec3(ka);
+	
+	//specularVec *= skyBoxSpecular;
 
 	//ambientVec *= mix(skyBoxSpecular.rgb, skyBoxIntensity.rgb, 0.5);
 	//ambientVec = mix(ambientVec, skyBoxSpecular, 0.5);
@@ -107,8 +131,6 @@ void main()
 	
 	color.rgb *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
 
-	if(color.w <= 0.1)
-	discard;
 
 	vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, eyeDirection)); 
 	float dotNormalEye = dot(normal, eyeDirection);
@@ -121,6 +143,6 @@ void main()
 
 	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
 
-
+	
 
 }

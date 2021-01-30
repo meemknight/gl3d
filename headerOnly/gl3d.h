@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-24
+//built on 2021-01-30
 ////////////////////////////////////////////////
 
 
@@ -100,6 +100,8 @@ namespace gl3d
 		GLuint id = 0;
 
 		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader);
+		bool loadShaderProgramFromFile(const char *vertexShader, 
+			const char *geometryShader, const char *fragmentShader);
 
 		void deleteShaderProgram();
 

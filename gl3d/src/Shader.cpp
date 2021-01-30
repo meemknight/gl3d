@@ -44,17 +44,25 @@ namespace gl3d
 
 			glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &l);
 
-			message = new char[l];
+			if(l)
+			{
+				message = new char[l];
 
-			glGetShaderInfoLog(shaderId, l, &l, message);
+				glGetShaderInfoLog(shaderId, l, &l, message);
 
-			message[l - 1] = 0;
+				message[l - 1] = 0;
 
-			std::cout << source << ": " << message << "\n";
+				std::cout << source << ": " << message << "\n";
 
-			delete[] message;
+				delete[] message;
+				
+			}else
+			{
+				std::cout << source << ": " << "unknown error"<< "\n";
+			}
 
 			glDeleteShader(shaderId);
+
 			shaderId = 0;
 			return shaderId;
 		}
@@ -67,8 +75,6 @@ namespace gl3d
 
 		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER);
 		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER);
-
-		//todo probably free the created shader
 
 
 		if (vertexId == 0 || fragmentId == 0)
@@ -84,6 +90,58 @@ namespace gl3d
 		glLinkProgram(id);
 
 		glDeleteShader(vertexId);
+		glDeleteShader(fragmentId);
+
+		GLint info = 0;
+		glGetProgramiv(id, GL_LINK_STATUS, &info);
+
+		if (info != GL_TRUE)
+		{
+			char *message = 0;
+			int   l = 0;
+
+			glGetProgramiv(id, GL_INFO_LOG_LENGTH, &l);
+
+			message = new char[l];
+
+			glGetProgramInfoLog(id, l, &l, message);
+
+			std::cout << "Link error: " << message << "\n";
+
+			delete[] message;
+
+			glDeleteProgram(id);
+			id = 0;
+			return 0;
+		}
+
+		glValidateProgram(id);
+
+		return true;
+	}
+
+	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *geometryShader, const char *fragmentShader)
+	{
+
+		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER);
+		auto geometryId = createShaderFromFile(geometryShader, GL_GEOMETRY_SHADER);
+		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER);
+
+		if (vertexId == 0 || fragmentId == 0 || geometryId == 0)
+		{
+			return 0;
+		}
+
+		id = glCreateProgram();
+
+		glAttachShader(id, vertexId);
+		glAttachShader(id, geometryId);
+		glAttachShader(id, fragmentId);
+
+		glLinkProgram(id);
+
+		glDeleteShader(vertexId);
+		glDeleteShader(geometryId);
 		glDeleteShader(fragmentId);
 
 		GLint info = 0;

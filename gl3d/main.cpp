@@ -67,7 +67,6 @@ int main()
 
 
 
-
 #pragma endregion
 
 	glEnable(GL_DEPTH_TEST);
@@ -86,6 +85,15 @@ int main()
 	
 	gl3d::LightShader lightShader;
 	lightShader.create();
+
+
+	gl3d::Shader showNormalsShader;
+	showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
+		"shaders/showNormals.geom", "shaders/showNormals.frag");
+
+	GLint normalsModelTransformLocation = glGetUniformLocation(showNormalsShader.id, "u_modelTransform");
+	GLint normalsProjectionLocation = glGetUniformLocation(showNormalsShader.id, "u_projection");
+	
 
 #pragma endregion
 
@@ -370,9 +378,9 @@ int main()
 
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
-	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
-	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
+	gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
+	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -385,6 +393,7 @@ int main()
 	camera.position = { 0.f,0.f,2.f };
 
 	static int item_current = 0;
+	static int borderItem = 0;
 
 	int timeBeg = clock();
 	 
@@ -667,7 +676,7 @@ int main()
 			//		skyBox.texture, gamaCorection);
 			//}
 
-			if(item_current == i)
+			if(item_current == i && borderItem)
 			{
 				glEnable(GL_STENCIL_TEST);
 				glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
@@ -678,7 +687,34 @@ int main()
 			gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
 				skyBox.texture, gamaCorection);
 
-			if (item_current == i)
+			if (!models[i].models.empty())
+			{
+				showNormalsShader.bind();
+
+				auto projMat = camera.getProjectionMatrix();
+				auto viewMat = camera.getWorldToViewMatrix();
+				auto transformMat = models[i].getTransformMatrix();
+				
+				auto viewTransformMat =  viewMat * transformMat;
+
+				glUniformMatrix4fv(normalsModelTransformLocation,
+					1, GL_FALSE, &viewTransformMat[0][0]);
+
+				glUniformMatrix4fv(normalsProjectionLocation,
+					1, GL_FALSE, &projMat[0][0]);
+
+				for (auto &i : models[i].models)
+				{
+
+
+					i.draw();
+
+				}
+			}
+
+			
+
+			if (item_current == i && borderItem)
 			{
 				glDisable(GL_STENCIL_TEST);
 			}
@@ -687,7 +723,7 @@ int main()
 		}
 
 		
-		if (item_current < models.size())
+		if (item_current < models.size() && borderItem)
 		{
 			glEnable(GL_STENCIL_TEST);
 			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
