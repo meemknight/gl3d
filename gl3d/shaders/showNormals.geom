@@ -4,7 +4,7 @@ layout (line_strip, max_vertices = 6) out;
 
 in vec3 v_normals[];
 
-const float size = 0.2;
+const float size = 0.8;
 
 uniform mat4 u_projection; //projection matrix
 

@@ -13,6 +13,7 @@
 #include <glm/gtx/transform.hpp>
 
 #include "src/gl3d.h"
+#include "profiler.h"
 
 #include <ctime>
 #include <functional>
@@ -387,7 +388,6 @@ int main()
 
 	std::vector< gl3d::MultipleGraphicModels > models;
 	
-
 	static std::vector < const char* > items = {};
 
 	gl3d::Camera camera((float)w / h, glm::radians(100.f));
@@ -395,11 +395,31 @@ int main()
 
 	static int itemCurrent = 0;
 	static int subItemCurent = 0;
-	static int borderItem = 1;
-	static int showNormals = 1;
+	static bool borderItem = 1;
+	static bool showNormals = 1;
+
+	static int currnetFps = 0;
+	const int FPS_RECORD_ARR_SIZE = 20;
+	int recordPos = 0;
+	static float fpsArr[FPS_RECORD_ARR_SIZE] = { };
+
+	const int DELTA_TIME_ARR_SIZE = 120;
+	int recordPosDeltaTime = 0;
+	static float deltaTimeArr[DELTA_TIME_ARR_SIZE] = { };
 
 	int timeBeg = clock();
-	 
+
+	static PL::AverageProfiler renderProfiler;
+	static PL::ProfileRezults lastProfilerRezult = {};
+
+	const int Profiler_ARR_SIZE = 120;
+	int profilePos = 0;
+	static float profileeArr[Profiler_ARR_SIZE] = { };
+
+	const int ProfilerAverage_ARR_SIZE = 20;
+	int profileAveragePos = 0;
+	static float profileAverageArr[ProfilerAverage_ARR_SIZE] = { };
+
 	while (!glfwWindowShouldClose(wind))
 	{
 		glfwGetWindowSize(wind, &w, &h);
@@ -411,6 +431,76 @@ int main()
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
+
+		static float fpsCounterFloat;
+		static float currentFpsCounter;
+
+		fpsCounterFloat += deltaTime;
+		currentFpsCounter += 1;
+		if(fpsCounterFloat >= 1)
+		{
+			fpsCounterFloat -= 1;
+			currnetFps = currentFpsCounter;
+			currentFpsCounter = 0;
+
+			if(recordPos<FPS_RECORD_ARR_SIZE)
+			{
+				fpsArr[recordPos] = currnetFps;
+				recordPos++;
+			}else
+			{
+				for(int i=0;i< FPS_RECORD_ARR_SIZE-1;i++)
+				{
+					fpsArr[i] = fpsArr[i + 1];
+				}
+				fpsArr[FPS_RECORD_ARR_SIZE-1] = currnetFps;
+			}
+
+			if (profileAveragePos < ProfilerAverage_ARR_SIZE)
+			{
+
+				profileAverageArr[profileAveragePos] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+				profileAveragePos++;
+			}
+			else
+			{
+				for (int i = 0; i < ProfilerAverage_ARR_SIZE - 1; i++)
+				{
+					profileAverageArr[i] = profileAverageArr[i + 1];
+				}
+				profileAverageArr[ProfilerAverage_ARR_SIZE - 1] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+			}
+
+		}
+
+		if (recordPosDeltaTime < DELTA_TIME_ARR_SIZE)
+		{
+			deltaTimeArr[recordPosDeltaTime] = deltaTime;
+			recordPosDeltaTime++;
+		}
+		else
+		{
+			for (int i = 0; i < DELTA_TIME_ARR_SIZE - 1; i++)
+			{
+				deltaTimeArr[i] = deltaTimeArr[i + 1];
+			}
+			deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime;
+		}
+
+		if (profilePos < Profiler_ARR_SIZE)
+		{
+			profileeArr[profilePos] = lastProfilerRezult.timeSeconds;
+			profilePos++;
+		}
+		else
+		{
+			for (int i = 0; i < Profiler_ARR_SIZE - 1; i++)
+			{
+				profileeArr[i] = profileeArr[i + 1];
+			}
+			profileeArr[Profiler_ARR_SIZE - 1] = lastProfilerRezult.timeSeconds;
+		}
+
 
 	#pragma region imgui
 
@@ -434,6 +524,7 @@ int main()
 
 		static bool lightEditor = 1;
 		static bool cubeEditor = 1;
+		static bool showStats = 1;
 	
 		{
 			ImGui::Begin("Menu");
@@ -441,12 +532,13 @@ int main()
 
 			ImGui::Checkbox("Light Editor##check", &lightEditor);
 			ImGui::Checkbox("Object Editor##check", &cubeEditor);
+			ImGui::Checkbox("Stats##check", &showStats);
 			ImGui::NewLine();
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
+		
 			static bool antiAliasing = 0;
 			ImGui::Checkbox("Anti aliasing", &antiAliasing);
-			
 			if (antiAliasing)
 			{
 				glEnable(GL_MULTISAMPLE);
@@ -479,6 +571,9 @@ int main()
 			{
 				glDisable(GL_CULL_FACE);
 			}
+
+			ImGui::Checkbox("Display item border", &borderItem);
+			ImGui::Checkbox("Display normals", &showNormals);
 
 			ImGui::End();
 		}
@@ -590,6 +685,29 @@ int main()
 			ImGui::End();
 		}
 
+		if(showStats)
+		{
+			ImGui::Begin("Stats", &showStats, flags);
+			ImGui::SetWindowFontScale(2.0f);
+		
+			ImGui::PlotHistogram("Fps graph", fpsArr, FPS_RECORD_ARR_SIZE, 0, 0,
+			0, 60);
+			ImGui::Text("Fps %d", currnetFps);
+
+			ImGui::PlotHistogram("Frame duration graph", deltaTimeArr, DELTA_TIME_ARR_SIZE, 0, 0,
+			0, 0.32);
+			ImGui::Text("Frame duration (ms) %f", deltaTime * 1000);
+
+			ImGui::PlotHistogram("Render duration graph", profileeArr, Profiler_ARR_SIZE, 0, 0,
+			0, 0.32);
+			ImGui::Text("Render duration (ms) %f", lastProfilerRezult.timeSeconds * 1000);
+
+			ImGui::PlotHistogram("Render duration average graph", profileAverageArr, ProfilerAverage_ARR_SIZE, 0, 0,
+			0, 32);
+
+			ImGui::End();
+		}
+
 		//ImGui::ShowDemoWindow(0);
 
 	#pragma endregion
@@ -668,6 +786,8 @@ int main()
 		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
 		lightCube.draw();
 
+		renderProfiler.start();
+
 		for (int i = 0; i < models.size(); i++)
 		{
 			//models[i].models[0].position = models[i].position;
@@ -701,6 +821,7 @@ int main()
 		
 		}
 
+		lastProfilerRezult = renderProfiler.end();
 
 		if (itemCurrent	< models.size() &&
 			!models[itemCurrent].models.empty() && showNormals 
