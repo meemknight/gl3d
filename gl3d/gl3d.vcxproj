@@ -205,6 +205,7 @@
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
     <None Include="shaders\normals.frag" />
+    <None Include="shaders\oldNormals.frag" />
     <None Include="shaders\showNormals.geom" />
     <None Include="shaders\normals.vert" />
     <None Include="shaders\showNormals.frag" />

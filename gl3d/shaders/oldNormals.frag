@@ -20,22 +20,21 @@ uniform float u_gama;
 layout(std140) uniform u_material
 {
 	vec4 ka; //= 0.5; //w component not used
-	vec4 kd; //= 0.45;//
+	vec4 kd; //= 0.45;//w component not used
 	vec4 ks; //= 1;	 ;//w component is the specular exponent
 	float roughness;
 	float metallic;
-	float ao; //one means light
+	float ao;
 };
 
-//todo move some of this from global for implementing multi lights
 vec3 normal; //the normal of the object (can be normal mapped or not)
 vec3 noMappedNorals; //this is the original non normal mapped normal
 vec3 lightDirection;
-vec3 viewDir;
+vec3 viewDirection;
 float difuseTest;  // used to check if object is in the light
 vec4 color; //texture color
 
-float PI = 3.14159265359;
+float PI = 3.14159;
 
 //https://gamedev.stackexchange.com/questions/22204/from-normal-to-rotation-matrix#:~:text=Therefore%2C%20if%20you%20want%20to,the%20first%20and%20second%20columns.
 mat3x3 NormalToRotation(in vec3 normal)
@@ -74,44 +73,42 @@ vec3 getNormalMap(in vec3 v)
 //h halfway vector
 //a roughness	(1 rough, 0 glossy) 
 //this gets the amount of specular light reflected
-float DistributionGGX(vec3 N, vec3 H, float roughness)
+float DistributionGGX(vec3 N, vec3 H, float a)
 {
-	float a      = roughness*roughness;
-	float a2     = a*a;
-	float NdotH  = max(dot(N, H), 0.0);
+	float a2 = a*a;
+	float NdotH = max(dot(N, H), 0.0);
 	float NdotH2 = NdotH*NdotH;
 	
 	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
 	denom = PI * denom * denom;
 	
-	return  a2 / denom;
+	return a2 / denom;
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+float GeometrySchlickGGX(float NdotV, float k)
 {
-	float r = (roughness + 1.0);
-	float k = (r*r) / 8.0;
+	//float r = (roughness + 1.0); this is how you get k
+	//float k = (r*r) / 8.0;
 
-	float num   = NdotV;
+	float nom   = NdotV;
 	float denom = NdotV * (1.0 - k) + k;
 	
-	return num / denom;
+	return nom / denom;
 }
  
 //oclude light that is hidded begind small geometry roughnesses
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k)
 {
 	float NdotV = max(dot(N, V), 0.0);
 	float NdotL = max(dot(N, L), 0.0);
-	float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-	float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotV, k);
+	float ggx2 = GeometrySchlickGGX(NdotL, k);
 	
 	return ggx1 * ggx2;
 }
 
 
 //cosTheta is the dot between the normal and halfway
-//ratio between specular and diffuse reflection
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -120,7 +117,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 vec3 computeSpecular()
 {
 	//Blinn-Phong
-	vec3 halfwayDir = normalize(lightDirection + viewDir);
+	vec3 halfwayDir = normalize(lightDirection + viewDirection);
 	float cosTheta = dot(halfwayDir, normal);
 
 	//phong
@@ -154,7 +151,7 @@ void main()
 	{	//general data
 
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		color = vec4(kd.rgb,1); //(option) remove albedo texture
+		color = vec4(1); //(option) remove albedo texture
 		if(color.w <= 0.1)
 			discard;
 
@@ -162,10 +159,11 @@ void main()
 		normal = getNormalMap(noMappedNorals);
 		normal = noMappedNorals; //(option) remove normal mapping
 
-		
+		lightDirection = u_lightPosition - v_position;
+		lightDirection = normalize(lightDirection);
 
-		viewDir = u_eyePosition - v_position;
-		viewDir = normalize(viewDir); //v
+		viewDirection = u_eyePosition - v_position;
+		viewDirection = normalize(viewDirection); //v
 
 		difuseTest = dot(noMappedNorals, lightDirection); // used to check if object is in the light
 		
@@ -180,48 +178,9 @@ void main()
 	vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //this color is coming directly to the object
 
 
-	vec3 Lo = {0,0,0}; //this is the accumulated light
-
-	//foreach point light
-	{
-		vec3 lightPosition = u_lightPosition;
-
-		lightDirection = normalize(lightPosition - v_position);
-		vec3 halfwayVec = normalize(lightDirection + viewDir);
-		
-		float dist = length(lightPosition - v_position);
-		float attenuation = 1.0 / pow(dist,2);
-		attenuation = 1; //(option) remove light attenuation
-		vec3 radiance = vec3(1,1,1) * attenuation; //here the first component is the light color
-		
-		vec3 F0 = vec3(0.04); 
-		F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
-		vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
-
-		float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-		float G   = GeometrySmith(normal, viewDir, lightPosition, roughness);   
-
-		float denominator = 4.0 * max(dot(normal, viewDir), 0.0) 
-			* max(dot(normal, lightDirection), 0.0);
-		vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
-
-		vec3 kS = F; //this is the specular contribution
-		vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
-		kD *= 1.0 - metallic;	//metallic surfaces are darker
-		
-
-		float NdotL = max(dot(normal, lightDirection), 0.0);        
-		Lo += (kD * color.rgb / PI + specular) * radiance * NdotL;
-	}
-
-	vec3 ambient = vec3(0.1) * color.rgb * ao; //this value is made up
-	vec3 color   = ambient + Lo; 
-
-	color = clamp(color, 0, 1);
-
-	//vec3 difuseVec = computeDifuse();
-	//vec3 specularVec = computeSpecular();
-	//vec3 ambientVec = vec3(ka);
+	vec3 difuseVec = computeDifuse();
+	vec3 specularVec = computeSpecular();
+	vec3 ambientVec = vec3(ka);
 	
 	//specularVec *= skyBoxSpecular;
 
@@ -229,11 +188,11 @@ void main()
 	//ambientVec = mix(ambientVec, skyBoxSpecular, 0.5);
 	//ambientVec *= skyBoxSpecular;
 	
-	//color.rgb *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
+	color.rgb *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
 
 
-	vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, viewDir)); 
-	float dotNormalEye = dot(normal, viewDir);
+	vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, viewDirection)); 
+	float dotNormalEye = dot(normal, viewDirection);
 	dotNormalEye = clamp(dotNormalEye, 0, 1);
 	
 	//color.rgb = mix(skyBoxSpecular, color.rgb, pow(dotNormalEye, 1/1.0) ); //90 degrees, 0, reflected color

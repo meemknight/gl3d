@@ -382,8 +382,8 @@ int main()
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
 	gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
-	gl3d::LoadedModelData sphereModel("resources/obj/sphere2.obj");
 	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
+	gl3d::LoadedModelData sphereModel("resources/obj/sphere2.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -684,7 +684,7 @@ int main()
 					ImGui::ColorEdit3("ambience", &material.ka[0]);
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
-					ImGui::SliderFloat("ao", &material.ao, 0, 1);
+					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
 					ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
 				}
 			
