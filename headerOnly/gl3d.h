@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-30
+//built on 2021-01-31
 ////////////////////////////////////////////////
 
 
@@ -25,13 +25,18 @@ namespace gl3d
 		glm::vec4 ka; //= 0.5; //w component not used
 		glm::vec4 kd; //= 0.45;//w component not used
 		glm::vec4 ks; //= 1;	 ;//w component is the specular exponent
-
+		float roughness = 0.5f;
+		float metallic = 0.5;
+		float ao = 0.1;
 		Material setDefaultMaterial()
 		{
 			ka = glm::vec4(0.2);
 			kd = glm::vec4(0.45);
 			ks = glm::vec4(1);
 			ks.w = 32;
+			roughness = 0.5f;
+			metallic = 0.5;
+			ao = 0.1;
 			return *this;
 		}
 	};

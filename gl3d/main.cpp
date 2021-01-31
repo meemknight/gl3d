@@ -382,6 +382,7 @@ int main()
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
 	gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
+	gl3d::LoadedModelData sphereModel("resources/obj/sphere2.obj");
 	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
@@ -395,8 +396,8 @@ int main()
 
 	static int itemCurrent = 0;
 	static int subItemCurent = 0;
-	static bool borderItem = 1;
-	static bool showNormals = 1;
+	static bool borderItem = 0;
+	static bool showNormals = 0;
 
 	static int currnetFps = 0;
 	const int FPS_RECORD_ARR_SIZE = 20;
@@ -524,7 +525,7 @@ int main()
 
 		static bool lightEditor = 1;
 		static bool cubeEditor = 1;
-		static bool showStats = 1;
+		static bool showStats = 0;
 	
 		{
 			ImGui::Begin("Menu");
@@ -627,6 +628,14 @@ int main()
 				model.loadFromModel(levelModel);
 				models.push_back(model);
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("Add sphere"))
+			{
+				items.push_back("Sphere");
+				gl3d::MultipleGraphicModels model;
+				model.loadFromModel(sphereModel);
+				models.push_back(model);
+			}
 			if (ImGui::Button("Remove object") && itemCurrent < items.size() )
 			{
 				items.erase(items.begin() + itemCurrent);
@@ -644,15 +653,13 @@ int main()
 					models[itemCurrent].subModelsNames.data(), subitemsCount);
 
 			}
-
+			
 			ImGui::NewLine();
 
 			
 
 			if(!models.empty() && itemCurrent < items.size())
 			{
-				static glm::vec3 color;
-				ImGui::ColorEdit3("Object Color", (float *)&color);
 				ImGui::NewLine();
 
 				ImGui::Text("Object transform");
@@ -675,6 +682,9 @@ int main()
 					ImGui::ColorEdit3("difuse", &material.kd[0]);
 					ImGui::ColorEdit3("specular", &material.ks[0]);
 					ImGui::ColorEdit3("ambience", &material.ka[0]);
+					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
+					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
+					ImGui::SliderFloat("ao", &material.ao, 0, 1);
 					ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
 				}
 			

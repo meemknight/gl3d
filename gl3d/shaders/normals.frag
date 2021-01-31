@@ -22,7 +22,9 @@ layout(std140) uniform u_material
 	vec4 ka; //= 0.5; //w component not used
 	vec4 kd; //= 0.45;//w component not used
 	vec4 ks; //= 1;	 ;//w component is the specular exponent
-
+	float roughness;
+	float metallic;
+	float ao;
 };
 
 vec3 normal; //the normal of the object (can be normal mapped or not)
@@ -31,6 +33,8 @@ vec3 lightDirection;
 vec3 eyeDirection;
 float difuseTest;  // used to check if object is in the light
 vec4 color; //texture color
+
+float PI = 3.14159;
 
 //https://gamedev.stackexchange.com/questions/22204/from-normal-to-rotation-matrix#:~:text=Therefore%2C%20if%20you%20want%20to,the%20first%20and%20second%20columns.
 mat3x3 NormalToRotation(in vec3 normal)
@@ -65,21 +69,71 @@ vec3 getNormalMap(in vec3 v)
 	return normal;
 }
 
+//n normal
+//h halfway vector
+//a roughness	(1 rough, 0 glossy) 
+//this gets the amount of specular light reflected
+float DistributionGGX(vec3 N, vec3 H, float a)
+{
+	float a2 = a*a;
+	float NdotH = max(dot(N, H), 0.0);
+	float NdotH2 = NdotH*NdotH;
+	
+	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+	denom = PI * denom * denom;
+	
+	return a2 / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float k)
+{
+	//float r = (roughness + 1.0); this is how you get k
+	//float k = (r*r) / 8.0;
+
+	float nom   = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+	
+	return nom / denom;
+}
+ 
+//oclude light that is hidded begind small geometry roughnesses
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k)
+{
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+	float ggx1 = GeometrySchlickGGX(NdotV, k);
+	float ggx2 = GeometrySchlickGGX(NdotL, k);
+	
+	return ggx1 * ggx2;
+}
+
+
+//cosTheta is the dot between the normal and halfway
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 vec3 computeSpecular()
 {
 	//Blinn-Phong
 	vec3 halfwayDir = normalize(lightDirection + eyeDirection);
-	float specularLight = dot(halfwayDir, normal);
+	float cosTheta = dot(halfwayDir, normal);
 
 	//phong
 	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
 	//float specularLight = dot(reflectedLightVector, eyeDirection);
 
-	if(difuseTest <= 0.001) specularLight = 0;
-	specularLight = max(specularLight,0);
-	specularLight = pow(specularLight, ks.w);
+	//if(difuseTest <= 0.01) 
+	//{return vec3(0);}
+
+	cosTheta = max(cosTheta,0);
+	cosTheta = pow(cosTheta, ks.w);
 	
-	return specularLight * vec3(ks);
+	//return cosTheta * vec3(ks);
+
+	float roughDistribution = DistributionGGX(normal, halfwayDir, roughness);
+	return roughDistribution * vec3(ks);
 }
 
 vec3 computeDifuse()
@@ -91,17 +145,19 @@ vec3 computeDifuse()
 }
 
 
+
 void main()
 {
 	{	//general data
 
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
+		color = vec4(1); //(option) remove albedo texture
 		if(color.w <= 0.1)
 			discard;
 
 		noMappedNorals = normalize(v_normals);
 		normal = getNormalMap(noMappedNorals);
-		normal = noMappedNorals; //remove normal mapping
+		normal = noMappedNorals; //(option) remove normal mapping
 
 		lightDirection = u_lightPosition - v_position;
 		lightDirection = normalize(lightDirection);
@@ -115,8 +171,8 @@ void main()
 
 	vec3 I = normalize(v_position - u_eyePosition); //looking direction (towards eye)
 	vec3 R = reflect(I, normal);	//reflected vector
-	vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;
-	vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //todo check
+	vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		//this is the reflected color
+	vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //this color is coming directly to the object
 
 
 	vec3 difuseVec = computeDifuse();
@@ -136,8 +192,7 @@ void main()
 	float dotNormalEye = dot(normal, eyeDirection);
 	dotNormalEye = clamp(dotNormalEye, 0, 1);
 	
-
-	//color = mix(skyBoxSpecular, color, pow(dotNormalEye, 1/1.0) ); //90 degrees, 0, reflected color
+	//color.rgb = mix(skyBoxSpecular, color.rgb, pow(dotNormalEye, 1/1.0) ); //90 degrees, 0, reflected color
 
 	//color = caleidoscop;
 
