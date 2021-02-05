@@ -1,6 +1,8 @@
 #version 330
 #pragma debug(on)
 
+#extension GL_NV_shadow_samplers_cube : enable
+
 out layout(location = 0) vec4 a_outColor;
 
 in vec3 v_normals;
@@ -18,9 +20,7 @@ uniform float u_gama;
 
 layout(std140) uniform u_material
 {
-	vec4 ka; //= 0.5; //w component not used
 	vec4 kd; //= 0.45;//w component not used
-	vec4 ks; //= 1;	 ;//w component is the specular exponent
 	float roughness;
 	float metallic;
 	float ao; //one means light
@@ -50,11 +50,6 @@ mat3x3 NormalToRotation(in vec3 normal)
 	return mat3x3(tangent0,tangent1,normal);
 
 	//return ColumnVectorsToMatrix(tangent0, tangent1, normal);
-}
-
-vec3 applyGama(in vec3 v)
-{
-	return v.rgb = pow(v.rgb, vec3(1.0/u_gama));
 }
 
 
@@ -115,54 +110,59 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
 
-//vec3 computeSpecular()
-//{
-//	//Blinn-Phong
-//	vec3 halfwayDir = normalize(lightDirection + viewDir);
-//	float cosTheta = dot(halfwayDir, normal);
-//
-//	//phong
-//	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
-//	//float specularLight = dot(reflectedLightVector, eyeDirection);
-//
-//	//if(difuseTest <= 0.01) 
-//	//{return vec3(0);}
-//
-//	cosTheta = max(cosTheta,0);
-//	cosTheta = pow(cosTheta, ks.w);
-//	
-//	//return cosTheta * vec3(ks);
-//
-//	float roughDistribution = DistributionGGX(normal, halfwayDir, roughness);
-//	return roughDistribution * vec3(ks);
-//}
-//
-//vec3 computeDifuse()
-//{
-//
-//	float difuseLight = dot(normal, lightDirection);
-//	difuseLight = max(difuseLight, 0);
-//	return vec3(kd) * difuseLight;
-//}
+vec3 computePointLightSource(vec3 lightPosition)
+{
+	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
+
+	vec3 lightDirection = normalize(lightPosition - v_position);
+	vec3 halfwayVec = normalize(lightDirection + viewDir);
+	
+	float dist = length(lightPosition - v_position);
+	float attenuation = 1.0 / pow(dist,2);
+	attenuation = 1; //(option) remove light attenuation
+	vec3 radiance = vec3(1,1,1) * attenuation; //here the first component is the light color
+	
+	vec3 F0 = vec3(0.04); 
+	F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
+	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
+
+	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
+	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
+
+	float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
+		* max(dot(normal, lightDirection), 0.0);
+	vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
+
+	vec3 kS = F; //this is the specular contribution
+	vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
+	kD *= 1.0 - metallic;	//metallic surfaces are darker
+	
+	// scale light by NdotL
+	float NdotL = max(dot(normal, lightDirection), 0.0);        
+	Lo += (kD * color.rgb / PI + specular) * radiance * NdotL;
+
+	return Lo;
+}
 
 
 void main()
 {
 	{	//general data
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
-		
-		//color *= vec4(kd.rgb,1); //(option) multiply texture by kd
-		//color = vec4(kd.rgb,1); //(option) remove albedo texture
 		if(color.w <= 0.1)
 			discard;
 
+		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
+		
+		color *= vec4(kd.rgb,1); //(option) multiply texture by kd
+		
+		//color = vec4(kd.rgb,1); //(option) remove albedo texture
+	
 		noMappedNorals = normalize(v_normals);
 		normal = getNormalMap(noMappedNorals);
 		//normal = noMappedNorals; //(option) remove normal mapping
 
-		//todo recheck normalize normals ant others
 
 		viewDir = u_eyePosition - v_position;
 		viewDir = normalize(viewDir); //v
@@ -172,46 +172,18 @@ void main()
 	}
 
 
-
-
 	vec3 I = normalize(v_position - u_eyePosition); //looking direction (towards eye)
 	vec3 R = reflect(I, normal);	//reflected vector
 	vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		//this is the reflected color
 	vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //this color is coming directly to the object
 
-
-	vec3 Lo = {0,0,0}; //this is the accumulated light
+	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
 	//foreach point light
 	{
 		vec3 lightPosition = u_lightPosition;
 
-		vec3 lightDirection = normalize(lightPosition - v_position);
-		vec3 halfwayVec = normalize(lightDirection + viewDir);
-		
-		float dist = length(lightPosition - v_position);
-		float attenuation = 1.0 / pow(dist,2);
-		attenuation = 1; //(option) remove light attenuation
-		vec3 radiance = vec3(1,1,1) * attenuation; //here the first component is the light color
-		
-		vec3 F0 = vec3(0.04); 
-		F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
-		vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
-
-		float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-		float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
-
-		float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
-			* max(dot(normal, lightDirection), 0.0);
-		vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
-
-		vec3 kS = F; //this is the specular contribution
-		vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
-		kD *= 1.0 - metallic;	//metallic surfaces are darker
-		
-		// scale light by NdotL
-		float NdotL = max(dot(normal, lightDirection), 0.0);        
-		Lo += (kD * color.rgb / PI + specular) * radiance * NdotL;
+		Lo += computePointLightSource(lightPosition);
 	}
 
 	vec3 ambient = vec3(0.01) * color.rgb * ao; //this value is made up
@@ -225,9 +197,6 @@ void main()
 
 	//color = clamp(color, 0, 1);
 
-	//vec3 difuseVec = computeDifuse();
-	//vec3 specularVec = computeSpecular();
-	//vec3 ambientVec = vec3(ka);
 	
 	//specularVec *= skyBoxSpecular;
 

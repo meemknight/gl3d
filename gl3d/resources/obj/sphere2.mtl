@@ -9,5 +9,7 @@ Ks 1.000000 1.000000 1.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
+Pm 0.9
 illum 2
-map_Kd marble.jpg 
+map_Kd metalPlate/metal_plate_diff_8k.jpg 
+map_Kn metalPlate/metal_plate_Nor_8k.jpg 

@@ -13,6 +13,8 @@
 namespace gl3d
 {
 
+	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
+
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
@@ -85,18 +87,9 @@ namespace gl3d
 		glm::vec3 rotation = {};
 		glm::vec3 scale = { 1,1,1 };
 
-
-		//todo move into a standalone function
 		glm::mat4 getTransformMatrix()
 		{
-			auto s = glm::scale(scale);
-			auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-				glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-				glm::rotate(rotation.z, glm::vec3(0, 0, 1));
-			auto t = glm::translate(position);
-
-			return t * r * s;
-
+			return gl3d::getTransformMatrix(position, rotation, scale);
 		}
 
 	};
@@ -109,7 +102,7 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name, int format = 0); //todo add enum
+		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yer
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat, float gama);
 

@@ -23,6 +23,15 @@ int h = 640;
 
 gl3d::Material material = gl3d::Material().setDefaultMaterial();
 
+#define USE_GPU_ENGINE 1
+
+#pragma region gpu
+extern "C"
+{
+	__declspec(dllexport) unsigned long NvOptimusEnablement = USE_GPU_ENGINE;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = USE_GPU_ENGINE;
+}
+#pragma endregion
 
 int main()
 {
@@ -35,6 +44,11 @@ int main()
 	}
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
+
+	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
 
 	GLFWwindow *wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
 	glfwMakeContextCurrent(wind);
@@ -381,8 +395,8 @@ int main()
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
-	gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
-	//gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
+	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
+	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
 	gl3d::LoadedModelData sphereModel("resources/obj/sphere2.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
@@ -680,12 +694,9 @@ int main()
 
 					ImGui::Text("Object material");
 					ImGui::ColorEdit3("difuse", &material.kd[0]);
-					ImGui::ColorEdit3("specular", &material.ks[0]);
-					ImGui::ColorEdit3("ambience", &material.ka[0]);
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
-					ImGui::SliderFloat("specular exponent", &material.ks[3], 0, 100);
 				}
 			
 			}
@@ -823,7 +834,6 @@ int main()
 			//}
 			//else if (items[i] == "Crate")
 			//{
-			//	//todo fix normal here
 			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
 			//		skyBox.texture, gamaCorection);
 			//}

@@ -444,15 +444,15 @@ namespace gl3d
 		return true;
 	}
 
-	void Shader::deleteShaderProgram()
-	{
-		glDeleteProgram(id);
-		id = 0;
-	}
-
 	void Shader::bind()
 	{
 		glUseProgram(id);
+	}
+
+	void Shader::clear()
+	{
+		glDeleteProgram(id);
+		id = 0;
 	}
 
 	GLint getUniform(GLuint id, const char *name)
@@ -729,9 +729,9 @@ namespace gl3d
 
 		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 
-		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
-		material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
-		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+		material.kd = glm::vec4(glm::vec3(mat.Kd), 1);
+		//material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
+		//material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
 		material.metallic = mat.metallic;
 		material.roughness = mat.roughness;
 		//material.ao = mat.ao;
@@ -870,13 +870,7 @@ namespace gl3d
 
 	glm::mat4 GraphicModel::getTransformMatrix()
 	{
-		auto s = glm::scale(scale);
-		auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-			glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-			glm::rotate(rotation.z, glm::vec3(0, 0, 1));
-		auto t = glm::translate(position);
-
-		return t * r * s;
+		return gl3d::getTransformMatrix(position, rotation, scale);
 
 	}
 
@@ -1214,6 +1208,20 @@ namespace gl3d
 
 		subModelsNames.clear();
 		models.clear();
+	}
+
+
+	//todo optimize
+	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
+	{
+		auto s = glm::scale(scale);
+		auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+			glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+			glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+		auto t = glm::translate(position);
+
+		return t * r * s;
+
 	}
 
 };

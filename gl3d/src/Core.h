@@ -12,9 +12,7 @@ namespace gl3d
 	//todo move
 	struct Material
 	{
-		glm::vec4 ka = glm::vec4(0.2);; //= 0.5; //w component not used
-		glm::vec4 kd = glm::vec4(0.45);; //= 0.45;//w component not used
-		glm::vec4 ks = glm::vec4(1);; //= 1;	 ;//w component is the specular exponent
+		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
 		float roughness = 0.2f;
 		float metallic = 0.1;
 		float ao = 0.5;

@@ -15,12 +15,10 @@ namespace gl3d
 		bool loadShaderProgramFromFile(const char *vertexShader, 
 			const char *geometryShader, const char *fragmentShader);
 
-		void deleteShaderProgram();
 
 		void bind();
 
-
-		//todo clear
+		void clear();
 	};
 
 	GLint getUniform(GLuint id, const char *name);
@@ -47,7 +45,6 @@ namespace gl3d
 		GLuint materialBlockBuffer = 0;
 
 		Shader shader;
-
 
 		//todo clear
 	};

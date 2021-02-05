@@ -1,6 +1,8 @@
 #version 330
 #pragma debug(on)
 
+#extension GL_NV_shadow_samplers_cube : enable
+
 out vec4 a_outColor;
 
 in vec3 v_texCoords;

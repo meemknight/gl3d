@@ -172,15 +172,15 @@ namespace gl3d
 		return true;
 	}
 
-	void Shader::deleteShaderProgram()
-	{
-		glDeleteProgram(id);
-		id = 0;
-	}
-
 	void Shader::bind()
 	{
 		glUseProgram(id);
+	}
+
+	void Shader::clear()
+	{
+		glDeleteProgram(id);
+		id = 0;
 	}
 
 	GLint getUniform(GLuint id, const char *name)

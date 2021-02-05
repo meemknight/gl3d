@@ -22,9 +22,7 @@ namespace gl3d
 	//todo move
 	struct Material
 	{
-		glm::vec4 ka = glm::vec4(0.2);; //= 0.5; //w component not used
-		glm::vec4 kd = glm::vec4(0.45);; //= 0.45;//w component not used
-		glm::vec4 ks = glm::vec4(1);; //= 1;	 ;//w component is the specular exponent
+		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
 		float roughness = 0.2f;
 		float metallic = 0.1;
 		float ao = 0.5;
@@ -103,12 +101,10 @@ namespace gl3d
 		bool loadShaderProgramFromFile(const char *vertexShader, 
 			const char *geometryShader, const char *fragmentShader);
 
-		void deleteShaderProgram();
 
 		void bind();
 
-
-		//todo clear
+		void clear();
 	};
 
 	GLint getUniform(GLuint id, const char *name);
@@ -135,7 +131,6 @@ namespace gl3d
 		GLuint materialBlockBuffer = 0;
 
 		Shader shader;
-
 
 		//todo clear
 	};
@@ -216,6 +211,8 @@ namespace gl3d
 namespace gl3d
 {
 
+	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
+
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
@@ -288,18 +285,9 @@ namespace gl3d
 		glm::vec3 rotation = {};
 		glm::vec3 scale = { 1,1,1 };
 
-
-		//todo move into a standalone function
 		glm::mat4 getTransformMatrix()
 		{
-			auto s = glm::scale(scale);
-			auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-				glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-				glm::rotate(rotation.z, glm::vec3(0, 0, 1));
-			auto t = glm::translate(position);
-
-			return t * r * s;
-
+			return gl3d::getTransformMatrix(position, rotation, scale);
 		}
 
 	};
@@ -312,7 +300,7 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name, int format = 0); //todo add enum
+		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yer
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat, float gama);
 
