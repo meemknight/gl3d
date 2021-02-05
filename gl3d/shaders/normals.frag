@@ -7,7 +7,6 @@ in vec3 v_normals;
 in vec3 v_position;	//world space
 in vec2 v_texCoord;
 
-
 uniform vec3 u_lightPosition;
 uniform vec3 u_eyePosition;
 
@@ -20,7 +19,7 @@ uniform float u_gama;
 layout(std140) uniform u_material
 {
 	vec4 ka; //= 0.5; //w component not used
-	vec4 kd; //= 0.45;//
+	vec4 kd; //= 0.45;//w component not used
 	vec4 ks; //= 1;	 ;//w component is the specular exponent
 	float roughness;
 	float metallic;
@@ -30,7 +29,6 @@ layout(std140) uniform u_material
 //todo move some of this from global for implementing multi lights
 vec3 normal; //the normal of the object (can be normal mapped or not)
 vec3 noMappedNorals; //this is the original non normal mapped normal
-vec3 lightDirection;
 vec3 viewDir;
 float difuseTest;  // used to check if object is in the light
 vec4 color; //texture color
@@ -84,7 +82,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
 	denom = PI * denom * denom;
 	
-	return  a2 / denom;
+	return  a2 / max(denom, 0.0000001);
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
@@ -114,47 +112,49 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 //ratio between specular and diffuse reflection
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
-	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
 
-vec3 computeSpecular()
-{
-	//Blinn-Phong
-	vec3 halfwayDir = normalize(lightDirection + viewDir);
-	float cosTheta = dot(halfwayDir, normal);
-
-	//phong
-	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
-	//float specularLight = dot(reflectedLightVector, eyeDirection);
-
-	//if(difuseTest <= 0.01) 
-	//{return vec3(0);}
-
-	cosTheta = max(cosTheta,0);
-	cosTheta = pow(cosTheta, ks.w);
-	
-	//return cosTheta * vec3(ks);
-
-	float roughDistribution = DistributionGGX(normal, halfwayDir, roughness);
-	return roughDistribution * vec3(ks);
-}
-
-vec3 computeDifuse()
-{
-
-	float difuseLight = dot(normal, lightDirection);
-	difuseLight = max(difuseLight, 0);
-	return vec3(kd) * difuseLight;
-}
+//vec3 computeSpecular()
+//{
+//	//Blinn-Phong
+//	vec3 halfwayDir = normalize(lightDirection + viewDir);
+//	float cosTheta = dot(halfwayDir, normal);
+//
+//	//phong
+//	//vec3 reflectedLightVector = reflect(-lightDirection, normal);
+//	//float specularLight = dot(reflectedLightVector, eyeDirection);
+//
+//	//if(difuseTest <= 0.01) 
+//	//{return vec3(0);}
+//
+//	cosTheta = max(cosTheta,0);
+//	cosTheta = pow(cosTheta, ks.w);
+//	
+//	//return cosTheta * vec3(ks);
+//
+//	float roughDistribution = DistributionGGX(normal, halfwayDir, roughness);
+//	return roughDistribution * vec3(ks);
+//}
+//
+//vec3 computeDifuse()
+//{
+//
+//	float difuseLight = dot(normal, lightDirection);
+//	difuseLight = max(difuseLight, 0);
+//	return vec3(kd) * difuseLight;
+//}
 
 
 
 void main()
 {
 	{	//general data
-
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		color = vec4(kd.rgb,1); //(option) remove albedo texture
+		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
+		
+		//color *= vec4(kd.rgb,1); //(option) multiply texture by kd
+		//color = vec4(kd.rgb,1); //(option) remove albedo texture
 		if(color.w <= 0.1)
 			discard;
 
@@ -162,12 +162,12 @@ void main()
 		normal = getNormalMap(noMappedNorals);
 		normal = noMappedNorals; //(option) remove normal mapping
 
-		
+		//todo recheck normalize normals ant others
 
 		viewDir = u_eyePosition - v_position;
 		viewDir = normalize(viewDir); //v
 
-		difuseTest = dot(noMappedNorals, lightDirection); // used to check if object is in the light
+		//difuseTest = dot(noMappedNorals, lightDirection); // used to check if object is in the light
 		
 	}
 
@@ -186,7 +186,7 @@ void main()
 	{
 		vec3 lightPosition = u_lightPosition;
 
-		lightDirection = normalize(lightPosition - v_position);
+		vec3 lightDirection = normalize(lightPosition - v_position);
 		vec3 halfwayVec = normalize(lightDirection + viewDir);
 		
 		float dist = length(lightPosition - v_position);
@@ -199,9 +199,9 @@ void main()
 		vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 
 		float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-		float G   = GeometrySmith(normal, viewDir, lightPosition, roughness);   
+		float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
 
-		float denominator = 4.0 * max(dot(normal, viewDir), 0.0) 
+		float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
 			* max(dot(normal, lightDirection), 0.0);
 		vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
 
@@ -209,15 +209,21 @@ void main()
 		vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
 		kD *= 1.0 - metallic;	//metallic surfaces are darker
 		
-
+		// scale light by NdotL
 		float NdotL = max(dot(normal, lightDirection), 0.0);        
 		Lo += (kD * color.rgb / PI + specular) * radiance * NdotL;
 	}
 
-	vec3 ambient = vec3(0.1) * color.rgb * ao; //this value is made up
+	vec3 ambient = vec3(0.01) * color.rgb * ao; //this value is made up
 	vec3 color   = ambient + Lo; 
 
-	color = clamp(color, 0, 1);
+	 //HDR and gamma correction
+	//color = color / (color + vec3(1.0));
+	float exposure = 1;
+	color = vec3(1.0) - exp(-color  * exposure);
+	color = pow(color, vec3(1.0/2.2));
+
+	//color = clamp(color, 0, 1);
 
 	//vec3 difuseVec = computeDifuse();
 	//vec3 specularVec = computeSpecular();
@@ -232,9 +238,9 @@ void main()
 	//color.rgb *= (clamp(ambientVec + difuseVec, 0, 1) + specularVec);
 
 
-	vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, viewDir)); 
-	float dotNormalEye = dot(normal, viewDir);
-	dotNormalEye = clamp(dotNormalEye, 0, 1);
+	//vec3 caleidoscop = mix(skyBoxSpecular, color.rgb, cross(normal, viewDir)); 
+	//float dotNormalEye = dot(normal, viewDir);
+	//dotNormalEye = clamp(dotNormalEye, 0, 1);
 	
 	//color.rgb = mix(skyBoxSpecular, color.rgb, pow(dotNormalEye, 1/1.0) ); //90 degrees, 0, reflected color
 

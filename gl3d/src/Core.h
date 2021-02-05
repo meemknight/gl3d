@@ -15,18 +15,18 @@ namespace gl3d
 		glm::vec4 ka; //= 0.5; //w component not used
 		glm::vec4 kd; //= 0.45;//w component not used
 		glm::vec4 ks; //= 1;	 ;//w component is the specular exponent
-		float roughness = 0.5f;
-		float metallic = 0.5;
-		float ao = 0.1;
+		float roughness = 0.65f;
+		float metallic = 0.1;
+		float ao = 0.5;
 		Material setDefaultMaterial()
 		{
 			ka = glm::vec4(0.2);
 			kd = glm::vec4(0.45);
 			ks = glm::vec4(1);
 			ks.w = 32;
-			roughness = 0.5f;
-			metallic = 0.5;
-			ao = 0.1;
+			roughness = 0.65f;
+			metallic = 0.1;
+			ao = 0.5;
 			return *this;
 		}
 	};

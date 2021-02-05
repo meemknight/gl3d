@@ -26,6 +26,7 @@ namespace gl3d
 
 	}
 
+	//todo add srgb
 	void Texture::loadTextureFromMemory(void *data, int w, int h)
 	{
 		glGenTextures(1, &id);

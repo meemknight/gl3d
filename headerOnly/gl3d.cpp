@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-01-31
+//built on 2021-02-05
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -113,6 +113,7 @@ namespace gl3d
 
 	}
 
+	//todo add srgb
 	void Texture::loadTextureFromMemory(void *data, int w, int h)
 	{
 		glGenTextures(1, &id);
@@ -731,6 +732,11 @@ namespace gl3d
 		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
 		material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
 		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+		material.metallic = mat.metallic;
+		material.roughness = mat.roughness;
+		//material.ao = mat.ao;
+
+		material.setDefaultMaterial();
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
@@ -977,6 +983,7 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
+	//todo add srgb
 	void SkyBox::loadTexture(const char *names[6])
 	{
 		glGenTextures(1, &texture);
@@ -1025,8 +1032,7 @@ namespace gl3d
 
 	}
 
-
-
+	//todo add srgb
 	void SkyBox::loadTexture(const char *name, int format)
 	{
 		glGenTextures(1, &texture);
@@ -1260,12 +1266,13 @@ namespace gl3d
 		auto viewMat = camera.getWorldToViewMatrix();
 		auto transformMat = model.getTransformMatrix();
 
-		auto viewProjMat = projMat * viewMat * transformMat;
+		auto modelViewProjMat = projMat * viewMat * transformMat;
+		//auto modelView = viewMat * transformMat;
 
 		for(auto &i : model.models)
 		{
 		
-			lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, i.material);
+			lightShader.bind(modelViewProjMat, transformMat, lightPos, camera.position, gama, i.material);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);

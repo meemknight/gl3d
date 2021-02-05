@@ -39,12 +39,13 @@ namespace gl3d
 		auto viewMat = camera.getWorldToViewMatrix();
 		auto transformMat = model.getTransformMatrix();
 
-		auto viewProjMat = projMat * viewMat * transformMat;
+		auto modelViewProjMat = projMat * viewMat * transformMat;
+		//auto modelView = viewMat * transformMat;
 
 		for(auto &i : model.models)
 		{
 		
-			lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, i.material);
+			lightShader.bind(modelViewProjMat, transformMat, lightPos, camera.position, gama, i.material);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);

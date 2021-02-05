@@ -111,6 +111,11 @@ namespace gl3d
 		material.kd = glm::vec4(glm::vec3(mat.Kd), 0);
 		material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
 		material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
+		material.metallic = mat.metallic;
+		material.roughness = mat.roughness;
+		//material.ao = mat.ao;
+
+		material.setDefaultMaterial();
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
@@ -357,6 +362,7 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
+	//todo add srgb
 	void SkyBox::loadTexture(const char *names[6])
 	{
 		glGenTextures(1, &texture);
@@ -405,8 +411,7 @@ namespace gl3d
 
 	}
 
-
-
+	//todo add srgb
 	void SkyBox::loadTexture(const char *name, int format)
 	{
 		glGenTextures(1, &texture);

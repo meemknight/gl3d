@@ -46,7 +46,7 @@ int main()
 	}
 
 	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
+	ImGui::StyleColorsDark(); 
 
 	ImGuiIO &io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -786,15 +786,19 @@ int main()
 
 		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
+	#pragma region light cube
+		{
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto transformMat = lightCube.getTransformMatrix();
 
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = lightCube.getTransformMatrix();
+			auto viewProjMat = projMat * viewMat * transformMat;
+			shader.bind();
+			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+			lightCube.draw();
+		}
+	#pragma endregion
 
-		auto viewProjMat = projMat * viewMat * transformMat;
-		shader.bind();
-		glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-		lightCube.draw();
 
 		renderProfiler.start();
 
