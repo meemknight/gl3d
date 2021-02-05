@@ -160,7 +160,7 @@ void main()
 
 		noMappedNorals = normalize(v_normals);
 		normal = getNormalMap(noMappedNorals);
-		normal = noMappedNorals; //(option) remove normal mapping
+		//normal = noMappedNorals; //(option) remove normal mapping
 
 		//todo recheck normalize normals ant others
 
