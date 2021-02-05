@@ -183,6 +183,16 @@ namespace gl3d
 		id = 0;
 	}
 
+	GLint getUniformSubroutine(GLuint id, GLenum shaderType, const char *name)
+	{
+		GLint uniform = glGetSubroutineUniformLocation(id, shaderType, name);
+		if (uniform == -1)
+		{
+			std::cout << "uniform subroutine error " << name << "\n";
+		}
+		return uniform;
+	};
+
 	GLint getUniform(GLuint id, const char *name)
 	{
 		GLint uniform = glGetUniformLocation(id, name);
@@ -199,6 +209,16 @@ namespace gl3d
 		if (uniform == GL_INVALID_INDEX)
 		{
 			std::cout << "uniform block error " << name << "\n";
+		}
+		return uniform;
+	};
+
+	GLuint getUniformSubroutineIndex(GLuint id, GLenum shaderType, const char *name)
+	{
+		GLuint uniform = glGetSubroutineIndex(id, shaderType, name);
+		if (uniform == GL_INVALID_INDEX)
+		{
+			std::cout << "uniform subroutine index error " << name << "\n";
 		}
 		return uniform;
 	};
@@ -251,6 +271,19 @@ namespace gl3d
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
 
+
+	}
+
+	void LightShader::getSubroutines()
+	{
+		normalSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+			"getNormalMapFunc");
+
+		normalSubroutine_noMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+			"noNormalMapped");
+
+		normalSubroutine_normalMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+				"normalMapped");
 
 	}
 

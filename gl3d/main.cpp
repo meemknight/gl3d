@@ -23,7 +23,7 @@ int h = 640;
 
 gl3d::Material material = gl3d::Material().setDefaultMaterial();
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 
 #pragma region gpu
 extern "C"
@@ -412,6 +412,7 @@ int main()
 	static int subItemCurent = 0;
 	static bool borderItem = 0;
 	static bool showNormals = 0;
+	static bool normalMap = 1;
 
 	static int currnetFps = 0;
 	const int FPS_RECORD_ARR_SIZE = 20;
@@ -587,8 +588,13 @@ int main()
 				glDisable(GL_CULL_FACE);
 			}
 
+			ImGui::Checkbox("Normal map", &normalMap);
+			
+			lightShader.normalMap = normalMap;
+
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);
+
 
 			ImGui::End();
 		}

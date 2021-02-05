@@ -117,6 +117,7 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
 		, const Material &material);
 
+		void getSubroutines();
 
 		GLint normalShaderLocation = -1;
 		GLint normalShaderNormalTransformLocation = -1;
@@ -130,7 +131,15 @@ namespace gl3d
 		GLuint materialBlockLocation = -1;
 		GLuint materialBlockBuffer = 0;
 
+		GLint normalSubroutineLocation = -1;
+
+		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
+		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
+
+
 		Shader shader;
+
+		bool normalMap = 1; //todo remove
 
 		//todo clear
 	};

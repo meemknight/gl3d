@@ -1,4 +1,4 @@
-#version 330
+#version 420
 #pragma debug(on)
 
 #extension GL_NV_shadow_samplers_cube : enable
@@ -51,6 +51,26 @@ mat3x3 NormalToRotation(in vec3 normal)
 
 	//return ColumnVectorsToMatrix(tangent0, tangent1, normal);
 }
+
+
+subroutine vec3 GetNormalMapFunc(vec3);
+
+subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
+{
+	vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
+	normal = normalize(2*normal - 1.f);
+	mat3 rotMat = NormalToRotation(v);
+	normal = rotMat * normal;
+	normal = normalize(normal);
+	return normal;
+}
+
+subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
+{
+	return v;
+}
+
+subroutine uniform GetNormalMapFunc getNormalMapFunc;
 
 
 vec3 getNormalMap(in vec3 v)
@@ -160,7 +180,7 @@ void main()
 		//color = vec4(kd.rgb,1); //(option) remove albedo texture
 	
 		noMappedNorals = normalize(v_normals);
-		normal = getNormalMap(noMappedNorals);
+		normal = getNormalMapFunc(noMappedNorals);
 		//normal = noMappedNorals; //(option) remove normal mapping
 
 

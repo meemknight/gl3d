@@ -27,8 +27,8 @@ namespace gl3d
 	}
 
 
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-	GLuint skyBoxTexture, float gama)
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, 
+		LightShader lightShader, GLuint skyBoxTexture, float gama)
 	{
 		if(model.models.empty())
 		{
@@ -56,7 +56,31 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
+			lightShader.getSubroutines();
+
+			GLsizei n;
+			//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
+			glGetProgramStageiv(lightShader.shader.id,
+			GL_FRAGMENT_SHADER,
+			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+			&n);
+
+
+			GLuint *indices = new GLuint[n];
+
+			if (lightShader.normalMap)
+			{
+				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
+			}else
+			{
+				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
+			}
+
+			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+
 			i.draw();
+
+			delete[] indices;
 
 		}
 
