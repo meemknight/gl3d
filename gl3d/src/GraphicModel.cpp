@@ -107,6 +107,7 @@ namespace gl3d
 
 
 		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
+		material.setDefaultMaterial();
 
 		material.kd = glm::vec4(glm::vec3(mat.Kd), 1);
 		//material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
@@ -115,10 +116,12 @@ namespace gl3d
 		material.roughness = mat.roughness;
 		//material.ao = mat.ao;
 
-		material.setDefaultMaterial();
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
+		roughnessMapTexture.clear();
+		ambientMapTexture.clear();
+		metallicMapTexture.clear();
 
 		if (!mat.map_Kd.empty())
 		{
@@ -130,6 +133,20 @@ namespace gl3d
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
 		}
 
+		if (!mat.map_Pr.empty())
+		{
+			roughnessMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str());
+		}
+
+		if (!mat.map_Ka.empty())
+		{
+			ambientMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str());
+		}
+
+		if (!mat.map_Pm.empty())
+		{
+			metallicMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str());
+		}
 
 	}
 
@@ -217,6 +234,8 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
+		roughnessMapTexture.clear();
+		ambientMapTexture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;

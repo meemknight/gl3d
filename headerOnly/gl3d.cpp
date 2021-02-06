@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-05
+//built on 2021-02-06
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -508,7 +508,9 @@ namespace gl3d
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 		gamaLocation = getUniform(shader.id, "u_gama");
-		
+		roughnessSamplerLocation = getUniform(shader.id, "u_roughnessSampler");
+		ambientSamplerLocation = getUniform(shader.id, "u_aoSampler");
+		metallicSamplerLocation = getUniform(shader.id, "u_metallicSampler");
 		
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
 
@@ -538,6 +540,9 @@ namespace gl3d
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
+		glUniform1i(roughnessSamplerLocation, 3);
+		glUniform1i(ambientSamplerLocation, 4);
+		glUniform1i(metallicSamplerLocation, 5);
 		glUniform1f(gamaLocation, gama);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
@@ -761,6 +766,7 @@ namespace gl3d
 
 
 		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
+		material.setDefaultMaterial();
 
 		material.kd = glm::vec4(glm::vec3(mat.Kd), 1);
 		//material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
@@ -769,10 +775,12 @@ namespace gl3d
 		material.roughness = mat.roughness;
 		//material.ao = mat.ao;
 
-		material.setDefaultMaterial();
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
+		roughnessMapTexture.clear();
+		ambientMapTexture.clear();
+		metallicMapTexture.clear();
 
 		if (!mat.map_Kd.empty())
 		{
@@ -784,6 +792,20 @@ namespace gl3d
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
 		}
 
+		if (!mat.map_Pr.empty())
+		{
+			roughnessMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str());
+		}
+
+		if (!mat.map_Ka.empty())
+		{
+			ambientMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str());
+		}
+
+		if (!mat.map_Pm.empty())
+		{
+			metallicMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str());
+		}
 
 	}
 
@@ -871,6 +893,8 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
+		roughnessMapTexture.clear();
+		ambientMapTexture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;
@@ -1324,6 +1348,15 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, i.roughnessMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, i.ambientMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE5);
+			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
+
 			lightShader.getSubroutines();
 
 			GLsizei n;
@@ -1336,7 +1369,7 @@ namespace gl3d
 
 			GLuint *indices = new GLuint[n];
 
-			if (lightShader.normalMap)
+			if (i.normalMapTexture.id && lightShader.normalMap)
 			{
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}else

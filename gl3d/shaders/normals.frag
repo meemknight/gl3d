@@ -15,6 +15,9 @@ uniform vec3 u_eyePosition;
 uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 uniform samplerCube u_skybox;
+uniform sampler2D u_roughnessSampler;
+uniform sampler2D u_aoSampler;
+uniform sampler2D u_metallicSampler;
 uniform float u_gama;
 
 
@@ -23,7 +26,7 @@ layout(std140) uniform u_material
 	vec4 kd; //= 0.45;//w component not used
 	float roughness;
 	float metallic;
-	float ao; //one means light
+	float ao; //one means full light
 };
 
 //todo move some of this from global for implementing multi lights
@@ -53,6 +56,7 @@ mat3x3 NormalToRotation(in vec3 normal)
 }
 
 
+subroutine vec3 GetMapFunc(vec3);
 subroutine vec3 GetNormalMapFunc(vec3);
 
 subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
@@ -130,8 +134,11 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
 
-vec3 computePointLightSource(vec3 lightPosition)
+vec3 computePointLightSource(vec3 lightPosition, float metallic)
 {
+	float roughnessSampled = texture2D(u_roughnessSampler, v_texCoord).r;
+
+
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
 
@@ -147,8 +154,8 @@ vec3 computePointLightSource(vec3 lightPosition)
 	F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
 	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 
-	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
+	float NDF = DistributionGGX(normal, halfwayVec, roughnessSampled);       
+	float G   = GeometrySmith(normal, viewDir, lightDirection, roughnessSampled);   
 
 	float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
 		* max(dot(normal, lightDirection), 0.0);
@@ -168,6 +175,11 @@ vec3 computePointLightSource(vec3 lightPosition)
 
 void main()
 {
+
+
+	float metallicSampled = texture2D(u_metallicSampler, v_texCoord).r;
+	float sampledAo = texture2D(u_aoSampler, v_texCoord).r;
+
 	{	//general data
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
 		if(color.w <= 0.1)
@@ -199,20 +211,24 @@ void main()
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
+
 	//foreach point light
 	{
 		vec3 lightPosition = u_lightPosition;
 
-		Lo += computePointLightSource(lightPosition);
+		Lo += computePointLightSource(lightPosition, metallicSampled);
 	}
 
-	vec3 ambient = vec3(0.01) * color.rgb * ao; //this value is made up
+
+	vec3 ambient = vec3(0.01) * color.rgb * sampledAo; //this value is made up
 	vec3 color   = ambient + Lo; 
 
-	 //HDR and gamma correction
+	 //HDR 
 	//color = color / (color + vec3(1.0));
 	float exposure = 1;
 	color = vec3(1.0) - exp(-color  * exposure);
+	
+	//gamma correction
 	color = pow(color, vec3(1.0/2.2));
 
 	//color = clamp(color, 0, 1);

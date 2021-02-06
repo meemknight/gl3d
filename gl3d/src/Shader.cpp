@@ -236,7 +236,9 @@ namespace gl3d
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 		gamaLocation = getUniform(shader.id, "u_gama");
-		
+		roughnessSamplerLocation = getUniform(shader.id, "u_roughnessSampler");
+		ambientSamplerLocation = getUniform(shader.id, "u_aoSampler");
+		metallicSamplerLocation = getUniform(shader.id, "u_metallicSampler");
 		
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
 
@@ -266,6 +268,9 @@ namespace gl3d
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
+		glUniform1i(roughnessSamplerLocation, 3);
+		glUniform1i(ambientSamplerLocation, 4);
+		glUniform1i(metallicSamplerLocation, 5);
 		glUniform1f(gamaLocation, gama);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);

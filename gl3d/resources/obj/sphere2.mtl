@@ -4,12 +4,15 @@
 newmtl None
 Ns 198.039216
 Ka 0.000000 0.800000 0.000000
-Kd 0.000257 0.800000 0.000000
+Kd 1.000000 1.000000 1.000000
 Ks 1.000000 1.000000 1.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 Pm 0.9
 illum 2
-map_Kd metalPlate/metal_plate_diff_8k.jpg 
-map_Kn metalPlate/metal_plate_Nor_8k.jpg 
+map_Kd concrete/dirty_concrete_diff_1k.png 
+map_Kn concrete/dirty_concrete_Nor_1k.png
+map_Pr concrete/dirty_concrete_rough_1k.png
+map_Ao concrete/dirty_concrete_ao_1k.png
+map_Pm concrete/dirty_concrete_metall_1k.png

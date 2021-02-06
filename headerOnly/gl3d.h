@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-05
+//built on 2021-02-06
 ////////////////////////////////////////////////
 
 
@@ -127,6 +127,9 @@ namespace gl3d
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
+		GLint roughnessSamplerLocation = -1;
+		GLint ambientSamplerLocation = -1;
+		GLint metallicSamplerLocation = -1;
 
 		GLuint materialBlockLocation = -1;
 		GLuint materialBlockBuffer = 0;
@@ -275,6 +278,10 @@ namespace gl3d
 		//todo probably teporarily add this things
 		Texture albedoTexture;
 		Texture normalMapTexture;
+		Texture roughnessMapTexture;
+		Texture ambientMapTexture;
+		Texture metallicMapTexture;
+
 		Material material;
 
 	};

@@ -397,7 +397,7 @@ int main()
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
 	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
 	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
-	gl3d::LoadedModelData sphereModel("resources/obj/sphere2.obj");
+	gl3d::LoadedModelData sphereModel("resources/obj/sphere3.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -824,31 +824,10 @@ int main()
 			//models[i].models[0].position = models[i].position;
 			//models[i].models[0].scale = models[i].scale;
 			//models[i].models[0].rotation = models[i].rotation;
-			//if (items[i] == "Barrel")
-			//{	
-			//	//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, texture, normalTexture,
-			//	//	skyBox.texture, gamaCorection, material);
-			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-			//	skyBox.texture, gamaCorection);
-			//
-			//}else if(items[i] == "Rock")
-			//{
-			//	//gl3d::renderLightModel(models[i].models[0], camera, lightCube.position, lightShader, rockTexture, rockNormalTexture,
-			//	//	skyBox.texture, gamaCorection, material);
-			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-			//	skyBox.texture, gamaCorection);
-			//}
-			//else if (items[i] == "Crate")
-			//{
-			//	gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-			//		skyBox.texture, gamaCorection);
-			//}
-
-
+		
 			gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
 				skyBox.texture, gamaCorection);
 
-		
 		}
 
 		lastProfilerRezult = renderProfiler.end();

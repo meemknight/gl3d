@@ -56,6 +56,15 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, i.roughnessMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, i.ambientMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE5);
+			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
+
 			lightShader.getSubroutines();
 
 			GLsizei n;
@@ -68,7 +77,7 @@ namespace gl3d
 
 			GLuint *indices = new GLuint[n];
 
-			if (lightShader.normalMap)
+			if (i.normalMapTexture.id && lightShader.normalMap)
 			{
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}else

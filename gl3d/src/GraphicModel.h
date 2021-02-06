@@ -68,6 +68,10 @@ namespace gl3d
 		//todo probably teporarily add this things
 		Texture albedoTexture;
 		Texture normalMapTexture;
+		Texture roughnessMapTexture;
+		Texture ambientMapTexture;
+		Texture metallicMapTexture;
+
 		Material material;
 
 	};
