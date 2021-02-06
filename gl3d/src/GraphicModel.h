@@ -68,9 +68,7 @@ namespace gl3d
 		//todo probably teporarily add this things
 		Texture albedoTexture;
 		Texture normalMapTexture;
-		Texture roughnessMapTexture;
-		Texture ambientMapTexture;
-		Texture metallicMapTexture;
+
 		Texture RMA_Texture; //rough metalness ambient oclusion
 
 		Material material;

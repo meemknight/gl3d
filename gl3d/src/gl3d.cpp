@@ -57,15 +57,6 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
 			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, i.roughnessMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, i.ambientMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE5);
-			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE6);
 			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
 
 			lightShader.getSubroutines();

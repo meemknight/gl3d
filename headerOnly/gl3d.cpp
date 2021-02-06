@@ -90,14 +90,17 @@ void assertFunc(const char *expression,
 #include <iostream>
 #include <glm\vec3.hpp>
 
+
 namespace gl3d
 {
 
-	void Texture::loadTextureFromFile(const char *file)
+	void Texture::loadTextureFromFile(const char *file, int chanels, int quality)
 	{
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
+
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 4);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, chanels);
 
 		if (!data)
 		{
@@ -106,7 +109,7 @@ namespace gl3d
 		}
 		else
 		{
-			loadTextureFromMemory(data, w, h);
+			loadTextureFromMemory(data, w, h, chanels, quality);
 			stbi_image_free(data);
 		}
 
@@ -114,7 +117,12 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels)
+	//todo add quality enum
+	
+
+
+	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels,
+		int quality)
 	{
 		GLenum format = GL_RGBA;
 
@@ -122,6 +130,7 @@ namespace gl3d
 		{
 			format = GL_RGB;
 		}
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
@@ -130,12 +139,43 @@ namespace gl3d
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		
+		switch(quality)
+		{
+			case leastPossible:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			}
+			break;
+			case nearestMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			break;
+			case linearMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			break;
+			case maxQuality:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glGenerateMipmap(GL_TEXTURE_2D);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
+			}
+			break;
+			default:
+				gl3dAssertComment(0, "invalid quality");
+			break;
+		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8);
+	
 
 	}
 
@@ -515,9 +555,6 @@ namespace gl3d
 		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 		gamaLocation = getUniform(shader.id, "u_gama");
-		roughnessSamplerLocation = getUniform(shader.id, "u_roughnessSampler");
-		ambientSamplerLocation = getUniform(shader.id, "u_aoSampler");
-		metallicSamplerLocation = getUniform(shader.id, "u_metallicSampler");
 		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
 		
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
@@ -548,10 +585,7 @@ namespace gl3d
 		glUniform1i(textureSamplerLocation, 0);
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
-		glUniform1i(roughnessSamplerLocation, 3);
-		glUniform1i(ambientSamplerLocation, 4);
-		glUniform1i(metallicSamplerLocation, 5);
-		glUniform1i(RMASamplerLocation, 6);
+		glUniform1i(RMASamplerLocation, 3);
 		glUniform1f(gamaLocation, gama);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
@@ -792,9 +826,6 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
-		roughnessMapTexture.clear();
-		ambientMapTexture.clear();
-		metallicMapTexture.clear();
 		RMA_Texture.clear();
 
 		if (!mat.map_Kd.empty())
@@ -804,9 +835,11 @@ namespace gl3d
 
 		if (!mat.map_Kn.empty())
 		{
-			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
+			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
+				3, TextureLoadQuality::linearMipmap);
 		}
 
+		//RMA trexture
 		{
 			int w1, h1;
 			unsigned char *data1 = 0;
@@ -826,7 +859,6 @@ namespace gl3d
 			stbi_set_flip_vertically_on_load(true);
 			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
 				&w3, &h3, 0, 1);
-
 
 			int w = max(w1, w2, w3);
 			int h = max(h1, h2, h3);
@@ -882,7 +914,8 @@ namespace gl3d
 				}
 			}
 		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3);
+			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3, 
+				TextureLoadQuality::nearestMipmap);
 
 			stbi_image_free(data1);
 			stbi_image_free(data2);
@@ -890,22 +923,7 @@ namespace gl3d
 			delete[] finalData;
 
 		}
-	
 
-		if (!mat.map_Pr.empty())
-		{
-			roughnessMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str());
-		}
-
-		if (!mat.map_Ka.empty())
-		{
-			ambientMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str());
-		}
-
-		if (!mat.map_Pm.empty())
-		{
-			metallicMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str());
-		}
 
 	}
 
@@ -993,8 +1011,7 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
-		roughnessMapTexture.clear();
-		ambientMapTexture.clear();
+		RMA_Texture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;
@@ -1449,15 +1466,6 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
 
 			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, i.roughnessMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, i.ambientMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE5);
-			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE6);
 			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
 
 			lightShader.getSubroutines();

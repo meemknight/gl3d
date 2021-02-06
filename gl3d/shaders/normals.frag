@@ -15,11 +15,9 @@ uniform vec3 u_eyePosition;
 uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 uniform samplerCube u_skybox;
-uniform sampler2D u_roughnessSampler;
-uniform sampler2D u_aoSampler;
-uniform sampler2D u_metallicSampler;
-uniform sampler2D u_RMASampler;
 uniform float u_gama;
+
+uniform sampler2D u_RMASampler;
 
 
 layout(std140) uniform u_material
@@ -175,15 +173,12 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 void main()
 {
 
-	float metallicSampled = texture2D(u_metallicSampler, v_texCoord).r;
-	float sampledAo = texture2D(u_aoSampler, v_texCoord).r;
-	float roughnessSampled = texture2D(u_roughnessSampler, v_texCoord).r;
 
 	vec3 sampledMaterial = texture2D(u_RMASampler, v_texCoord).rgb;
 
-	//float roughnessSampled = sampledMaterial.r;
-	//float metallicSampled = sampledMaterial.g;
-	//float sampledAo = sampledMaterial.b;
+	float roughnessSampled = sampledMaterial.r;
+	float metallicSampled = sampledMaterial.g;
+	float sampledAo = sampledMaterial.b;
 
 	{	//general data
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
@@ -258,6 +253,7 @@ void main()
 	//color = caleidoscop;
 
 	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
+	//a_outColor = vec4(sampledMaterial.rgb,1);
 	
 
 }

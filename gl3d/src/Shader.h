@@ -41,9 +41,6 @@ namespace gl3d
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
-		GLint roughnessSamplerLocation = -1;
-		GLint ambientSamplerLocation = -1;
-		GLint metallicSamplerLocation = -1;
 		GLint RMASamplerLocation = -1;
 
 		GLuint materialBlockLocation = -1;

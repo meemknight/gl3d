@@ -59,6 +59,14 @@ namespace gl3d
 namespace gl3d
 {
 
+	enum TextureLoadQuality
+	{
+		leastPossible = 0,
+		nearestMipmap,
+		linearMipmap,
+		maxQuality
+	};
+
 	struct Texture
 	{
 		GLuint id = 0;
@@ -66,8 +74,8 @@ namespace gl3d
 		Texture() = default;
 		Texture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file);
-		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4);
+		void loadTextureFromFile(const char *file, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
 
 		void clear();
 	};
@@ -127,9 +135,6 @@ namespace gl3d
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
-		GLint roughnessSamplerLocation = -1;
-		GLint ambientSamplerLocation = -1;
-		GLint metallicSamplerLocation = -1;
 		GLint RMASamplerLocation = -1;
 
 		GLuint materialBlockLocation = -1;
@@ -279,9 +284,7 @@ namespace gl3d
 		//todo probably teporarily add this things
 		Texture albedoTexture;
 		Texture normalMapTexture;
-		Texture roughnessMapTexture;
-		Texture ambientMapTexture;
-		Texture metallicMapTexture;
+
 		Texture RMA_Texture; //rough metalness ambient oclusion
 
 		Material material;

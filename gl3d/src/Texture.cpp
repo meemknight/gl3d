@@ -2,15 +2,18 @@
 #include <stb_image.h>
 #include <iostream>
 #include <glm\vec3.hpp>
+#include "Core.h"
 
 namespace gl3d
 {
 
-	void Texture::loadTextureFromFile(const char *file)
+	void Texture::loadTextureFromFile(const char *file, int chanels, int quality)
 	{
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
+
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 4);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, chanels);
 
 		if (!data)
 		{
@@ -19,7 +22,7 @@ namespace gl3d
 		}
 		else
 		{
-			loadTextureFromMemory(data, w, h);
+			loadTextureFromMemory(data, w, h, chanels, quality);
 			stbi_image_free(data);
 		}
 
@@ -27,7 +30,12 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels)
+	//todo add quality enum
+	
+
+
+	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels,
+		int quality)
 	{
 		GLenum format = GL_RGBA;
 
@@ -35,6 +43,7 @@ namespace gl3d
 		{
 			format = GL_RGB;
 		}
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
@@ -43,12 +52,43 @@ namespace gl3d
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		
+		switch(quality)
+		{
+			case leastPossible:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			}
+			break;
+			case nearestMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			break;
+			case linearMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			break;
+			case maxQuality:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glGenerateMipmap(GL_TEXTURE_2D);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
+			}
+			break;
+			default:
+				gl3dAssertComment(0, "invalid quality");
+			break;
+		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8);
+	
 
 	}
 

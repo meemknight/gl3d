@@ -124,9 +124,6 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
-		roughnessMapTexture.clear();
-		ambientMapTexture.clear();
-		metallicMapTexture.clear();
 		RMA_Texture.clear();
 
 		if (!mat.map_Kd.empty())
@@ -136,9 +133,11 @@ namespace gl3d
 
 		if (!mat.map_Kn.empty())
 		{
-			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
+			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
+				3, TextureLoadQuality::linearMipmap);
 		}
 
+		//RMA trexture
 		{
 			int w1, h1;
 			unsigned char *data1 = 0;
@@ -158,7 +157,6 @@ namespace gl3d
 			stbi_set_flip_vertically_on_load(true);
 			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
 				&w3, &h3, 0, 1);
-
 
 			int w = max(w1, w2, w3);
 			int h = max(h1, h2, h3);
@@ -214,7 +212,8 @@ namespace gl3d
 				}
 			}
 		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3);
+			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3, 
+				TextureLoadQuality::nearestMipmap);
 
 			stbi_image_free(data1);
 			stbi_image_free(data2);
@@ -223,20 +222,6 @@ namespace gl3d
 
 		}
 
-		if (!mat.map_Pr.empty())
-		{
-			roughnessMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str());
-		}
-
-		if (!mat.map_Ka.empty())
-		{
-			ambientMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str());
-		}
-
-		if (!mat.map_Pm.empty())
-		{
-			metallicMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str());
-		}
 
 	}
 
@@ -324,8 +309,7 @@ namespace gl3d
 
 		albedoTexture.clear();
 		normalMapTexture.clear();
-		roughnessMapTexture.clear();
-		ambientMapTexture.clear();
+		RMA_Texture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;
