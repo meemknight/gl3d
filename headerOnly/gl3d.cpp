@@ -94,13 +94,12 @@ void assertFunc(const char *expression,
 namespace gl3d
 {
 
-	void Texture::loadTextureFromFile(const char *file, int chanels, int quality)
+	void Texture::loadTextureFromFile(const char *file, int quality)
 	{
-		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, chanels);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 4);
 
 		if (!data)
 		{
@@ -109,7 +108,7 @@ namespace gl3d
 		}
 		else
 		{
-			loadTextureFromMemory(data, w, h, chanels, quality);
+			loadTextureFromMemory(data, w, h, 4, quality);
 			stbi_image_free(data);
 		}
 
@@ -135,7 +134,7 @@ namespace gl3d
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, format, GL_UNSIGNED_BYTE, data);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -567,7 +566,7 @@ namespace gl3d
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 	
-		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_STATIC_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only
 
 		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
 
@@ -578,6 +577,14 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
 	{
 		shader.bind();
+		
+		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, material);
+
+	}
+
+	void LightShader::setData(const glm::mat4 &viewProjMat, 
+		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+	{
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
@@ -588,11 +595,16 @@ namespace gl3d
 		glUniform1i(RMASamplerLocation, 3);
 		glUniform1f(gamaLocation, gama);
 
+		setMaterial(material);
+	}
+
+	void LightShader::setMaterial(const Material &material)
+	{
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
-
-
 	}
+
+
 
 	void LightShader::getSubroutines()
 	{
@@ -604,6 +616,27 @@ namespace gl3d
 
 		normalSubroutine_normalMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
+
+
+		materialSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+			"u_getMaterialMapped");
+
+		const char *materiaSubroutineFunctions[8] = { 
+			"materialNone",
+			"materialR",
+			"materialM",
+			"materialA",
+			"materialRM",
+			"materialRA",
+			"materialMA",
+			"materialRMA" };
+
+		for(int i=0; i<8; i++)
+		{
+			materialSubroutine_functions[i] = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+				materiaSubroutineFunctions[i]);
+		}
+
 
 	}
 
@@ -836,36 +869,61 @@ namespace gl3d
 		if (!mat.map_Kn.empty())
 		{
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
-				3, TextureLoadQuality::linearMipmap);
+				TextureLoadQuality::linearMipmap);
 		}
 
+		RMA_loadedTextures = 0;
 		//RMA trexture
 		{
-			int w1, h1;
+			stbi_set_flip_vertically_on_load(true);
+
+			int w1=0, h1=0;
 			unsigned char *data1 = 0;
 			unsigned char *data2 = 0;
 			unsigned char *data3 = 0;
 
-			stbi_set_flip_vertically_on_load(true);
-			data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(), 
+			if(!mat.map_Pr.empty())
+			{
+				data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
 				&w1, &h1, 0, 1);
-
-			int w2, h2;
-			stbi_set_flip_vertically_on_load(true);
-			data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
+				if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
+			}
+			
+			int w2=0, h2=0;
+			if(!mat.map_Pm.empty())
+			{
+				data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
 				&w2, &h2, 0, 1);
+				if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
+			}
+		
 
-			int w3, h3;
-			stbi_set_flip_vertically_on_load(true);
+			int w3=0, h3=0;
+			if(!mat.map_Ka.empty())
+			{
 			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
 				&w3, &h3, 0, 1);
+				if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
+			}
 
 			int w = max(w1, w2, w3);
 			int h = max(h1, h2, h3);
 
-			unsigned char *finalData = new unsigned char[w * h * 3];
+			//calculate which function to use
+			if(data1 && data2 && data3){ RMA_loadedTextures = 7;}else
+			if(			data2 && data3){ RMA_loadedTextures = 6;}else
+			if(data1 		  && data3){ RMA_loadedTextures = 5;}else
+			if(data1 && data2		  ){ RMA_loadedTextures = 4;}else
+			if(					 data3){ RMA_loadedTextures = 3;}else
+			if(			data2		  ){ RMA_loadedTextures = 2;}else
+			if(data1				  ){ RMA_loadedTextures = 1;}else
+									   { RMA_loadedTextures = 0;};
+
+
+			unsigned char *finalData = new unsigned char[w * h * 4];
 
 			//todo mabe add bilinear filtering
+			//todo load less chanels if necessary
 			for(int j=0; j<h; j++)
 			{
 				for (int i = 0; i < w; i++)
@@ -876,12 +934,12 @@ namespace gl3d
 						int texelI = (i / (float)w) * w1;
 						int texelJ = (j / float(h)) * h1;
 
-						finalData[((j * w) + i) * 3 + 0] = 
+						finalData[((j * w) + i) * 4 + 0] = 
 							data1[(texelJ*w1) + texelI];
 
 					}else
 					{
-						finalData[((j * w) + i) * 3 + 0] = 0;
+						finalData[((j * w) + i) * 4 + 0] = 0;
 					}
 
 					if (data2)	//metalic
@@ -890,12 +948,12 @@ namespace gl3d
 						int texelI = (i / (float)w) * w2;
 						int texelJ = (j / float(h)) * h2;
 
-						finalData[((j * w) + i) * 3 + 1] =
+						finalData[((j * w) + i) * 4 + 1] =
 							data2[(texelJ * w2) + texelI];
 					}
 					else
 					{
-						finalData[((j * w) + i) * 3 + 1] = 0;
+						finalData[((j * w) + i) * 4 + 1] = 0;
 					}
 
 					if (data3)	//ambient
@@ -903,18 +961,18 @@ namespace gl3d
 						int texelI = (i / (float)w) * w3;
 						int texelJ = (j / float(h)) * h3;
 
-						finalData[((j * w) + i) * 3 + 2] =
+						finalData[((j * w) + i) * 4 + 2] =
 							data3[(texelJ * w3) + texelI];
 					}
 					else
 					{
-						finalData[((j * w) + i) * 3 + 2] = 0;
+						finalData[((j * w) + i) * 4 + 2] = 0;
 					}
 
 				}
 			}
 		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3, 
+			RMA_Texture.loadTextureFromMemory(finalData, w, h, 4, 
 				TextureLoadQuality::nearestMipmap);
 
 			stbi_image_free(data1);
@@ -922,6 +980,7 @@ namespace gl3d
 			stbi_image_free(data3);
 			delete[] finalData;
 
+			
 		}
 
 
@@ -1451,10 +1510,24 @@ namespace gl3d
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
 
+		lightShader.shader.bind();
+
+		lightShader.getSubroutines();
+		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material());
+
+		GLsizei n;
+		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
+		glGetProgramStageiv(lightShader.shader.id,
+		GL_FRAGMENT_SHADER,
+		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+		&n);
+
+		GLuint *indices = new GLuint[n]{ 0 };
+		bool changed = 1;
+
 		for(auto &i : model.models)
 		{
-		
-			lightShader.bind(modelViewProjMat, transformMat, lightPos, camera.position, gama, i.material);
+			lightShader.setMaterial(i.material);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
@@ -1468,33 +1541,42 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
 
-			lightShader.getSubroutines();
-
-			GLsizei n;
-			//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-			glGetProgramStageiv(lightShader.shader.id,
-			GL_FRAGMENT_SHADER,
-			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-			&n);
-
-
-			GLuint *indices = new GLuint[n];
 
 			if (i.normalMapTexture.id && lightShader.normalMap)
 			{
+				if(indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}else
 			{
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
 			}
 
-			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+			if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
+			{ 
+				changed = 1;
+			}
+
+			indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
+
+			if(changed)
+			{
+				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+			}
+			changed = 0;
 
 			i.draw();
 
-			delete[] indices;
 
 		}
+
+		delete[] indices;
 
 		
 	}

@@ -31,6 +31,12 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
 		, const Material &material);
 
+		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
+		, const Material &material);
+
+		void setMaterial(const Material &material);
+
 		void getSubroutines();
 
 		GLint normalShaderLocation = -1;
@@ -47,9 +53,16 @@ namespace gl3d
 		GLuint materialBlockBuffer = 0;
 
 		GLint normalSubroutineLocation = -1;
+		GLint materialSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
+		
+		
+		GLuint materialSubroutine_functions[8] = {
+			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
+			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
+		};
 
 
 		Shader shader;

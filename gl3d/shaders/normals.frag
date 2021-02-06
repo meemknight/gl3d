@@ -55,7 +55,6 @@ mat3x3 NormalToRotation(in vec3 normal)
 }
 
 
-subroutine vec3 GetMapFunc(vec3);
 subroutine vec3 GetNormalMapFunc(vec3);
 
 subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
@@ -76,15 +75,57 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
 
 
-vec3 getNormalMap(in vec3 v)
+subroutine vec3 GetMaterialMapped();
+
+subroutine (GetMaterialMapped) vec3 materialNone()
 {
-	vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
-	normal = normalize(2*normal - 1.f);
-	mat3 rotMat = NormalToRotation(v);
-	normal = rotMat * normal;
-	normal = normalize(normal);
-	return normal;
+	return vec3(roughness, metallic, ao);
 }
+
+subroutine (GetMaterialMapped) vec3 materialR()
+{
+	float r = texture2D(u_RMASampler, v_texCoord).r;
+	return vec3(r, metallic, ao);
+}
+
+subroutine (GetMaterialMapped) vec3 materialM()
+{
+	float m = texture2D(u_RMASampler, v_texCoord).r;
+	return vec3(roughness, m, ao);
+}
+
+subroutine (GetMaterialMapped) vec3 materialA()
+{
+	float a = texture2D(u_RMASampler, v_texCoord).r;
+	return vec3(roughness, metallic, a);
+}
+
+subroutine (GetMaterialMapped) vec3 materialRM()
+{
+	vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
+	return vec3(v.x, v.y, ao);
+}
+
+subroutine (GetMaterialMapped) vec3 materialRA()
+{
+	vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
+	return vec3(v.x, metallic, v.y);
+}
+
+subroutine (GetMaterialMapped) vec3 materialMA()
+{
+	vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
+	return vec3(roughness, v.x, v.y);
+}
+
+subroutine (GetMaterialMapped) vec3 materialRMA()
+{
+	return texture2D(u_RMASampler, v_texCoord).rgb;
+}
+
+subroutine uniform GetMaterialMapped u_getMaterialMapped;
+
+
 
 //n normal
 //h halfway vector
@@ -174,7 +215,8 @@ void main()
 {
 
 
-	vec3 sampledMaterial = texture2D(u_RMASampler, v_texCoord).rgb;
+	//vec3 sampledMaterial = texture2D(u_RMASampler, v_texCoord).rgb;
+	vec3 sampledMaterial = u_getMaterialMapped();
 
 	float roughnessSampled = sampledMaterial.r;
 	float metallicSampled = sampledMaterial.g;

@@ -74,7 +74,7 @@ namespace gl3d
 		Texture() = default;
 		Texture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromFile(const char *file, int quality = maxQuality);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
 
 		void clear();
@@ -125,6 +125,12 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
 		, const Material &material);
 
+		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
+		, const Material &material);
+
+		void setMaterial(const Material &material);
+
 		void getSubroutines();
 
 		GLint normalShaderLocation = -1;
@@ -141,9 +147,16 @@ namespace gl3d
 		GLuint materialBlockBuffer = 0;
 
 		GLint normalSubroutineLocation = -1;
+		GLint materialSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
+		
+		
+		GLuint materialSubroutine_functions[8] = {
+			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
+			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
+		};
 
 
 		Shader shader;
@@ -286,6 +299,7 @@ namespace gl3d
 		Texture normalMapTexture;
 
 		Texture RMA_Texture; //rough metalness ambient oclusion
+		int RMA_loadedTextures;
 
 		Material material;
 

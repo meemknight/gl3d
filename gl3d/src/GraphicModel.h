@@ -70,6 +70,7 @@ namespace gl3d
 		Texture normalMapTexture;
 
 		Texture RMA_Texture; //rough metalness ambient oclusion
+		int RMA_loadedTextures;
 
 		Material material;
 

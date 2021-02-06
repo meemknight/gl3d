@@ -248,7 +248,7 @@ namespace gl3d
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 	
-		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_STATIC_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
 
 		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
 
@@ -259,6 +259,14 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
 	{
 		shader.bind();
+		
+		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, material);
+
+	}
+
+	void LightShader::setData(const glm::mat4 &viewProjMat, 
+		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+	{
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
@@ -269,11 +277,16 @@ namespace gl3d
 		glUniform1i(RMASamplerLocation, 3);
 		glUniform1f(gamaLocation, gama);
 
+		setMaterial(material);
+	}
+
+	void LightShader::setMaterial(const Material &material)
+	{
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
-
-
 	}
+
+
 
 	void LightShader::getSubroutines()
 	{
@@ -285,6 +298,27 @@ namespace gl3d
 
 		normalSubroutine_normalMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
+
+
+		materialSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+			"u_getMaterialMapped");
+
+		const char *materiaSubroutineFunctions[8] = { 
+			"materialNone",
+			"materialR",
+			"materialM",
+			"materialA",
+			"materialRM",
+			"materialRA",
+			"materialMA",
+			"materialRMA" };
+
+		for(int i=0; i<8; i++)
+		{
+			materialSubroutine_functions[i] = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+				materiaSubroutineFunctions[i]);
+		}
+
 
 	}
 

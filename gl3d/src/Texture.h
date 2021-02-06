@@ -19,7 +19,7 @@ namespace gl3d
 		Texture() = default;
 		Texture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromFile(const char *file, int quality = maxQuality);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
 
 		void clear();

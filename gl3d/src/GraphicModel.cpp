@@ -134,36 +134,61 @@ namespace gl3d
 		if (!mat.map_Kn.empty())
 		{
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
-				3, TextureLoadQuality::linearMipmap);
+				TextureLoadQuality::linearMipmap);
 		}
 
+		RMA_loadedTextures = 0;
 		//RMA trexture
 		{
-			int w1, h1;
+			stbi_set_flip_vertically_on_load(true);
+
+			int w1=0, h1=0;
 			unsigned char *data1 = 0;
 			unsigned char *data2 = 0;
 			unsigned char *data3 = 0;
 
-			stbi_set_flip_vertically_on_load(true);
-			data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(), 
+			if(!mat.map_Pr.empty())
+			{
+				data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
 				&w1, &h1, 0, 1);
-
-			int w2, h2;
-			stbi_set_flip_vertically_on_load(true);
-			data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
+				if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
+			}
+			
+			int w2=0, h2=0;
+			if(!mat.map_Pm.empty())
+			{
+				data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
 				&w2, &h2, 0, 1);
+				if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
+			}
+		
 
-			int w3, h3;
-			stbi_set_flip_vertically_on_load(true);
+			int w3=0, h3=0;
+			if(!mat.map_Ka.empty())
+			{
 			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
 				&w3, &h3, 0, 1);
+				if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
+			}
 
 			int w = max(w1, w2, w3);
 			int h = max(h1, h2, h3);
 
-			unsigned char *finalData = new unsigned char[w * h * 3];
+			//calculate which function to use
+			if(data1 && data2 && data3){ RMA_loadedTextures = 7;}else
+			if(			data2 && data3){ RMA_loadedTextures = 6;}else
+			if(data1 		  && data3){ RMA_loadedTextures = 5;}else
+			if(data1 && data2		  ){ RMA_loadedTextures = 4;}else
+			if(					 data3){ RMA_loadedTextures = 3;}else
+			if(			data2		  ){ RMA_loadedTextures = 2;}else
+			if(data1				  ){ RMA_loadedTextures = 1;}else
+									   { RMA_loadedTextures = 0;};
+
+
+			unsigned char *finalData = new unsigned char[w * h * 4];
 
 			//todo mabe add bilinear filtering
+			//todo load less chanels if necessary
 			for(int j=0; j<h; j++)
 			{
 				for (int i = 0; i < w; i++)
@@ -174,12 +199,12 @@ namespace gl3d
 						int texelI = (i / (float)w) * w1;
 						int texelJ = (j / float(h)) * h1;
 
-						finalData[((j * w) + i) * 3 + 0] = 
+						finalData[((j * w) + i) * 4 + 0] = 
 							data1[(texelJ*w1) + texelI];
 
 					}else
 					{
-						finalData[((j * w) + i) * 3 + 0] = 0;
+						finalData[((j * w) + i) * 4 + 0] = 0;
 					}
 
 					if (data2)	//metalic
@@ -188,12 +213,12 @@ namespace gl3d
 						int texelI = (i / (float)w) * w2;
 						int texelJ = (j / float(h)) * h2;
 
-						finalData[((j * w) + i) * 3 + 1] =
+						finalData[((j * w) + i) * 4 + 1] =
 							data2[(texelJ * w2) + texelI];
 					}
 					else
 					{
-						finalData[((j * w) + i) * 3 + 1] = 0;
+						finalData[((j * w) + i) * 4 + 1] = 0;
 					}
 
 					if (data3)	//ambient
@@ -201,18 +226,18 @@ namespace gl3d
 						int texelI = (i / (float)w) * w3;
 						int texelJ = (j / float(h)) * h3;
 
-						finalData[((j * w) + i) * 3 + 2] =
+						finalData[((j * w) + i) * 4 + 2] =
 							data3[(texelJ * w3) + texelI];
 					}
 					else
 					{
-						finalData[((j * w) + i) * 3 + 2] = 0;
+						finalData[((j * w) + i) * 4 + 2] = 0;
 					}
 
 				}
 			}
 		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3, 
+			RMA_Texture.loadTextureFromMemory(finalData, w, h, 4, 
 				TextureLoadQuality::nearestMipmap);
 
 			stbi_image_free(data1);
@@ -220,6 +245,7 @@ namespace gl3d
 			stbi_image_free(data3);
 			delete[] finalData;
 
+			
 		}
 
 

@@ -7,13 +7,12 @@
 namespace gl3d
 {
 
-	void Texture::loadTextureFromFile(const char *file, int chanels, int quality)
+	void Texture::loadTextureFromFile(const char *file, int quality)
 	{
-		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, chanels);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 4);
 
 		if (!data)
 		{
@@ -22,7 +21,7 @@ namespace gl3d
 		}
 		else
 		{
-			loadTextureFromMemory(data, w, h, chanels, quality);
+			loadTextureFromMemory(data, w, h, 4, quality);
 			stbi_image_free(data);
 		}
 
@@ -48,7 +47,7 @@ namespace gl3d
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, format, GL_UNSIGNED_BYTE, data);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

@@ -42,10 +42,24 @@ namespace gl3d
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
 
+		lightShader.shader.bind();
+
+		lightShader.getSubroutines();
+		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material());
+
+		GLsizei n;
+		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
+		glGetProgramStageiv(lightShader.shader.id,
+		GL_FRAGMENT_SHADER,
+		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+		&n);
+
+		GLuint *indices = new GLuint[n]{ 0 };
+		bool changed = 1;
+
 		for(auto &i : model.models)
 		{
-		
-			lightShader.bind(modelViewProjMat, transformMat, lightPos, camera.position, gama, i.material);
+			lightShader.setMaterial(i.material);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
@@ -59,33 +73,42 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
 
-			lightShader.getSubroutines();
-
-			GLsizei n;
-			//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-			glGetProgramStageiv(lightShader.shader.id,
-			GL_FRAGMENT_SHADER,
-			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-			&n);
-
-
-			GLuint *indices = new GLuint[n];
 
 			if (i.normalMapTexture.id && lightShader.normalMap)
 			{
+				if(indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}else
 			{
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
 			}
 
-			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+			if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
+			{ 
+				changed = 1;
+			}
+
+			indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
+
+			if(changed)
+			{
+				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+			}
+			changed = 0;
 
 			i.draw();
 
-			delete[] indices;
 
 		}
+
+		delete[] indices;
 
 		
 	}
