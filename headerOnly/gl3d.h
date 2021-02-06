@@ -67,7 +67,7 @@ namespace gl3d
 		Texture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file);
-		void loadTextureFromMemory(void *data, int w, int h);
+		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4);
 
 		void clear();
 	};
@@ -130,6 +130,7 @@ namespace gl3d
 		GLint roughnessSamplerLocation = -1;
 		GLint ambientSamplerLocation = -1;
 		GLint metallicSamplerLocation = -1;
+		GLint RMASamplerLocation = -1;
 
 		GLuint materialBlockLocation = -1;
 		GLuint materialBlockBuffer = 0;
@@ -281,6 +282,7 @@ namespace gl3d
 		Texture roughnessMapTexture;
 		Texture ambientMapTexture;
 		Texture metallicMapTexture;
+		Texture RMA_Texture; //rough metalness ambient oclusion
 
 		Material material;
 

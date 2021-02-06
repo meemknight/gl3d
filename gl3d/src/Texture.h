@@ -12,7 +12,7 @@ namespace gl3d
 		Texture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file);
-		void loadTextureFromMemory(void *data, int w, int h);
+		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4);
 
 		void clear();
 	};

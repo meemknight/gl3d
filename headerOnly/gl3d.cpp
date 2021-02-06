@@ -114,12 +114,19 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void Texture::loadTextureFromMemory(void *data, int w, int h)
+	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels)
 	{
+		GLenum format = GL_RGBA;
+
+		if(chanels == 3)
+		{
+			format = GL_RGB;
+		}
+
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -511,6 +518,7 @@ namespace gl3d
 		roughnessSamplerLocation = getUniform(shader.id, "u_roughnessSampler");
 		ambientSamplerLocation = getUniform(shader.id, "u_aoSampler");
 		metallicSamplerLocation = getUniform(shader.id, "u_metallicSampler");
+		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
 		
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
 
@@ -543,6 +551,7 @@ namespace gl3d
 		glUniform1i(roughnessSamplerLocation, 3);
 		glUniform1i(ambientSamplerLocation, 4);
 		glUniform1i(metallicSamplerLocation, 5);
+		glUniform1i(RMASamplerLocation, 6);
 		glUniform1f(gamaLocation, gama);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
@@ -757,6 +766,11 @@ namespace gl3d
 			indexesCount * 4, &indexes[0], (textureUV == nullptr));
 	}
 
+	int max(int x, int y, int z)
+	{
+		return std::max(std::max(x, y), z);
+	}
+
 	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
 	{
 		auto &mesh = model.loader.LoadedMeshes[index];
@@ -781,6 +795,7 @@ namespace gl3d
 		roughnessMapTexture.clear();
 		ambientMapTexture.clear();
 		metallicMapTexture.clear();
+		RMA_Texture.clear();
 
 		if (!mat.map_Kd.empty())
 		{
@@ -791,6 +806,91 @@ namespace gl3d
 		{
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str());
 		}
+
+		{
+			int w1, h1;
+			unsigned char *data1 = 0;
+			unsigned char *data2 = 0;
+			unsigned char *data3 = 0;
+
+			stbi_set_flip_vertically_on_load(true);
+			data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(), 
+				&w1, &h1, 0, 1);
+
+			int w2, h2;
+			stbi_set_flip_vertically_on_load(true);
+			data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
+				&w2, &h2, 0, 1);
+
+			int w3, h3;
+			stbi_set_flip_vertically_on_load(true);
+			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
+				&w3, &h3, 0, 1);
+
+
+			int w = max(w1, w2, w3);
+			int h = max(h1, h2, h3);
+
+			unsigned char *finalData = new unsigned char[w * h * 3];
+
+			//todo mabe add bilinear filtering
+			for(int j=0; j<h; j++)
+			{
+				for (int i = 0; i < w; i++)
+				{
+
+					if(data1)	//rough
+					{
+						int texelI = (i / (float)w) * w1;
+						int texelJ = (j / float(h)) * h1;
+
+						finalData[((j * w) + i) * 3 + 0] = 
+							data1[(texelJ*w1) + texelI];
+
+					}else
+					{
+						finalData[((j * w) + i) * 3 + 0] = 0;
+					}
+
+					if (data2)	//metalic
+					{
+
+						int texelI = (i / (float)w) * w2;
+						int texelJ = (j / float(h)) * h2;
+
+						finalData[((j * w) + i) * 3 + 1] =
+							data2[(texelJ * w2) + texelI];
+					}
+					else
+					{
+						finalData[((j * w) + i) * 3 + 1] = 0;
+					}
+
+					if (data3)	//ambient
+					{
+						int texelI = (i / (float)w) * w3;
+						int texelJ = (j / float(h)) * h3;
+
+						finalData[((j * w) + i) * 3 + 2] =
+							data3[(texelJ * w3) + texelI];
+					}
+					else
+					{
+						finalData[((j * w) + i) * 3 + 2] = 0;
+					}
+
+				}
+			}
+		
+			RMA_Texture.loadTextureFromMemory(finalData, w, h, 3);
+
+			stbi_image_free(data1);
+			stbi_image_free(data2);
+			stbi_image_free(data3);
+			delete[] finalData;
+
+		}
+	
 
 		if (!mat.map_Pr.empty())
 		{
@@ -1356,6 +1456,9 @@ namespace gl3d
 
 			glActiveTexture(GL_TEXTURE5);
 			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
+
+			glActiveTexture(GL_TEXTURE6);
+			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
 
 			lightShader.getSubroutines();
 

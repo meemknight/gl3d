@@ -18,6 +18,7 @@ uniform samplerCube u_skybox;
 uniform sampler2D u_roughnessSampler;
 uniform sampler2D u_aoSampler;
 uniform sampler2D u_metallicSampler;
+uniform sampler2D u_RMASampler;
 uniform float u_gama;
 
 
@@ -134,10 +135,8 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
 
-vec3 computePointLightSource(vec3 lightPosition, float metallic)
+vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness)
 {
-	float roughnessSampled = texture2D(u_roughnessSampler, v_texCoord).r;
-
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
@@ -154,8 +153,8 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic)
 	F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
 	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 
-	float NDF = DistributionGGX(normal, halfwayVec, roughnessSampled);       
-	float G   = GeometrySmith(normal, viewDir, lightDirection, roughnessSampled);   
+	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
+	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
 
 	float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
 		* max(dot(normal, lightDirection), 0.0);
@@ -176,9 +175,15 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic)
 void main()
 {
 
-
 	float metallicSampled = texture2D(u_metallicSampler, v_texCoord).r;
 	float sampledAo = texture2D(u_aoSampler, v_texCoord).r;
+	float roughnessSampled = texture2D(u_roughnessSampler, v_texCoord).r;
+
+	vec3 sampledMaterial = texture2D(u_RMASampler, v_texCoord).rgb;
+
+	//float roughnessSampled = sampledMaterial.r;
+	//float metallicSampled = sampledMaterial.g;
+	//float sampledAo = sampledMaterial.b;
 
 	{	//general data
 		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
@@ -189,6 +194,7 @@ void main()
 		
 		color *= vec4(kd.rgb,1); //(option) multiply texture by kd
 		
+
 		//color = vec4(kd.rgb,1); //(option) remove albedo texture
 	
 		noMappedNorals = normalize(v_normals);
@@ -216,7 +222,7 @@ void main()
 	{
 		vec3 lightPosition = u_lightPosition;
 
-		Lo += computePointLightSource(lightPosition, metallicSampled);
+		Lo += computePointLightSource(lightPosition, metallicSampled, roughnessSampled);
 	}
 
 
@@ -252,7 +258,6 @@ void main()
 	//color = caleidoscop;
 
 	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
-
 	
 
 }

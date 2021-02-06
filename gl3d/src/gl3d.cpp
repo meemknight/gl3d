@@ -65,6 +65,9 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE5);
 			glBindTexture(GL_TEXTURE_2D, i.metallicMapTexture.id);
 
+			glActiveTexture(GL_TEXTURE6);
+			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
+
 			lightShader.getSubroutines();
 
 			GLsizei n;

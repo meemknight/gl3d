@@ -27,12 +27,19 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void Texture::loadTextureFromMemory(void *data, int w, int h)
+	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels)
 	{
+		GLenum format = GL_RGBA;
+
+		if(chanels == 3)
+		{
+			format = GL_RGB;
+		}
+
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

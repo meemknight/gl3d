@@ -44,6 +44,7 @@ namespace gl3d
 		GLint roughnessSamplerLocation = -1;
 		GLint ambientSamplerLocation = -1;
 		GLint metallicSamplerLocation = -1;
+		GLint RMASamplerLocation = -1;
 
 		GLuint materialBlockLocation = -1;
 		GLuint materialBlockBuffer = 0;

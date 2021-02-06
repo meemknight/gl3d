@@ -239,6 +239,7 @@ namespace gl3d
 		roughnessSamplerLocation = getUniform(shader.id, "u_roughnessSampler");
 		ambientSamplerLocation = getUniform(shader.id, "u_aoSampler");
 		metallicSamplerLocation = getUniform(shader.id, "u_metallicSampler");
+		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
 		
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
 
@@ -271,6 +272,7 @@ namespace gl3d
 		glUniform1i(roughnessSamplerLocation, 3);
 		glUniform1i(ambientSamplerLocation, 4);
 		glUniform1i(metallicSamplerLocation, 5);
+		glUniform1i(RMASamplerLocation, 6);
 		glUniform1f(gamaLocation, gama);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
