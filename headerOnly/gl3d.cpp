@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-06
+//built on 2021-02-11
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -566,7 +566,7 @@ namespace gl3d
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 	
-		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
 
 		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
 

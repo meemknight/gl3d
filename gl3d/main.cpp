@@ -82,7 +82,6 @@ int main()
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 
-
 #pragma endregion
 
 	glEnable(GL_DEPTH_TEST);
@@ -391,7 +390,7 @@ int main()
 	//cube.loadFromFile("resources/obj/sphere.obj");
 	//cube.loadFromFile("resources/other/barrel.obj");
 
-
+	
 	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
@@ -419,7 +418,7 @@ int main()
 	int recordPos = 0;
 	static float fpsArr[FPS_RECORD_ARR_SIZE] = { };
 
-	const int DELTA_TIME_ARR_SIZE = 120;
+	const int DELTA_TIME_ARR_SIZE = 60;
 	int recordPosDeltaTime = 0;
 	static float deltaTimeArr[DELTA_TIME_ARR_SIZE] = { };
 
@@ -428,7 +427,7 @@ int main()
 	static PL::AverageProfiler renderProfiler;
 	static PL::ProfileRezults lastProfilerRezult = {};
 
-	const int Profiler_ARR_SIZE = 120;
+	const int Profiler_ARR_SIZE = 60;
 	int profilePos = 0;
 	static float profileeArr[Profiler_ARR_SIZE] = { };
 

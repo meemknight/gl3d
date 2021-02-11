@@ -19,7 +19,6 @@ uniform float u_gama;
 
 uniform sampler2D u_RMASampler;
 
-
 layout(std140) uniform u_material
 {
 	vec4 kd; //= 0.45;//w component not used
@@ -53,7 +52,6 @@ mat3x3 NormalToRotation(in vec3 normal)
 
 	//return ColumnVectorsToMatrix(tangent0, tangent1, normal);
 }
-
 
 subroutine vec3 GetNormalMapFunc(vec3);
 
