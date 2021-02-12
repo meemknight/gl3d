@@ -23,6 +23,10 @@ namespace gl3d
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
 
 		void clear();
+
+		void setTextureQuality(int quality);
+		int getTextureQuality();
+
 	};
 
 

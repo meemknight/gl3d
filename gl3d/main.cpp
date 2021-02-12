@@ -382,7 +382,7 @@ int main()
  cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
 	lightCube.scale = glm::vec3(0.05);
-	lightCube.position = glm::vec3(0, 1.6, 0.5);
+	lightCube.position = glm::vec3(0, 0.42, 2.44);
 
 	//gl3d::GraphicModel cube;
 	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
@@ -703,8 +703,68 @@ int main()
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
+
+
+					auto drawImage = [io](const char *c, GLuint id, int w, int h)
+					{
+						ImGui::PushID(id);
+						ImGui::Text(c, id);
+						ImGui::SameLine();
+
+						int my_tex_w = 20;
+						int my_tex_h = 20;
+						ImVec2 pos = ImGui::GetCursorScreenPos();
+						ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+						ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+						ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+						ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+						ImGui::Image((void *)(id),
+							ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
+
+						if (ImGui::IsItemHovered())
+						{
+							ImGui::BeginTooltip();
+							float region_sz = 64.0f * 4;
+							ImGui::Image((void *)(id)
+								, ImVec2(region_sz, region_sz ));
+							ImGui::EndTooltip();
+						}
+
+						gl3d::Texture t;
+						t.id = id;
+
+						int quality = t.getTextureQuality();
+						//ImGui::RadioButton("leastPossible", &quality, 0);
+						//ImGui::RadioButton("nearestMipmap", &quality, 1);
+						//ImGui::RadioButton("linearMipmap", &quality, 2);
+						//ImGui::RadioButton("maxQuality", &quality, 3);
+
+						//if (ImGui::RadioButton("leastPossible", quality == gl3d::leastPossible)) { quality = gl3d::leastPossible; }
+						//if (ImGui::RadioButton("nearestMipmap", quality == gl3d::nearestMipmap)) { quality = gl3d::nearestMipmap; }
+						//if (ImGui::RadioButton("linearMipmap", quality == gl3d::linearMipmap)) { quality = gl3d::linearMipmap; }
+						//if (ImGui::RadioButton("maxQuality", quality == gl3d::maxQuality)) { quality = gl3d::maxQuality; }
+
+						static const char const *items[] =
+						{
+						"leastPossible",
+						"nearestMipmap",
+						"linearMipmap",
+						"maxQuality",
+						};
+
+						ImGui::Combo("Texture Quality", &quality, items, 4);
+
+						t.setTextureQuality(quality);
+						ImGui::PopID();
+					};
+
+					drawImage("Object albedo, id: %d", models[itemCurrent].models[subItemCurent].albedoTexture.id, 20, 20);
+					drawImage("Object normal map, id: %d", models[itemCurrent].models[subItemCurent].normalMapTexture.id, 20, 20);
+					drawImage("Object RMA map, id: %d", models[itemCurrent].models[subItemCurent].RMA_Texture.id, 20, 20);
+
 				}
-			
+				
+
 			}
 
 			

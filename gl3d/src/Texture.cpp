@@ -53,7 +53,22 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		
-		switch(quality)
+		setTextureQuality(quality);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+	}
+
+	void Texture::clear()
+	{
+		glDeleteTextures(1, &id);
+		id = 0;
+	}
+
+	void Texture::setTextureQuality(int quality)
+	{
+		glBindTexture(GL_TEXTURE_2D, id);
+
+		switch (quality)
 		{
 			case leastPossible:
 			{
@@ -65,37 +80,67 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 			break;
 			case linearMipmap:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 			break;
 			case maxQuality:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glGenerateMipmap(GL_TEXTURE_2D);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
 			}
 			break;
 			default:
-				gl3dAssertComment(0, "invalid quality");
+			gl3dAssertComment(0, "invalid quality");
 			break;
 		}
-
-	
-
 	}
 
-	void Texture::clear()
+	int Texture::getTextureQuality()
 	{
-		glDeleteTextures(1, &id);
-		id = 0;
+		if(id == leastPossible)
+		{
+			return 0;
+		}
+
+		glBindTexture(GL_TEXTURE_2D, id);
+
+		int param = 0;
+
+		glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, &param);
+
+		switch (param)
+		{
+			case GL_NEAREST:
+			{
+				return leastPossible;
+			}
+			break;
+			case GL_NEAREST_MIPMAP_NEAREST:
+			{
+				return nearestMipmap;
+			}
+			break;
+			case GL_LINEAR_MIPMAP_NEAREST:
+			{
+				return linearMipmap;
+			}
+			break;
+			case GL_LINEAR_MIPMAP_LINEAR:
+			{
+				return maxQuality;
+			}
+			break;
+			
+		}
+
+		return leastPossible;
+
 	}
 
 	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel)

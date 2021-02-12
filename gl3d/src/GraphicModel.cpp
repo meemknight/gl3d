@@ -288,6 +288,7 @@ namespace gl3d
 						finalData[((j * w) + i) * 4 + 2] = 0;
 					}
 
+					finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
 				}
 			}
 		
