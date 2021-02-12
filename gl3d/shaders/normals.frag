@@ -212,11 +212,12 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 void main()
 {
 
-
 	//vec3 sampledMaterial = texture2D(u_RMASampler, v_texCoord).rgb;
 	vec3 sampledMaterial = u_getMaterialMapped();
 
 	float roughnessSampled = sampledMaterial.r;
+	roughnessSampled = max(0.50,roughnessSampled);
+
 	float metallicSampled = sampledMaterial.g;
 	float sampledAo = sampledMaterial.b;
 
