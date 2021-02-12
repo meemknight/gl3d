@@ -1,0 +1,15 @@
+# Blender MTL File: 'Barrel_01.blend'
+# Material Count: 1
+
+newmtl Barrel_01
+Ns 18.000005
+Ka 1.000000 1.000000 1.000000
+Kd 0.588235 0.588235 0.588235
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd Barrel_01_Textures\\Barrel_01_Radiation\\Barrel_01_Radiation_8-bit_Diffuse.png
+norm Barrel_01_Textures\\Barrel_01_Radiation\\Barrel_01_Radiation_16-bit_Normal.png
+map_ORM Barrel_01_Textures\\Barrel_01_Radiation\\Barrel_01_Radiation_8-bit_OcclusionRoughnessMetallic.png

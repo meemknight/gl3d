@@ -18,6 +18,7 @@ namespace gl3d
 		{
 			//todo err messages
 			std::cout << "err: " << file << "\n";
+			id = 0;
 		}
 		else
 		{

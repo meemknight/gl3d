@@ -105,6 +105,7 @@ namespace gl3d
 		{
 			//todo err messages
 			std::cout << "err: " << file << "\n";
+			id = 0;
 		}
 		else
 		{
@@ -873,7 +874,61 @@ namespace gl3d
 		}
 
 		RMA_loadedTextures = 0;
+		
+		if(!mat.map_RMA.empty()) //todo not tested
+		{
+			RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
+			TextureLoadQuality::nearestMipmap);
+
+			if(RMA_Texture.id)
+			{
+				RMA_loadedTextures = 7; //all textures loaded
+			}
+
+		}
+
+		if (!mat.map_ORM.empty() && RMA_loadedTextures == 0)
+		{
+			stbi_set_flip_vertically_on_load(true);
+
+			int w = 0, h = 0;
+			unsigned char *data = 0;
+
+			
+			{
+				data = stbi_load(std::string(model.path + mat.map_ORM).c_str(),
+				&w, &h, 0, 4);
+				if (!data)
+				{ std::cout << "err loading " << std::string(model.path + mat.map_ORM) << "\n"; }
+				else
+				{
+					//convert from ORM ro RMA
+
+					for (int j = 0; j < h; j++)
+						for (int i = 0; i < w; i++)
+						{
+							unsigned char R = data[(i + j*w) * 4 + 1];
+							unsigned char M = data[(i + j*w) * 4 + 2];
+							unsigned char A = data[(i + j*w) * 4 + 0];
+
+							data[(i + j * w) * 4 + 0] = R;
+							data[(i + j * w) * 4 + 1] = M;
+							data[(i + j * w) * 4 + 2] = A;
+						}
+
+					RMA_Texture.loadTextureFromMemory(data, w, h, 4, TextureLoadQuality::nearestMipmap);
+				
+					RMA_loadedTextures = 7; //all textures loaded
+
+					stbi_image_free(data);
+				}
+			}
+			
+
+		}
+
 		//RMA trexture
+		if(RMA_loadedTextures == 0)
 		{
 			stbi_set_flip_vertically_on_load(true);
 

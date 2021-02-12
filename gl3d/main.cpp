@@ -391,7 +391,8 @@ int main()
 	//cube.loadFromFile("resources/other/barrel.obj");
 
 	
-	gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
+	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
+	gl3d::LoadedModelData barelModel("resources/barrel/Barrel_01.obj", 1);
 	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
 	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
 	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
