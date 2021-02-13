@@ -319,7 +319,7 @@ namespace gl3d
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
 			, &material, GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-
+		glUniform1i(materialIndexLocation, 0);
 	}
 
 

@@ -421,7 +421,6 @@ namespace gl3d
 			glDrawArrays(GL_TRIANGLES, 0, primitiveCount);
 		}
 
-
 		glBindVertexArray(0);
 
 	}

@@ -689,7 +689,7 @@ namespace gl3d
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
 			, &material, GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-
+		glUniform1i(materialIndexLocation, 0);
 	}
 
 
@@ -1243,7 +1243,6 @@ namespace gl3d
 		{
 			glDrawArrays(GL_TRIANGLES, 0, primitiveCount);
 		}
-
 
 		glBindVertexArray(0);
 
@@ -2246,6 +2245,11 @@ namespace gl3d
 		
 		//todo material buffer here
 
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(internal::GpuMaterial) * materials.size()
+			, &materials[0], GL_STREAM_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
+
 		for (auto &i : model.models)
 		{
 			//lightShader.setMaterial(i.material);
@@ -2305,8 +2309,19 @@ namespace gl3d
 			}
 			changed = 0;
 	
-			//i.draw();
-	
+			{
+				glBindVertexArray(i.vertexArray);
+
+				if (i.indexBuffer)
+				{
+					glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+				}
+				else
+				{
+					glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+				}
+				glBindVertexArray(0);
+			}
 	
 		}
 	

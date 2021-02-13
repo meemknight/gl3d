@@ -47,12 +47,7 @@ struct MaterialStruct
 
 layout(std140) buffer u_material
 {
-	float kdr; //= 1;
-	float kdg; //= 1;
-	float kdb; //= 1;
-	float roughness;
-	float metallic;
-	float ao; //one means full light
+	MaterialStruct mat[];
 };
 
 
@@ -108,43 +103,43 @@ subroutine vec3 GetMaterialMapped();
 
 subroutine (GetMaterialMapped) vec3 materialNone()
 {
-	return vec3(roughness, metallic, ao);
+	return vec3(mat[u_materialIndex].roughness, mat[u_materialIndex].metallic, mat[u_materialIndex].ao);
 }
 
 subroutine (GetMaterialMapped) vec3 materialR()
 {
 	float r = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(r, metallic, ao);
+	return vec3(r, mat[u_materialIndex].metallic, mat[u_materialIndex].ao);
 }
 
 subroutine (GetMaterialMapped) vec3 materialM()
 {
 	float m = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(roughness, m, ao);
+	return vec3(mat[u_materialIndex].roughness, m, mat[u_materialIndex].ao);
 }
 
 subroutine (GetMaterialMapped) vec3 materialA()
 {
 	float a = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(roughness, metallic, a);
+	return vec3(mat[u_materialIndex].roughness, mat[u_materialIndex].metallic, a);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRM()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
-	return vec3(v.x, v.y, ao);
+	return vec3(v.x, v.y, mat[u_materialIndex].ao);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRA()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
-	return vec3(v.x, metallic, v.y);
+	return vec3(v.x, mat[u_materialIndex].metallic, v.y);
 }
 
 subroutine (GetMaterialMapped) vec3 materialMA()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
-	return vec3(roughness, v.x, v.y);
+	return vec3(mat[u_materialIndex].roughness, v.x, v.y);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRMA()
@@ -257,7 +252,7 @@ void main()
 
 		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
 		
-		color *= vec4(kdr, kdg, kdb, 1); //(option) multiply texture by kd
+		color *= vec4(mat[u_materialIndex].kdr, mat[u_materialIndex].kdg, mat[u_materialIndex].kdb, 1); //(option) multiply texture by kd
 		
 
 		//color = vec4(kd.rgb,1); //(option) remove albedo texture

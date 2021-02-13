@@ -146,7 +146,6 @@ namespace gl3d
 			return gl3d::getTransformMatrix(position, rotation, scale);
 		}
 
-
 	};
 
 
