@@ -94,7 +94,7 @@ namespace gl3d
 		}
 
 		this->loadFromComputedData(vertexCount * 4,
- &dataForModel[0],
+		&dataForModel[0],
 			indexesCount * 4, &indexes[0], (textureUV == nullptr));
 	}
 
@@ -766,6 +766,8 @@ namespace gl3d
 
 		subModelsNames.clear();
 		models.clear();
+
+		//todo clear material buffer
 	}
 
 
@@ -780,6 +782,96 @@ namespace gl3d
 
 		return t * r * s;
 
+	}
+
+
+
+	void GpuMultipleGraphicModel::clear()
+	{
+		for (auto &i : models)
+		{
+			i.clear();
+		}
+
+		for (auto &i : subModelsNames)
+		{
+			delete[] i;
+		}
+
+		subModelsNames.clear();
+		models.clear();
+
+	}
+
+	
+
+	void GpuGraphicModel::loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize, const unsigned int *indexes, bool noTexture)
+	{
+
+		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
+		if (indexSize % 3 != 0)return;
+
+
+		glGenVertexArrays(1, &vertexArray);
+		glBindVertexArray(vertexArray);
+
+		glGenBuffers(1, &vertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
+
+		if (noTexture)
+		{
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+		}
+		else
+		{
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+
+		}
+
+
+		if (indexSize && indexes)
+		{
+			glGenBuffers(1, &indexBuffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexSize, indexes, GL_STATIC_DRAW);
+
+			primitiveCount = indexSize / sizeof(*indexes);
+
+		}
+		else
+		{
+			primitiveCount = vertexSize / sizeof(float);
+		}
+
+		glBindVertexArray(0);
+
+
+	}
+
+	void GpuGraphicModel::clear()
+	{
+		glDeleteBuffers(1, &vertexBuffer);
+		glDeleteBuffers(1, &indexBuffer);
+
+		glDeleteVertexArrays(1, &vertexArray);
+
+		albedoTexture.clear();
+		normalMapTexture.clear();
+		RMA_Texture.clear();
+
+		vertexBuffer = 0;
+		indexBuffer = 0;
+		primitiveCount = 0;
+		vertexArray = 0;
 	}
 
 };

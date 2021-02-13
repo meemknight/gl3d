@@ -21,7 +21,7 @@
 int w = 840;
 int h = 640;
 
-gl3d::Material material = gl3d::Material().setDefaultMaterial();
+gl3d::internal::GpuMaterial material = gl3d::internal::GpuMaterial().setDefaultMaterial();
 
 #define USE_GPU_ENGINE 1
 
@@ -81,10 +81,44 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(wind, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
+	glEnable(GL_DEPTH_TEST);
 
 #pragma endregion
 
-	glEnable(GL_DEPTH_TEST);
+
+	gl3d::Renderer3D rendere;
+
+	gl3d::Material mat[20];
+	
+	for (int i = 0; i < 10; i++)
+	{
+		mat[i] = rendere.createMaterial();
+	}
+
+	rendere.deleteMaterial(mat[3]);
+	rendere.deleteMaterial(mat[5]);
+	rendere.deleteMaterial(mat[7]);
+	rendere.deleteMaterial(mat[9]);
+	rendere.deleteMaterial(mat[0]);
+	rendere.deleteMaterial(mat[4]);
+	
+	mat[3] = rendere.createMaterial();
+	mat[5] = rendere.createMaterial();
+	mat[7] = rendere.createMaterial();
+	mat[9] = rendere.createMaterial();
+	mat[0] = rendere.createMaterial();
+	mat[4] = rendere.createMaterial();
+
+	for (int i = 10; i < 20; i++)
+	{
+		mat[i] = rendere.createMaterial();
+	}
+
+	for (int i = 0; i < 20; i++)
+	{
+		std::cout << mat[i]._id << " ";
+	}
+	std::cout << "\n\n";
 
 #pragma region shader
 	gl3d::Shader shader;
@@ -374,8 +408,8 @@ int main()
 	20, 22, 21, 20, 23, 22, // Bottom
 	};
 
-	std::vector<gl3d::PointLight> pointLights;
-	pointLights.push_back(gl3d::PointLight());
+	std::vector<gl3d::internal::GpuPointLight> pointLights;
+	pointLights.push_back(gl3d::internal::GpuPointLight());
 	pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
 
 	gl3d::GraphicModel lightCubeModel;
@@ -621,7 +655,7 @@ int main()
 
 			if(n || pointLightSelector >= (int)pointLights.size())
 			{
-				gl3d::PointLight l = {};
+				gl3d::internal::GpuPointLight l = {};
 				l.color = { 1,1,1,0 };
 
 				pointLights.push_back(l);
@@ -921,7 +955,6 @@ int main()
 		}
 	#pragma endregion
 
-
 		renderProfiler.start();
 
 		for (int i = 0; i < models.size(); i++)
@@ -985,7 +1018,6 @@ int main()
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 			glDisable(GL_STENCIL_TEST);
-
 
 			glEnable(GL_STENCIL_TEST);
 			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);

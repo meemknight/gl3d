@@ -252,34 +252,27 @@ namespace gl3d
 		pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
-
-		materialBlockLocation = getUniformBlock(shader.id, "u_material");
-		glUniformBlockBinding(shader.id, materialBlockLocation, 0);
-
-		int size = 0;
-		glGetActiveUniformBlockiv(shader.id, materialBlockLocation,
-			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
-
-
 		//todo geb buffer for each material
+		materialBlockLocation = getStorageBlockIndex(shader.id, "u_material");
+		glShaderStorageBlockBinding(shader.id, materialBlockLocation, 0);
+		
 		glGenBuffers(1, &materialBlockBuffer);
-		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
-		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
-		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
+
 
 
 		pointLightsBlockLocation = getStorageBlockIndex(shader.id, "u_pointLights");
 		glShaderStorageBlockBinding(shader.id, pointLightsBlockLocation, 1);
 
-
 		glGenBuffers(1, &pointLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
 
 	}
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
-		const Material &material, std::vector<PointLight> &pointLights)
+		const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 		shader.bind();
 		
@@ -290,7 +283,7 @@ namespace gl3d
 
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
 		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
-		float gama, const Material &material, std::vector<PointLight> &pointLights)
+		float gama, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
@@ -302,9 +295,14 @@ namespace gl3d
 		glUniform1i(RMASamplerLocation, 3);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(PointLight)
-			,&pointLights[0], GL_STREAM_DRAW); 
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+		if(pointLights.size())
+		{
+		
+			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
+				,&pointLights[0], GL_STREAM_DRAW); 
+
+		}
+
 
 
 		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
@@ -314,11 +312,12 @@ namespace gl3d
 		setMaterial(material);
 	}
 
-	void LightShader::setMaterial(const Material &material)
+	void LightShader::setMaterial(const internal::GpuMaterial &material)
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
-		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
+			, &material, GL_STREAM_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
 
 	}
 

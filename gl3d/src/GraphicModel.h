@@ -9,6 +9,7 @@
 
 #include "Shader.h"
 #include "Texture.h"
+#include "Core.h"
 
 namespace gl3d
 {
@@ -72,7 +73,7 @@ namespace gl3d
 		Texture RMA_Texture; //rough metalness ambient oclusion
 		int RMA_loadedTextures;
 
-		Material material;
+		internal::GpuMaterial material;
 
 	};
 
@@ -95,6 +96,56 @@ namespace gl3d
 		{
 			return gl3d::getTransformMatrix(position, rotation, scale);
 		}
+
+	};
+
+	struct GpuGraphicModel
+	{
+		std::string name;
+
+		GLuint vertexArray = 0;
+
+		GLuint vertexBuffer = 0;
+		GLuint indexBuffer = 0;
+
+		GLsizei primitiveCount = 0;
+
+		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
+			const unsigned int *indexes = nullptr, bool noTexture = false);
+
+
+		void clear();
+
+
+		//todo probably teporarily add this things
+		Texture albedoTexture;
+		Texture normalMapTexture;
+
+		Texture RMA_Texture; //rough metalness ambient oclusion
+		int RMA_loadedTextures;
+
+		Material material;
+	
+	};
+
+
+	struct GpuMultipleGraphicModel
+	{
+
+		std::vector < GpuGraphicModel >models;
+		std::vector < char* > subModelsNames;
+
+		void clear();
+
+		glm::vec3 position = {};
+		glm::vec3 rotation = {};
+		glm::vec3 scale = { 1,1,1 };
+
+		glm::mat4 getTransformMatrix()
+		{
+			return gl3d::getTransformMatrix(position, rotation, scale);
+		}
+
 
 	};
 

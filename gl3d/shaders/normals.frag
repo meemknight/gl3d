@@ -34,9 +34,11 @@ uniform int u_pointLightCount;
 
 //uniform Pointlight u_pointLights;
 
-layout(std140) uniform u_material
+layout(std140) buffer u_material
 {
-	vec4 kd; //= 0.45;//w component not used
+	float kdr; //= 1;
+	float kdg; //= 1;
+	float kdb; //= 1;
 	float roughness;
 	float metallic;
 	float ao; //one means full light
@@ -241,7 +243,7 @@ void main()
 
 		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
 		
-		color *= vec4(kd.rgb,1); //(option) multiply texture by kd
+		color *= vec4(kdr, kdg, kdb, 1); //(option) multiply texture by kd
 		
 
 		//color = vec4(kd.rgb,1); //(option) remove albedo texture

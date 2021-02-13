@@ -30,13 +30,13 @@ namespace gl3d
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material, std::vector<PointLight> &pointLights);
+		, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
 
 		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material, std::vector<PointLight> &pointLights);
+		, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
 
-		void setMaterial(const Material &material);
+		void setMaterial(const internal::GpuMaterial &material);
 
 		void getSubroutines();
 
@@ -79,5 +79,7 @@ namespace gl3d
 
 		//todo clear
 	};
+
+
 
 };

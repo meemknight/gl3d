@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-13
+//built on 2021-02-14
 ////////////////////////////////////////////////
 
 
@@ -10,36 +10,57 @@
 #pragma region Core
 #pragma once
 #include <glm\vec4.hpp>
+#include <glm\vec3.hpp>
 
 namespace gl3d
 {
-	
+	struct Material
+	{
+		int _id = {};
+
+	};
+
+	struct Object
+	{
+		int _id = {};
+
+	};
+
+	//todo move
+	namespace internal
+	{
+		
+
+
+		struct GpuMaterial
+		{
+			glm::vec3 kd = glm::vec3(1);; //= 0.45;//w component not used
+			float roughness = 0.5f;
+			float metallic = 0.1;
+			float ao = 1;
+			GpuMaterial setDefaultMaterial()
+			{
+				*this = GpuMaterial();
+
+				return *this;
+			}
+		};
+
+		//todo move
+		struct GpuPointLight
+		{
+			glm::vec4 position = {};
+			glm::vec4 color = { 1,1,1,0 };
+		};
+
+	};
+
+
+
 	void assertFunc(const char *expression,
 	const char *file_name,
 	unsigned const line_number,
 	const char *comment = "---");
-
-	//todo move
-	struct Material
-	{
-		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
-		float roughness = 0.2f;
-		float metallic = 0.1;
-		float ao = 0.5;
-		Material setDefaultMaterial()
-		{
-			*this = Material();
-			
-			return *this;
-		}
-	};
-
-	//todo move
-	struct PointLight
-	{
-		glm::vec4 position = {};
-		glm::vec4 color = {1,1,1,0};
-	};
 
 };
 
@@ -135,13 +156,13 @@ namespace gl3d
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material, std::vector<PointLight> &pointLights);
+		, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
 
 		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material, std::vector<PointLight> &pointLights);
+		, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
 
-		void setMaterial(const Material &material);
+		void setMaterial(const internal::GpuMaterial &material);
 
 		void getSubroutines();
 
@@ -184,6 +205,8 @@ namespace gl3d
 
 		//todo clear
 	};
+
+
 
 };
 #pragma endregion
@@ -257,6 +280,7 @@ namespace gl3d
 
 #include "Shader.h"
 #include "Texture.h"
+#include "Core.h"
 
 namespace gl3d
 {
@@ -320,7 +344,7 @@ namespace gl3d
 		Texture RMA_Texture; //rough metalness ambient oclusion
 		int RMA_loadedTextures;
 
-		Material material;
+		internal::GpuMaterial material;
 
 	};
 
@@ -343,6 +367,56 @@ namespace gl3d
 		{
 			return gl3d::getTransformMatrix(position, rotation, scale);
 		}
+
+	};
+
+	struct GpuGraphicModel
+	{
+		std::string name;
+
+		GLuint vertexArray = 0;
+
+		GLuint vertexBuffer = 0;
+		GLuint indexBuffer = 0;
+
+		GLsizei primitiveCount = 0;
+
+		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
+			const unsigned int *indexes = nullptr, bool noTexture = false);
+
+
+		void clear();
+
+
+		//todo probably teporarily add this things
+		Texture albedoTexture;
+		Texture normalMapTexture;
+
+		Texture RMA_Texture; //rough metalness ambient oclusion
+		int RMA_loadedTextures;
+
+		Material material;
+	
+	};
+
+
+	struct GpuMultipleGraphicModel
+	{
+
+		std::vector < GpuGraphicModel >models;
+		std::vector < char* > subModelsNames;
+
+		void clear();
+
+		glm::vec3 position = {};
+		glm::vec3 rotation = {};
+		glm::vec3 scale = { 1,1,1 };
+
+		glm::mat4 getTransformMatrix()
+		{
+			return gl3d::getTransformMatrix(position, rotation, scale);
+		}
+
 
 	};
 
@@ -396,17 +470,52 @@ namespace gl3d
 #include <Shader.h>
 #include <Camera.h>
 #include <GraphicModel.h>
+#include <list>
 
 namespace gl3d
 {
-	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
-		const Material &material, std::vector<PointLight> &pointLights);
 
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GLuint skyBoxTexture, float gama, std::vector<PointLight> &pointLights);
 	
 
+	struct Renderer3D
+	{
+		void init();
+		
+	#pragma region material
+
+		std::vector< internal::GpuMaterial > materials;
+		std::vector<int> materialIndexes;
+		
+		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
+			float roughness = 0.5f, float metallic = 0.1, float ao = 1);
+		
+		void deleteMaterial(Material m);
+	
+	#pragma endregion
+
+
+		std::vector< GpuMultipleGraphicModel > graphicModels;
+		std::vector<int> graphicModelsIndexes;
+
+		Object loadObject(std::string path);
+		void deleteObject(Object o);
+
+		LightShader lightShader;
+		Camera camera;
+		
+
+		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+
+	};
+
+
+	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
+		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
+		const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
+
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+		GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights);
+	
 };
 #pragma endregion
 
