@@ -223,6 +223,18 @@ namespace gl3d
 		return uniform;
 	};
 
+	GLuint getStorageBlockIndex(GLuint id, const char *name)
+	{
+		GLuint uniform = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, name);
+		if (uniform == GL_INVALID_INDEX)
+		{
+			std::cout << "storage block index error " << name << "\n";
+		}
+		return uniform;
+	};
+
+
+
 	void LightShader::create()
 	{
 		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
@@ -252,25 +264,16 @@ namespace gl3d
 		//todo geb buffer for each material
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
-	
 		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
-
 		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
 
 
+		pointLightsBlockLocation = getStorageBlockIndex(shader.id, "u_pointLights");
+		glShaderStorageBlockBinding(shader.id, pointLightsBlockLocation, 1);
 
-		pointLightsBlockLocation = getUniformBlock(shader.id, "u_pointLights");
-		glUniformBlockBinding(shader.id, pointLightsBlockLocation, 1);
-
-
-		glGetActiveUniformBlockiv(shader.id, pointLightsBlockLocation,
-			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
 
 		glGenBuffers(1, &pointLightsBlockBuffer);
-		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
-		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
-		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
-
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
 
 	}
 
@@ -298,10 +301,11 @@ namespace gl3d
 		glUniform1i(skyBoxSamplerLocation, 2);
 		glUniform1i(RMASamplerLocation, 3);
 
-		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, pointLights.size() * sizeof(PointLight)
-			,&pointLights[0]); 
-		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(PointLight)
+			,&pointLights[0], GL_STREAM_DRAW); 
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+
 
 		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
 

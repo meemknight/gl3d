@@ -25,9 +25,9 @@ struct Pointlight
 	vec4 color; // w component not used
 };
 
-layout(std140) uniform u_pointLights
+layout(std140) buffer u_pointLights
 {
-	Pointlight light[10];
+	Pointlight light[];
 };
 
 uniform int u_pointLightCount;
