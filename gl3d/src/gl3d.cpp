@@ -496,101 +496,115 @@ namespace gl3d
 
 	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
-	//	
-	//	auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o._id);
-	//	if(found == graphicModelsIndexes.end())
-	//	{
-	//		gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid render object");
-	//		return;
-	//	}
-	//	int id = found - graphicModelsIndexes.begin();
-	//
-	//	auto &model = graphicModels[id];
-	//
-	//
-	//	if (model.models.empty())
-	//	{
-	//		return;
-	//	}
-	//
-	//	auto projMat = camera.getProjectionMatrix();
-	//	auto viewMat = camera.getWorldToViewMatrix();
-	//	auto transformMat = model.getTransformMatrix();
-	//
-	//	auto modelViewProjMat = projMat * viewMat * transformMat;
-	//	//auto modelView = viewMat * transformMat;
-	//
-	//	lightShader.shader.bind();
-	//
-	//	lightShader.getSubroutines();
-	//	lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, internal::GpuMaterial(),
-	//		pointLights);
-	//
-	//	GLsizei n;
-	//	//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-	//	glGetProgramStageiv(lightShader.shader.id,
-	//	GL_FRAGMENT_SHADER,
-	//	GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-	//	&n);
-	//
-	//	GLuint *indices = new GLuint[n]{ 0 };
-	//	bool changed = 1;
-	//
-	//	for (auto &i : model.models)
-	//	{
-	//		lightShader.setMaterial(i.material);
-	//
-	//		glActiveTexture(GL_TEXTURE0);
-	//		glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
-	//
-	//		glActiveTexture(GL_TEXTURE1);
-	//		glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
-	//
-	//		glActiveTexture(GL_TEXTURE2);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
-	//
-	//		glActiveTexture(GL_TEXTURE3);
-	//		glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
-	//
-	//
-	//		if (i.normalMapTexture.id && lightShader.normalMap)
-	//		{
-	//			if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
-	//			{
-	//				changed = 1;
-	//			}
-	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
-	//		}
-	//		else
-	//		{
-	//			if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
-	//			{
-	//				changed = 1;
-	//			}
-	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
-	//		}
-	//
-	//		if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
-	//		{
-	//			changed = 1;
-	//		}
-	//
-	//		indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
-	//
-	//		if (changed)
-	//		{
-	//			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
-	//		}
-	//		changed = 0;
-	//
-	//		i.draw();
-	//
-	//
-	//	}
-	//
-	//	delete[] indices;
-	//
-	//
+		
+		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o._id);
+		if(found == graphicModelsIndexes.end())
+		{
+			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid render object");
+			return;
+		}
+		int id = found - graphicModelsIndexes.begin();
+	
+		auto &model = graphicModels[id];
+	
+	
+		if (model.models.empty())
+		{
+			return;
+		}
+	
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		auto transformMat = model.getTransformMatrix();
+	
+		auto modelViewProjMat = projMat * viewMat * transformMat;
+		//auto modelView = viewMat * transformMat;
+	
+		lightShader.shader.bind();
+	
+		lightShader.getSubroutines();
+		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, internal::GpuMaterial(),
+			pointLights);
+	
+		GLsizei n;
+		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
+		glGetProgramStageiv(lightShader.shader.id,
+		GL_FRAGMENT_SHADER,
+		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+		&n);
+	
+		GLuint *indices = new GLuint[n]{ 0 };
+		bool changed = 1;
+		
+		//todo material buffer here
+
+		for (auto &i : model.models)
+		{
+			//lightShader.setMaterial(i.material);
+			{
+				int id = i.material._id;
+				auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
+				if (found == materialIndexes.end())
+				{
+					gl3dAssertComment(found == materialIndexes.end(), "invalid material during render object");
+					continue;
+				}
+				id = found - materialIndexes.begin();
+
+				glUniform1i(lightShader.materialIndexLocation, id);
+			}
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
+	
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
+	
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+	
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
+	
+	
+			if (i.normalMapTexture.id && lightShader.normalMap)
+			{
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
+				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
+			}
+			else
+			{
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				{
+					changed = 1;
+				}
+				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
+			}
+	
+			if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
+			{
+				changed = 1;
+			}
+	
+			indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
+	
+			if (changed)
+			{
+				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+			}
+			changed = 0;
+	
+			//i.draw();
+	
+	
+		}
+	
+		delete[] indices;
+	
+	
 	}
 
 };

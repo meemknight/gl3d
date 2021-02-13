@@ -37,7 +37,9 @@ namespace gl3d
 
 		LightShader lightShader;
 		Camera camera;
-		
+		SkyBox skyBox;
+
+		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
 		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 

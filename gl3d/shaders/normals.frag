@@ -18,6 +18,7 @@ uniform samplerCube u_skybox;
 uniform float u_gama;
 
 uniform sampler2D u_RMASampler;
+uniform int u_materialIndex;
 
 struct Pointlight
 {
@@ -34,6 +35,16 @@ uniform int u_pointLightCount;
 
 //uniform Pointlight u_pointLights;
 
+struct MaterialStruct
+{
+	float kdr; //= 1;
+	float kdg; //= 1;
+	float kdb; //= 1;
+	float roughness;
+	float metallic;
+	float ao; //one means full light
+};
+
 layout(std140) buffer u_material
 {
 	float kdr; //= 1;
@@ -43,6 +54,9 @@ layout(std140) buffer u_material
 	float metallic;
 	float ao; //one means full light
 };
+
+
+
 
 //todo move some of this from global for implementing multi lights
 vec3 normal; //the normal of the object (can be normal mapped or not)

@@ -177,7 +177,7 @@ namespace gl3d
 		GLint RMASamplerLocation = -1;
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
-
+		GLint materialIndexLocation = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -502,7 +502,9 @@ namespace gl3d
 
 		LightShader lightShader;
 		Camera camera;
-		
+		SkyBox skyBox;
+
+		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
 		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 

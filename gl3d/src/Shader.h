@@ -51,7 +51,7 @@ namespace gl3d
 		GLint RMASamplerLocation = -1;
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
-
+		GLint materialIndexLocation = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;

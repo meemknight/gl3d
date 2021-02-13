@@ -250,6 +250,7 @@ namespace gl3d
 		gamaLocation = getUniform(shader.id, "u_gama");
 		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
 		pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
+		materialIndexLocation = getUniform(shader.id, "u_materialIndex");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
 		//todo geb buffer for each material
