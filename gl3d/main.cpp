@@ -97,7 +97,6 @@ int main()
 		std::cout << "uniform error u_transform\n";
 	}
 
-	
 	gl3d::LightShader lightShader;
 	lightShader.create();
 
@@ -375,14 +374,15 @@ int main()
 	20, 22, 21, 20, 23, 22, // Bottom
 	};
 
-	
+	std::vector<gl3d::PointLight> pointLights;
+	pointLights.push_back(gl3d::PointLight());
+	pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
 
-	gl3d::GraphicModel lightCube;
-	lightCube.loadFromComputedData(sizeof(cubePositions),
+	gl3d::GraphicModel lightCubeModel;
+	lightCubeModel.loadFromComputedData(sizeof(cubePositions),
  cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
-	lightCube.scale = glm::vec3(0.05);
-	lightCube.position = glm::vec3(0, 0.42, 2.44);
+	lightCubeModel.scale = glm::vec3(0.05);
 
 	//gl3d::GraphicModel cube;
 	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
@@ -604,17 +604,59 @@ int main()
 			
 		if(lightEditor)
 		{
+			ImGui::PushID(6996);
 			ImGui::Begin("Light Editor", &lightEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 		
-			static glm::vec3 color;
-			ImGui::ColorEdit3("Light Color", (float *)&color);
-			ImGui::NewLine();
-		
-			ImGui::Text("Light 1");
-			ImGui::SliderFloat3("position", &lightCube.position[0], -15, 15);
+			static int pointLightSelector = -1;
+			ImGui::Text("Point lightd Count %d", pointLights.size());
+			ImGui::InputInt("Current Point light:", &pointLightSelector);
+			int n = ImGui::Button("New Light"); ImGui::SameLine();
+			int remove = ImGui::Button("Remove Light");
 
+			if(pointLightSelector < -1)
+			{
+				pointLightSelector = -1;
+			}
+
+			if(n || pointLightSelector >= (int)pointLights.size())
+			{
+				gl3d::PointLight l = {};
+				l.color = { 1,1,1,0 };
+
+				pointLights.push_back(l);
+			}
+
+			pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
+
+			if(remove)
+			{
+				if(pointLightSelector>=0)
+				{
+					pointLights.erase(pointLights.begin() + pointLightSelector);
+					pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
+				}
+			
+			}
+
+			ImGui::NewLine();
+
+			if(pointLightSelector >= 0)
+			{
+				ImGui::PushID(12);
+
+				ImGui::ColorEdit3("Color", &pointLights[pointLightSelector].color[0]);
+				ImGui::DragFloat3("Position", &pointLights[pointLightSelector].position[0], 0.1);
+				
+				ImGui::PopID();
+			}
+
+			ImGui::NewLine();
+
+		
 			ImGui::End();
+			ImGui::PopID();
+
 		}
 
 		if (cubeEditor)
@@ -683,9 +725,9 @@ int main()
 				ImGui::NewLine();
 
 				ImGui::Text("Object transform");
-				ImGui::SliderFloat3("position", &models[itemCurrent].position[0], -10, 10);
-				ImGui::SliderFloat3("rotation", &models[itemCurrent].rotation[0], 0, glm::radians(360.f));
-				ImGui::SliderFloat3("scale", &models[itemCurrent].scale[0], 0.01, 5);
+				ImGui::DragFloat3("position", &models[itemCurrent].position[0], 0.1);
+				ImGui::DragFloat3("rotation", &models[itemCurrent].rotation[0], 0.1);
+				ImGui::DragFloat3("scale", &models[itemCurrent].scale[0], 0.1);
 				float s = 0;
 				ImGui::InputFloat("sameScale", &s);
 
@@ -795,7 +837,7 @@ int main()
 			ImGui::End();
 		}
 
-		//ImGui::ShowDemoWindow(0);
+		ImGui::ShowDemoWindow(0);
 
 	#pragma endregion
 
@@ -864,15 +906,18 @@ int main()
 		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
 	#pragma region light cube
+		for(auto &i : pointLights)
 		{
+			lightCubeModel.position = i.position;
+
 			auto projMat = camera.getProjectionMatrix();
 			auto viewMat = camera.getWorldToViewMatrix();
-			auto transformMat = lightCube.getTransformMatrix();
+			auto transformMat = lightCubeModel.getTransformMatrix();
 
 			auto viewProjMat = projMat * viewMat * transformMat;
 			shader.bind();
 			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-			lightCube.draw();
+			lightCubeModel.draw();
 		}
 	#pragma endregion
 
@@ -885,8 +930,9 @@ int main()
 			//models[i].models[0].scale = models[i].scale;
 			//models[i].models[0].rotation = models[i].rotation;
 		
-			gl3d::renderLightModel(models[i], camera, lightCube.position, lightShader,
-				skyBox.texture, gamaCorection);
+			//todo here change the uniform
+			gl3d::renderLightModel(models[i], camera, lightCubeModel.position, lightShader,
+				skyBox.texture, gamaCorection, pointLights);
 
 		}
 
@@ -929,10 +975,10 @@ int main()
 
 			auto viewProjMat = projMat * viewMat * transformMat;
 
-
+			//todo here also change the uniform
 			lightShader.bind(viewProjMat, transformMat,
-				lightCube.position, camera.position, gamaCorection,
-				models[itemCurrent].models[subItemCurent].material);
+				lightCubeModel.position, camera.position, gamaCorection,
+				models[itemCurrent].models[subItemCurent].material, pointLights);
 
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			models[itemCurrent].models[subItemCurent].draw();

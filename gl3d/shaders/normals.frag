@@ -1,4 +1,4 @@
-#version 420
+#version 430
 #pragma debug(on)
 
 #extension GL_NV_shadow_samplers_cube : enable
@@ -18,6 +18,21 @@ uniform samplerCube u_skybox;
 uniform float u_gama;
 
 uniform sampler2D u_RMASampler;
+
+struct Pointlight
+{
+	vec4 positions; // w component not used
+	vec4 color; // w component not used
+};
+
+layout(std140) uniform u_pointLights
+{
+	Pointlight light[10];
+};
+
+uniform int u_pointLightCount;
+
+//uniform Pointlight u_pointLights;
 
 layout(std140) uniform u_material
 {
@@ -172,10 +187,8 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
 
-vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness)
+vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor)
 {
-
-	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
 
 	vec3 lightDirection = normalize(lightPosition - v_position);
@@ -184,7 +197,7 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 	float dist = length(lightPosition - v_position);
 	float attenuation = 1.0 / pow(dist,2);
 	attenuation = 1; //(option) remove light attenuation
-	vec3 radiance = vec3(1,1,1) * attenuation; //here the first component is the light color
+	vec3 radiance = lightColor * attenuation; //here the first component is the light color
 	
 	vec3 F0 = vec3(0.04); 
 	F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
@@ -203,7 +216,7 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 	
 	// scale light by NdotL
 	float NdotL = max(dot(normal, lightDirection), 0.0);        
-	Lo += (kD * color.rgb / PI + specular) * radiance * NdotL;
+	vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;
 
 	return Lo;
 }
@@ -255,15 +268,17 @@ void main()
 
 
 	//foreach point light
+	for(int i=0; i<u_pointLightCount;i++)
 	{
-		vec3 lightPosition = u_lightPosition;
+		vec3 lightPosition = light[i].positions.xyz;
+		vec3 lightColor = light[i].color.rgb;
 
-		Lo += computePointLightSource(lightPosition, metallicSampled, roughnessSampled);
+		Lo += computePointLightSource(lightPosition, metallicSampled, roughnessSampled, lightColor);
 	}
 
 
 	vec3 ambient = vec3(0.01) * color.rgb * sampledAo; //this value is made up
-	vec3 color   = ambient + Lo; 
+	vec3 color   = Lo + ambient; 
 
 	 //HDR 
 	//color = color / (color + vec3(1.0));

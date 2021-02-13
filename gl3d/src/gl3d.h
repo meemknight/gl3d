@@ -10,10 +10,10 @@ namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
 		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
-		const Material &material);
+		const Material &material, std::vector<PointLight> &pointLights);
 
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GLuint skyBoxTexture, float gama);
+		GLuint skyBoxTexture, float gama, std::vector<PointLight> &pointLights);
 	
 
 };

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-12
+//built on 2021-02-13
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -153,6 +153,9 @@ namespace gl3d
 
 	void Texture::setTextureQuality(int quality)
 	{
+		if (!id)
+			return;
+
 		glBindTexture(GL_TEXTURE_2D, id);
 
 		switch (quality)
@@ -161,18 +164,21 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 0);
 			}
 			break;
 			case nearestMipmap:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 0);
 			}
 			break;
 			case linearMipmap:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
 			}
 			break;
 			case maxQuality:
@@ -601,35 +607,57 @@ namespace gl3d
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 		gamaLocation = getUniform(shader.id, "u_gama");
 		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
+		pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
+		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
+
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
+		glUniformBlockBinding(shader.id, materialBlockLocation, 0);
 
 		int size = 0;
 		glGetActiveUniformBlockiv(shader.id, materialBlockLocation,
 			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
 
 
+		//todo geb buffer for each material
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 	
 		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+
+
+
+		pointLightsBlockLocation = getUniformBlock(shader.id, "u_pointLights");
+		glUniformBlockBinding(shader.id, pointLightsBlockLocation, 1);
+
+
+		glGetActiveUniformBlockiv(shader.id, pointLightsBlockLocation,
+			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+
+		glGenBuffers(1, &pointLightsBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
 
 
 	}
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
+		const Material &material, std::vector<PointLight> &pointLights)
 	{
 		shader.bind();
 		
-		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, material);
+		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, 
+			material, pointLights);
 
 	}
 
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
-		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
+		float gama, const Material &material, std::vector<PointLight> &pointLights)
 	{
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
@@ -639,7 +667,15 @@ namespace gl3d
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
 		glUniform1i(RMASamplerLocation, 3);
-		glUniform1f(gamaLocation, gama);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, pointLights.size() * sizeof(PointLight)
+			,&pointLights[0]); 
+		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
+
+		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
+
+		glUniform1i(pointLightCountLocation, pointLights.size());
 
 		setMaterial(material);
 	}
@@ -648,6 +684,8 @@ namespace gl3d
 	{
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+
 	}
 
 
@@ -920,10 +958,12 @@ namespace gl3d
 
 		RMA_loadedTextures = 0;
 		
+		auto rmaQuality = TextureLoadQuality::linearMipmap;
+
 		if(!mat.map_RMA.empty()) //todo not tested
 		{
 			RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
-			TextureLoadQuality::nearestMipmap);
+			rmaQuality);
 
 			if(RMA_Texture.id)
 			{
@@ -961,7 +1001,7 @@ namespace gl3d
 							data[(i + j * w) * 4 + 2] = A;
 						}
 
-					RMA_Texture.loadTextureFromMemory(data, w, h, 4, TextureLoadQuality::nearestMipmap);
+					RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 				
 					RMA_loadedTextures = 7; //all textures loaded
 
@@ -1018,70 +1058,73 @@ namespace gl3d
 			if(			data2		  ){ RMA_loadedTextures = 2;}else
 			if(data1				  ){ RMA_loadedTextures = 1;}else
 									   { RMA_loadedTextures = 0;};
-
-
-			unsigned char *finalData = new unsigned char[w * h * 4];
-
-			//todo mabe add bilinear filtering
-			//todo load less chanels if necessary
-			for(int j=0; j<h; j++)
+			if (RMA_loadedTextures)
 			{
-				for (int i = 0; i < w; i++)
+
+				unsigned char *finalData = new unsigned char[w * h * 4];
+
+				//todo mabe add bilinear filtering
+				//todo load less chanels if necessary
+				for (int j = 0; j < h; j++)
 				{
-
-					if(data1)	//rough
+					for (int i = 0; i < w; i++)
 					{
-						int texelI = (i / (float)w) * w1;
-						int texelJ = (j / float(h)) * h1;
 
-						finalData[((j * w) + i) * 4 + 0] = 
-							data1[(texelJ*w1) + texelI];
+						if (data1)	//rough
+						{
+							int texelI = (i / (float)w) * w1;
+							int texelJ = (j / float(h)) * h1;
 
-					}else
-					{
-						finalData[((j * w) + i) * 4 + 0] = 0;
+							finalData[((j * w) + i) * 4 + 0] =
+								data1[(texelJ * w1) + texelI];
+
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 0] = 0;
+						}
+
+						if (data2)	//metalic
+						{
+
+							int texelI = (i / (float)w) * w2;
+							int texelJ = (j / float(h)) * h2;
+
+							finalData[((j * w) + i) * 4 + 1] =
+								data2[(texelJ * w2) + texelI];
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 1] = 0;
+						}
+
+						if (data3)	//ambient
+						{
+							int texelI = (i / (float)w) * w3;
+							int texelJ = (j / float(h)) * h3;
+
+							finalData[((j * w) + i) * 4 + 2] =
+								data3[(texelJ * w3) + texelI];
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 2] = 0;
+						}
+
+						finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
 					}
-
-					if (data2)	//metalic
-					{
-
-						int texelI = (i / (float)w) * w2;
-						int texelJ = (j / float(h)) * h2;
-
-						finalData[((j * w) + i) * 4 + 1] =
-							data2[(texelJ * w2) + texelI];
-					}
-					else
-					{
-						finalData[((j * w) + i) * 4 + 1] = 0;
-					}
-
-					if (data3)	//ambient
-					{
-						int texelI = (i / (float)w) * w3;
-						int texelJ = (j / float(h)) * h3;
-
-						finalData[((j * w) + i) * 4 + 2] =
-							data3[(texelJ * w3) + texelI];
-					}
-					else
-					{
-						finalData[((j * w) + i) * 4 + 2] = 0;
-					}
-
-					finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
 				}
+
+				RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
+					rmaQuality);
+
+				stbi_image_free(data1);
+				stbi_image_free(data2);
+				stbi_image_free(data3);
+				delete[] finalData;
+
 			}
-		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 4, 
-				TextureLoadQuality::nearestMipmap);
 
-			stbi_image_free(data1);
-			stbi_image_free(data2);
-			stbi_image_free(data3);
-			delete[] finalData;
-
-			
 		}
 
 
@@ -1570,7 +1613,8 @@ namespace gl3d
 
 namespace gl3d
 {
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const Material &material)
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, 
+		float gama, const Material &material, std::vector<PointLight> &pointLights)
 	{
 
 		auto projMat = camera.getProjectionMatrix();
@@ -1579,7 +1623,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat * transformMat;
 
-		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material);
+		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material,
+			pointLights);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture.id);
@@ -1597,7 +1642,7 @@ namespace gl3d
 
 
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, 
-		LightShader lightShader, GLuint skyBoxTexture, float gama)
+		LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<PointLight> &pointLights)
 	{
 		if(model.models.empty())
 		{
@@ -1614,7 +1659,8 @@ namespace gl3d
 		lightShader.shader.bind();
 
 		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material());
+		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material(),
+			pointLights);
 
 		GLsizei n;
 		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);

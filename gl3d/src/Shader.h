@@ -2,6 +2,7 @@
 #include "GL/glew.h"
 #include <glm\mat4x4.hpp>
 #include <Core.h>
+#include <vector>
 
 namespace gl3d
 {
@@ -29,11 +30,11 @@ namespace gl3d
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material);
+		, const Material &material, std::vector<PointLight> &pointLights);
 
 		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material);
+		, const Material &material, std::vector<PointLight> &pointLights);
 
 		void setMaterial(const Material &material);
 
@@ -48,9 +49,16 @@ namespace gl3d
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
 		GLint RMASamplerLocation = -1;
+		GLint pointLightCountLocation = -1;
+		GLint pointLightBufferLocation = -1;
 
-		GLuint materialBlockLocation = -1;
+
+		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
+
+		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint pointLightsBlockBuffer = 0;
+
 
 		GLint normalSubroutineLocation = -1;
 		GLint materialSubroutineLocation = -1;

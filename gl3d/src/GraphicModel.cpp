@@ -139,10 +139,12 @@ namespace gl3d
 
 		RMA_loadedTextures = 0;
 		
+		auto rmaQuality = TextureLoadQuality::linearMipmap;
+
 		if(!mat.map_RMA.empty()) //todo not tested
 		{
 			RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
-			TextureLoadQuality::nearestMipmap);
+			rmaQuality);
 
 			if(RMA_Texture.id)
 			{
@@ -180,7 +182,7 @@ namespace gl3d
 							data[(i + j * w) * 4 + 2] = A;
 						}
 
-					RMA_Texture.loadTextureFromMemory(data, w, h, 4, TextureLoadQuality::nearestMipmap);
+					RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 				
 					RMA_loadedTextures = 7; //all textures loaded
 
@@ -237,70 +239,73 @@ namespace gl3d
 			if(			data2		  ){ RMA_loadedTextures = 2;}else
 			if(data1				  ){ RMA_loadedTextures = 1;}else
 									   { RMA_loadedTextures = 0;};
-
-
-			unsigned char *finalData = new unsigned char[w * h * 4];
-
-			//todo mabe add bilinear filtering
-			//todo load less chanels if necessary
-			for(int j=0; j<h; j++)
+			if (RMA_loadedTextures)
 			{
-				for (int i = 0; i < w; i++)
+
+				unsigned char *finalData = new unsigned char[w * h * 4];
+
+				//todo mabe add bilinear filtering
+				//todo load less chanels if necessary
+				for (int j = 0; j < h; j++)
 				{
-
-					if(data1)	//rough
+					for (int i = 0; i < w; i++)
 					{
-						int texelI = (i / (float)w) * w1;
-						int texelJ = (j / float(h)) * h1;
 
-						finalData[((j * w) + i) * 4 + 0] = 
-							data1[(texelJ*w1) + texelI];
+						if (data1)	//rough
+						{
+							int texelI = (i / (float)w) * w1;
+							int texelJ = (j / float(h)) * h1;
 
-					}else
-					{
-						finalData[((j * w) + i) * 4 + 0] = 0;
+							finalData[((j * w) + i) * 4 + 0] =
+								data1[(texelJ * w1) + texelI];
+
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 0] = 0;
+						}
+
+						if (data2)	//metalic
+						{
+
+							int texelI = (i / (float)w) * w2;
+							int texelJ = (j / float(h)) * h2;
+
+							finalData[((j * w) + i) * 4 + 1] =
+								data2[(texelJ * w2) + texelI];
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 1] = 0;
+						}
+
+						if (data3)	//ambient
+						{
+							int texelI = (i / (float)w) * w3;
+							int texelJ = (j / float(h)) * h3;
+
+							finalData[((j * w) + i) * 4 + 2] =
+								data3[(texelJ * w3) + texelI];
+						}
+						else
+						{
+							finalData[((j * w) + i) * 4 + 2] = 0;
+						}
+
+						finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
 					}
-
-					if (data2)	//metalic
-					{
-
-						int texelI = (i / (float)w) * w2;
-						int texelJ = (j / float(h)) * h2;
-
-						finalData[((j * w) + i) * 4 + 1] =
-							data2[(texelJ * w2) + texelI];
-					}
-					else
-					{
-						finalData[((j * w) + i) * 4 + 1] = 0;
-					}
-
-					if (data3)	//ambient
-					{
-						int texelI = (i / (float)w) * w3;
-						int texelJ = (j / float(h)) * h3;
-
-						finalData[((j * w) + i) * 4 + 2] =
-							data3[(texelJ * w3) + texelI];
-					}
-					else
-					{
-						finalData[((j * w) + i) * 4 + 2] = 0;
-					}
-
-					finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
 				}
+
+				RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
+					rmaQuality);
+
+				stbi_image_free(data1);
+				stbi_image_free(data2);
+				stbi_image_free(data3);
+				delete[] finalData;
+
 			}
-		
-			RMA_Texture.loadTextureFromMemory(finalData, w, h, 4, 
-				TextureLoadQuality::nearestMipmap);
 
-			stbi_image_free(data1);
-			stbi_image_free(data2);
-			stbi_image_free(data3);
-			delete[] finalData;
-
-			
 		}
 
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-12
+//built on 2021-02-13
 ////////////////////////////////////////////////
 
 
@@ -34,16 +34,23 @@ namespace gl3d
 		}
 	};
 
+	//todo move
+	struct PointLight
+	{
+		glm::vec4 position = {};
+		glm::vec4 color = {1,1,1,0};
+	};
+
 };
 
 #define gl3dAssert(expression) (void)(											\
-			(!!(expression)) ||												\
+			(!!(expression)) ||													\
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0)	\
 		)
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)	\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)\
 		)
 
 #pragma endregion
@@ -100,6 +107,7 @@ namespace gl3d
 #include "GL/glew.h"
 #include <glm\mat4x4.hpp>
 #include <Core.h>
+#include <vector>
 
 namespace gl3d
 {
@@ -127,11 +135,11 @@ namespace gl3d
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material);
+		, const Material &material, std::vector<PointLight> &pointLights);
 
 		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const Material &material);
+		, const Material &material, std::vector<PointLight> &pointLights);
 
 		void setMaterial(const Material &material);
 
@@ -146,9 +154,16 @@ namespace gl3d
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
 		GLint RMASamplerLocation = -1;
+		GLint pointLightCountLocation = -1;
+		GLint pointLightBufferLocation = -1;
 
-		GLuint materialBlockLocation = -1;
+
+		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
+
+		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint pointLightsBlockBuffer = 0;
+
 
 		GLint normalSubroutineLocation = -1;
 		GLint materialSubroutineLocation = -1;
@@ -386,10 +401,10 @@ namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
 		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
-		const Material &material);
+		const Material &material, std::vector<PointLight> &pointLights);
 
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GLuint skyBoxTexture, float gama);
+		GLuint skyBoxTexture, float gama, std::vector<PointLight> &pointLights);
 	
 
 };

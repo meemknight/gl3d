@@ -237,35 +237,57 @@ namespace gl3d
 		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
 		gamaLocation = getUniform(shader.id, "u_gama");
 		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
+		pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
+		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
+
 		materialBlockLocation = getUniformBlock(shader.id, "u_material");
+		glUniformBlockBinding(shader.id, materialBlockLocation, 0);
 
 		int size = 0;
 		glGetActiveUniformBlockiv(shader.id, materialBlockLocation,
 			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
 
 
+		//todo geb buffer for each material
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 	
 		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); //todo for now only probably
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, materialBlockLocation, materialBlockBuffer);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+
+
+
+		pointLightsBlockLocation = getUniformBlock(shader.id, "u_pointLights");
+		glUniformBlockBinding(shader.id, pointLightsBlockLocation, 1);
+
+
+		glGetActiveUniformBlockiv(shader.id, pointLightsBlockLocation,
+			GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+
+		glGenBuffers(1, &pointLightsBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
 
 
 	}
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
+		const Material &material, std::vector<PointLight> &pointLights)
 	{
 		shader.bind();
 		
-		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, material);
+		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, 
+			material, pointLights);
 
 	}
 
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
-		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama, const Material &material)
+		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
+		float gama, const Material &material, std::vector<PointLight> &pointLights)
 	{
 		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
@@ -275,7 +297,15 @@ namespace gl3d
 		glUniform1i(normalMapSamplerLocation, 1);
 		glUniform1i(skyBoxSamplerLocation, 2);
 		glUniform1i(RMASamplerLocation, 3);
-		glUniform1f(gamaLocation, gama);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, pointLightsBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, pointLights.size() * sizeof(PointLight)
+			,&pointLights[0]); 
+		glBindBufferBase(GL_UNIFORM_BUFFER, 1, pointLightsBlockBuffer);
+
+		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
+
+		glUniform1i(pointLightCountLocation, pointLights.size());
 
 		setMaterial(material);
 	}
@@ -284,6 +314,8 @@ namespace gl3d
 	{
 		glBindBuffer(GL_UNIFORM_BUFFER, materialBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(material), &material);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, materialBlockBuffer);
+
 	}
 
 

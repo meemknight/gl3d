@@ -24,14 +24,21 @@ namespace gl3d
 		}
 	};
 
+	//todo move
+	struct PointLight
+	{
+		glm::vec4 position = {};
+		glm::vec4 color = {1,1,1,0};
+	};
+
 };
 
 #define gl3dAssert(expression) (void)(											\
-			(!!(expression)) ||												\
+			(!!(expression)) ||													\
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0)	\
 		)
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)	\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)\
 		)

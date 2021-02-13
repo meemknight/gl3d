@@ -1,7 +1,8 @@
 #include "gl3d.h"
 namespace gl3d
 {
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const Material &material)
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, 
+		float gama, const Material &material, std::vector<PointLight> &pointLights)
 	{
 
 		auto projMat = camera.getProjectionMatrix();
@@ -10,7 +11,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat * transformMat;
 
-		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material);
+		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material,
+			pointLights);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture.id);
@@ -28,7 +30,7 @@ namespace gl3d
 
 
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, 
-		LightShader lightShader, GLuint skyBoxTexture, float gama)
+		LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<PointLight> &pointLights)
 	{
 		if(model.models.empty())
 		{
@@ -45,7 +47,8 @@ namespace gl3d
 		lightShader.shader.bind();
 
 		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material());
+		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, Material(),
+			pointLights);
 
 		GLsizei n;
 		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
