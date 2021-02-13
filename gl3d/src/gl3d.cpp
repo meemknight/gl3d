@@ -190,10 +190,10 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
-	Object Renderer3D::loadObject(std::string path)
+	Object Renderer3D::loadObject(std::string path, float scale)
 	{
 
-		gl3d::LoadedModelData model(path.c_str(), 1);
+		gl3d::LoadedModelData model(path.c_str(), scale);
 		if(model.loader.LoadedMeshes.empty())
 		{
 			std::cout << "err loading " + path + "\n";
@@ -515,7 +515,7 @@ namespace gl3d
 	
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = model.getTransformMatrix();
+		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);;
 	
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
@@ -525,7 +525,14 @@ namespace gl3d
 		lightShader.getSubroutines();
 		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, internal::GpuMaterial(),
 			pointLights);
-	
+
+		//material buffer
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(internal::GpuMaterial) * materials.size()
+			, &materials[0], GL_STREAM_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
+
+
 		GLsizei n;
 		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
 		glGetProgramStageiv(lightShader.shader.id,
@@ -536,13 +543,7 @@ namespace gl3d
 		GLuint *indices = new GLuint[n]{ 0 };
 		bool changed = 1;
 		
-		//todo material buffer here
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(internal::GpuMaterial) * materials.size()
-			, &materials[0], GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
-
+	
 		for (auto &i : model.models)
 		{
 			//lightShader.setMaterial(i.material);

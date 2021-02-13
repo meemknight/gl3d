@@ -407,16 +407,7 @@ namespace gl3d
 		std::vector < char* > subModelsNames;
 
 		void clear();
-
-		glm::vec3 position = {};
-		glm::vec3 rotation = {};
-		glm::vec3 scale = { 1,1,1 };
-
-		glm::mat4 getTransformMatrix()
-		{
-			return gl3d::getTransformMatrix(position, rotation, scale);
-		}
-
+	
 	};
 
 
@@ -477,6 +468,7 @@ namespace gl3d
 	
 
 	struct Renderer3D
+
 	{
 		void init();
 		
@@ -496,7 +488,7 @@ namespace gl3d
 		std::vector< GpuMultipleGraphicModel > graphicModels;
 		std::vector<int> graphicModelsIndexes;
 
-		Object loadObject(std::string path);
+		Object loadObject(std::string path, float scale = 1);
 		void deleteObject(Object o);
 
 		LightShader lightShader;

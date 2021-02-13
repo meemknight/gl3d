@@ -295,16 +295,16 @@ namespace gl3d
 		glUniform1i(skyBoxSamplerLocation, 2);
 		glUniform1i(RMASamplerLocation, 3);
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
 		if(pointLights.size())
 		{
-		
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
+
 			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
 				,&pointLights[0], GL_STREAM_DRAW); 
 
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+
 		}
-
-
 
 		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
 

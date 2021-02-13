@@ -13,6 +13,7 @@ namespace gl3d
 	
 
 	struct Renderer3D
+
 	{
 		void init();
 		
@@ -32,7 +33,7 @@ namespace gl3d
 		std::vector< GpuMultipleGraphicModel > graphicModels;
 		std::vector<int> graphicModelsIndexes;
 
-		Object loadObject(std::string path);
+		Object loadObject(std::string path, float scale = 1);
 		void deleteObject(Object o);
 
 		LightShader lightShader;

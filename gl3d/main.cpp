@@ -85,40 +85,10 @@ int main()
 
 #pragma endregion
 
+	gl3d::Renderer3D renderer;
+	renderer.init();
 
-	gl3d::Renderer3D rendere;
 
-	gl3d::Material mat[20];
-	
-	for (int i = 0; i < 10; i++)
-	{
-		mat[i] = rendere.createMaterial();
-	}
-
-	rendere.deleteMaterial(mat[3]);
-	rendere.deleteMaterial(mat[5]);
-	rendere.deleteMaterial(mat[7]);
-	rendere.deleteMaterial(mat[9]);
-	rendere.deleteMaterial(mat[0]);
-	rendere.deleteMaterial(mat[4]);
-	
-	mat[3] = rendere.createMaterial();
-	mat[5] = rendere.createMaterial();
-	mat[7] = rendere.createMaterial();
-	mat[9] = rendere.createMaterial();
-	mat[0] = rendere.createMaterial();
-	mat[4] = rendere.createMaterial();
-
-	for (int i = 10; i < 20; i++)
-	{
-		mat[i] = rendere.createMaterial();
-	}
-
-	for (int i = 0; i < 20; i++)
-	{
-		std::cout << mat[i]._id << " ";
-	}
-	std::cout << "\n\n";
 
 #pragma region shader
 	gl3d::Shader shader;
@@ -142,11 +112,9 @@ int main()
 	GLint normalsModelTransformLocation = glGetUniformLocation(showNormalsShader.id, "u_modelTransform");
 	GLint normalsProjectionLocation = glGetUniformLocation(showNormalsShader.id, "u_projection");
 	
-
 #pragma endregion
 
 #pragma region texture
-
 
 	gl3d::Texture crateTexture("resources/other/crate.png");
 	gl3d::Texture crateNormalTexture("resources/other/crateNormal.png");
@@ -157,10 +125,8 @@ int main()
 
 	//gl3d::Texture levelTexture("resources/obj/level.png");
 
-
 #pragma endregion
 
-	gl3d::SkyBox skyBox;
 	{
 		const char *names[6] = 
 		{	"resources/skyBoxes/ocean/right.jpg",
@@ -170,12 +136,13 @@ int main()
 			"resources/skyBoxes/ocean/front.jpg",
 			"resources/skyBoxes/ocean/back.jpg" };
 
-		skyBox.createGpuData();
-		skyBox.loadTexture(names);
+		renderer.skyBox.createGpuData();
+		renderer.skyBox.loadTexture(names);
 		//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
 		//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
 	
 	}
+
 	
 	//VertexArrayContext va;
 	//va.create();
@@ -408,13 +375,12 @@ int main()
 	20, 22, 21, 20, 23, 22, // Bottom
 	};
 
-	std::vector<gl3d::internal::GpuPointLight> pointLights;
-	pointLights.push_back(gl3d::internal::GpuPointLight());
-	pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
+	renderer.pointLights.push_back(gl3d::internal::GpuPointLight());
+	renderer.pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
 
 	gl3d::GraphicModel lightCubeModel;
 	lightCubeModel.loadFromComputedData(sizeof(cubePositions),
- cubePositions,
+	cubePositions,
 		sizeof(cubeIndices), cubeIndices, true);
 	lightCubeModel.scale = glm::vec3(0.05);
 
@@ -435,12 +401,15 @@ int main()
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
+	auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
+
 	std::vector< gl3d::MultipleGraphicModels > models;
 	
 	static std::vector < const char* > items = {};
 
-	gl3d::Camera camera((float)w / h, glm::radians(100.f));
-	camera.position = { 0.f,0.f,2.f };
+	renderer.camera.aspectRatio = (float)w / h;
+	renderer.camera.fovRadians = glm::radians(100.f);
+	renderer.camera.position = { 0.f,0.f,2.f };
 
 	static int itemCurrent = 0;
 	static int subItemCurent = 0;
@@ -612,7 +581,7 @@ int main()
 
 			static bool cullFace = 0;
 			ImGui::Checkbox("CullFace", &cullFace);
-
+			
 			if (cullFace)
 			{
 				glEnable(GL_CULL_FACE);
@@ -633,7 +602,6 @@ int main()
 			ImGui::End();
 		}
 
-
 		ImGuiWindowFlags flags = {};
 			
 		if(lightEditor)
@@ -643,7 +611,7 @@ int main()
 			ImGui::SetWindowFontScale(1.2f);
 		
 			static int pointLightSelector = -1;
-			ImGui::Text("Point lightd Count %d", pointLights.size());
+			ImGui::Text("Point lightd Count %d", renderer.pointLights.size());
 			ImGui::InputInt("Current Point light:", &pointLightSelector);
 			int n = ImGui::Button("New Light"); ImGui::SameLine();
 			int remove = ImGui::Button("Remove Light");
@@ -653,22 +621,22 @@ int main()
 				pointLightSelector = -1;
 			}
 
-			if(n || pointLightSelector >= (int)pointLights.size())
+			if(n || pointLightSelector >= (int)renderer.pointLights.size())
 			{
 				gl3d::internal::GpuPointLight l = {};
 				l.color = { 1,1,1,0 };
 
-				pointLights.push_back(l);
+				renderer.pointLights.push_back(l);
 			}
 
-			pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
+			pointLightSelector = std::min(pointLightSelector, (int)renderer.pointLights.size() - 1);
 
 			if(remove)
 			{
 				if(pointLightSelector>=0)
 				{
-					pointLights.erase(pointLights.begin() + pointLightSelector);
-					pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
+					renderer.pointLights.erase(renderer.pointLights.begin() + pointLightSelector);
+					pointLightSelector = std::min(pointLightSelector, (int)renderer.pointLights.size() - 1);
 				}
 			
 			}
@@ -679,8 +647,8 @@ int main()
 			{
 				ImGui::PushID(12);
 
-				ImGui::ColorEdit3("Color", &pointLights[pointLightSelector].color[0]);
-				ImGui::DragFloat3("Position", &pointLights[pointLightSelector].position[0], 0.1);
+				ImGui::ColorEdit3("Color", &renderer.pointLights[pointLightSelector].color[0]);
+				ImGui::DragFloat3("Position", &renderer.pointLights[pointLightSelector].position[0], 0.1);
 				
 				ImGui::PopID();
 			}
@@ -871,10 +839,9 @@ int main()
 			ImGui::End();
 		}
 
-		ImGui::ShowDemoWindow(0);
+		//ImGui::ShowDemoWindow(0);
 
 	#pragma endregion
-
 
 
 	#pragma region camera
@@ -908,7 +875,7 @@ int main()
 			dir.y += speed * deltaTime;
 		}
 
-		camera.moveFPS(dir);
+		renderer.camera.moveFPS(dir);
 
 		{
 			static glm::dvec2 lastMousePos = {};
@@ -922,7 +889,7 @@ int main()
 				glm::vec2 delta = lastMousePos - currentMousePos;
 				delta *= speed * deltaTime;
 
-				camera.rotateCamera(delta);
+				renderer.camera.rotateCamera(delta);
 
 				lastMousePos = currentMousePos;
 			}
@@ -933,19 +900,19 @@ int main()
 			}
 		}
 
-		camera.aspectRatio = (float)w / h;
+		renderer.camera.aspectRatio = (float)w / h;
 
 	#pragma endregion
 
 		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
 	#pragma region light cube
-		for(auto &i : pointLights)
+		for(auto &i : renderer.pointLights)
 		{
 			lightCubeModel.position = i.position;
 
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
 			auto transformMat = lightCubeModel.getTransformMatrix();
 
 			auto viewProjMat = projMat * viewMat * transformMat;
@@ -964,10 +931,12 @@ int main()
 			//models[i].models[0].rotation = models[i].rotation;
 		
 			//todo here change the uniform
-			gl3d::renderLightModel(models[i], camera, lightCubeModel.position, lightShader,
-				skyBox.texture, gamaCorection, pointLights);
+			gl3d::renderLightModel(models[i], renderer.camera, lightCubeModel.position, lightShader,
+				renderer.skyBox.texture, gamaCorection, renderer.pointLights);
 
 		}
+
+		renderer.renderObject(objectTest, { 0,0,0 });
 
 		lastProfilerRezult = renderProfiler.end();
 
@@ -977,8 +946,8 @@ int main()
 		{
 			showNormalsShader.bind();
 
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
 			auto transformMat = models[itemCurrent].getTransformMatrix();
 
 			auto viewTransformMat = viewMat * transformMat;
@@ -1002,16 +971,16 @@ int main()
 			glStencilFunc(GL_ALWAYS, 1, 0xFF);
 			glStencilMask(0xFF);	
 
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
 			auto transformMat = models[0].getTransformMatrix();
 
 			auto viewProjMat = projMat * viewMat * transformMat;
 
 			//todo here also change the uniform
 			lightShader.bind(viewProjMat, transformMat,
-				lightCubeModel.position, camera.position, gamaCorection,
-				models[itemCurrent].models[subItemCurent].material, pointLights);
+				lightCubeModel.position, renderer.camera.position, gamaCorection,
+				models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
 
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			models[itemCurrent].models[subItemCurent].draw();
@@ -1026,8 +995,8 @@ int main()
 			glStencilMask(0x00);
 
 			auto &m = models[itemCurrent].models[subItemCurent];
-			projMat = camera.getProjectionMatrix();
-			viewMat = camera.getWorldToViewMatrix();
+			projMat = renderer.camera.getProjectionMatrix();
+			viewMat = renderer.camera.getWorldToViewMatrix();
 
 			auto rotation = models[itemCurrent].rotation;
 			auto scale = models[itemCurrent].scale;
@@ -1065,13 +1034,13 @@ int main()
 		
 		{
 
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
 			viewMat = glm::mat4(glm::mat3(viewMat));
 
 			auto viewProjMat = projMat * viewMat;
 
-			skyBox.draw(viewProjMat, gamaCorection);
+			renderer.skyBox.draw(viewProjMat, gamaCorection);
 
 		}
 
