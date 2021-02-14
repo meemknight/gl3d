@@ -23,7 +23,7 @@ int h = 640;
 
 gl3d::internal::GpuMaterial material = gl3d::internal::GpuMaterial().setDefaultMaterial();
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 
 #pragma region gpu
 extern "C"
@@ -52,7 +52,7 @@ int main()
 
 	GLFWwindow *wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
 	glfwMakeContextCurrent(wind);
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 
 	if (glewInit() != GLEW_OK)
 	{
@@ -116,12 +116,10 @@ int main()
 
 #pragma region texture
 
-	gl3d::Texture crateTexture("resources/other/crate.png");
-	gl3d::Texture crateNormalTexture("resources/other/crateNormal.png");
-
-
-	gl3d::Texture rockTexture("resources/other/boulder.png");
-	gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
+	//gl3d::Texture crateTexture("resources/other/crate.png");
+	//gl3d::Texture crateNormalTexture("resources/other/crateNormal.png");
+	//gl3d::Texture rockTexture("resources/other/boulder.png");
+	//gl3d::Texture rockNormalTexture("resources/other/boulderNormal.png");
 
 	//gl3d::Texture levelTexture("resources/obj/level.png");
 
@@ -136,7 +134,6 @@ int main()
 			"resources/skyBoxes/ocean/front.jpg",
 			"resources/skyBoxes/ocean/back.jpg" };
 
-		renderer.skyBox.createGpuData();
 		renderer.skyBox.loadTexture(names);
 		//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
 		//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
@@ -401,11 +398,17 @@ int main()
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
-	auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
+	//auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto objectTest = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	auto material = renderer.createMaterial();
+
+	renderer.deleteMaterial(material);
+
+	//auto objectTest = renderer.loadObject("resources/barrel/Barrel_01.obj");
+	//auto objectTest2 = renderer.loadObject("resources/other/crate.obj", 0.01);
 
 	std::vector< gl3d::MultipleGraphicModels > models;
-	
-	static std::vector < const char* > items = {};
+	static std::vector < const char* > items = {}; //just models names
 
 	renderer.camera.aspectRatio = (float)w / h;
 	renderer.camera.fovRadians = glm::radians(100.f);
@@ -446,80 +449,84 @@ int main()
 		h = std::max(h, 1);
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		
+
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
 
-		static float fpsCounterFloat;
-		static float currentFpsCounter;
-
-		fpsCounterFloat += deltaTime;
-		currentFpsCounter += 1;
-		if(fpsCounterFloat >= 1)
+	#pragma region profiler ui code
 		{
-			fpsCounterFloat -= 1;
-			currnetFps = currentFpsCounter;
-			currentFpsCounter = 0;
+			static float fpsCounterFloat;
+			static float currentFpsCounter;
 
-			if(recordPos<FPS_RECORD_ARR_SIZE)
+			fpsCounterFloat += deltaTime;
+			currentFpsCounter += 1;
+			if (fpsCounterFloat >= 1)
 			{
-				fpsArr[recordPos] = currnetFps;
-				recordPos++;
-			}else
-			{
-				for(int i=0;i< FPS_RECORD_ARR_SIZE-1;i++)
+				fpsCounterFloat -= 1;
+				currnetFps = currentFpsCounter;
+				currentFpsCounter = 0;
+
+				if (recordPos < FPS_RECORD_ARR_SIZE)
 				{
-					fpsArr[i] = fpsArr[i + 1];
+					fpsArr[recordPos] = currnetFps;
+					recordPos++;
 				}
-				fpsArr[FPS_RECORD_ARR_SIZE-1] = currnetFps;
+				else
+				{
+					for (int i = 0; i < FPS_RECORD_ARR_SIZE - 1; i++)
+					{
+						fpsArr[i] = fpsArr[i + 1];
+					}
+					fpsArr[FPS_RECORD_ARR_SIZE - 1] = currnetFps;
+				}
+
+				if (profileAveragePos < ProfilerAverage_ARR_SIZE)
+				{
+
+					profileAverageArr[profileAveragePos] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+					profileAveragePos++;
+				}
+				else
+				{
+					for (int i = 0; i < ProfilerAverage_ARR_SIZE - 1; i++)
+					{
+						profileAverageArr[i] = profileAverageArr[i + 1];
+					}
+					profileAverageArr[ProfilerAverage_ARR_SIZE - 1] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+				}
+
 			}
 
-			if (profileAveragePos < ProfilerAverage_ARR_SIZE)
+			if (recordPosDeltaTime < DELTA_TIME_ARR_SIZE)
 			{
-
-				profileAverageArr[profileAveragePos] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
-				profileAveragePos++;
+				deltaTimeArr[recordPosDeltaTime] = deltaTime;
+				recordPosDeltaTime++;
 			}
 			else
 			{
-				for (int i = 0; i < ProfilerAverage_ARR_SIZE - 1; i++)
+				for (int i = 0; i < DELTA_TIME_ARR_SIZE - 1; i++)
 				{
-					profileAverageArr[i] = profileAverageArr[i + 1];
+					deltaTimeArr[i] = deltaTimeArr[i + 1];
 				}
-				profileAverageArr[ProfilerAverage_ARR_SIZE - 1] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+				deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime;
 			}
 
-		}
-
-		if (recordPosDeltaTime < DELTA_TIME_ARR_SIZE)
-		{
-			deltaTimeArr[recordPosDeltaTime] = deltaTime;
-			recordPosDeltaTime++;
-		}
-		else
-		{
-			for (int i = 0; i < DELTA_TIME_ARR_SIZE - 1; i++)
+			if (profilePos < Profiler_ARR_SIZE)
 			{
-				deltaTimeArr[i] = deltaTimeArr[i + 1];
+				profileeArr[profilePos] = lastProfilerRezult.timeSeconds;
+				profilePos++;
 			}
-			deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime;
-		}
-
-		if (profilePos < Profiler_ARR_SIZE)
-		{
-			profileeArr[profilePos] = lastProfilerRezult.timeSeconds;
-			profilePos++;
-		}
-		else
-		{
-			for (int i = 0; i < Profiler_ARR_SIZE - 1; i++)
+			else
 			{
-				profileeArr[i] = profileeArr[i + 1];
+				for (int i = 0; i < Profiler_ARR_SIZE - 1; i++)
+				{
+					profileeArr[i] = profileeArr[i + 1];
+				}
+				profileeArr[Profiler_ARR_SIZE - 1] = lastProfilerRezult.timeSeconds;
 			}
-			profileeArr[Profiler_ARR_SIZE - 1] = lastProfilerRezult.timeSeconds;
 		}
-
+	#pragma endregion
 
 	#pragma region imgui
 
@@ -545,6 +552,7 @@ int main()
 		static bool cubeEditor = 1;
 		static bool showStats = 0;
 	
+		//imgui main menu
 		{
 			ImGui::Begin("Menu");
 			ImGui::SetWindowFontScale(1.2f);
@@ -594,6 +602,7 @@ int main()
 			ImGui::Checkbox("Normal map", &normalMap);
 			
 			lightShader.normalMap = normalMap;
+			renderer.lightShader.normalMap = normalMap;
 
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);
@@ -604,6 +613,7 @@ int main()
 
 		ImGuiWindowFlags flags = {};
 			
+		//imgui light editor
 		if(lightEditor)
 		{
 			ImGui::PushID(6996);
@@ -661,6 +671,7 @@ int main()
 
 		}
 
+		//imgui objectEditor
 		if (cubeEditor)
 		{
 		
@@ -720,7 +731,6 @@ int main()
 			
 			ImGui::NewLine();
 
-			
 
 			if(!models.empty() && itemCurrent < items.size())
 			{
@@ -747,7 +757,6 @@ int main()
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
-
 
 					auto drawImage = [io](const char *c, GLuint id, int w, int h)
 					{
@@ -811,7 +820,6 @@ int main()
 
 			}
 
-			
 
 			ImGui::End();
 		}
@@ -937,6 +945,8 @@ int main()
 		}
 
 		renderer.renderObject(objectTest, { 0,0,0 });
+		//renderer.renderObject(objectTest2, { 3,0,0 });
+
 
 		lastProfilerRezult = renderProfiler.end();
 

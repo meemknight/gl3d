@@ -90,7 +90,7 @@ namespace gl3d
 				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}else
 			{
-				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
 				{
 					changed = 1;
 				}
@@ -123,7 +123,7 @@ namespace gl3d
 	void Renderer3D::init()
 	{
 		lightShader.create();
-
+		skyBox.createGpuData();
 
 	}
 
@@ -155,7 +155,7 @@ namespace gl3d
 		}
 
 		internal::GpuMaterial gpuMaterial;
-		gpuMaterial.kd = kd;
+		gpuMaterial.kd = glm::vec4(kd, 0);
 		gpuMaterial.roughness = roughness;
 		gpuMaterial.metallic = metallic;
 		gpuMaterial.ao = ao;
@@ -230,11 +230,23 @@ namespace gl3d
 
 		GpuMultipleGraphicModel returnModel;
 
-
 		{
 
 			int s = model.loader.LoadedMeshes.size();
 			returnModel.models.reserve(s);
+
+
+			std::vector<gl3d::Material> loadedMaterials;
+			loadedMaterials.reserve(model.loader.LoadedMaterials.size());
+			for(int i=0;i<model.loader.LoadedMaterials.size(); i++)
+			{
+				auto &mat = model.loader.LoadedMaterials[i];
+				auto m = this->createMaterial(mat.Kd, mat.roughness,
+				mat.metallic /*,mat.ao todo*/);
+
+				loadedMaterials.push_back(m);
+			}
+
 
 			for (int i = 0; i < s; i++)
 			{
@@ -248,11 +260,8 @@ namespace gl3d
 						 (float *)&mesh.Vertices[0],
 						mesh.Indices.size() * 4, &mesh.Indices[0]);
 
-
 					auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
-					gm.material = this->createMaterial(mat.Kd, mat.roughness,
-					material.metallic /*,mat.ao todo*/ );
-
+					gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 
 					gm.albedoTexture.clear();
 					gm.normalMapTexture.clear();
@@ -505,7 +514,7 @@ namespace gl3d
 		}
 		int id = found - graphicModelsIndexes.begin();
 	
-		auto &model = graphicModels[id];
+		auto &model = graphicModels[id]; 
 	
 	
 		if (model.models.empty())
@@ -583,7 +592,7 @@ namespace gl3d
 			}
 			else
 			{
-				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
 				{
 					changed = 1;
 				}

@@ -37,20 +37,20 @@ uniform int u_pointLightCount;
 
 struct MaterialStruct
 {
-	float kdr; //= 1;
-	float kdg; //= 1;
-	float kdb; //= 1;
-	float roughness;
-	float metallic;
-	float ao; //one means full light
+	vec4 kd;
+	vec4 rma;
+	//float kdr; //= 1;
+	//float kdg; //= 1;
+	//float kdb; //= 1;
+	//float roughness;
+	//float metallic;
+	//float ao; //one means full light
 };
 
 layout(std140) buffer u_material
 {
 	MaterialStruct mat[];
 };
-
-
 
 
 //todo move some of this from global for implementing multi lights
@@ -103,43 +103,43 @@ subroutine vec3 GetMaterialMapped();
 
 subroutine (GetMaterialMapped) vec3 materialNone()
 {
-	return vec3(mat[u_materialIndex].roughness, mat[u_materialIndex].metallic, mat[u_materialIndex].ao);
+	return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
 }
 
 subroutine (GetMaterialMapped) vec3 materialR()
 {
 	float r = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(r, mat[u_materialIndex].metallic, mat[u_materialIndex].ao);
+	return vec3(r, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
 }
 
 subroutine (GetMaterialMapped) vec3 materialM()
 {
 	float m = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(mat[u_materialIndex].roughness, m, mat[u_materialIndex].ao);
+	return vec3(mat[u_materialIndex].rma.x, m, mat[u_materialIndex].rma.z);
 }
 
 subroutine (GetMaterialMapped) vec3 materialA()
 {
 	float a = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(mat[u_materialIndex].roughness, mat[u_materialIndex].metallic, a);
+	return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, a);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRM()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
-	return vec3(v.x, v.y, mat[u_materialIndex].ao);
+	return vec3(v.x, v.y, mat[u_materialIndex].rma.z);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRA()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
-	return vec3(v.x, mat[u_materialIndex].metallic, v.y);
+	return vec3(v.x, mat[u_materialIndex].rma.y, v.y);
 }
 
 subroutine (GetMaterialMapped) vec3 materialMA()
 {
 	vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
-	return vec3(mat[u_materialIndex].roughness, v.x, v.y);
+	return vec3(mat[u_materialIndex].rma.x, v.x, v.y);
 }
 
 subroutine (GetMaterialMapped) vec3 materialRMA()
@@ -252,7 +252,7 @@ void main()
 
 		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
 		
-		color *= vec4(mat[u_materialIndex].kdr, mat[u_materialIndex].kdg, mat[u_materialIndex].kdb, 1); //(option) multiply texture by kd
+		color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
 		
 
 		//color = vec4(kd.rgb,1); //(option) remove albedo texture
