@@ -22,11 +22,13 @@ uniform int u_materialIndex;
 
 struct Pointlight
 {
-	vec4 positions; // w component not used
-	vec4 color; // w component not used
+	vec3 positions; // w component not used
+	float dist;
+	vec3 color; // w component not used
+	float strength;
 };
 
-layout(std140) buffer u_pointLights
+readonly layout(std140) buffer u_pointLights
 {
 	Pointlight light[];
 };
@@ -47,7 +49,7 @@ struct MaterialStruct
 	//float ao; //one means full light
 };
 
-layout(std140) buffer u_material
+readonly layout(std140) buffer u_material
 {
 	MaterialStruct mat[];
 };

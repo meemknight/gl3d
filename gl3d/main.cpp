@@ -400,9 +400,7 @@ int main()
 
 	//auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto objectTest = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
-	auto material = renderer.createMaterial();
 
-	renderer.deleteMaterial(material);
 
 	//auto objectTest = renderer.loadObject("resources/barrel/Barrel_01.obj");
 	//auto objectTest2 = renderer.loadObject("resources/other/crate.obj", 0.01);
@@ -431,16 +429,21 @@ int main()
 
 	int timeBeg = clock();
 
-	static PL::AverageProfiler renderProfiler;
-	static PL::ProfileRezults lastProfilerRezult = {};
+	//static PL::AverageProfiler renderProfiler;
+	//static PL::ProfileRezults lastProfilerRezult = {};
 
-	const int Profiler_ARR_SIZE = 60;
-	int profilePos = 0;
-	static float profileeArr[Profiler_ARR_SIZE] = { };
+	//const int Profiler_ARR_SIZE = 60;
+	//int profilePos = 0;
+	//static float profileeArr[Profiler_ARR_SIZE] = { };
 
-	const int ProfilerAverage_ARR_SIZE = 20;
-	int profileAveragePos = 0;
-	static float profileAverageArr[ProfilerAverage_ARR_SIZE] = { };
+	//const int ProfilerAverage_ARR_SIZE = 20;
+	//int profileAveragePos = 0;
+	//static float profileAverageArr[ProfilerAverage_ARR_SIZE] = { };
+
+	PL::ImguiProfiler renderDurationProfiler("Render duration (ms) (avg over one sec)", 0, 30);
+	PL::ImguiProfiler renderDurationProfilerFine("Render duration (ms) ", 0, 30);
+	PL::ImguiProfiler imguiRenderDuration("Imgui render duration (ms) ", 0, 30);
+	PL::ImguiProfiler swapBuffersDuration("Swap buffers duration (ms) ", 0, 30);
 
 	while (!glfwWindowShouldClose(wind))
 	{
@@ -481,21 +484,24 @@ int main()
 					fpsArr[FPS_RECORD_ARR_SIZE - 1] = currnetFps;
 				}
 
-				if (profileAveragePos < ProfilerAverage_ARR_SIZE)
-				{
+				//if (profileAveragePos < ProfilerAverage_ARR_SIZE)
+				//{
+				//
+				//	profileAverageArr[profileAveragePos] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+				//	profileAveragePos++;
+				//}
+				//else
+				//{
+				//	for (int i = 0; i < ProfilerAverage_ARR_SIZE - 1; i++)
+				//	{
+				//		profileAverageArr[i] = profileAverageArr[i + 1];
+				//	}
+				//	profileAverageArr[ProfilerAverage_ARR_SIZE - 1] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
+				//}
 
-					profileAverageArr[profileAveragePos] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
-					profileAveragePos++;
-				}
-				else
-				{
-					for (int i = 0; i < ProfilerAverage_ARR_SIZE - 1; i++)
-					{
-						profileAverageArr[i] = profileAverageArr[i + 1];
-					}
-					profileAverageArr[ProfilerAverage_ARR_SIZE - 1] = renderProfiler.getAverageAndResetData().timeSeconds * 1000;
-				}
-
+				renderDurationProfiler.updateValue(1000);
+				imguiRenderDuration.updateValue(1000);
+				swapBuffersDuration.updateValue(1000);
 			}
 
 			if (recordPosDeltaTime < DELTA_TIME_ARR_SIZE)
@@ -512,19 +518,22 @@ int main()
 				deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime;
 			}
 
-			if (profilePos < Profiler_ARR_SIZE)
-			{
-				profileeArr[profilePos] = lastProfilerRezult.timeSeconds;
-				profilePos++;
-			}
-			else
-			{
-				for (int i = 0; i < Profiler_ARR_SIZE - 1; i++)
-				{
-					profileeArr[i] = profileeArr[i + 1];
-				}
-				profileeArr[Profiler_ARR_SIZE - 1] = lastProfilerRezult.timeSeconds;
-			}
+			//if (profilePos < Profiler_ARR_SIZE)
+			//{
+			//	profileeArr[profilePos] = lastProfilerRezult.timeSeconds;
+			//	profilePos++;
+			//}
+			//else
+			//{
+			//	for (int i = 0; i < Profiler_ARR_SIZE - 1; i++)
+			//	{
+			//		profileeArr[i] = profileeArr[i + 1];
+			//	}
+			//	profileeArr[Profiler_ARR_SIZE - 1] = lastProfilerRezult.timeSeconds;
+			//}
+
+			renderDurationProfilerFine.updateValue(1000);
+
 		}
 	#pragma endregion
 
@@ -837,12 +846,16 @@ int main()
 			0, 0.32);
 			ImGui::Text("Frame duration (ms) %f", deltaTime * 1000);
 
-			ImGui::PlotHistogram("Render duration graph", profileeArr, Profiler_ARR_SIZE, 0, 0,
-			0, 0.32);
-			ImGui::Text("Render duration (ms) %f", lastProfilerRezult.timeSeconds * 1000);
+			//ImGui::PlotHistogram("Render duration graph", profileeArr, Profiler_ARR_SIZE, 0, 0,
+			//0, 0.32);
+			//ImGui::Text("Render duration (ms) %f", lastProfilerRezult.timeSeconds * 1000);
+			renderDurationProfilerFine.imguiPlotValues();
 
-			ImGui::PlotHistogram("Render duration average graph", profileAverageArr, ProfilerAverage_ARR_SIZE, 0, 0,
-			0, 32);
+			renderDurationProfiler.imguiPlotValues();
+
+			imguiRenderDuration.imguiPlotValues();
+
+			swapBuffersDuration.imguiPlotValues();
 
 			ImGui::End();
 		}
@@ -930,7 +943,8 @@ int main()
 		}
 	#pragma endregion
 
-		renderProfiler.start();
+		renderDurationProfiler.start();
+		renderDurationProfilerFine.start();
 
 		for (int i = 0; i < models.size(); i++)
 		{
@@ -948,7 +962,9 @@ int main()
 		//renderer.renderObject(objectTest2, { 3,0,0 });
 
 
-		lastProfilerRezult = renderProfiler.end();
+		//lastProfilerRezult = renderDurationProfiler.end();
+		renderDurationProfiler.end();
+		renderDurationProfilerFine.end();
 
 		if (itemCurrent	< models.size() &&
 			!models[itemCurrent].models.empty() && showNormals 
@@ -1058,6 +1074,8 @@ int main()
 	#pragma region render and events
 
 
+		imguiRenderDuration.start();
+
 		ImGui::Render();
 		int display_w, display_h;
 		glfwGetFramebufferSize(wind, &display_w, &display_h);
@@ -1075,9 +1093,13 @@ int main()
 			glfwMakeContextCurrent(backup_current_context);
 		}
 
+		imguiRenderDuration.end();
+
+		swapBuffersDuration.start();
+		glViewport(0, 0, w, h);
 		glfwSwapBuffers(wind);
 		glfwPollEvents();
-		glViewport(0, 0, w, h);
+		swapBuffersDuration.end();
 
 	#pragma endregion
 

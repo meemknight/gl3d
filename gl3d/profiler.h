@@ -60,7 +60,7 @@ namespace PL
 
 	};
 
-	const int AverageProfilerMaxTests = 200;
+	const int AverageProfilerMaxTests = 300;
 
 	struct AverageProfiler
 	{
@@ -121,4 +121,56 @@ namespace PL
 
 
 	};
+
+	struct ImguiProfiler
+	{
+
+		ImguiProfiler() {};
+		ImguiProfiler(std::string n, float min, float max): plotName(n), 
+			min(min), max(max){};
+
+		PL::AverageProfiler profiler;
+
+		void start() { profiler.start(); }
+		void end() { profiler.end(); }
+
+		static const int ARR_SIZE = 60;
+		int valuePos = 0;
+		float profileAverageValue[ARR_SIZE] = { };
+
+		std::string plotName;
+		float min = 0;
+		float max = 60;
+
+		void updateValue(float value = 1)
+		{
+			value *= profiler.getAverageAndResetData().timeSeconds;
+
+			if (valuePos < ARR_SIZE)
+			{
+
+				profileAverageValue[valuePos] = value;
+				valuePos++;
+			}
+			else
+			{
+				for (int i = 0; i < ARR_SIZE - 1; i++)
+				{
+					profileAverageValue[i] = profileAverageValue[i + 1];
+				}
+				profileAverageValue[ARR_SIZE - 1] = value;
+			}
+		}
+
+		void imguiPlotValues()
+		{
+			ImGui::NewLine();
+			ImGui::PlotHistogram(("##" + plotName + " graph").c_str(), profileAverageValue, ARR_SIZE, 0, 0,
+			min, max);
+			ImGui::Text((plotName + ", %f").c_str(), profileAverageValue[valuePos-1]);
+		};
+
+	};
+
+
 };
