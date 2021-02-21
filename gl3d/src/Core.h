@@ -16,26 +16,27 @@ namespace gl3d
 
 	};
 
+	struct GpuMaterial
+	{
+		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
+		float roughness = 0.5f;
+		float metallic = 0.1;
+		float ao = 1;
+		float notUdes;
+		GpuMaterial setDefaultMaterial()
+		{
+			*this = GpuMaterial();
+
+			return *this;
+		}
+	};
+
 	//todo move
 	namespace internal
 	{
 		
 
-
-		struct GpuMaterial
-		{
-			glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
-			float roughness = 0.5f;
-			float metallic = 0.1;
-			float ao = 1;
-			float notUdes;
-			GpuMaterial setDefaultMaterial()
-			{
-				*this = GpuMaterial();
-
-				return *this;
-			}
-		};
+	
 
 		//todo move
 		struct GpuPointLight

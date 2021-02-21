@@ -6,7 +6,7 @@
 namespace gl3d
 {
 	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, 
-		float gama, const internal::GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
+		float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 
 		auto projMat = camera.getProjectionMatrix();
@@ -51,7 +51,7 @@ namespace gl3d
 		lightShader.shader.bind();
 
 		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, internal::GpuMaterial(),
+		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, GpuMaterial(),
 			pointLights);
 
 		GLsizei n;
@@ -127,7 +127,8 @@ namespace gl3d
 
 	}
 
-	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao)
+	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
+	, std::string name)
 	{
 		int id = 0;
 
@@ -154,7 +155,7 @@ namespace gl3d
 
 		}
 
-		internal::GpuMaterial gpuMaterial;
+		GpuMaterial gpuMaterial;
 		gpuMaterial.kd = glm::vec4(kd, 0);
 		gpuMaterial.roughness = roughness;
 		gpuMaterial.metallic = metallic;
@@ -162,11 +163,20 @@ namespace gl3d
 
 		materialIndexes.push_back(id);
 		materials.push_back(gpuMaterial);
+		materialNames.push_back(name);
 
 		Material m;
 		m._id = id;
 		return m;
 
+	}
+
+	Material Renderer3D::createMaterial(Material m)
+	{
+		auto newM = createMaterial();
+		copyMaterial(newM, m);
+
+		return newM;
 	}
 
 	void Renderer3D::deleteMaterial(Material m)
@@ -183,6 +193,72 @@ namespace gl3d
 
 		materialIndexes.erase(pos);
 		materials.erase(materials.begin() + index);
+		materialNames.erase(materialNames.begin() + index);
+	}
+
+	void Renderer3D::copyMaterial(Material dest, Material source)
+	{
+		int destId = getMaterialIndex(dest);
+		int sourceId = getMaterialIndex(source);
+
+		gl3dAssertComment(destId != -1, "invaled dest material index");
+		gl3dAssertComment(sourceId != -1, "invaled source material index");
+
+		materials[destId] = materials[sourceId];
+		materialNames[destId] = materialNames[sourceId];
+
+	}
+
+	GpuMaterial *Renderer3D::getMaterialData(Material m, std::string *s)
+	{
+		int id = getMaterialIndex(m);
+
+		if(id == -1)
+		{
+			return nullptr;
+		}
+		
+		auto data = &materials[id];
+
+		if(s)
+		{
+			*s = materialNames[id];
+		}
+
+		return data;
+	}
+
+	bool Renderer3D::setMaterialData(Material m, const GpuMaterial &data, std::string *s)
+	{
+		int id = getMaterialIndex(m);
+
+		if (id == -1)
+		{
+			return 0;
+		}
+
+		materials[id] = data;
+		
+		if (s)
+		{
+			materialNames[id] = *s;
+		}
+
+		return 1;
+	}
+
+	GpuMultipleGraphicModel *Renderer3D::getObjectData(Object o)
+	{
+		int id = getObjectIndex(o);
+	
+		if (id == -1)
+		{
+			return nullptr;
+		}
+	
+		auto data = &graphicModels[id];
+	
+		return data;
 	}
 
 	static int max(int x, int y, int z)
@@ -252,7 +328,7 @@ namespace gl3d
 			{
 				GpuGraphicModel gm;
 				int index = i;
-				internal::GpuMaterial material;
+				GpuMaterial material;
 
 				{
 					auto &mesh = model.loader.LoadedMeshes[index];
@@ -532,12 +608,12 @@ namespace gl3d
 		lightShader.shader.bind();
 	
 		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, internal::GpuMaterial(),
+		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, GpuMaterial(),
 			pointLights);
 
 		//material buffer
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(internal::GpuMaterial) * materials.size()
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * materials.size()
 			, &materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
@@ -557,14 +633,10 @@ namespace gl3d
 		{
 			//lightShader.setMaterial(i.material);
 			{
-				int id = i.material._id;
-				auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
-				if (found == materialIndexes.end())
-				{
-					gl3dAssertComment(found == materialIndexes.end(), "invalid material during render object");
-					continue;
-				}
-				id = found - materialIndexes.begin();
+				int id = getMaterialIndex(i.material);
+
+				if (id == -1) 
+					{ continue; }
 
 				glUniform1i(lightShader.materialIndexLocation, id);
 			}
@@ -631,6 +703,34 @@ namespace gl3d
 		delete[] indices;
 	
 	
+	}
+
+	int Renderer3D::getMaterialIndex(Material m)
+	{
+		int id = m._id;
+		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
+		if (found == materialIndexes.end())
+		{
+			gl3dAssertComment(found == materialIndexes.end(), "invalid material");
+			return -1;
+		}
+		id = found - materialIndexes.begin();
+
+		return id;
+	}
+
+	int Renderer3D::getObjectIndex(Object o)
+	{
+		int id = o._id;
+		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
+		if (found == graphicModelsIndexes.end())
+		{
+			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid object");
+			return -1;
+		}
+		id = found - graphicModelsIndexes.begin();
+	
+		return id;
 	}
 
 };

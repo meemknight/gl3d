@@ -73,7 +73,7 @@ namespace gl3d
 		Texture RMA_Texture; //rough metalness ambient oclusion
 		int RMA_loadedTextures;
 
-		internal::GpuMaterial material;
+		GpuMaterial material;
 
 	};
 

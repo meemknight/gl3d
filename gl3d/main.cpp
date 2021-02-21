@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-gl3d::internal::GpuMaterial material = gl3d::internal::GpuMaterial().setDefaultMaterial();
+gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
 #define USE_GPU_ENGINE 0
 
@@ -88,7 +88,6 @@ int main()
 
 	gl3d::Renderer3D renderer;
 	renderer.init();
-
 
 
 #pragma region shader
@@ -399,8 +398,8 @@ int main()
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
-	//auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto objectTest = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
+	//auto objectTest = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 
 
 	//auto objectTest = renderer.loadObject("resources/barrel/Barrel_01.obj");
@@ -906,7 +905,7 @@ int main()
 				glm::dvec2 currentMousePos = {};
 				glfwGetCursorPos(wind, &currentMousePos.x, &currentMousePos.y);
 
-				float speed = 0.4f;
+				float speed = 0.8f;
 
 				glm::vec2 delta = lastMousePos - currentMousePos;
 				delta *= speed * deltaTime;
