@@ -34,6 +34,15 @@ extern "C"
 }
 #pragma endregion
 
+struct ObjectAndTransform
+{
+	gl3d::Object obj = {};
+	glm::vec3 position = {};
+	glm::vec3 rotation = {};
+	glm::vec3 scale = {1,1,1};
+};
+
+
 int main()
 {
 
@@ -389,23 +398,23 @@ int main()
 
 	
 	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
-	gl3d::LoadedModelData barelModel("resources/barrel/Barrel_01.obj", 1);
-	gl3d::LoadedModelData rockModel("resources/other/boulder.obj", 0.1);
-	//gl3d::LoadedModelData levelModel("resources/sponza/sponza.obj");
+	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
+	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
+	auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
-	gl3d::LoadedModelData levelModel("resources/other/crate.obj", 0.01);
-	gl3d::LoadedModelData sphereModel("resources/obj/sphere3.obj");
+	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
-	auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
+	//auto objectTest = renderer.loadObject("resources/other/crate.obj", 0.01);
 	//auto objectTest = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 
 
 	//auto objectTest = renderer.loadObject("resources/barrel/Barrel_01.obj");
 	//auto objectTest2 = renderer.loadObject("resources/other/crate.obj", 0.01);
 
-	std::vector< gl3d::MultipleGraphicModels > models;
+	std::vector< ObjectAndTransform > models;
 	static std::vector < const char* > items = {}; //just models names
 
 	renderer.camera.aspectRatio = (float)w / h;
@@ -692,49 +701,48 @@ int main()
 			if (ImGui::Button("Add barrel"))
 			{
 				items.push_back("Barrel");
-				gl3d::MultipleGraphicModels model;
-				model.loadFromModel(barelModel);
+				ObjectAndTransform model;
+				model.obj = barelModel;
 				models.push_back(model);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add rock"))
 			{
 				items.push_back("Rock");
-				gl3d::MultipleGraphicModels model;
-				model.loadFromModel(rockModel);
+				ObjectAndTransform model;
+				model.obj = rockModel;
 				models.push_back(model);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add crate"))
 			{
 				items.push_back("Crate");
-				gl3d::MultipleGraphicModels model;
-				model.loadFromModel(levelModel);
+				ObjectAndTransform model;
+				model.obj = levelModel;
 				models.push_back(model);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add sphere"))
 			{
 				items.push_back("Sphere");
-				gl3d::MultipleGraphicModels model;
-				model.loadFromModel(sphereModel);
+				ObjectAndTransform model;
+				model.obj = sphereModel;
 				models.push_back(model);
 			}
 			if (ImGui::Button("Remove object") && itemCurrent < items.size() )
 			{
 				items.erase(items.begin() + itemCurrent);
-				models[itemCurrent].clear();
 				models.erase(models.begin() + itemCurrent);
 				if(itemCurrent) itemCurrent--;
 			}
 			
 			if (itemCurrent < models.size())
 			{
-			
-				int subitemsCount = models[itemCurrent].subModelsNames.size();
+				auto curentModel = renderer.getObjectData(models[itemCurrent].obj);
+				int subitemsCount = curentModel->subModelsNames.size();
 
 				ImGui::ListBox("Object components", &subItemCurent, 
-					models[itemCurrent].subModelsNames.data(), subitemsCount);
+					curentModel->subModelsNames.data(), subitemsCount);
 
 			}
 			
@@ -743,6 +751,8 @@ int main()
 
 			if(!models.empty() && itemCurrent < items.size())
 			{
+				auto curentModel = renderer.getObjectData(models[itemCurrent].obj);
+
 				ImGui::NewLine();
 
 				ImGui::Text("Object transform");
@@ -757,9 +767,10 @@ int main()
 					models[itemCurrent].scale = glm::vec3(s);
 				}
 
-				if(subItemCurent < models[itemCurrent].models.size())
+				if(subItemCurent < curentModel->models.size())
 				{
-					auto &material = models[itemCurrent].models[subItemCurent].material;
+					auto &material = *renderer.getMaterialData(curentModel->models[subItemCurent].material);
+
 
 					ImGui::Text("Object material");
 					ImGui::ColorEdit3("difuse", &material.kd[0]);
@@ -820,9 +831,9 @@ int main()
 						ImGui::PopID();
 					};
 
-					drawImage("Object albedo, id: %d", models[itemCurrent].models[subItemCurent].albedoTexture.id, 20, 20);
-					drawImage("Object normal map, id: %d", models[itemCurrent].models[subItemCurent].normalMapTexture.id, 20, 20);
-					drawImage("Object RMA map, id: %d", models[itemCurrent].models[subItemCurent].RMA_Texture.id, 20, 20);
+					drawImage("Object albedo, id: %d", curentModel->models[subItemCurent].albedoTexture.id, 20, 20);
+					drawImage("Object normal map, id: %d", curentModel->models[subItemCurent].normalMapTexture.id, 20, 20);
+					drawImage("Object RMA map, id: %d", curentModel->models[subItemCurent].RMA_Texture.id, 20, 20);
 
 				}
 				
@@ -953,12 +964,14 @@ int main()
 			//models[i].models[0].rotation = models[i].rotation;
 		
 			//todo here change the uniform
-			gl3d::renderLightModel(models[i], renderer.camera, lightCubeModel.position, lightShader,
-				renderer.skyBox.texture, gamaCorection, renderer.pointLights);
+			//gl3d::renderLightModel(models[i], renderer.camera, lightCubeModel.position, lightShader,
+			//	renderer.skyBox.texture, gamaCorection, renderer.pointLights);
+
+			renderer.renderObject(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
 
 		}
 
-		renderer.renderObject(objectTest, { 0,0,0 });
+		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });
 
 
@@ -966,98 +979,98 @@ int main()
 		renderDurationProfiler.end();
 		renderDurationProfilerFine.end();
 
-		if (itemCurrent	< models.size() &&
-			!models[itemCurrent].models.empty() && showNormals 
-			&& subItemCurent < models[itemCurrent].models.size())
-		{
-			showNormalsShader.bind();
-
-			auto projMat = renderer.camera.getProjectionMatrix();
-			auto viewMat = renderer.camera.getWorldToViewMatrix();
-			auto transformMat = models[itemCurrent].getTransformMatrix();
-
-			auto viewTransformMat = viewMat * transformMat;
-
-			glUniformMatrix4fv(normalsModelTransformLocation,
-				1, GL_FALSE, &viewTransformMat[0][0]);
-
-			glUniformMatrix4fv(normalsProjectionLocation,
-				1, GL_FALSE, &projMat[0][0]);
-
-			models[itemCurrent].models[subItemCurent].draw();
-
-		}
+		//todo show normals routine
+		//if (itemCurrent	< models.size() &&
+		//	!models[itemCurrent].models.empty() && showNormals 
+		//	&& subItemCurent < models[itemCurrent].models.size())
+		//{
+		//	showNormalsShader.bind();
+		//
+		//	auto projMat = renderer.camera.getProjectionMatrix();
+		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
+		//	auto transformMat = models[itemCurrent].getTransformMatrix();
+		//
+		//	auto viewTransformMat = viewMat * transformMat;
+		//
+		//	glUniformMatrix4fv(normalsModelTransformLocation,
+		//		1, GL_FALSE, &viewTransformMat[0][0]);
+		//
+		//	glUniformMatrix4fv(normalsProjectionLocation,
+		//		1, GL_FALSE, &projMat[0][0]);
+		//
+		//	models[itemCurrent].models[subItemCurent].draw();
+		//
+		//}
 		
-		if (itemCurrent < models.size() && borderItem && 
-			models[itemCurrent].models.size() > subItemCurent)
-		{
-			
-			glEnable(GL_STENCIL_TEST);
-			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-			glStencilFunc(GL_ALWAYS, 1, 0xFF);
-			glStencilMask(0xFF);	
+		//todo border item routine
+		//if (itemCurrent < models.size() && borderItem && 
+		//	models[itemCurrent].models.size() > subItemCurent)
+		//{
+		//	
+		//	glEnable(GL_STENCIL_TEST);
+		//	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+		//	glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		//	glStencilMask(0xFF);	
+		//
+		//	auto projMat = renderer.camera.getProjectionMatrix();
+		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
+		//	auto transformMat = models[0].getTransformMatrix();
+		//
+		//	auto viewProjMat = projMat * viewMat * transformMat;
+		//
+		//	//todo here also change the uniform
+		//	lightShader.bind(viewProjMat, transformMat,
+		//		lightCubeModel.position, renderer.camera.position, gamaCorection,
+		//		models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
+		//
+		//	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//	models[itemCurrent].models[subItemCurent].draw();
+		//	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		//
+		//	glDisable(GL_STENCIL_TEST);
+		//
+		//	glEnable(GL_STENCIL_TEST);
+		//	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+		//	glDepthFunc(GL_ALWAYS);
+		//	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		//	glStencilMask(0x00);
+		//
+		//	auto &m = models[itemCurrent].models[subItemCurent];
+		//	projMat = renderer.camera.getProjectionMatrix();
+		//	viewMat = renderer.camera.getWorldToViewMatrix();
+		//
+		//	auto rotation = models[itemCurrent].rotation;
+		//	auto scale = models[itemCurrent].scale;
+		//	scale *= 1.05;
+		//	auto position = models[itemCurrent].position;
+		//
+		//
+		//	auto s = glm::scale(scale);
+		//	auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+		//		glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+		//		glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+		//	auto t = glm::translate(position);
+		//
+		//	transformMat = t * r * s;
+		//
+		//	viewProjMat = projMat * viewMat * transformMat;
+		//
+		//	shader.bind();
+		//	glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+		//
+		//	glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+		//
+		//	glEnableVertexAttribArray(0);
+		//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+		//	glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
+		//
+		//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
+		//	glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
+		//
+		//	glDisable(GL_STENCIL_TEST);
+		//	glDepthFunc(GL_LESS);
+		//}
 
-			auto projMat = renderer.camera.getProjectionMatrix();
-			auto viewMat = renderer.camera.getWorldToViewMatrix();
-			auto transformMat = models[0].getTransformMatrix();
-
-			auto viewProjMat = projMat * viewMat * transformMat;
-
-			//todo here also change the uniform
-			lightShader.bind(viewProjMat, transformMat,
-				lightCubeModel.position, renderer.camera.position, gamaCorection,
-				models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
-
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			models[itemCurrent].models[subItemCurent].draw();
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-			glDisable(GL_STENCIL_TEST);
-
-			glEnable(GL_STENCIL_TEST);
-			glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-			glDepthFunc(GL_ALWAYS);
-			glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-			glStencilMask(0x00);
-
-			auto &m = models[itemCurrent].models[subItemCurent];
-			projMat = renderer.camera.getProjectionMatrix();
-			viewMat = renderer.camera.getWorldToViewMatrix();
-
-			auto rotation = models[itemCurrent].rotation;
-			auto scale = models[itemCurrent].scale;
-			scale *= 1.05;
-			auto position = models[itemCurrent].position;
-
-
-			auto s = glm::scale(scale);
-			auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-				glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-				glm::rotate(rotation.z, glm::vec3(0, 0, 1));
-			auto t = glm::translate(position);
-
-			transformMat = t * r * s;
-
-			viewProjMat = projMat * viewMat * transformMat;
-
-			shader.bind();
-			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-
-			glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
-
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-			glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
-
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
-			glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
-
-			glDisable(GL_STENCIL_TEST);
-			glDepthFunc(GL_LESS);
-		}
-
-
-		
 		{
 
 			auto projMat = renderer.camera.getProjectionMatrix();
