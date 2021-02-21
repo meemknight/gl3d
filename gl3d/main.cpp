@@ -17,6 +17,7 @@
 
 #include <ctime>
 #include <functional>
+#include <algorithm>
 
 int w = 840;
 int h = 640;

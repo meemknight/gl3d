@@ -3,6 +3,7 @@
 #include <OBJ_Loader.h>
 #include <stb_image.h>
 #include "Texture.h"
+#include <algorithm>
 
 namespace gl3d 
 {

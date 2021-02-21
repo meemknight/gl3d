@@ -3,6 +3,7 @@
 #include <iostream>
 #include <glm\vec3.hpp>
 #include "Core.h"
+#include <algorithm>
 
 namespace gl3d
 {
