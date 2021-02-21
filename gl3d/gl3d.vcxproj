@@ -193,6 +193,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\OBJ_Loader.h" />
     <ClInclude Include="profiler.h" />
     <ClInclude Include="src\gl3d.h" />
     <ClInclude Include="src\Core.h" />

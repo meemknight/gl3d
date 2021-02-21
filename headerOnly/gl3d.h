@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-17
+//built on 2021-02-21
 ////////////////////////////////////////////////
 
 
@@ -277,7 +277,7 @@ namespace gl3d
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
-#include <OBJ_Loader.h>
+#include "OBJ_Loader.h"
 
 #include "Shader.h"
 #include "Texture.h"

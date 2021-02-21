@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
-#include <OBJ_Loader.h>
+#include "OBJ_Loader.h"
 
 #include "Shader.h"
 #include "Texture.h"

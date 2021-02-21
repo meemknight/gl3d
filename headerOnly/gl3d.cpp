@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-17
+//built on 2021-02-21
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -823,7 +823,7 @@ namespace gl3d
 #pragma region GraphicModel
 
 
-#include <OBJ_Loader.h>
+#include "OBJ_Loader.h"
 #include <stb_image.h>
 
 
