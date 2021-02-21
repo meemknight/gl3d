@@ -90,6 +90,7 @@ void assertFunc(const char *expression,
 #include <iostream>
 #include <glm\vec3.hpp>
 
+#include <algorithm>
 
 namespace gl3d
 {
@@ -826,6 +827,7 @@ namespace gl3d
 #include "OBJ_Loader.h"
 #include <stb_image.h>
 
+#include <algorithm>
 
 namespace gl3d 
 {
