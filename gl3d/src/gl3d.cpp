@@ -607,6 +607,8 @@ namespace gl3d
 	
 		lightShader.shader.bind();
 	
+		//todo refactor or remove light shader
+
 		lightShader.getSubroutines();
 		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, GpuMaterial(),
 			pointLights);
@@ -648,7 +650,7 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
 	
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
 	
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
@@ -658,26 +660,40 @@ namespace gl3d
 			{
 				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
 				{
+					indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 					changed = 1;
 				}
-				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
 			}
 			else
 			{
 				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
 				{
+					indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
 					changed = 1;
 				}
-				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
 			}
 	
 			if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
 			{
+				indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
 				changed = 1;
 			}
-	
-			indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
-	
+			
+			if(i.albedoTexture.id != 0)
+			{
+				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
+				{
+					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
+					changed = 1;
+				}else
+				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
+				{
+					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
+					changed = 1;
+				}
+			}
+
+
 			if (changed)
 			{
 				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);

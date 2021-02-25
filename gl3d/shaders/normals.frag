@@ -101,6 +101,31 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
 
 
+//albedo
+subroutine vec4 GetAlbedoFunc();
+
+subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
+{
+	color = texture2D(u_albedoSampler, v_texCoord).xyzw;
+		if(color.w <= 0.1)
+			discard;
+
+	color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
+		
+	color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
+		
+
+	return color;
+}
+
+subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
+{
+	return vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
+}
+
+subroutine uniform GetAlbedoFunc u_getAlbedo;
+
+
 subroutine vec3 GetMaterialMapped();
 
 subroutine (GetMaterialMapped) vec3 materialNone()
@@ -203,7 +228,6 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor)
 {
 
-
 	vec3 lightDirection = normalize(lightPosition - v_position);
 	vec3 halfwayVec = normalize(lightDirection + viewDir);
 	
@@ -248,17 +272,18 @@ void main()
 	float sampledAo = sampledMaterial.b;
 
 	{	//general data
-		color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		if(color.w <= 0.1)
-			discard;
+		//color = texture2D(u_albedoSampler, v_texCoord).xyzw;
+		//if(color.w <= 0.1)
+		//	discard;
 
-		color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
+		//color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
 		
-		color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
-		
+		//color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
 
-		//color = vec4(kd.rgb,1); //(option) remove albedo texture
-	
+		//color = vec4(mat[u_materialIndex].kd.rgb,1); //(option) remove albedo texture
+		
+		color = u_getAlbedo();
+
 		noMappedNorals = normalize(v_normals);
 		normal = getNormalMapFunc(noMappedNorals);
 		//normal = noMappedNorals; //(option) remove normal mapping

@@ -326,8 +326,7 @@ namespace gl3d
 
 	void LightShader::getSubroutines()
 	{
-		normalSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
-			"getNormalMapFunc");
+
 
 		normalSubroutine_noMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
 			"noNormalMapped");
@@ -335,9 +334,24 @@ namespace gl3d
 		normalSubroutine_normalMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
+		
+		//
+		albedoSubroutine_sampled = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+				"sampledAlbedo");
+
+		albedoSubroutine_notSampled = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+				"notSampledAlbedo");
+
+
+		//	
+		normalSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+			"getNormalMapFunc");
 
 		materialSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
 			"u_getMaterialMapped");
+
+		getAlbedoSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+			"u_getAlbedo");
 
 		const char *materiaSubroutineFunctions[8] = { 
 			"materialNone",

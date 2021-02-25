@@ -62,10 +62,14 @@ namespace gl3d
 
 		GLint normalSubroutineLocation = -1;
 		GLint materialSubroutineLocation = -1;
+		GLint getAlbedoSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
 		
+		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
+		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
+
 		
 		GLuint materialSubroutine_functions[8] = {
 			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,

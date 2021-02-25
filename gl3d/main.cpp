@@ -400,10 +400,10 @@ int main()
 	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
+	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
-	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
+	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -778,9 +778,9 @@ int main()
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
 
-					auto drawImage = [io](const char *c, GLuint id, int w, int h)
+					auto drawImage = [io](const char *c, GLuint id, int w, int h, int imguiId)
 					{
-						ImGui::PushID(id);
+						ImGui::PushID(imguiId);
 						ImGui::Text(c, id);
 						ImGui::SameLine();
 
@@ -831,9 +831,9 @@ int main()
 						ImGui::PopID();
 					};
 
-					drawImage("Object albedo, id: %d", curentModel->models[subItemCurent].albedoTexture.id, 20, 20);
-					drawImage("Object normal map, id: %d", curentModel->models[subItemCurent].normalMapTexture.id, 20, 20);
-					drawImage("Object RMA map, id: %d", curentModel->models[subItemCurent].RMA_Texture.id, 20, 20);
+					drawImage("Object albedo, id: %d", curentModel->models[subItemCurent].albedoTexture.id, 20, 20, 1);
+					drawImage("Object normal map, id: %d", curentModel->models[subItemCurent].normalMapTexture.id, 20, 20, 2);
+					drawImage("Object RMA map, id: %d", curentModel->models[subItemCurent].RMA_Texture.id, 20, 20, 3);
 
 				}
 				
