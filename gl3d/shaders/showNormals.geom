@@ -4,7 +4,7 @@ layout (line_strip, max_vertices = 6) out;
 
 in vec3 v_normals[];
 
-const float size = 0.8;
+uniform float u_size = 0.5;
 
 uniform mat4 u_projection; //projection matrix
 
@@ -12,7 +12,7 @@ void emitNormal(int index)
 {
 	gl_Position = u_projection * gl_in[index].gl_Position;
 	EmitVertex();
-	gl_Position = u_projection * (gl_in[index].gl_Position + vec4(v_normals[index],0) * size);
+	gl_Position = u_projection * (gl_in[index].gl_Position + vec4(v_normals[index],0) * u_size);
 	EmitVertex();
 	EndPrimitive();
 }

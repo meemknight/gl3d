@@ -962,12 +962,10 @@ int main()
 			//models[i].models[0].position = models[i].position;
 			//models[i].models[0].scale = models[i].scale;
 			//models[i].models[0].rotation = models[i].rotation;
-		
-			//todo here change the uniform
-			//gl3d::renderLightModel(models[i], renderer.camera, lightCubeModel.position, lightShader,
-			//	renderer.skyBox.texture, gamaCorection, renderer.pointLights);
 
 			renderer.renderObject(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
+			renderer.renderObjectNormals(models[i].obj, models[i].position, models[i].rotation,
+				models[i].scale, 0.2);
 
 		}
 
@@ -978,29 +976,7 @@ int main()
 		//lastProfilerRezult = renderDurationProfiler.end();
 		renderDurationProfiler.end();
 		renderDurationProfilerFine.end();
-
-		//todo show normals routine
-		//if (itemCurrent	< models.size() &&
-		//	!models[itemCurrent].models.empty() && showNormals 
-		//	&& subItemCurent < models[itemCurrent].models.size())
-		//{
-		//	showNormalsShader.bind();
-		//
-		//	auto projMat = renderer.camera.getProjectionMatrix();
-		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
-		//	auto transformMat = models[itemCurrent].getTransformMatrix();
-		//
-		//	auto viewTransformMat = viewMat * transformMat;
-		//
-		//	glUniformMatrix4fv(normalsModelTransformLocation,
-		//		1, GL_FALSE, &viewTransformMat[0][0]);
-		//
-		//	glUniformMatrix4fv(normalsProjectionLocation,
-		//		1, GL_FALSE, &projMat[0][0]);
-		//
-		//	models[itemCurrent].models[subItemCurent].draw();
-		//
-		//}
+		
 		
 		//todo border item routine
 		//if (itemCurrent < models.size() && borderItem && 

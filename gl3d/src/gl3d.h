@@ -53,11 +53,21 @@ namespace gl3d
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
 		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+		void renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation = {},
+			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
+		void renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation = {}, 
+			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = { 0.7, 0.7, 0.1 });
 
 		//internal
 		int getMaterialIndex(Material m);
 		int getObjectIndex(Object o);
 
+		//todo probably move into separate struct or sthing
+		Shader showNormalsShader;
+		GLint normalsModelTransformLocation;
+		GLint normalsProjectionLocation;
+		GLint normalsSizeLocation;
+		GLint normalColorLocation;
 
 	};
 

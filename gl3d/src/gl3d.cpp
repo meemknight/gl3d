@@ -125,6 +125,15 @@ namespace gl3d
 		lightShader.create();
 		skyBox.createGpuData();
 
+		showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
+		"shaders/showNormals.geom", "shaders/showNormals.frag");
+
+
+		normalsModelTransformLocation = glGetUniformLocation(showNormalsShader.id, "u_modelTransform");
+		normalsProjectionLocation = glGetUniformLocation(showNormalsShader.id, "u_projection");
+		normalsSizeLocation = glGetUniformLocation(showNormalsShader.id, "u_size");
+		normalColorLocation = glGetUniformLocation(showNormalsShader.id, "u_color");
+		
 	}
 
 	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
@@ -600,7 +609,7 @@ namespace gl3d
 	
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);;
+		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);
 	
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
@@ -720,6 +729,76 @@ namespace gl3d
 		delete[] indices;
 	
 	
+	}
+
+	void Renderer3D::renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation, 
+		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
+	{
+		auto obj = getObjectData(o);
+
+		if(!obj)
+		{
+			return;
+		}
+
+		for(int i=0; i<obj->models.size(); i++)
+		{
+			renderSubObjectNormals(o, i, position, rotation, scale, normalSize, normalColor);
+		}
+		
+	}
+
+	void Renderer3D::renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation,
+		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
+	{
+			
+		showNormalsShader.bind();
+		
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);
+		
+		auto viewTransformMat = viewMat * transformMat;
+		
+		glUniformMatrix4fv(normalsModelTransformLocation,
+			1, GL_FALSE, &viewTransformMat[0][0]);
+		
+		glUniformMatrix4fv(normalsProjectionLocation,
+			1, GL_FALSE, &projMat[0][0]);
+		
+		glUniform1f(normalsSizeLocation, normalSize);
+
+		glUniform3fv(normalColorLocation, 1, &(normalColor[0]));
+
+		auto modelIndex = this->getObjectIndex(o);
+
+		auto obj = getObjectData(o);
+		if(obj == nullptr)
+		{
+			return;
+		}
+
+		{
+			if(index >= obj->models.size())
+			{
+				return;
+			}
+
+			auto &i = obj->models[index];
+			
+			glBindVertexArray(i.vertexArray);
+
+			if (i.indexBuffer)
+			{
+				glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+			}
+			else
+			{
+				glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+			}
+			glBindVertexArray(0);
+		}
+
 	}
 
 	int Renderer3D::getMaterialIndex(Material m)
