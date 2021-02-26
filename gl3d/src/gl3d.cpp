@@ -685,12 +685,13 @@ namespace gl3d
 				{
 					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
 					changed = 1;
-				}else
-				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
-				{
-					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
-					changed = 1;
 				}
+			}
+			else
+			if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
+			{
+				indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
+				changed = 1;
 			}
 
 

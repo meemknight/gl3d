@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-25
+//built on 2021-02-26
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -2408,12 +2408,13 @@ namespace gl3d
 				{
 					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
 					changed = 1;
-				}else
-				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
-				{
-					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
-					changed = 1;
 				}
+			}
+			else
+			if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
+			{
+				indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
+				changed = 1;
 			}
 
 
