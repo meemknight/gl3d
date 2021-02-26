@@ -272,15 +272,6 @@ void main()
 	float sampledAo = sampledMaterial.b;
 
 	{	//general data
-		//color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		//if(color.w <= 0.1)
-		//	discard;
-
-		//color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
-		
-		//color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
-
-		//color = vec4(mat[u_materialIndex].kd.rgb,1); //(option) remove albedo texture
 		
 		color = u_getAlbedo();
 
