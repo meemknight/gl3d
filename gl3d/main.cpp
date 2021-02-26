@@ -398,11 +398,12 @@ int main()
 
 	
 	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
+
 	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
+	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	//gl3d::LoadedModelData levelModel("resources/sponza2/sponza.obj", 0.008);
-	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
@@ -803,7 +804,7 @@ int main()
 							ImGui::EndTooltip();
 						}
 
-						gl3d::Texture t;
+						gl3d::GpuTexture t;
 						t.id = id;
 
 						int quality = t.getTextureQuality();
@@ -831,10 +832,10 @@ int main()
 						ImGui::PopID();
 					};
 
-					drawImage("Object albedo, id: %d", curentModel->models[subItemCurent].albedoTexture.id, 20, 20, 1);
-					drawImage("Object normal map, id: %d", curentModel->models[subItemCurent].normalMapTexture.id, 20, 20, 2);
-					drawImage("Object RMA map, id: %d", curentModel->models[subItemCurent].RMA_Texture.id, 20, 20, 3);
-
+					drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].albedoTexture) ,20, 20, __COUNTER__);
+					drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].normalMapTexture), 20, 20, __COUNTER__);
+					drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].RMA_Texture), 20, 20, __COUNTER__);
+				
 				}
 				
 
@@ -964,8 +965,12 @@ int main()
 			//models[i].models[0].rotation = models[i].rotation;
 
 			renderer.renderObject(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
+			
+			if(showNormals)
+			{
 			renderer.renderObjectNormals(models[i].obj, models[i].position, models[i].rotation,
 				models[i].scale, 0.2);
+			}
 
 		}
 
@@ -976,76 +981,6 @@ int main()
 		//lastProfilerRezult = renderDurationProfiler.end();
 		renderDurationProfiler.end();
 		renderDurationProfilerFine.end();
-		
-		
-		//todo border item routine
-		//if (itemCurrent < models.size() && borderItem && 
-		//	models[itemCurrent].models.size() > subItemCurent)
-		//{
-		//	
-		//	glEnable(GL_STENCIL_TEST);
-		//	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-		//	glStencilFunc(GL_ALWAYS, 1, 0xFF);
-		//	glStencilMask(0xFF);	
-		//
-		//	auto projMat = renderer.camera.getProjectionMatrix();
-		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
-		//	auto transformMat = models[0].getTransformMatrix();
-		//
-		//	auto viewProjMat = projMat * viewMat * transformMat;
-		//
-		//	//todo here also change the uniform
-		//	lightShader.bind(viewProjMat, transformMat,
-		//		lightCubeModel.position, renderer.camera.position, gamaCorection,
-		//		models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
-		//
-		//	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		//	models[itemCurrent].models[subItemCurent].draw();
-		//	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		//
-		//	glDisable(GL_STENCIL_TEST);
-		//
-		//	glEnable(GL_STENCIL_TEST);
-		//	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-		//	glDepthFunc(GL_ALWAYS);
-		//	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-		//	glStencilMask(0x00);
-		//
-		//	auto &m = models[itemCurrent].models[subItemCurent];
-		//	projMat = renderer.camera.getProjectionMatrix();
-		//	viewMat = renderer.camera.getWorldToViewMatrix();
-		//
-		//	auto rotation = models[itemCurrent].rotation;
-		//	auto scale = models[itemCurrent].scale;
-		//	scale *= 1.05;
-		//	auto position = models[itemCurrent].position;
-		//
-		//
-		//	auto s = glm::scale(scale);
-		//	auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-		//		glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-		//		glm::rotate(rotation.z, glm::vec3(0, 0, 1));
-		//	auto t = glm::translate(position);
-		//
-		//	transformMat = t * r * s;
-		//
-		//	viewProjMat = projMat * viewMat * transformMat;
-		//
-		//	shader.bind();
-		//	glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-		//
-		//	glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
-		//
-		//	glEnableVertexAttribArray(0);
-		//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-		//	glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
-		//
-		//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
-		//	glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
-		//
-		//	glDisable(GL_STENCIL_TEST);
-		//	glDepthFunc(GL_LESS);
-		//}
 
 		{
 
@@ -1059,9 +994,7 @@ int main()
 
 		}
 
-
 	#pragma region render and events
-
 
 		imguiRenderDuration.start();
 

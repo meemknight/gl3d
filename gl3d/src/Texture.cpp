@@ -8,7 +8,7 @@
 namespace gl3d
 {
 
-	void Texture::loadTextureFromFile(const char *file, int quality)
+	void GpuTexture::loadTextureFromFile(const char *file, int quality)
 	{
 
 		int w, h, nrChannels;
@@ -35,7 +35,7 @@ namespace gl3d
 	
 
 
-	void Texture::loadTextureFromMemory(void *data, int w, int h, int chanels,
+	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
 		GLenum format = GL_RGBA;
@@ -59,13 +59,13 @@ namespace gl3d
 
 	}
 
-	void Texture::clear()
+	void GpuTexture::clear()
 	{
 		glDeleteTextures(1, &id);
 		id = 0;
 	}
 
-	void Texture::setTextureQuality(int quality)
+	void GpuTexture::setTextureQuality(int quality)
 	{
 		if (!id)
 			return;
@@ -108,7 +108,7 @@ namespace gl3d
 		}
 	}
 
-	int Texture::getTextureQuality()
+	int GpuTexture::getTextureQuality()
 	{
 		if(id == leastPossible)
 		{

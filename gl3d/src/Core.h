@@ -16,6 +16,12 @@ namespace gl3d
 
 	};
 
+	struct Texture
+	{
+		int _id = {};
+
+	};
+
 	struct GpuMaterial
 	{
 		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
@@ -36,7 +42,6 @@ namespace gl3d
 	{
 		
 
-	
 
 		//todo move
 		struct GpuPointLight

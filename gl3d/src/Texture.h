@@ -12,12 +12,12 @@ namespace gl3d
 		maxQuality
 	};
 
-	struct Texture
+	struct GpuTexture
 	{
 		GLuint id = 0;
 
-		Texture() = default;
-		Texture(const char *file) { loadTextureFromFile(file); };
+		GpuTexture() = default;
+		GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file, int quality = maxQuality);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);

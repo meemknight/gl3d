@@ -67,10 +67,10 @@ namespace gl3d
 		glm::mat4 getTransformMatrix();
 
 		//todo probably teporarily add this things
-		Texture albedoTexture;
-		Texture normalMapTexture;
+		GpuTexture albedoTexture;
+		GpuTexture normalMapTexture;
 
-		Texture RMA_Texture; //rough metalness ambient oclusion
+		GpuTexture RMA_Texture; //rough metalness ambient oclusion
 		int RMA_loadedTextures;
 
 		GpuMaterial material;
@@ -98,6 +98,7 @@ namespace gl3d
 		}
 
 	};
+	
 
 	struct GpuGraphicModel
 	{
@@ -139,6 +140,11 @@ namespace gl3d
 	
 	};
 
+	struct LoadedTextures
+	{
+		std::string name;
+		GpuTexture t;
+	};
 
 	struct SkyBox
 	{

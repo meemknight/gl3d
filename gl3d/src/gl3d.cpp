@@ -5,7 +5,8 @@
 
 namespace gl3d
 {
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, 
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+		GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture,
 		float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 
@@ -134,11 +135,21 @@ namespace gl3d
 		normalsSizeLocation = glGetUniformLocation(showNormalsShader.id, "u_size");
 		normalColorLocation = glGetUniformLocation(showNormalsShader.id, "u_color");
 		
+		unsigned char textureData[] =
+		{
+			20, 20, 20, 255,
+			212, 0, 219, 255,
+			212, 0, 219, 255,
+			20, 20, 20, 255,
+		};
+
+		defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 	}
 
 	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
 	, std::string name)
 	{
+
 		int id = 0;
 
 		auto materialIndexesCopy = materialIndexes;
@@ -203,6 +214,8 @@ namespace gl3d
 		materialIndexes.erase(pos);
 		materials.erase(materials.begin() + index);
 		materialNames.erase(materialNames.begin() + index);
+
+		m._id = 0;
 	}
 
 	void Renderer3D::copyMaterial(Material dest, Material source)
@@ -268,6 +281,165 @@ namespace gl3d
 		auto data = &graphicModels[id];
 	
 		return data;
+	}
+
+	Texture Renderer3D::loadTexture(std::string path, bool defaultToDefaultTexture)
+	{
+
+		if(path == "")
+		{
+			return Texture{ 0 };
+		}
+
+		GpuTexture t(path.c_str());
+
+		if(t.id == 0 && defaultToDefaultTexture == false)
+		{
+			return Texture{ 0 };
+		}
+
+		int pos = 0;
+		for(auto &i: loadedTexturesNames)
+		{
+			if(i == path)
+			{
+				Texture t;
+				t._id = loadedTexturesIndexes[pos];
+				return t;
+			}
+			pos++;
+		}
+
+		int id = 0;
+
+		auto textureIndexesCopy = loadedTexturesIndexes;
+		std::sort(textureIndexesCopy.begin(), textureIndexesCopy.end());
+
+		if (textureIndexesCopy.empty())
+		{
+			id = 1;
+		}
+		else
+		{
+			id = 1;
+
+			for (int i = 0; i < textureIndexesCopy.size(); i++)
+			{
+				if (textureIndexesCopy[i] != id)
+				{
+					break;
+				}
+				else
+				{
+					id++;
+				}
+			}
+
+		}
+
+		if(t.id == 0)
+		{
+			t.id = defaultTexture.id;
+		}
+
+		loadedTexturesIndexes.push_back(id);
+		loadedTextures.push_back(t);
+		loadedTexturesNames.push_back(path);
+
+		return Texture{ id };
+	}
+
+	GLuint Renderer3D::getTextureOpenglId(Texture t)
+	{
+		auto p = getTextureData(t);
+
+		if(p == nullptr)
+		{
+			return 0;
+		}else
+		{
+			return p->id;
+		}
+	}
+
+	void Renderer3D::deleteTexture(Texture t)
+	{
+		int index = getTextureIndex(t);
+
+		if(index < 0)
+		{
+			return;
+		}
+
+		auto gpuTexture = loadedTextures[index];
+
+		if(gpuTexture.id != defaultTexture.id)
+		{
+			gpuTexture.clear();
+		}
+
+		loadedTexturesIndexes.erase(loadedTexturesIndexes.begin() + index);
+		loadedTextures.erase(loadedTextures.begin() + index);
+		loadedTexturesNames.erase(loadedTexturesNames.begin() + index);
+		
+		t._id = 0;
+
+	}
+
+	GpuTexture *Renderer3D::getTextureData(Texture t)
+	{
+		int id = getTextureIndex(t);
+
+		if (id == -1)
+		{
+			return nullptr;
+		}
+
+		auto data = &loadedTextures[id];
+
+		return data;
+	}
+
+	Texture Renderer3D::createIntenralTexture(GpuTexture t)
+	{
+
+		int id = 0;
+
+		auto textureIndexesCopy = loadedTexturesIndexes;
+		std::sort(textureIndexesCopy.begin(), textureIndexesCopy.end());
+
+		if (textureIndexesCopy.empty())
+		{
+			id = 1;
+		}
+		else
+		{
+			id = 1;
+
+			for (int i = 0; i < textureIndexesCopy.size(); i++)
+			{
+				if (textureIndexesCopy[i] != id)
+				{
+					break;
+				}
+				else
+				{
+					id++;
+				}
+			}
+
+		}
+
+		if (t.id == 0)
+		{
+			t.id = defaultTexture.id;
+		}
+
+		loadedTexturesIndexes.push_back(id);
+		loadedTextures.push_back(t);
+		loadedTexturesNames.push_back("");
+
+		return Texture{ id };
 	}
 
 	static int max(int x, int y, int z)
@@ -348,19 +520,22 @@ namespace gl3d
 					auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 					gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 
-					gm.albedoTexture.clear();
-					gm.normalMapTexture.clear();
-					gm.RMA_Texture.clear();
+					//gm.albedoTexture.clear();
+					//gm.normalMapTexture.clear();
+					//gm.RMA_Texture.clear();
 
 					if (!mat.map_Kd.empty())
 					{
-						gm.albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+						//gm.albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
+						gm.albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd), 0);
 					}
 
 					if (!mat.map_Kn.empty())
 					{
-						gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
-							TextureLoadQuality::linearMipmap);
+						//todo add texture load quality options
+						gm.normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn), 0);
+						//gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
+						//	TextureLoadQuality::linearMipmap);
 					}
 
 					gm.RMA_loadedTextures = 0;
@@ -369,13 +544,21 @@ namespace gl3d
 
 					if (!mat.map_RMA.empty()) //todo not tested
 					{
-						gm.RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
-						rmaQuality);
+						//gm.RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
+						//rmaQuality);
 
-						if (gm.RMA_Texture.id)
+						gm.RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
+
+						//todo add a function to check if a function is valid
+						if(getTextureData(gm.RMA_Texture)->id == defaultTexture.id)
 						{
 							gm.RMA_loadedTextures = 7; //all textures loaded
 						}
+
+						//if (gm.RMA_Texture.id)
+						//{
+						//	gm.RMA_loadedTextures = 7; //all textures loaded
+						//}
 
 					}
 
@@ -410,7 +593,10 @@ namespace gl3d
 										data[(i + j * w) * 4 + 2] = A;
 									}
 
-								gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+								GpuTexture t;
+								t.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+								gm.RMA_Texture = this->createIntenralTexture(t);
 
 								gm.RMA_loadedTextures = 7; //all textures loaded
 
@@ -531,8 +717,12 @@ namespace gl3d
 								}
 							}
 
-							gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
-								rmaQuality);
+							//gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
+							//	rmaQuality);
+
+							GpuTexture t;
+							t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
+							gm.RMA_Texture = this->createIntenralTexture(t);
 
 							stbi_image_free(data1);
 							stbi_image_free(data2);
@@ -586,6 +776,8 @@ namespace gl3d
 
 		graphicModels[index].clear();
 		graphicModels.erase(graphicModels.begin() + index);
+
+		o._id = 0;
 	}
 
 	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
@@ -652,20 +844,46 @@ namespace gl3d
 				glUniform1i(lightShader.materialIndexLocation, id);
 			}
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
-	
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
-	
+			int albdeoLoaded = 0;
+			int normalMapLoaded = 0;
+			int rmaLoaded = 0;
+
+			auto albedoTextureData = this->getTextureData(i.albedoTexture);
+			if(albedoTextureData && albedoTextureData->id != defaultTexture.id)
+			{
+				albdeoLoaded = 1;
+			}
+
+			auto normalMapTextureData = this->getTextureData(i.normalMapTexture);
+			if(normalMapTextureData && normalMapTextureData->id != defaultTexture.id)
+			{
+				normalMapLoaded = 1;
+			}
+
+
+			if(albdeoLoaded)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.albedoTexture)->id);
+			}
+
+			if(normalMapLoaded)
+			{
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.normalMapTexture)->id);
+			}
+		
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
+			
+			if(i.RMA_Texture._id)
+			{
+				glActiveTexture(GL_TEXTURE3);
+				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.RMA_Texture)->id);
+			}
+
 	
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
-	
-	
-			if (i.normalMapTexture.id && lightShader.normalMap)
+			if (i.normalMapTexture._id && lightShader.normalMap)
 			{
 				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
 				{
@@ -688,7 +906,7 @@ namespace gl3d
 				changed = 1;
 			}
 			
-			if(i.albedoTexture.id != 0)
+			if(i.albedoTexture._id != 0)
 			{
 				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
 				{
@@ -801,6 +1019,88 @@ namespace gl3d
 
 	}
 
+	void Renderer3D::renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, float borderSize, glm::vec3 borderColor)
+	{
+		//auto modelIndex = this->getObjectIndex(o);
+		//
+		//auto obj = getObjectData(o);
+		//if (obj == nullptr)
+		//{
+		//	return;
+		//}
+		//
+		//if (index >= obj->models.size())
+		//{
+		//	return;
+		//}
+		//
+		//	
+		//glEnable(GL_STENCIL_TEST);
+		//glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+		//glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		//glStencilMask(0xFF);	
+		//
+		//auto projMat = renderer.camera.getProjectionMatrix();
+		//auto viewMat = renderer.camera.getWorldToViewMatrix();
+		//auto transformMat = models[0].getTransformMatrix();
+		//
+		//auto viewProjMat = projMat * viewMat * transformMat;
+		//
+		////todo implement a light weight shader here
+		////lightShader.bind(viewProjMat, transformMat,
+		////	lightCubeModel.position, renderer.camera.position, gamaCorection,
+		////	models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
+		//
+		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//models[itemCurrent].models[subItemCurent].draw();
+		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		//
+		//glDisable(GL_STENCIL_TEST);
+		//
+		//glEnable(GL_STENCIL_TEST);
+		//glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+		//glDepthFunc(GL_ALWAYS);
+		//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		//glStencilMask(0x00);
+		//
+		//auto &m = models[itemCurrent].models[subItemCurent];
+		//projMat = renderer.camera.getProjectionMatrix();
+		//viewMat = renderer.camera.getWorldToViewMatrix();
+		//
+		//auto rotation = models[itemCurrent].rotation;
+		//auto scale = models[itemCurrent].scale;
+		//scale *= 1.05;
+		//auto position = models[itemCurrent].position;
+		//
+		//
+		//auto s = glm::scale(scale);
+		//auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+		//	glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+		//	glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+		//auto t = glm::translate(position);
+		//
+		//transformMat = t * r * s;
+		//
+		//viewProjMat = projMat * viewMat * transformMat;
+		//
+		//shader.bind();
+		//glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+		//
+		//glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+		//
+		//glEnableVertexAttribArray(0);
+		//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+		//glVertexAttrib3f(1, 98 / 255.f, 24 / 255.f, 201 / 255.f);
+		//
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.indexBuffer);
+		//glDrawElements(GL_TRIANGLES, m.primitiveCount, GL_UNSIGNED_INT, 0);
+		//
+		//glDisable(GL_STENCIL_TEST);
+		//glDepthFunc(GL_LESS);
+
+
+	}
+
 	int Renderer3D::getMaterialIndex(Material m)
 	{
 		int id = m._id;
@@ -826,6 +1126,23 @@ namespace gl3d
 		}
 		id = found - graphicModelsIndexes.begin();
 	
+		return id;
+	}
+
+	int Renderer3D::getTextureIndex(Texture t)
+	{
+		int id = t._id;
+		
+		if (id == 0) { return -1; }//todo add this optimization to other gets
+
+		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
+		if (found == loadedTexturesIndexes.end())
+		{
+			gl3dAssertComment(found == loadedTexturesIndexes.end(), "invalid texture");
+			return -1;
+		}
+		id = found - loadedTexturesIndexes.begin();
+
 		return id;
 	}
 

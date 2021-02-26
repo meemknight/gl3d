@@ -864,9 +864,9 @@ namespace gl3d
 
 		glDeleteVertexArrays(1, &vertexArray);
 
-		albedoTexture.clear();
-		normalMapTexture.clear();
-		RMA_Texture.clear();
+		//albedoTexture.clear();
+		//normalMapTexture.clear();
+		//RMA_Texture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;

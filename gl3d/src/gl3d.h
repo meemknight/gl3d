@@ -10,7 +10,6 @@
 namespace gl3d
 {
 
-	
 
 	struct Renderer3D
 
@@ -38,9 +37,32 @@ namespace gl3d
 
 	#pragma endregion
 
+	//todo remove pragma in python script
+	#pragma region Texture
+
+
+		std::vector <GpuTexture> loadedTextures;
+		std::vector<int> loadedTexturesIndexes;
+		std::vector<std::string> loadedTexturesNames;
+
+		GpuTexture defaultTexture;
+
+		Texture loadTexture(std::string path, bool defaultToDefaultTexture = true);
+		GLuint getTextureOpenglId(Texture t);
+
+		void deleteTexture(Texture t);
+
+		GpuTexture *getTextureData(Texture t);
+
+		//internal
+		Texture createIntenralTexture(GpuTexture t);
+
+	#pragma endregion
+
 
 		std::vector< GpuMultipleGraphicModel > graphicModels;
 		std::vector<int> graphicModelsIndexes;
+
 
 		Object loadObject(std::string path, float scale = 1);
 		void deleteObject(Object o);
@@ -58,9 +80,13 @@ namespace gl3d
 		void renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation = {}, 
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = { 0.7, 0.7, 0.1 });
 
-		//internal
+		void renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation = {},
+			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
+
+		//internal //todo add internal namespace
 		int getMaterialIndex(Material m);
 		int getObjectIndex(Object o);
+		int getTextureIndex(Texture t);
 
 		//todo probably move into separate struct or sthing
 		Shader showNormalsShader;
@@ -73,7 +99,7 @@ namespace gl3d
 
 
 	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama,
+		GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture, float gama,
 		const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
 
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
