@@ -966,13 +966,16 @@ int main()
 
 			renderer.renderObject(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
 			
-			if(showNormals)
-			{
-			renderer.renderObjectNormals(models[i].obj, models[i].position, models[i].rotation,
-				models[i].scale, 0.2);
-			}
+		}
+
+		if(showNormals)
+		{
+			renderer.renderSubObjectNormals(models[itemCurrent].obj, subItemCurent, 
+				models[itemCurrent].position, models[itemCurrent].rotation,
+				models[itemCurrent].scale, 0.2);
 
 		}
+
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });

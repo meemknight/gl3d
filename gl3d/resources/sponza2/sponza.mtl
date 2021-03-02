@@ -12,7 +12,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/lion.tga
 map_Kn textures/lion_ddn.tga
-map_Ka textures/lion.tga
+map_Ao pbr/lion_ambientocclusion.png
+map_Pr pbr/lion_roughness.png
 
 newmtl Material__298
 Ns 7.843137
@@ -25,7 +26,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/background.tga
 map_Kn textures/background_ddn.tga
-map_Ka textures/background.tga
+map_Ao pbr/background_ambientocclusion.png
+map_Pr pbr/background_roughness.png
 
 newmtl Material__47
 Ns 7.843137
@@ -61,8 +63,10 @@ d 0.000000
 Pm 0.00000
 illum 2
 map_Kd textures/sponza_arch_diff.tga
-map_Ka textures/sponza_arch_diff.tga
 map_Kn textures/sponza_arch_ddn.tga
+map_Ao pbr/arch_ambientocclusion.png
+map_Pr pbr/arch_roughness.png
+
 
 newmtl bricks
 Ns 7.843137
@@ -75,7 +79,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/spnza_bricks_a_diff.tga
 map_Kn textures/spnza_bricks_a_ddn.tga
-map_Ka textures/spnza_bricks_a_diff.tga
+map_Ao pbr/bricks_ambientocclusion.png
+map_Pr pbr/bricks_roughness.png
 
 newmtl ceiling
 Ns 7.843137
@@ -87,8 +92,10 @@ d 0.000000
 Pm 0.00000
 illum 2
 map_Kd textures/sponza_ceiling_a_diff.tga
-map_Ka textures/sponza_ceiling_a_diff.tga
 map_Kn textures/sponza_ceiling_a_ddn.tga
+map_Ao pbr/ceeling_ambientocclusion.png
+map_Pr pbr/ceeling_roughness.png
+
 
 newmtl chain
 Ns 7.843137
@@ -115,7 +122,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/sponza_column_a_diff.tga
 map_Kn textures/sponza_column_a_ddn.tga
-map_Ka textures/sponza_column_a_diff.tga
+map_Ao pbr/columna_ambientocclusion.png
+map_Pr pbr/columna_roughness.png
 
 newmtl column_b
 Ns 7.843137
@@ -128,7 +136,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/sponza_column_b_diff.tga
 map_Kn textures/sponza_column_b_ddn.tga
-map_Ka textures/sponza_column_b_diff.tga
+map_Ao pbr/columnb_ambientocclusion.png
+map_Pr pbr/columnb_roughness.png
 
 newmtl column_c
 Ns 7.843137
@@ -141,7 +150,8 @@ Pm 0.00000
 illum 2
 map_Kd textures/sponza_column_c_diff.tga
 map_Kn textures/sponza_column_c_ddn.tga
-map_Ka textures/sponza_column_c_diff.tga
+map_Ao pbr/columnc_ambientocclusion.png
+map_Pr pbr/columnc_roughness.png
 
 newmtl details
 Ns 7.843137
@@ -254,11 +264,13 @@ Kd 0.470400 0.470400 0.470400
 Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
-Pm 0.00000
+Pm 1.00000
 illum 2
 map_Kd textures/sponza_flagpole_diff.tga
-map_Ka textures/sponza_flagpole_diff.tga
 map_Kn textures/sponza_flagpole_ddn.tga
+Ao 1.00000
+map_Pm pbr/flag_metallic.png
+map_Pr pbr/flag_roughness.png
 
 newmtl floor
 Ns 7.843137
@@ -270,8 +282,9 @@ d 0.000000
 Pm 0.00000
 illum 2
 map_Kd textures/sponza_floor_a_diff.tga
-map_Ka textures/sponza_floor_a_diff.tga
 map_Kn textures/sponza_floor_a_ddn.tga
+map_Kp pbr/floora_ambientocclusion.png
+map_Pr pbr/floora_roughness.png
 
 newmtl leaf
 Ns 7.843137
@@ -310,8 +323,10 @@ d 0.000000
 Pm 0.00000
 illum 2
 map_Kd textures/vase_dif.tga
-map_Ka textures/vase_dif.tga
 map_Kn textures/vase_ddn.tga
+map_Ao pbr/vase_ambientocclusion.png
+map_Pr pbr/vase_roughness.png
+
 
 newmtl vase_hanging
 Ns 7.843137
@@ -320,11 +335,14 @@ Kd 0.470400 0.470400 0.470400
 Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
-Pm 0.00000
+Pm 1.00000
 illum 2
 map_Kd textures/vase_hanging.tga
-map_Ka textures/vase_hanging.tga
 map_Kn textures/vase_hanging_ddn.tga
+Ao 1.00000
+map_Pm pbr/vaseHanging_metallic.png
+map_Pr pbr/vaseHanging_roughness.png
+
 
 newmtl vase_round
 Ns 7.843137
