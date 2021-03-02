@@ -4,22 +4,35 @@
 
 namespace gl3d
 {
-	struct Material
+	template <class T>
+	struct InterfaceCheckId
 	{
-		int _id = {};
+		bool isNotNull()
+		{
+			return static_cast<T*>(this)->id_;
+		}
 
 	};
 
-	struct Object
+	struct Material : public InterfaceCheckId< Material >
 	{
-		int _id = {};
+		int id_ = {};
 
+		Material(int id = 0):id_(id) {};
 	};
 
-	struct Texture
+	struct Object : public InterfaceCheckId< Object >
 	{
-		int _id = {};
+		int id_ = {};
 
+		Object(int id = 0):id_(id) {};
+	};
+
+	struct Texture : public InterfaceCheckId< Texture >
+	{
+		int id_ = {};
+		
+		Texture(int id = 0):id_(id) {};
 	};
 
 	struct GpuMaterial

@@ -5,11 +5,46 @@
 #include <Shader.h>
 #include <Camera.h>
 #include <GraphicModel.h>
-#include <list>
+#include <algorithm>
 
 namespace gl3d
 {
+	namespace internal
+	{
+		template <class T>
+		int generateNewIndex(T indexesVec)
+		{
+			int id = 0;
 
+			auto indexesCopy = indexesVec;
+			std::sort(indexesCopy.begin(), indexesCopy.end());
+
+			if (indexesCopy.empty())
+			{
+				id = 1;
+			}
+			else
+			{
+				id = 1;
+
+				for (int i = 0; i < indexesCopy.size(); i++)
+				{
+					if (indexesCopy[i] != id)
+					{
+						break;
+					}
+					else
+					{
+						id++;
+					}
+				}
+
+			}
+			
+			return id;
+		};
+
+	};
 
 	struct Renderer3D
 
@@ -28,9 +63,11 @@ namespace gl3d
 		Material createMaterial(Material m);
 
 		void deleteMaterial(Material m);
-		void copyMaterial(Material dest, Material source);
+		void copyMaterialData(Material dest, Material source);
 
 		GpuMaterial *getMaterialData(Material m, std::string *s = nullptr);
+
+		//returns true if succeded
 		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
 
 		GpuMultipleGraphicModel *getObjectData(Object o);
@@ -66,6 +103,7 @@ namespace gl3d
 
 		Object loadObject(std::string path, float scale = 1);
 		void deleteObject(Object o);
+
 
 
 		LightShader lightShader;

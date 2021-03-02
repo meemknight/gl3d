@@ -176,7 +176,7 @@ namespace objl
 		// Ambient Color
 		Vector3 Ka;
 		// Diffuse Color
-		Vector3 Kd;
+		Vector3 Kd = Vector3{ 1,1,1 };
 		// Specular Color
 		Vector3 Ks;
 		// Specular Exponent
@@ -188,9 +188,11 @@ namespace objl
 		// Illumination
 		int illum;
 		// metallic
-		float metallic = 0.5;
+		float metallic = 0;
 		// roughness
 		float roughness = 0.5;
+		//ambient factor for pbr
+		float ao = 0.5;
 		// Ambient Texture Map
 		std::string map_Ka;
 		// Diffuse Texture Map
@@ -1175,6 +1177,11 @@ namespace objl
 					tempMaterial.roughness = std::stoi(algorithm::tail(curline));
 				}
 				else
+				if (algorithm::firstToken(curline) == "Ao")
+				{
+					tempMaterial.ao = std::stoi(algorithm::tail(curline));
+				}
+				else
 				// Ambient Texture Map
 				if (algorithm::firstToken(curline) == "map_Ka" ||
 					algorithm::firstToken(curline) == "map_Ao") //todo ? same thing ?
@@ -1259,5 +1266,6 @@ namespace objl
 			else
 				return true;
 		}
+
 	};
 }

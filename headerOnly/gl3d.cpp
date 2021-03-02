@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-02-27
+//built on 2021-03-02
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1757,7 +1757,11 @@ namespace gl3d
 	}
 
 
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, 
+	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
+	{
+	}
+
+	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos,
 		LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights)
 	{
 		if(model.models.empty())
@@ -1873,30 +1877,7 @@ namespace gl3d
 	, std::string name)
 	{
 
-		int id = 0;
-
-		auto materialIndexesCopy = materialIndexes;
-		std::sort(materialIndexesCopy.begin(), materialIndexesCopy.end());
-		
-		if(materialIndexesCopy.empty())
-		{
-			id = 1;
-		}else
-		{
-			id = 1;
-
-			for (int i = 0; i< materialIndexesCopy.size(); i++)
-			{
-				if(materialIndexesCopy[i] != id)
-				{
-					break;
-				}else
-				{
-					id++;
-				}
-			}
-
-		}
+		int id = internal::generateNewIndex(materialIndexes);
 
 		GpuMaterial gpuMaterial;
 		gpuMaterial.kd = glm::vec4(kd, 0);
@@ -1909,7 +1890,7 @@ namespace gl3d
 		materialNames.push_back(name);
 
 		Material m;
-		m._id = id;
+		m.id_ = id;
 		return m;
 
 	}
@@ -1917,14 +1898,14 @@ namespace gl3d
 	Material Renderer3D::createMaterial(Material m)
 	{
 		auto newM = createMaterial();
-		copyMaterial(newM, m);
+		copyMaterialData(newM, m);
 
 		return newM;
 	}
 
 	void Renderer3D::deleteMaterial(Material m)
 	{
-		auto pos = std::find(materialIndexes.begin(), materialIndexes.end(), m._id);
+		auto pos = std::find(materialIndexes.begin(), materialIndexes.end(), m.id_);
 
 		if (pos == materialIndexes.end())
 		{
@@ -1938,10 +1919,10 @@ namespace gl3d
 		materials.erase(materials.begin() + index);
 		materialNames.erase(materialNames.begin() + index);
 
-		m._id = 0;
+		m.id_ = 0;
 	}
 
-	void Renderer3D::copyMaterial(Material dest, Material source)
+	void Renderer3D::copyMaterialData(Material dest, Material source)
 	{
 		int destId = getMaterialIndex(dest);
 		int sourceId = getMaterialIndex(source);
@@ -2027,39 +2008,15 @@ namespace gl3d
 			if(i == path)
 			{
 				Texture t;
-				t._id = loadedTexturesIndexes[pos];
+				t.id_ = loadedTexturesIndexes[pos];
 				return t;
 			}
 			pos++;
 		}
 
-		int id = 0;
+		int id = internal::generateNewIndex(loadedTexturesIndexes);
 
-		auto textureIndexesCopy = loadedTexturesIndexes;
-		std::sort(textureIndexesCopy.begin(), textureIndexesCopy.end());
-
-		if (textureIndexesCopy.empty())
-		{
-			id = 1;
-		}
-		else
-		{
-			id = 1;
-
-			for (int i = 0; i < textureIndexesCopy.size(); i++)
-			{
-				if (textureIndexesCopy[i] != id)
-				{
-					break;
-				}
-				else
-				{
-					id++;
-				}
-			}
-
-		}
-
+		//if texture is not loaded, set it to default
 		if(t.id == 0)
 		{
 			t.id = defaultTexture.id;
@@ -2105,7 +2062,7 @@ namespace gl3d
 		loadedTextures.erase(loadedTextures.begin() + index);
 		loadedTexturesNames.erase(loadedTexturesNames.begin() + index);
 		
-		t._id = 0;
+		t.id_ = 0;
 
 	}
 
@@ -2126,33 +2083,9 @@ namespace gl3d
 	Texture Renderer3D::createIntenralTexture(GpuTexture t)
 	{
 
-		int id = 0;
+		int id = internal::generateNewIndex(loadedTexturesIndexes);
 
-		auto textureIndexesCopy = loadedTexturesIndexes;
-		std::sort(textureIndexesCopy.begin(), textureIndexesCopy.end());
-
-		if (textureIndexesCopy.empty())
-		{
-			id = 1;
-		}
-		else
-		{
-			id = 1;
-
-			for (int i = 0; i < textureIndexesCopy.size(); i++)
-			{
-				if (textureIndexesCopy[i] != id)
-				{
-					break;
-				}
-				else
-				{
-					id++;
-				}
-			}
-
-		}
-
+		//if t is null initialize to default texture
 		if (t.id == 0)
 		{
 			t.id = defaultTexture.id;
@@ -2181,35 +2114,9 @@ namespace gl3d
 		
 		}
 
-		int id = 0;
-
-		auto objectIndexesCopy = graphicModelsIndexes;
-		std::sort(objectIndexesCopy.begin(), objectIndexesCopy.end());
-
-		if (objectIndexesCopy.empty())
-		{
-			id = 1;
-		}
-		else
-		{
-			id = 1;
-
-			for (int i = 0; i < objectIndexesCopy.size(); i++)
-			{
-				if (objectIndexesCopy[i] != id)
-				{
-					break;
-				}
-				else
-				{
-					id++;
-				}
-			}
-
-		}
-
+		int id = internal::generateNewIndex(graphicModelsIndexes);
+	
 		GpuMultipleGraphicModel returnModel;
-
 		{
 
 			int s = model.loader.LoadedMeshes.size();
@@ -2222,7 +2129,7 @@ namespace gl3d
 			{
 				auto &mat = model.loader.LoadedMaterials[i];
 				auto m = this->createMaterial(mat.Kd, mat.roughness,
-				mat.metallic /*,mat.ao todo*/);
+				mat.metallic, mat.ao);
 
 				loadedMaterials.push_back(m);
 			}
@@ -2478,14 +2385,14 @@ namespace gl3d
 
 
 		Object o;
-		o._id = id;
+		o.id_ = id;
 		return o;
 
 	}
 
 	void Renderer3D::deleteObject(Object o)
 	{
-		auto pos = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o._id);
+		auto pos = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
 
 		if (pos == graphicModelsIndexes.end())
 		{
@@ -2500,13 +2407,13 @@ namespace gl3d
 		graphicModels[index].clear();
 		graphicModels.erase(graphicModels.begin() + index);
 
-		o._id = 0;
+		o.id_ = 0;
 	}
 
 	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		
-		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o._id);
+		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
 		if(found == graphicModelsIndexes.end())
 		{
 			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid render object");
@@ -2599,14 +2506,14 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
 			
-			if(i.RMA_Texture._id)
+			if(i.RMA_Texture.id_)
 			{
 				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.RMA_Texture)->id);
 			}
 
 	
-			if (i.normalMapTexture._id && lightShader.normalMap)
+			if (i.normalMapTexture.id_ && lightShader.normalMap)
 			{
 				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
 				{
@@ -2629,7 +2536,7 @@ namespace gl3d
 				changed = 1;
 			}
 			
-			if(i.albedoTexture._id != 0)
+			if(i.albedoTexture.id_ != 0)
 			{
 				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
 				{
@@ -2826,7 +2733,7 @@ namespace gl3d
 
 	int Renderer3D::getMaterialIndex(Material m)
 	{
-		int id = m._id;
+		int id = m.id_;
 		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
 		if (found == materialIndexes.end())
 		{
@@ -2840,7 +2747,7 @@ namespace gl3d
 
 	int Renderer3D::getObjectIndex(Object o)
 	{
-		int id = o._id;
+		int id = o.id_;
 		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
 		if (found == graphicModelsIndexes.end())
 		{
@@ -2854,7 +2761,7 @@ namespace gl3d
 
 	int Renderer3D::getTextureIndex(Texture t)
 	{
-		int id = t._id;
+		int id = t.id_;
 		
 		if (id == 0) { return -1; }//todo add this optimization to other gets
 
