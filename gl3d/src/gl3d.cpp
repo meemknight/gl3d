@@ -466,6 +466,7 @@ namespace gl3d
 				auto m = this->createMaterial(mat.Kd, mat.roughness,
 				mat.metallic, mat.ao);
 				
+
 				{
 					//load textures for materials
 					TextureDataForModel *textureData = this->getMaterialTextures(m);

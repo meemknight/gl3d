@@ -409,16 +409,14 @@ namespace objl
 					{
 						out.push_back(temp);
 						temp.clear();
-						//i += (int)token.size() - 1;
 					}
 					else
 					{
-						out.push_back("");
 					}
 				}
-				else if (i + 1/*+ token.size() */>= in.size())
+				else if (i + 1 >= in.size())
 				{
-					temp += in.substr(i, /*token.size()*/ 1);
+					temp += in[i];
 					out.push_back(temp);
 					break;
 				}
