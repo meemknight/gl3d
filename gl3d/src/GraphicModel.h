@@ -119,11 +119,10 @@ namespace gl3d
 
 
 		//todo probably teporarily add this things
-		Texture albedoTexture;
-		Texture normalMapTexture;
-
-		Texture RMA_Texture; //rough metalness ambient oclusion
-		int RMA_loadedTextures;
+		//Texture albedoTexture;
+		//Texture normalMapTexture;
+		//Texture RMA_Texture; //rough metalness ambient oclusion
+		//int RMA_loadedTextures;
 
 		Material material;
 	

@@ -12,6 +12,11 @@ namespace gl3d
 			return static_cast<T*>(this)->id_;
 		}
 
+		bool isNull()
+		{
+			return !this->isNotNull();
+		}
+
 	};
 
 	struct Material : public InterfaceCheckId< Material >
@@ -28,11 +33,30 @@ namespace gl3d
 		Object(int id = 0):id_(id) {};
 	};
 
+	struct Model: public InterfaceCheckId< Model >
+	{
+		int id_ = {};
+
+		Model(int id = 0):id_(id) {};
+	};
+
+	
+
 	struct Texture : public InterfaceCheckId< Texture >
 	{
 		int id_ = {};
 		
 		Texture(int id = 0):id_(id) {};
+	};
+
+
+	struct TextureDataForModel
+	{
+		Texture albedoTexture = {};
+		Texture normalMapTexture = {};
+
+		Texture RMA_Texture = {}; //rough metalness ambient oclusion
+		int RMA_loadedTextures = {};
 	};
 
 	struct GpuMaterial
@@ -41,7 +65,8 @@ namespace gl3d
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
-		float notUdes;
+		float notUsed;
+
 		GpuMaterial setDefaultMaterial()
 		{
 			*this = GpuMaterial();
@@ -54,7 +79,6 @@ namespace gl3d
 	namespace internal
 	{
 		
-
 
 		//todo move
 		struct GpuPointLight

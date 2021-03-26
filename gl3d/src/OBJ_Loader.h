@@ -18,7 +18,7 @@
 #include <math.h>
 
 // Print progress to console while loading (large models)
-#define OBJL_CONSOLE_OUTPUT
+//#define OBJL_CONSOLE_OUTPUT
 
 #include <glm\vec3.hpp>
 
@@ -356,6 +356,7 @@ namespace objl
 			std::string token)
 		{
 			out.clear();
+			out.reserve(12);
 
 			std::string temp;
 
@@ -388,6 +389,47 @@ namespace objl
 				}
 			}
 		}
+
+		inline void split2(const std::string &in,
+		std::vector<std::string> &out,
+		char token)
+		{
+			out.clear();
+			out.reserve(12);
+
+			std::string temp;
+			temp.reserve(25);
+
+			for (int i = 0; i < int(in.size()); i++)
+			{
+
+				if (in[i] == token)
+				{
+					if (!temp.empty())
+					{
+						out.push_back(temp);
+						temp.clear();
+						//i += (int)token.size() - 1;
+					}
+					else
+					{
+						out.push_back("");
+					}
+				}
+				else if (i + 1/*+ token.size() */>= in.size())
+				{
+					temp += in.substr(i, /*token.size()*/ 1);
+					out.push_back(temp);
+					break;
+				}
+				else
+				{
+					temp += in[i];
+				}
+			}
+		
+		}
+
 
 		// Get tail of string after first token and possibly following spaces
 		inline std::string tail(const std::string &in)
@@ -573,7 +615,7 @@ namespace objl
 				{
 					std::vector<std::string> spos;
 					Vector3 vpos;
-					algorithm::split(algorithm::tail(curline), spos, " ");
+					algorithm::split2(algorithm::tail(curline), spos, ' ');
 
 					vpos.X = std::stof(spos[0]);
 					vpos.Y = std::stof(spos[1]);
@@ -586,7 +628,7 @@ namespace objl
 				{
 					std::vector<std::string> stex;
 					Vector2 vtex;
-					algorithm::split(algorithm::tail(curline), stex, " ");
+					algorithm::split2(algorithm::tail(curline), stex, ' ');
 
 					vtex.X = std::stof(stex[0]);
 					vtex.Y = std::stof(stex[1]);
@@ -598,7 +640,7 @@ namespace objl
 				{
 					std::vector<std::string> snor;
 					Vector3 vnor;
-					algorithm::split(algorithm::tail(curline), snor, " ");
+					algorithm::split2(algorithm::tail(curline), snor, ' ');
 
 					vnor.X = std::stof(snor[0]);
 					vnor.Y = std::stof(snor[1]);
@@ -676,7 +718,7 @@ namespace objl
 
 					// Generate a path to the material file
 					std::vector<std::string> temp;
-					algorithm::split(Path, temp, "/");
+					algorithm::split2(Path, temp, '/');
 
 					std::string pathtomat = "";
 
@@ -766,7 +808,7 @@ namespace objl
 		{
 			std::vector<std::string> sface, svert;
 			Vertex vVert;
-			algorithm::split(algorithm::tail(icurline), sface, " ");
+			algorithm::split2(algorithm::tail(icurline), sface, ' ');
 
 			bool noNormal = false;
 
@@ -776,7 +818,7 @@ namespace objl
 				// See What type the vertex is.
 				int vtype;
 
-				algorithm::split(sface[i], svert, "/");
+				algorithm::split2(sface[i], svert, '/');
 
 				// Check for just position - v1
 				if (svert.size() == 1)
@@ -1105,7 +1147,7 @@ namespace objl
 				if (algorithm::firstToken(curline) == "Ka")
 				{
 					std::vector<std::string> temp;
-					algorithm::split(algorithm::tail(curline), temp, " ");
+					algorithm::split2(algorithm::tail(curline), temp, ' ');
 
 					if (temp.size() != 3)
 						continue;
@@ -1119,7 +1161,7 @@ namespace objl
 				if (algorithm::firstToken(curline) == "Kd")
 				{
 					std::vector<std::string> temp;
-					algorithm::split(algorithm::tail(curline), temp, " ");
+					algorithm::split2(algorithm::tail(curline), temp, ' ');
 
 					if (temp.size() != 3)
 						continue;
@@ -1133,7 +1175,7 @@ namespace objl
 				if (algorithm::firstToken(curline) == "Ks")
 				{
 					std::vector<std::string> temp;
-					algorithm::split(algorithm::tail(curline), temp, " ");
+					algorithm::split2(algorithm::tail(curline), temp, ' ');
 
 					if (temp.size() != 3)
 						continue;

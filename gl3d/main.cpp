@@ -154,19 +154,6 @@ int main()
 	//va.create();
 
 
-	float bufferData[] =
-	{
-		0.f, 1.5f, 0.f,
-		-0.5f, 0.5f, 0.f,
-		0.5f, 0.5f, 0.f,
-	};
-
-	float bufferData2[] =
-	{
-		0.f, 0.5f, -1.f,
-		-0.5f, -0.5f, -1.f,
-		0.5f, -0.5f, 0-1.f,
-	};
 
 	float cubePositions[] = {
 		-1.0f, +1.0f, +1.0f, // 0
@@ -371,7 +358,6 @@ int main()
 
 	};
 	
-
 	unsigned int cubeIndices[] = {
 	0,   1,  2,  0,  2,  3, // Top
 	4,   5,  6,  4,  6,  7, // Back
@@ -399,12 +385,21 @@ int main()
 	
 	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 
+	PL::AverageProfiler loadProfiler;
+	loadProfiler.start();
+
 	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
+	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
+	
+	auto rez = loadProfiler.end();
+
+	std::cout << "\n\nLoad profiler: time(s):" << rez.timeSeconds << "    cpu clocks:" << rez.cpuClocks << "\n";
+
+	
 	//cube.loadFromModelMeshIndex(barelModel, 0);
 	//cube.scale = glm::vec3(0.1);
 
@@ -832,10 +827,17 @@ int main()
 						ImGui::PopID();
 					};
 
-					drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].albedoTexture) ,20, 20, __COUNTER__);
-					drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].normalMapTexture), 20, 20, __COUNTER__);
-					drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(curentModel->models[subItemCurent].RMA_Texture), 20, 20, __COUNTER__);
-				
+					auto currentMateiral = curentModel->models[subItemCurent].material;
+					auto materialTextureData = renderer.getMaterialTextures(currentMateiral);
+
+					if(materialTextureData != nullptr)
+					{
+						drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData->albedoTexture) ,20, 20, __COUNTER__);
+						drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData->normalMapTexture), 20, 20, __COUNTER__);
+						drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->RMA_Texture), 20, 20, __COUNTER__);
+
+					}
+					
 				}
 				
 
