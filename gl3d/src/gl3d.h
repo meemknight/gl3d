@@ -49,7 +49,7 @@ namespace gl3d
 	struct Renderer3D
 
 	{
-		void init();
+		void init(int x, int y);
 		
 	#pragma region material
 
@@ -144,8 +144,24 @@ namespace gl3d
 			GLint sizeLocation;
 			GLint colorLocation;
 		}showNormalsProgram;
-		//todo probably move into separate struct or sthing
 	
+		struct
+		{
+			enum bufferTargers
+			{
+				position = 0,
+				normal,
+				albedo,
+				material,
+				bufferCount,
+			};
+
+			unsigned int gBuffer;
+			unsigned int buffers[bufferCount];
+			unsigned int depthBuffer;
+
+		}gBuffer;
+
 
 	};
 

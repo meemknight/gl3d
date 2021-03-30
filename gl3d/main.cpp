@@ -96,7 +96,7 @@ int main()
 #pragma endregion
 
 	gl3d::Renderer3D renderer;
-	renderer.init();
+	renderer.init(w, h);
 
 
 #pragma region shader

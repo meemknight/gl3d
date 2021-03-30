@@ -125,7 +125,7 @@ namespace gl3d
 		
 	}
 
-	void Renderer3D::init()
+	void Renderer3D::init(int x, int y)
 	{
 		lightShader.create();
 		skyBox.createGpuData();
@@ -148,6 +148,52 @@ namespace gl3d
 		};
 
 		defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
+
+
+		//create gBuffer
+		glGenFramebuffers(1, &gBuffer.gBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+
+		glGenTextures(gBuffer.bufferCount, gBuffer.buffers);
+
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position], 0);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal], 0);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo], 0);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material], 0);
+
+		glDrawBuffers(gBuffer.bufferCount, gBuffer.buffers);
+
+		glGenRenderbuffers(1, &gBuffer.depthBuffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gBuffer.depthBuffer);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "Gbuffer failed\n";
+		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
