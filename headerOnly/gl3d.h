@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-03-02
+//built on 2021-03-30
 ////////////////////////////////////////////////
 
 
@@ -22,6 +22,11 @@ namespace gl3d
 			return static_cast<T*>(this)->id_;
 		}
 
+		bool isNull()
+		{
+			return !this->isNotNull();
+		}
+
 	};
 
 	struct Material : public InterfaceCheckId< Material >
@@ -38,11 +43,30 @@ namespace gl3d
 		Object(int id = 0):id_(id) {};
 	};
 
+	struct Model: public InterfaceCheckId< Model >
+	{
+		int id_ = {};
+
+		Model(int id = 0):id_(id) {};
+	};
+
+	
+
 	struct Texture : public InterfaceCheckId< Texture >
 	{
 		int id_ = {};
 		
 		Texture(int id = 0):id_(id) {};
+	};
+
+
+	struct TextureDataForModel
+	{
+		Texture albedoTexture = {};
+		Texture normalMapTexture = {};
+
+		Texture RMA_Texture = {}; //rough metalness ambient oclusion
+		int RMA_loadedTextures = {};
 	};
 
 	struct GpuMaterial
@@ -51,7 +75,8 @@ namespace gl3d
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
-		float notUdes;
+		float notUsed;
+
 		GpuMaterial setDefaultMaterial()
 		{
 			*this = GpuMaterial();
@@ -64,7 +89,6 @@ namespace gl3d
 	namespace internal
 	{
 		
-
 
 		//todo move
 		struct GpuPointLight
@@ -414,11 +438,10 @@ namespace gl3d
 
 
 		//todo probably teporarily add this things
-		Texture albedoTexture;
-		Texture normalMapTexture;
-
-		Texture RMA_Texture; //rough metalness ambient oclusion
-		int RMA_loadedTextures;
+		//Texture albedoTexture;
+		//Texture normalMapTexture;
+		//Texture RMA_Texture; //rough metalness ambient oclusion
+		//int RMA_loadedTextures;
 
 		Material material;
 	
@@ -538,10 +561,13 @@ namespace gl3d
 		
 	#pragma region material
 
-		std::vector< GpuMaterial > materials;
+		std::vector<GpuMaterial> materials;
 		std::vector<int> materialIndexes;
 		std::vector<std::string> materialNames;
+		std::vector<TextureDataForModel> materialTexturesData;
 		
+
+		//todo add texture data function
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
 		
@@ -550,7 +576,15 @@ namespace gl3d
 		void deleteMaterial(Material m);
 		void copyMaterialData(Material dest, Material source);
 
-		GpuMaterial *getMaterialData(Material m, std::string *s = nullptr);
+		//returns 0 if not found
+		GpuMaterial *getMaterialData(Material m);
+		std::string *getMaterialName(Material m);
+
+		//probably move this to internal
+		TextureDataForModel *getMaterialTextures(Material m);
+		bool getMaterialData(Material m, GpuMaterial *gpuMaterial,
+			std::string *name, TextureDataForModel *textureData);
+
 
 		//returns true if succeded
 		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
@@ -559,7 +593,6 @@ namespace gl3d
 
 	#pragma endregion
 
-	//todo remove pragma in python script
 	#pragma region Texture
 
 
@@ -611,12 +644,16 @@ namespace gl3d
 		int getObjectIndex(Object o);
 		int getTextureIndex(Texture t);
 
+		struct
+		{
+			Shader shader;
+			GLint modelTransformLocation;
+			GLint projectionLocation;
+			GLint sizeLocation;
+			GLint colorLocation;
+		}showNormalsProgram;
 		//todo probably move into separate struct or sthing
-		Shader showNormalsShader;
-		GLint normalsModelTransformLocation;
-		GLint normalsProjectionLocation;
-		GLint normalsSizeLocation;
-		GLint normalColorLocation;
+	
 
 	};
 

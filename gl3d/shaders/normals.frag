@@ -306,7 +306,7 @@ void main()
 	}
 
 
-	vec3 ambient = vec3(0.01) * color.rgb * sampledAo; //this value is made up
+	vec3 ambient = vec3(0.03) * color.rgb * sampledAo; //this value is made up
 	vec3 color   = Lo + ambient; 
 
 	 //HDR 

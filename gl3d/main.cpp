@@ -601,7 +601,7 @@ int main()
 				glDisable(GL_SAMPLE_SHADING);
 			}
 
-			static bool cullFace = 0;
+			static bool cullFace = 1;
 			ImGui::Checkbox("CullFace", &cullFace);
 			
 			if (cullFace)

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-03-02
+//built on 2021-03-30
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1853,14 +1853,14 @@ namespace gl3d
 		lightShader.create();
 		skyBox.createGpuData();
 
-		showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
+		showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
 
 
-		normalsModelTransformLocation = glGetUniformLocation(showNormalsShader.id, "u_modelTransform");
-		normalsProjectionLocation = glGetUniformLocation(showNormalsShader.id, "u_projection");
-		normalsSizeLocation = glGetUniformLocation(showNormalsShader.id, "u_size");
-		normalColorLocation = glGetUniformLocation(showNormalsShader.id, "u_color");
+		showNormalsProgram.modelTransformLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_modelTransform");
+		showNormalsProgram.projectionLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_projection");
+		showNormalsProgram.sizeLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_size");
+		showNormalsProgram.colorLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_color");
 		
 		unsigned char textureData[] =
 		{
@@ -1888,6 +1888,7 @@ namespace gl3d
 		materialIndexes.push_back(id);
 		materials.push_back(gpuMaterial);
 		materialNames.push_back(name);
+		materialTexturesData.push_back({});
 
 		Material m;
 		m.id_ = id;
@@ -1918,7 +1919,7 @@ namespace gl3d
 		materialIndexes.erase(pos);
 		materials.erase(materials.begin() + index);
 		materialNames.erase(materialNames.begin() + index);
-
+		materialTexturesData.erase(materialTexturesData.begin() + index);
 		m.id_ = 0;
 	}
 
@@ -1927,15 +1928,21 @@ namespace gl3d
 		int destId = getMaterialIndex(dest);
 		int sourceId = getMaterialIndex(source);
 
-		gl3dAssertComment(destId != -1, "invaled dest material index");
-		gl3dAssertComment(sourceId != -1, "invaled source material index");
+		if(destId == -1 || sourceId == -1)
+		{
+			gl3dAssertComment(destId != -1, "invaled dest material index");
+			gl3dAssertComment(sourceId != -1, "invaled source material index");
+
+			return;
+		}
 
 		materials[destId] = materials[sourceId];
 		materialNames[destId] = materialNames[sourceId];
+		materialTexturesData[destId] = materialTexturesData[destId];
 
 	}
 
-	GpuMaterial *Renderer3D::getMaterialData(Material m, std::string *s)
+	GpuMaterial *Renderer3D::getMaterialData(Material m)
 	{
 		int id = getMaterialIndex(m);
 
@@ -1946,12 +1953,62 @@ namespace gl3d
 		
 		auto data = &materials[id];
 
-		if(s)
+		return data;
+	}
+
+	TextureDataForModel *Renderer3D::getMaterialTextures(Material m)
+	{
+		int id = getMaterialIndex(m);
+
+		if (id == -1)
 		{
-			*s = materialNames[id];
+			return nullptr;
 		}
 
+		auto data = &materialTexturesData[id];
+
 		return data;
+	}
+
+	std::string *Renderer3D::getMaterialName(Material m)
+	{
+		int id = getMaterialIndex(m);
+
+		if (id == -1)
+		{
+			return nullptr;
+		}
+
+		auto data = &materialNames[id];
+
+		return data;
+	}
+
+	bool Renderer3D::getMaterialData(Material m, GpuMaterial *gpuMaterial, std::string *name, TextureDataForModel *textureData)
+	{
+		int id = getMaterialIndex(m);
+
+		if (id == -1)
+		{
+			return false;
+		}
+
+		if(gpuMaterial)
+		{
+			gpuMaterial = &materials[id];
+		}
+
+		if(name)
+		{
+			name = &materialNames[id];
+		}
+
+		if(textureData)
+		{
+			textureData = &materialTexturesData[id];
+		}
+
+		return true;
 	}
 
 	bool Renderer3D::setMaterialData(Material m, const GpuMaterial &data, std::string *s)
@@ -1995,17 +2052,10 @@ namespace gl3d
 			return Texture{ 0 };
 		}
 
-		GpuTexture t(path.c_str());
-
-		if(t.id == 0 && defaultToDefaultTexture == false)
-		{
-			return Texture{ 0 };
-		}
-
 		int pos = 0;
-		for(auto &i: loadedTexturesNames)
+		for (auto &i : loadedTexturesNames)
 		{
-			if(i == path)
+			if (i == path)
 			{
 				Texture t;
 				t.id_ = loadedTexturesIndexes[pos];
@@ -2013,6 +2063,14 @@ namespace gl3d
 			}
 			pos++;
 		}
+
+		GpuTexture t(path.c_str());
+
+		if(t.id == 0 && defaultToDefaultTexture == false)
+		{
+			return Texture{ 0 };
+		}
+
 
 		int id = internal::generateNewIndex(loadedTexturesIndexes);
 
@@ -2130,25 +2188,16 @@ namespace gl3d
 				auto &mat = model.loader.LoadedMaterials[i];
 				auto m = this->createMaterial(mat.Kd, mat.roughness,
 				mat.metallic, mat.ao);
-
-				loadedMaterials.push_back(m);
-			}
-
-
-			for (int i = 0; i < s; i++)
-			{
-				GpuGraphicModel gm;
-				int index = i;
-				GpuMaterial material;
+				
 
 				{
-					auto &mesh = model.loader.LoadedMeshes[index];
-					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-						 (float *)&mesh.Vertices[0],
-						mesh.Indices.size() * 4, &mesh.Indices[0]);
+					//load textures for materials
+					TextureDataForModel *textureData = this->getMaterialTextures(m);
 
-					auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
-					gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
+					
+
+					//auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
+					//gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 
 					//gm.albedoTexture.clear();
 					//gm.normalMapTexture.clear();
@@ -2157,18 +2206,18 @@ namespace gl3d
 					if (!mat.map_Kd.empty())
 					{
 						//gm.albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
-						gm.albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd), 0);
+						textureData->albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd), 0);
 					}
 
 					if (!mat.map_Kn.empty())
 					{
 						//todo add texture load quality options
-						gm.normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn), 0);
+						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn), 0);
 						//gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 						//	TextureLoadQuality::linearMipmap);
 					}
 
-					gm.RMA_loadedTextures = 0;
+					textureData->RMA_loadedTextures = 0;
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
 
@@ -2177,12 +2226,12 @@ namespace gl3d
 						//gm.RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
 						//rmaQuality);
 
-						gm.RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
+						textureData->RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
 
 						//todo add a function to check if a function is valid
-						if(getTextureData(gm.RMA_Texture)->id == defaultTexture.id)
+						if (getTextureData(textureData->RMA_Texture)->id == defaultTexture.id)
 						{
-							gm.RMA_loadedTextures = 7; //all textures loaded
+							textureData->RMA_loadedTextures = 7; //all textures loaded
 						}
 
 						//if (gm.RMA_Texture.id)
@@ -2192,7 +2241,7 @@ namespace gl3d
 
 					}
 
-					if (!mat.map_ORM.empty() && gm.RMA_loadedTextures == 0)
+					if (!mat.map_ORM.empty() && textureData->RMA_loadedTextures == 0)
 					{
 						stbi_set_flip_vertically_on_load(true);
 
@@ -2226,9 +2275,9 @@ namespace gl3d
 								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 								GpuTexture t;
 								t.loadTextureFromMemory(data, w, h, 4, rmaQuality);
-								gm.RMA_Texture = this->createIntenralTexture(t);
+								textureData->RMA_Texture = this->createIntenralTexture(t);
 
-								gm.RMA_loadedTextures = 7; //all textures loaded
+								textureData->RMA_loadedTextures = 7; //all textures loaded
 
 								stbi_image_free(data);
 							}
@@ -2238,7 +2287,7 @@ namespace gl3d
 					}
 
 					//RMA trexture
-					if (gm.RMA_loadedTextures == 0)
+					if (textureData->RMA_loadedTextures == 0)
 					{
 						stbi_set_flip_vertically_on_load(true);
 
@@ -2275,22 +2324,22 @@ namespace gl3d
 						int h = max(h1, h2, h3);
 
 						//calculate which function to use
-						if (data1 && data2 && data3) { gm.RMA_loadedTextures = 7; }
+						if (data1 && data2 && data3) { textureData->RMA_loadedTextures = 7; }
 						else
-						if (data2 && data3) { gm.RMA_loadedTextures = 6; }
+						if (data2 && data3) { textureData->RMA_loadedTextures = 6; }
 						else
-						if (data1 && data3) { gm.RMA_loadedTextures = 5; }
+						if (data1 && data3) { textureData->RMA_loadedTextures = 5; }
 						else
-						if (data1 && data2) { gm.RMA_loadedTextures = 4; }
+						if (data1 && data2) { textureData->RMA_loadedTextures = 4; }
 						else
-						if (data3) { gm.RMA_loadedTextures = 3; }
+						if (data3) { textureData->RMA_loadedTextures = 3; }
 						else
-						if (data2) { gm.RMA_loadedTextures = 2; }
+						if (data2) { textureData->RMA_loadedTextures = 2; }
 						else
-						if (data1) { gm.RMA_loadedTextures = 1; }
-						else {gm.RMA_loadedTextures = 0;
-												};
-						if (gm.RMA_loadedTextures)
+						if (data1) { textureData->RMA_loadedTextures = 1; }
+						else { textureData->RMA_loadedTextures = 0; }
+
+						if (textureData->RMA_loadedTextures)
 						{
 
 							unsigned char *finalData = new unsigned char[w * h * 4];
@@ -2352,7 +2401,7 @@ namespace gl3d
 
 							GpuTexture t;
 							t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-							gm.RMA_Texture = this->createIntenralTexture(t);
+							textureData->RMA_Texture = this->createIntenralTexture(t);
 
 							stbi_image_free(data1);
 							stbi_image_free(data2);
@@ -2363,9 +2412,31 @@ namespace gl3d
 
 					}
 
-				
+
+
+
+
+					
 				}
+
+				loadedMaterials.push_back(m);
+			}
+
+
+			for (int i = 0; i < s; i++)
+			{
+				GpuGraphicModel gm;
+				int index = i;
+				GpuMaterial material;
+				//TextureDataForModel textureData = {};
+
 				
+				auto &mesh = model.loader.LoadedMeshes[index];
+				gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
+					 (float *)&mesh.Vertices[0],
+					mesh.Indices.size() * 4, &mesh.Indices[0]);
+
+				gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 				
 				gm.name = model.loader.LoadedMeshes[i].MeshName;
 				char *c = new char[gm.name.size() + 1];
@@ -2438,7 +2509,7 @@ namespace gl3d
 	
 		lightShader.shader.bind();
 	
-		//todo refactor or remove light shader
+		//todo refactor / remove light shader
 
 		lightShader.getSubroutines();
 		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, GpuMaterial(),
@@ -2465,55 +2536,52 @@ namespace gl3d
 		for (auto &i : model.models)
 		{
 			//lightShader.setMaterial(i.material);
-			{
-				int id = getMaterialIndex(i.material);
+			
+			int materialId = getMaterialIndex(i.material);
 
-				if (id == -1) 
-					{ continue; }
+			if (materialId == -1)
+				{ continue; }
 
-				glUniform1i(lightShader.materialIndexLocation, id);
-			}
+			glUniform1i(lightShader.materialIndexLocation, materialId);
+			
 
-			int albdeoLoaded = 0;
-			int normalMapLoaded = 0;
+			TextureDataForModel textureData = materialTexturesData[materialId];
+
 			int rmaLoaded = 0;
+			int albedoLoaded = 0;
+			int normalLoaded = 0;
 
-			auto albedoTextureData = this->getTextureData(i.albedoTexture);
-			if(albedoTextureData && albedoTextureData->id != defaultTexture.id)
+			GpuTexture *albedoTextureData = this->getTextureData(textureData.albedoTexture);
+			if(albedoTextureData != nullptr )
 			{
-				albdeoLoaded = 1;
-			}
-
-			auto normalMapTextureData = this->getTextureData(i.normalMapTexture);
-			if(normalMapTextureData && normalMapTextureData->id != defaultTexture.id)
-			{
-				normalMapLoaded = 1;
-			}
-
-
-			if(albdeoLoaded)
-			{
+				albedoLoaded = 1;
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.albedoTexture)->id);
+				glBindTexture(GL_TEXTURE_2D, albedoTextureData->id);
 			}
 
-			if(normalMapLoaded)
+			GpuTexture *normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
+			if(normalMapTextureData != nullptr && normalMapTextureData->id != defaultTexture.id)
 			{
+				normalLoaded = 1;
 				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.normalMapTexture)->id);
+				glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
 			}
 		
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
-			
-			if(i.RMA_Texture.id_)
+			//todo refactor default texture, just keep it totally separate and treat -1 as default texture
+			GpuTexture *rmaTextureData = this->getTextureData(textureData.RMA_Texture);
+			if(rmaTextureData != nullptr && rmaTextureData->id != defaultTexture.id)
 			{
+				rmaLoaded = 1;
 				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, this->getTextureData(i.RMA_Texture)->id);
+				glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 			}
 
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
+
 	
-			if (i.normalMapTexture.id_ && lightShader.normalMap)
+			if (normalLoaded && lightShader.normalMap)
 			{
 				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
 				{
@@ -2530,13 +2598,27 @@ namespace gl3d
 				}
 			}
 	
-			if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
+			if(rmaLoaded)
 			{
-				indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
-				changed = 1;
-			}
+
+				if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures])
+				{
+					indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures];
+					changed = 1;
+				}
 			
-			if(i.albedoTexture.id_ != 0)
+			}else
+			{
+				if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[0])
+				{
+					indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[0];
+					changed = 1;
+				}
+
+			}
+
+			
+			if(albedoLoaded != 0)
 			{
 				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
 				{
@@ -2600,7 +2682,7 @@ namespace gl3d
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
 			
-		showNormalsShader.bind();
+		showNormalsProgram.shader.bind();
 		
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
@@ -2608,15 +2690,15 @@ namespace gl3d
 		
 		auto viewTransformMat = viewMat * transformMat;
 		
-		glUniformMatrix4fv(normalsModelTransformLocation,
+		glUniformMatrix4fv(showNormalsProgram.modelTransformLocation,
 			1, GL_FALSE, &viewTransformMat[0][0]);
 		
-		glUniformMatrix4fv(normalsProjectionLocation,
+		glUniformMatrix4fv(showNormalsProgram.projectionLocation,
 			1, GL_FALSE, &projMat[0][0]);
 		
-		glUniform1f(normalsSizeLocation, normalSize);
+		glUniform1f(showNormalsProgram.sizeLocation, normalSize);
 
-		glUniform3fv(normalColorLocation, 1, &(normalColor[0]));
+		glUniform3fv(showNormalsProgram.colorLocation, 1, &(normalColor[0]));
 
 		auto modelIndex = this->getObjectIndex(o);
 

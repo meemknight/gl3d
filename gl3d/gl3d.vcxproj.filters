@@ -78,6 +78,5 @@
     <None Include="shaders\showNormals.frag" />
     <None Include="shaders\showNormals.geom" />
     <None Include="shaders\showNormals.vert" />
-    <None Include="shaders\oldNormals.frag" />
   </ItemGroup>
 </Project>
