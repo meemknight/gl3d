@@ -110,9 +110,6 @@ int main()
 		std::cout << "uniform error u_transform\n";
 	}
 
-	gl3d::LightShader lightShader;
-	lightShader.create();
-
 
 	gl3d::Shader showNormalsShader;
 	showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
@@ -615,7 +612,6 @@ int main()
 
 			ImGui::Checkbox("Normal map", &normalMap);
 			
-			lightShader.normalMap = normalMap;
 			renderer.lightShader.normalMap = normalMap;
 
 			ImGui::Checkbox("Display item border", &borderItem);

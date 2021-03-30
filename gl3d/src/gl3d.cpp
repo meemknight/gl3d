@@ -179,7 +179,7 @@ namespace gl3d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material], 0);
 
 		glDrawBuffers(gBuffer.bufferCount, gBuffer.buffers);
 
@@ -196,6 +196,7 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
+	
 	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
 	, std::string name)
 	{
@@ -1180,5 +1181,28 @@ namespace gl3d
 
 		return id;
 	}
+
+	void Renderer3D::render()
+	{
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		// also send light relevant uniforms
+		shaderLightingPass.use();
+		SendAllLightUniformsToShader(shaderLightingPass);
+		shaderLightingPass.setVec3("viewPos", camera.Position);
+		RenderQuad();
+
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
+
 
 };

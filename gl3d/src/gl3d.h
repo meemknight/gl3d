@@ -162,7 +162,7 @@ namespace gl3d
 
 		}gBuffer;
 
-
+		void render();
 	};
 
 
@@ -173,4 +173,6 @@ namespace gl3d
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
 		GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights);
 	
+
+
 };
