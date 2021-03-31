@@ -5,128 +5,130 @@
 
 namespace gl3d
 {
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture,
-		float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = model.getTransformMatrix();
-
-		auto viewProjMat = projMat * viewMat * transformMat;
-
-		lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material,
-			pointLights);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture.id);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, normalTexture.id);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
-
-		model.draw();
-
-
-	}
+	//void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
+	//	GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture,
+	//	float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
+	//{
+	//
+	//	auto projMat = camera.getProjectionMatrix();
+	//	auto viewMat = camera.getWorldToViewMatrix();
+	//	auto transformMat = model.getTransformMatrix();
+	//
+	//	auto viewProjMat = projMat * viewMat * transformMat;
+	//
+	//	lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material,
+	//		pointLights);
+	//
+	//	glActiveTexture(GL_TEXTURE0);
+	//	glBindTexture(GL_TEXTURE_2D, texture.id);
+	//
+	//	glActiveTexture(GL_TEXTURE1);
+	//	glBindTexture(GL_TEXTURE_2D, normalTexture.id);
+	//
+	//	glActiveTexture(GL_TEXTURE2);
+	//	glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
+	//
+	//	model.draw();
+	//
+	//
+	//}
 
 
 	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 	}
 
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos,
-		LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights)
-	{
-		if(model.models.empty())
-		{
-			return;
-		}
-
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = model.getTransformMatrix();
-
-		auto modelViewProjMat = projMat * viewMat * transformMat;
-		//auto modelView = viewMat * transformMat;
-
-		lightShader.shader.bind();
-
-		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, GpuMaterial(),
-			pointLights);
-
-		GLsizei n;
-		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-		glGetProgramStageiv(lightShader.shader.id,
-		GL_FRAGMENT_SHADER,
-		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-		&n);
-
-		GLuint *indices = new GLuint[n]{ 0 };
-		bool changed = 1;
-
-		for(auto &i : model.models)
-		{
-			lightShader.setMaterial(i.material);
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
-
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
-
-
-			if (i.normalMapTexture.id && lightShader.normalMap)
-			{
-				if(indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
-				{
-					changed = 1;
-				}
-				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
-			}else
-			{
-				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
-				{
-					changed = 1;
-				}
-				indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
-			}
-
-			if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
-			{ 
-				changed = 1;
-			}
-
-			indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
-
-			if(changed)
-			{
-				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
-			}
-			changed = 0;
-
-			i.draw();
-
-
-		}
-
-		delete[] indices;
-
-		
-	}
+	//void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos,
+	//	LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights)
+	//{
+	//	if(model.models.empty())
+	//	{
+	//		return;
+	//	}
+	//
+	//	auto projMat = camera.getProjectionMatrix();
+	//	auto viewMat = camera.getWorldToViewMatrix();
+	//	auto transformMat = model.getTransformMatrix();
+	//
+	//	auto modelViewProjMat = projMat * viewMat * transformMat;
+	//	//auto modelView = viewMat * transformMat;
+	//
+	//	lightShader.geometryPassShader.bind();
+	//
+	//	lightShader.getSubroutines();
+	//	lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, GpuMaterial(),
+	//		pointLights);
+	//
+	//	GLsizei n;
+	//	//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
+	//	glGetProgramStageiv(lightShader.geometryPassShader.id,
+	//	GL_FRAGMENT_SHADER,
+	//	GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+	//	&n);
+	//
+	//	GLuint *indices = new GLuint[n]{ 0 };
+	//	bool changed = 1;
+	//
+	//	for(auto &i : model.models)
+	//	{
+	//		lightShader.setMaterial(i.material);
+	//
+	//		glActiveTexture(GL_TEXTURE0);
+	//		glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
+	//
+	//		glActiveTexture(GL_TEXTURE1);
+	//		glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
+	//
+	//		glActiveTexture(GL_TEXTURE2);
+	//		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
+	//
+	//		glActiveTexture(GL_TEXTURE3);
+	//		glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
+	//
+	//
+	//		if (i.normalMapTexture.id && lightShader.normalMap)
+	//		{
+	//			if(indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+	//			{
+	//				changed = 1;
+	//			}
+	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
+	//		}else
+	//		{
+	//			if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
+	//			{
+	//				changed = 1;
+	//			}
+	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
+	//		}
+	//
+	//		if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
+	//		{ 
+	//			changed = 1;
+	//		}
+	//
+	//		indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
+	//
+	//		if(changed)
+	//		{
+	//			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+	//		}
+	//		changed = 0;
+	//
+	//		i.draw();
+	//
+	//
+	//	}
+	//
+	//	delete[] indices;
+	//
+	//	
+	//}
 
 	void Renderer3D::init(int x, int y)
 	{
+		w = x; h = y;
+
 		lightShader.create();
 		skyBox.createGpuData();
 
@@ -170,18 +172,19 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material], 0);
 
-		glDrawBuffers(gBuffer.bufferCount, gBuffer.buffers);
+		unsigned int attachments[decltype(gBuffer)::bufferCount] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+		glDrawBuffers(decltype(gBuffer)::bufferCount, attachments);
 
 		glGenRenderbuffers(1, &gBuffer.depthBuffer);
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
@@ -807,7 +810,9 @@ namespace gl3d
 
 	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
-		
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+
+
 		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
 		if(found == graphicModelsIndexes.end())
 		{
@@ -831,13 +836,22 @@ namespace gl3d
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
 	
-		lightShader.shader.bind();
+		lightShader.geometryPassShader.bind();
 	
-		//todo refactor / remove light shader
 
 		lightShader.getSubroutines();
-		lightShader.setData(modelViewProjMat, transformMat, {}, camera.position, 2.2, GpuMaterial(),
-			pointLights);
+
+
+		glUniformMatrix4fv(lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+		glUniformMatrix4fv(lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
+		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
+		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
+		glUniform1i(lightShader.textureSamplerLocation, 0);
+		glUniform1i(lightShader.normalMapSamplerLocation, 1);
+		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
+		glUniform1i(lightShader.RMASamplerLocation, 3);
+
+	
 
 		//material buffer
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
@@ -847,8 +861,7 @@ namespace gl3d
 
 
 		GLsizei n;
-		//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-		glGetProgramStageiv(lightShader.shader.id,
+		glGetProgramStageiv(lightShader.geometryPassShader.id,
 		GL_FRAGMENT_SHADER,
 		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
 		&n);
@@ -859,7 +872,6 @@ namespace gl3d
 	
 		for (auto &i : model.models)
 		{
-			//lightShader.setMaterial(i.material);
 			
 			int materialId = getMaterialIndex(i.material);
 
@@ -901,8 +913,8 @@ namespace gl3d
 			}
 
 
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
+			//glActiveTexture(GL_TEXTURE2);
+			//glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
 
 	
 			if (normalLoaded && lightShader.normalMap)
@@ -982,7 +994,8 @@ namespace gl3d
 	
 		delete[] indices;
 	
-	
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	}
 
 	void Renderer3D::renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation, 
@@ -1185,22 +1198,81 @@ namespace gl3d
 	void Renderer3D::render()
 	{
 
+		glBindVertexArray(lightShader.quadVAO);
+		glUseProgram(lightShader.lightingPassShader.id);
+
+		glUniform1i(lightShader.light_u_positions, 0);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
+
+		glUniform1i(lightShader.light_u_normals, 1);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+
+		glUniform1i(lightShader.light_u_albedo, 2);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-		// also send light relevant uniforms
-		shaderLightingPass.use();
-		SendAllLightUniformsToShader(shaderLightingPass);
-		shaderLightingPass.setVec3("viewPos", camera.Position);
-		RenderQuad();
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
+
+		glUniform1i(lightShader.light_u_materials, 3);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
+
+		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
+
+		if (pointLights.size())
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.pointLightsBlockBuffer);
+		
+			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
+				, &pointLights[0], GL_STREAM_DRAW);
+		
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lightShader.pointLightsBlockBuffer);
+		
+		}
+
+
+
+		glUniform1i(lightShader.light_u_pointLightCount, pointLights.size());
+
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		glBindVertexArray(0);
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+		glBlitFramebuffer(
+		  0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	}
+
+	void Renderer3D::updateWindowMetrics(int x, int y)
+	{
+		w = x; h = y;
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
+
+
 	}
 
 

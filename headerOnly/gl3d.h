@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-03-30
+//built on 2021-03-31
 ////////////////////////////////////////////////
 
 
@@ -210,8 +210,11 @@ namespace gl3d
 
 		void getSubroutines();
 
-		GLint normalShaderLocation = -1;
-		GLint normalShaderNormalTransformLocation = -1;
+		GLuint quadBuffer = 0;
+		GLuint quadVAO = 0;
+
+		GLint u_transform = -1;
+		GLint u_modelTransform = -1;
 		GLint normalShaderLightposLocation = -1;
 		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
@@ -222,6 +225,14 @@ namespace gl3d
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
 		GLint materialIndexLocation = -1;
+
+		GLint light_u_albedo = -1;
+		GLint light_u_normals = -1;
+		GLint light_u_skybox = -1;
+		GLint light_u_positions = -1;
+		GLint light_u_materials = -1;
+		GLint light_u_eyePosition = -1;
+		GLint light_u_pointLightCount = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -247,7 +258,8 @@ namespace gl3d
 		};
 
 
-		Shader shader;
+		Shader geometryPassShader;
+		Shader lightingPassShader;
 
 		bool normalMap = 1; //todo remove
 
@@ -670,6 +682,10 @@ namespace gl3d
 
 		}gBuffer;
 
+		void render();
+		void updateWindowMetrics(int x, int y);
+
+		int w; int h;
 
 	};
 
@@ -681,6 +697,8 @@ namespace gl3d
 	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
 		GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights);
 	
+
+
 };
 #pragma endregion
 

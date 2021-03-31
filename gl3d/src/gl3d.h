@@ -163,6 +163,10 @@ namespace gl3d
 		}gBuffer;
 
 		void render();
+		void updateWindowMetrics(int x, int y);
+
+		int w; int h;
+
 	};
 
 

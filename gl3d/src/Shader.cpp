@@ -237,37 +237,71 @@ namespace gl3d
 
 	void LightShader::create()
 	{
-		shader.loadShaderProgramFromFile("shaders/normals.vert", "shaders/normals.frag");
-		shader.bind();
+		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
+		geometryPassShader.bind();
 
-		normalShaderLocation = getUniform(shader.id, "u_transform");
-		normalShaderNormalTransformLocation = getUniform(shader.id, "u_modelTransform");
-		normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
-		textureSamplerLocation = getUniform(shader.id, "u_albedoSampler");
-		normalMapSamplerLocation = getUniform(shader.id, "u_normalSampler");
-		eyePositionLocation = getUniform(shader.id, "u_eyePosition");
-		skyBoxSamplerLocation = getUniform(shader.id, "u_skybox");
-		gamaLocation = getUniform(shader.id, "u_gama");
-		RMASamplerLocation = getUniform(shader.id, "u_RMASampler");
-		pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
-		materialIndexLocation = getUniform(shader.id, "u_materialIndex");
+		u_transform = getUniform(geometryPassShader.id, "u_transform");
+		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
+		
+		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
+		textureSamplerLocation = getUniform(geometryPassShader.id, "u_albedoSampler");
+		normalMapSamplerLocation = getUniform(geometryPassShader.id, "u_normalSampler");
+		//eyePositionLocation = getUniform(shader.id, "u_eyePosition");
+		//skyBoxSamplerLocation = getUniform(textureSamplerLocation.id, "u_skybox");
+		//gamaLocation = getUniform(shader.id, "u_gama");
+		RMASamplerLocation = getUniform(geometryPassShader.id, "u_RMASampler");
+		//pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
+		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
 		//todo geb buffer for each material
-		materialBlockLocation = getStorageBlockIndex(shader.id, "u_material");
-		glShaderStorageBlockBinding(shader.id, materialBlockLocation, 0);
-		
+		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
+		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
 
+		lightingPassShader.loadShaderProgramFromFile("shaders/deferred/lightingPass.vert", "shaders/deferred/lightingPass.frag");
+		lightingPassShader.bind();
 
-		pointLightsBlockLocation = getStorageBlockIndex(shader.id, "u_pointLights");
-		glShaderStorageBlockBinding(shader.id, pointLightsBlockLocation, 1);
+		light_u_albedo = getUniform(lightingPassShader.id, "u_albedo");
+		light_u_normals = getUniform(lightingPassShader.id, "u_normals");
+		light_u_skybox = getUniform(lightingPassShader.id, "u_skybox");
+		light_u_positions = getUniform(lightingPassShader.id, "u_positions");
+		light_u_materials = getUniform(lightingPassShader.id, "u_materials");
+		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition");
+		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 
+
+		pointLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_pointLights");
+		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);
 		glGenBuffers(1, &pointLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+
+
+		glGenVertexArrays(1, &quadVAO);
+		glBindVertexArray(quadVAO);
+
+		glGenBuffers(1, &quadBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, quadBuffer);
+
+		float quadVertices[] = {
+		   // positions        // texture Coords
+		   -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+		   -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+		// setup plane VAO
+		
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+
+		glBindVertexArray(0);
 
 	}
 
@@ -275,19 +309,19 @@ namespace gl3d
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
 		const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
-		shader.bind();
+		geometryPassShader.bind();
 		
 		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, 
 			material, pointLights);
-
+	
 	}
 
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
 		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
 		float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
-		glUniformMatrix4fv(normalShaderLocation, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniformMatrix4fv(normalShaderNormalTransformLocation, 1, GL_FALSE, &transformMat[0][0]);
+		glUniformMatrix4fv(u_transform, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniformMatrix4fv(u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
 		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
 		glUniform1i(textureSamplerLocation, 0);
@@ -328,29 +362,29 @@ namespace gl3d
 	{
 
 
-		normalSubroutine_noMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+		normalSubroutine_noMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"noNormalMapped");
 
-		normalSubroutine_normalMap = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+		normalSubroutine_normalMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
 		
 		//
-		albedoSubroutine_sampled = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+		albedoSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"sampledAlbedo");
 
-		albedoSubroutine_notSampled = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"notSampledAlbedo");
 
 
 		//	
-		normalSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"getNormalMapFunc");
 
-		materialSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+		materialSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getMaterialMapped");
 
-		getAlbedoSubroutineLocation = getUniformSubroutine(shader.id, GL_FRAGMENT_SHADER,
+		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getAlbedo");
 
 		const char *materiaSubroutineFunctions[8] = { 
@@ -365,7 +399,7 @@ namespace gl3d
 
 		for(int i=0; i<8; i++)
 		{
-			materialSubroutine_functions[i] = getUniformSubroutineIndex(shader.id, GL_FRAGMENT_SHADER,
+			materialSubroutine_functions[i] = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				materiaSubroutineFunctions[i]);
 		}
 

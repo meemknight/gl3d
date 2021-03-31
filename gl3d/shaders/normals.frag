@@ -9,7 +9,6 @@ in vec3 v_normals;
 in vec3 v_position;	//world space
 in vec2 v_texCoord;
 
-uniform vec3 u_lightPosition;
 uniform vec3 u_eyePosition;
 
 uniform sampler2D u_albedoSampler;

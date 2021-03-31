@@ -209,6 +209,8 @@
     <None Include="shaders\color.vert" />
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\geometryPass.vert" />
+    <None Include="shaders\deferred\lightingPass.frag" />
+    <None Include="shaders\deferred\lightingPass.vert" />
     <None Include="shaders\normals.frag" />
     <None Include="shaders\showNormals.geom" />
     <None Include="shaders\normals.vert" />

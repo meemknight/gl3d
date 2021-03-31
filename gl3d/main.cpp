@@ -617,6 +617,15 @@ int main()
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);
 
+			ImGui::PushID(234);
+
+			ImGui::Image((void *)(renderer.gBuffer.buffers[renderer.gBuffer.albedo]),
+							ImVec2(80, 80));
+			ImGui::Text("gBufferTexture: %d", renderer.gBuffer.buffers[renderer.gBuffer.albedo]);
+
+
+			ImGui::PopID();
+
 
 			ImGui::End();
 		}
@@ -937,22 +946,6 @@ int main()
 
 		//cube.rotation.y += (glm::radians(360.f)/ 5 )* deltaTime;
 
-	#pragma region light cube
-		for(auto &i : renderer.pointLights)
-		{
-			lightCubeModel.position = i.position;
-
-			auto projMat = renderer.camera.getProjectionMatrix();
-			auto viewMat = renderer.camera.getWorldToViewMatrix();
-			auto transformMat = lightCubeModel.getTransformMatrix();
-
-			auto viewProjMat = projMat * viewMat * transformMat;
-			shader.bind();
-			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-			lightCubeModel.draw();
-		}
-	#pragma endregion
-
 		renderDurationProfiler.start();
 		renderDurationProfilerFine.start();
 
@@ -974,6 +967,8 @@ int main()
 
 		}
 
+		renderer.render();
+
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });
@@ -982,6 +977,23 @@ int main()
 		//lastProfilerRezult = renderDurationProfiler.end();
 		renderDurationProfiler.end();
 		renderDurationProfilerFine.end();
+
+	#pragma region light cube
+		for (auto &i : renderer.pointLights)
+		{
+			lightCubeModel.position = i.position;
+
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
+			auto transformMat = lightCubeModel.getTransformMatrix();
+
+			auto viewProjMat = projMat * viewMat * transformMat;
+			shader.bind();
+			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+			lightCubeModel.draw();
+		}
+	#pragma endregion
+
 
 		{
 
@@ -1019,11 +1031,13 @@ int main()
 		imguiRenderDuration.end();
 
 		swapBuffersDuration.start();
-		glViewport(0, 0, w, h);
+		
 		glfwSwapBuffers(wind);
 		glfwPollEvents();
 		swapBuffersDuration.end();
 
+		glViewport(0, 0, w, h);
+		renderer.updateWindowMetrics(w, h);
 	#pragma endregion
 
 	}
