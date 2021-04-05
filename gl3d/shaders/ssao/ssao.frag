@@ -50,7 +50,7 @@ void main()
 		offset.xyz /= offset.w; // perspective divide
 		offset.xyz = offset.xyz * 0.5 + 0.5; // transform to range 0.0 - 1.0
 		
-		if(dot(normal, normalize(offset.xyz)) > 0.15) 
+		//if(dot(normal, normalize(offset.xyz)) > 0.02) //1.14 degrees
 		{
 			// get sample depth
 			float sampleDepth = vec3( u_view * vec4(texture(u_gPosition, offset.xy).xyz,1) ).z;
