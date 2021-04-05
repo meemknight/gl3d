@@ -218,6 +218,8 @@
     <None Include="shaders\showNormals.vert" />
     <None Include="shaders\skyBox.frag" />
     <None Include="shaders\skyBox.vert" />
+    <None Include="shaders\ssao\blur.frag" />
+    <None Include="shaders\ssao\blur.vert" />
     <None Include="shaders\ssao\ssao.frag" />
     <None Include="shaders\ssao\ssao.vert" />
     <None Include="shaders\stencil.frag" />

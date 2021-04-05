@@ -84,5 +84,7 @@
     <None Include="shaders\deferred\lightingPass.vert" />
     <None Include="shaders\ssao\ssao.vert" />
     <None Include="shaders\ssao\ssao.frag" />
+    <None Include="shaders\ssao\blur.frag" />
+    <None Include="shaders\ssao\blur.vert" />
   </ItemGroup>
 </Project>

@@ -708,6 +708,11 @@ namespace gl3d
 
 			std::vector<glm::vec3> ssaoKernel;
 
+			GLuint blurBuffer;
+			GLuint blurColorBuffer;
+			GLint u_ssaoInput;
+			Shader blurShader;
+
 		}ssao;
 
 

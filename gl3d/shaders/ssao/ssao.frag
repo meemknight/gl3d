@@ -12,7 +12,6 @@ uniform vec3 samples[64];
 uniform mat4 u_projection; // camera projection matrix
 uniform mat4 u_view; // camera view matrix
 
-const vec2 noiseScale = vec2(840.0/4.0, 640.0/4.0); 
 
 int kernelSize = 64;
 float radius = 0.5;
@@ -20,7 +19,11 @@ float bias = 0.025;
 
 void main()
 {
-	
+	vec2 screenSize = textureSize(u_gPosition, 0);
+
+	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0); 
+
+
 	vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
 	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * texture(u_gNormal, v_texCoords).rgb);
 	vec3 randomVec = texture(u_texNoise, v_texCoords * noiseScale).xyz; 

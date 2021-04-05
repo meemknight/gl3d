@@ -1124,9 +1124,16 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
 		glUniform1i(ssao.u_texNoise, 2);
 
-
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	
+		
+		//blur
+		glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
+		ssao.blurShader.bind();
+		glClear(GL_COLOR_BUFFER_BIT);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+		glUniform1i(ssao.u_ssaoInput, 0);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		////
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1152,7 +1159,8 @@ namespace gl3d
 
 		glUniform1i(lightShader.light_u_ssao, 4);
 		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
+		//glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -1186,7 +1194,6 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1212,7 +1219,11 @@ namespace gl3d
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
 
-
+		//ssao
+		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
 	}
 
 	float lerp(float a, float b, float f)
@@ -1286,7 +1297,22 @@ namespace gl3d
 		u_texNoise = getUniform(shader.id, "u_texNoise");
 		u_samples = getUniform(shader.id, "samples[0]");
 		
+		
+		//blur
+		blurShader.loadShaderProgramFromFile("shaders/ssao/blur.vert", "shaders/ssao/blur.frag");
+		
+		glGenFramebuffers(1, &blurBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer);
+		glGenTextures(1, &blurColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, blurColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColorBuffer, 0);
+		u_ssaoInput = getUniform(blurShader.id, "u_ssaoInput");
 
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 };

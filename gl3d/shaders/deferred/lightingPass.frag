@@ -3,7 +3,7 @@
 
 #extension GL_NV_shadow_samplers_cube : enable
 
-out layout(location = 0) vec4 a_outColor;
+layout(location = 0) out vec4 a_outColor;
 
 in vec2 v_texCoord;
 
@@ -126,7 +126,8 @@ void main()
 	vec3 normal = texture(u_normals, v_texCoord).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
 	vec3 material = texture(u_materials, v_texCoord).xyz;
-	float ssao = texture(u_ssao, v_texCoord).r;
+	float ssaof = texture(u_ssao, v_texCoord).r;
+	vec3 ssao = vec3(ssaof,ssaof,ssaof);
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
@@ -166,8 +167,6 @@ void main()
 
 	//color.rgb =  material.bbb;
 
-	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
-
-	a_outColor = vec4(ssao, ssao, ssao ,1);
+	a_outColor = clamp(vec4(color.rgb * ssao,1), 0, 1);
 
 }
