@@ -613,6 +613,8 @@ int main()
 			ImGui::Checkbox("Normal map", &normalMap);
 			
 			renderer.lightShader.normalMap = normalMap;
+			
+			ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
 
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);

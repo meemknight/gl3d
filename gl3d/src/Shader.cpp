@@ -273,6 +273,7 @@ namespace gl3d
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_ssao = getUniform(lightingPassShader.id, "u_ssao");
 		light_u_view = getUniform(lightingPassShader.id, "u_view");
+		u_useSSAO = getUniform(lightingPassShader.id, "u_useSSAO");
 
 		pointLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_pointLights");
 		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);

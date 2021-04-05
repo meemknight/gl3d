@@ -235,6 +235,7 @@ namespace gl3d
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
+		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -263,7 +264,8 @@ namespace gl3d
 		Shader geometryPassShader;
 		Shader lightingPassShader;
 
-		bool normalMap = 1; //todo remove
+		bool normalMap = 1; 
+		bool useSSAO = 1;
 
 		//todo clear
 	};

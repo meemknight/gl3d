@@ -13,7 +13,7 @@ uniform mat4 u_projection; // camera projection matrix
 uniform mat4 u_view; // camera view matrix
 
 
-int kernelSize = 64;
+const int kernelSize = 64;
 float radius = 0.5;
 float bias = 0.025;
 
@@ -34,7 +34,12 @@ void main()
 
 
 	float occlusion = 0.0;
-	for(int i = 0; i < kernelSize; ++i)
+
+
+	const int samplesTestSize = 32;
+	int begin = int((kernelSize - samplesTestSize) * abs(randomVec.x));
+
+	for(int i = begin; i < begin + samplesTestSize; ++i)
 	{
 		vec3 samplePos = TBN * samples[i]; // from tangent to view-space
 		//vec3 samplePos = TBN * normalize(vec3(0.5, 0.3, 0.4)); 
@@ -45,13 +50,16 @@ void main()
 		offset.xyz /= offset.w; // perspective divide
 		offset.xyz = offset.xyz * 0.5 + 0.5; // transform to range 0.0 - 1.0
 		
-		// get sample depth
-		float sampleDepth = vec3( u_view * vec4(texture(u_gPosition, offset.xy).xyz,1) ).z;
-		//float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
-		
-		// range check & accumulate
-		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
-		occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+		if(dot(normal, normalize(offset.xyz)) > 0.15) 
+		{
+			// get sample depth
+			float sampleDepth = vec3( u_view * vec4(texture(u_gPosition, offset.xy).xyz,1) ).z;
+			//float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
+			
+			// range check & accumulate
+			float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
+			occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+		}
 
 	}  
 

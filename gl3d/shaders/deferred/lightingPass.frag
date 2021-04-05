@@ -18,6 +18,7 @@ uniform sampler2D u_ssao;
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
 
+uniform int u_useSSAO;
 
 struct Pointlight
 {
@@ -126,8 +127,20 @@ void main()
 	vec3 normal = texture(u_normals, v_texCoord).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
 	vec3 material = texture(u_materials, v_texCoord).xyz;
-	float ssaof = texture(u_ssao, v_texCoord).r;
-	vec3 ssao = vec3(ssaof,ssaof,ssaof);
+
+	float ssaof;
+
+	if(u_useSSAO != 0)
+	{
+		ssaof = texture(u_ssao, v_texCoord).r;	
+	}else
+	{
+		ssaof = 1;
+	}
+
+	float ssao_ambient = pow(ssaof, 1.5);
+	float ssao_finalColor = pow(ssaof, 2.2);
+
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
@@ -151,8 +164,9 @@ void main()
 
 	}
 
-	
-	vec3 ambient = vec3(0.03) * albedo.rgb * material.b; //this value is made up
+	vec3 ambientColor = vec3(0.05);
+	ambientColor.rgb *= ssao_ambient;
+	vec3 ambient = ambientColor * albedo.rgb * material.b; //this value is made up
 	vec3 color   = Lo + ambient; 
 
 	//HDR 
@@ -167,6 +181,8 @@ void main()
 
 	//color.rgb =  material.bbb;
 
-	a_outColor = clamp(vec4(color.rgb * ssao,1), 0, 1);
+	a_outColor = clamp(vec4(color.rgb * ssao_finalColor, 1), 0, 1);
+
+	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);
 
 }
