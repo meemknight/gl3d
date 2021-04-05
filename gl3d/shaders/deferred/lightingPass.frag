@@ -13,8 +13,10 @@ uniform sampler2D u_normals;
 uniform samplerCube u_skybox;
 uniform sampler2D u_positions;
 uniform sampler2D u_materials;
+uniform sampler2D u_ssao;
 
 uniform vec3 u_eyePosition;
+uniform mat4 u_view;
 
 
 struct Pointlight
@@ -124,6 +126,7 @@ void main()
 	vec3 normal = texture(u_normals, v_texCoord).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
 	vec3 material = texture(u_materials, v_texCoord).xyz;
+	float ssao = texture(u_ssao, v_texCoord).r;
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
@@ -161,6 +164,10 @@ void main()
 	color = pow(color, vec3(1.0/2.2));
 
 
+	//color.rgb =  material.bbb;
+
 	a_outColor = clamp(vec4(color.rgb,1), 0, 1);
+
+	a_outColor = vec4(ssao, ssao, ssao ,1);
 
 }

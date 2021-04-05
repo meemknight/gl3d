@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-03-31
+//built on 2021-04-05
 ////////////////////////////////////////////////
 
 
@@ -233,6 +233,8 @@ namespace gl3d
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
+		GLint light_u_ssao = -1;
+		GLint light_u_view = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -585,7 +587,9 @@ namespace gl3d
 		
 		Material createMaterial(Material m);
 
-		void deleteMaterial(Material m);
+		Material loadMaterial(std::string file);
+
+		void deleteMaterial(Material m);  
 		void copyMaterialData(Material dest, Material source);
 
 		//returns 0 if not found
@@ -625,6 +629,7 @@ namespace gl3d
 		Texture createIntenralTexture(GpuTexture t);
 
 	#pragma endregion
+
 
 
 		std::vector< GpuMultipleGraphicModel > graphicModels;
@@ -681,6 +686,31 @@ namespace gl3d
 			unsigned int depthBuffer;
 
 		}gBuffer;
+
+		struct SSAO
+		{
+			//https://learnopengl.com/Advanced-Lighting/SSAO
+
+			void create(int w, int h);
+		
+			GLuint noiseTexture;
+			GLuint ssaoFBO;
+			GLuint ssaoColorBuffer;
+
+			Shader shader;
+			
+			GLint u_projection = -1;
+			GLint u_view = -1;
+			GLint u_gPosition = -1;
+			GLint u_gNormal = -1;
+			GLint u_texNoise = -1;
+			GLint u_samples = -1;
+
+			std::vector<glm::vec3> ssaoKernel;
+
+		}ssao;
+
+
 
 		void render();
 		void updateWindowMetrics(int x, int y);

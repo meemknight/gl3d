@@ -65,7 +65,9 @@ namespace gl3d
 		
 		Material createMaterial(Material m);
 
-		void deleteMaterial(Material m);
+		Material loadMaterial(std::string file);
+
+		void deleteMaterial(Material m);  
 		void copyMaterialData(Material dest, Material source);
 
 		//returns 0 if not found
@@ -105,6 +107,7 @@ namespace gl3d
 		Texture createIntenralTexture(GpuTexture t);
 
 	#pragma endregion
+
 
 
 		std::vector< GpuMultipleGraphicModel > graphicModels;
@@ -161,6 +164,31 @@ namespace gl3d
 			unsigned int depthBuffer;
 
 		}gBuffer;
+
+		struct SSAO
+		{
+			//https://learnopengl.com/Advanced-Lighting/SSAO
+
+			void create(int w, int h);
+		
+			GLuint noiseTexture;
+			GLuint ssaoFBO;
+			GLuint ssaoColorBuffer;
+
+			Shader shader;
+			
+			GLint u_projection = -1;
+			GLint u_view = -1;
+			GLint u_gPosition = -1;
+			GLint u_gNormal = -1;
+			GLint u_texNoise = -1;
+			GLint u_samples = -1;
+
+			std::vector<glm::vec3> ssaoKernel;
+
+		}ssao;
+
+
 
 		void render();
 		void updateWindowMetrics(int x, int y);

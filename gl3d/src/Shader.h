@@ -63,6 +63,8 @@ namespace gl3d
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
+		GLint light_u_ssao = -1;
+		GLint light_u_view = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;

@@ -82,5 +82,7 @@
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\lightingPass.frag" />
     <None Include="shaders\deferred\lightingPass.vert" />
+    <None Include="shaders\ssao\ssao.vert" />
+    <None Include="shaders\ssao\ssao.frag" />
   </ItemGroup>
 </Project>

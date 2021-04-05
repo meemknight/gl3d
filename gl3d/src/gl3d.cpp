@@ -2,128 +2,12 @@
 
 #include <algorithm>
 #include <stb_image.h>
+#include <random>
+#include <string>
 
 namespace gl3d
 {
-	//void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-	//	GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture,
-	//	float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
-	//{
-	//
-	//	auto projMat = camera.getProjectionMatrix();
-	//	auto viewMat = camera.getWorldToViewMatrix();
-	//	auto transformMat = model.getTransformMatrix();
-	//
-	//	auto viewProjMat = projMat * viewMat * transformMat;
-	//
-	//	lightShader.bind(viewProjMat, transformMat, lightPos, camera.position, gama, material,
-	//		pointLights);
-	//
-	//	glActiveTexture(GL_TEXTURE0);
-	//	glBindTexture(GL_TEXTURE_2D, texture.id);
-	//
-	//	glActiveTexture(GL_TEXTURE1);
-	//	glBindTexture(GL_TEXTURE_2D, normalTexture.id);
-	//
-	//	glActiveTexture(GL_TEXTURE2);
-	//	glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
-	//
-	//	model.draw();
-	//
-	//
-	//}
-
-
-	void renderLightModel(GraphicModel &model, Camera camera, glm::vec3 lightPos, LightShader lightShader, Texture texture, Texture normalTexture, GLuint skyBoxTexture, float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-	}
-
-	//void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos,
-	//	LightShader lightShader, GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights)
-	//{
-	//	if(model.models.empty())
-	//	{
-	//		return;
-	//	}
-	//
-	//	auto projMat = camera.getProjectionMatrix();
-	//	auto viewMat = camera.getWorldToViewMatrix();
-	//	auto transformMat = model.getTransformMatrix();
-	//
-	//	auto modelViewProjMat = projMat * viewMat * transformMat;
-	//	//auto modelView = viewMat * transformMat;
-	//
-	//	lightShader.geometryPassShader.bind();
-	//
-	//	lightShader.getSubroutines();
-	//	lightShader.setData(modelViewProjMat, transformMat, lightPos, camera.position, gama, GpuMaterial(),
-	//		pointLights);
-	//
-	//	GLsizei n;
-	//	//glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &n);
-	//	glGetProgramStageiv(lightShader.geometryPassShader.id,
-	//	GL_FRAGMENT_SHADER,
-	//	GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-	//	&n);
-	//
-	//	GLuint *indices = new GLuint[n]{ 0 };
-	//	bool changed = 1;
-	//
-	//	for(auto &i : model.models)
-	//	{
-	//		lightShader.setMaterial(i.material);
-	//
-	//		glActiveTexture(GL_TEXTURE0);
-	//		glBindTexture(GL_TEXTURE_2D, i.albedoTexture.id);
-	//
-	//		glActiveTexture(GL_TEXTURE1);
-	//		glBindTexture(GL_TEXTURE_2D, i.normalMapTexture.id);
-	//
-	//		glActiveTexture(GL_TEXTURE2);
-	//		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
-	//
-	//		glActiveTexture(GL_TEXTURE3);
-	//		glBindTexture(GL_TEXTURE_2D, i.RMA_Texture.id);
-	//
-	//
-	//		if (i.normalMapTexture.id && lightShader.normalMap)
-	//		{
-	//			if(indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
-	//			{
-	//				changed = 1;
-	//			}
-	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
-	//		}else
-	//		{
-	//			if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
-	//			{
-	//				changed = 1;
-	//			}
-	//			indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
-	//		}
-	//
-	//		if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[i.RMA_loadedTextures])
-	//		{ 
-	//			changed = 1;
-	//		}
-	//
-	//		indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[i.RMA_loadedTextures];
-	//
-	//		if(changed)
-	//		{
-	//			glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
-	//		}
-	//		changed = 0;
-	//
-	//		i.draw();
-	//
-	//
-	//	}
-	//
-	//	delete[] indices;
-	//
-	//	
-	//}
+	
 
 	void Renderer3D::init(int x, int y)
 	{
@@ -197,6 +81,9 @@ namespace gl3d
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		ssao.create(x, y);
+
 	}
 
 	
@@ -229,6 +116,17 @@ namespace gl3d
 		copyMaterialData(newM, m);
 
 		return newM;
+	}
+
+	Material Renderer3D::loadMaterial(std::string file)
+	{
+
+		objl::Loader loader;
+		loader.LoadFile(file);
+
+
+
+		return Material();
 	}
 
 	void Renderer3D::deleteMaterial(Material m)
@@ -1197,8 +1095,43 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
-
+		//we draw a rect several times
 		glBindVertexArray(lightShader.quadVAO);
+		glUseProgram(ssao.shader.id);
+
+		glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
+			&(camera.getProjectionMatrix())[0][0] );
+
+		glUniformMatrix4fv(ssao.u_view, 1, GL_FALSE,
+			&(camera.getWorldToViewMatrix())[0][0]);
+
+
+		glUniform3fv(ssao.u_samples, 64, &(ssao.ssaoKernel[0][0]));
+
+		glBindFramebuffer(GL_FRAMEBUFFER, ssao.ssaoFBO);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
+		glUniform1i(ssao.u_gPosition, 0);
+		
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+		glUniform1i(ssao.u_gNormal, 1);
+
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
+		glUniform1i(ssao.u_texNoise, 2);
+
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	
+		////
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 		glUseProgram(lightShader.lightingPassShader.id);
 
 		glUniform1i(lightShader.light_u_positions, 0);
@@ -1217,7 +1150,14 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
 
+		glUniform1i(lightShader.light_u_ssao, 4);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+
+
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
+
+		glUniformMatrix4fv(lightShader.light_u_view, 1, GL_FALSE, &(camera.getWorldToViewMatrix()[0][0]) );
 
 		if (pointLights.size())
 		{
@@ -1275,6 +1215,78 @@ namespace gl3d
 
 	}
 
+	float lerp(float a, float b, float f)
+	{
+		return a + f * (b - a);
+	}
 
+	void Renderer3D::SSAO::create(int w, int h)
+	{
+		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f); 
+		std::default_random_engine generator;
+
+		ssaoKernel.reserve(64);
+
+		for (unsigned int i = 0; i < 64; ++i)
+		{
+			glm::vec3 sample(
+				randomFloats(generator) * 2.0 - 1.0,
+				randomFloats(generator) * 2.0 - 1.0,
+				randomFloats(generator)	// z component is always positive
+			);
+			sample = glm::normalize(sample);
+
+			float scale = (float)i / 64.0;
+			scale = lerp(0.1f, 1.0f, scale * scale);
+			sample *= scale;
+			ssaoKernel.push_back(sample);
+
+		}
+
+
+		std::vector<glm::vec3> ssaoNoise;
+		for (unsigned int i = 0; i < 16; i++)
+		{
+			glm::vec3 noise(
+				randomFloats(generator) * 2.0 - 1.0,
+				randomFloats(generator) * 2.0 - 1.0,
+				0.0f);
+			ssaoNoise.push_back(noise);
+		}
+
+		
+		glGenTextures(1, &noiseTexture);
+		glBindTexture(GL_TEXTURE_2D, noiseTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+		glGenFramebuffers(1, &ssaoFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+
+		glGenTextures(1, &ssaoColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
+
+
+		shader.loadShaderProgramFromFile("shaders/ssao/ssao.vert", "shaders/ssao/ssao.frag");
+
+
+		u_projection = getUniform(shader.id, "u_projection");
+		u_view = getUniform(shader.id, "u_view");
+		u_gPosition = getUniform(shader.id, "u_gPosition");
+		u_gNormal = getUniform(shader.id, "u_gNormal");
+		u_texNoise = getUniform(shader.id, "u_texNoise");
+		u_samples = getUniform(shader.id, "samples[0]");
+		
+
+	}
 
 };
