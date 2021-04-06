@@ -24,7 +24,8 @@ void main()
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0); 
 
 
-	vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
+	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
+	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
 	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * texture(u_gNormal, v_texCoords).rgb);
 	vec3 randomVec = texture(u_texNoise, v_texCoords * noiseScale).xyz; 
 
@@ -53,8 +54,8 @@ void main()
 		//if(dot(normal, normalize(offset.xyz)) > 0.02) //1.14 degrees
 		{
 			// get sample depth
-			float sampleDepth = vec3( u_view * vec4(texture(u_gPosition, offset.xy).xyz,1) ).z;
-			//float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
+			//float sampleDepth = vec3( u_view * vec4(texture(u_gPosition, offset.xy).xyz,1) ).z;
+			float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
 			
 			// range check & accumulate
 			float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));

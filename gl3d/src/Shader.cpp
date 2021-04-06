@@ -242,7 +242,7 @@ namespace gl3d
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform");
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
-		
+		u_motelViewTransform = getUniform(geometryPassShader.id, "u_motelViewTransform");
 		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
 		textureSamplerLocation = getUniform(geometryPassShader.id, "u_albedoSampler");
 		normalMapSamplerLocation = getUniform(geometryPassShader.id, "u_normalSampler");

@@ -156,6 +156,7 @@ namespace gl3d
 				normal,
 				albedo,
 				material,
+				positionViewSpace,
 				bufferCount,
 			};
 

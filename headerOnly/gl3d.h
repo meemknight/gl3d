@@ -215,6 +215,7 @@ namespace gl3d
 
 		GLint u_transform = -1;
 		GLint u_modelTransform = -1;
+		GLint u_motelViewTransform = -1;
 		GLint normalShaderLightposLocation = -1;
 		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
@@ -680,6 +681,7 @@ namespace gl3d
 				normal,
 				albedo,
 				material,
+				positionViewSpace,
 				bufferCount,
 			};
 
