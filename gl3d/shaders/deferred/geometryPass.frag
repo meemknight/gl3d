@@ -90,7 +90,7 @@ subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
 		if(color.w <= 0.1)
 			discard;
 
-	color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
+	color.rgb = pow(color.rgb , vec3(2.2,2.2,2.2)).rgb; //gamma corection
 		
 	color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
 		
@@ -100,7 +100,11 @@ subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
 
 subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
 {
-	return vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
+	vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
+
+	c.rgb = pow(c.rgb , vec3(2.2,2.2,2.2)).rgb;
+
+	return c;
 }
 
 subroutine uniform GetAlbedoFunc u_getAlbedo;

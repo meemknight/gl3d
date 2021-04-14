@@ -14,14 +14,14 @@ uniform mat4 u_view; // camera view matrix
 
 
 const int kernelSize = 64;
-float radius = 0.5;
+float radius = 0.6;
 float bias = 0.025;
 
 void main()
 {
 	vec2 screenSize = textureSize(u_gPosition, 0);
 
-	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0); 
+	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 
 
 	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
@@ -37,7 +37,7 @@ void main()
 	float occlusion = 0.0;
 
 
-	const int samplesTestSize = 32;
+	const int samplesTestSize = 16;
 	int begin = int((kernelSize - samplesTestSize) * abs(randomVec.x));
 
 	for(int i = begin; i < begin + samplesTestSize; ++i)

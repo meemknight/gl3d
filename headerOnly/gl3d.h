@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-04-06
+//built on 2021-04-14
 ////////////////////////////////////////////////
 
 
@@ -690,6 +690,23 @@ namespace gl3d
 			unsigned int depthBuffer;
 
 		}gBuffer;
+
+		struct PostProcess
+		{
+			Shader postProcessShader;
+			Shader gausianBLurShader;
+			GLint u_colorTexture;
+			GLint u_bloomTexture;
+			GLint u_toBlurcolorInput;
+			GLint u_horizontal;
+
+			GLuint fbo;
+			GLuint blurFbo;
+			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
+			GLuint bluredColorBuffer;
+			void create(int w, int h);
+
+		}postProcess;
 
 		struct SSAO
 		{

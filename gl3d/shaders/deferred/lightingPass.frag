@@ -4,6 +4,7 @@
 #extension GL_NV_shadow_samplers_cube : enable
 
 layout(location = 0) out vec4 a_outColor;
+layout(location = 1) out vec4 a_outBloom;
 
 in vec2 v_texCoord;
 
@@ -126,6 +127,9 @@ void main()
 	vec3 pos = texture(u_positions, v_texCoord).xyz;
 	vec3 normal = texture(u_normals, v_texCoord).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
+	//albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+
+
 	vec3 material = texture(u_materials, v_texCoord).xyz;
 
 	float ssaof;
@@ -138,8 +142,8 @@ void main()
 		ssaof = 1;
 	}
 
-	float ssao_ambient = pow(ssaof, 1.5);
-	float ssao_finalColor = pow(ssaof, 2.2);
+	float ssao_ambient = pow(ssaof, 4.3);
+	float ssao_finalColor = pow(ssaof, 2.7);
 
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
@@ -169,11 +173,15 @@ void main()
 	vec3 ambient = ambientColor * albedo.rgb * material.b; //this value is made up
 	vec3 color   = Lo + ambient; 
 
+	color *= ssao_finalColor;
+
 	//HDR 
 	//color = color / (color + vec3(1.0));
 	float exposure = 1;
 	color = vec3(1.0) - exp(-color  * exposure);
 	
+	
+
 	//todo move gamma 
 	//gamma correction
 	color = pow(color, vec3(1.0/2.2));
@@ -181,7 +189,16 @@ void main()
 
 	//color.rgb =  material.bbb;
 
-	a_outColor = clamp(vec4(color.rgb * ssao_finalColor, 1), 0, 1);
+	float lightIntensity = Lo.r + Lo.g + Lo.b;
+	lightIntensity /= 3;
+	if(lightIntensity > 3)
+	{
+		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
+	}else
+	{
+		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+	}
+
 
 	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);
 

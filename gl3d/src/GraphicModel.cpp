@@ -781,7 +781,6 @@ namespace gl3d
 		auto t = glm::translate(position);
 
 		return t * r * s;
-
 	}
 
 

@@ -212,6 +212,10 @@
     <None Include="shaders\deferred\lightingPass.frag" />
     <None Include="shaders\deferred\lightingPass.vert" />
     <None Include="shaders\normals.frag" />
+    <None Include="shaders\postProcess\gausianBlur.frag" />
+    <None Include="shaders\postProcess\gausianBlur.vert" />
+    <None Include="shaders\postProcess\postProcess.frag" />
+    <None Include="shaders\postProcess\postProcess.vert" />
     <None Include="shaders\showNormals.geom" />
     <None Include="shaders\normals.vert" />
     <None Include="shaders\showNormals.frag" />

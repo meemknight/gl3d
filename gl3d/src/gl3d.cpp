@@ -101,6 +101,7 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		ssao.create(x, y);
+		postProcess.create(x, y);
 
 	}
 
@@ -1114,8 +1115,10 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
-		//we draw a rect several times
+		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadVAO);
+		
+	#pragma region ssao
 		glUseProgram(ssao.shader.id);
 
 		glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
@@ -1123,7 +1126,6 @@ namespace gl3d
 
 		glUniformMatrix4fv(ssao.u_view, 1, GL_FALSE,
 			&(camera.getWorldToViewMatrix())[0][0]);
-
 
 		glUniform3fv(ssao.u_samples, 64, &(ssao.ssaoKernel[0][0]));
 
@@ -1138,14 +1140,14 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
 		glUniform1i(ssao.u_gNormal, 1);
 
-
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
 		glUniform1i(ssao.u_texNoise, 2);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		
-		//blur
+	#pragma endregion
+
+	#pragma region ssao blur
 		glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
 		ssao.blurShader.bind();
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1153,10 +1155,12 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 		glUniform1i(ssao.u_ssaoInput, 0);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		////
+	#pragma endregion
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	#pragma region render into the bloom post processing fbo
 
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(lightShader.lightingPassShader.id);
 
@@ -1203,6 +1207,42 @@ namespace gl3d
 		glUniform1i(lightShader.u_useSSAO, lightShader.useSSAO);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	#pragma endregion
+
+	#pragma region bloom blur
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo);
+		postProcess.gausianBLurShader.bind();
+		glClear(GL_COLOR_BUFFER_BIT);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+		glUniform1i(postProcess.u_toBlurcolorInput, 0);
+		glUniform1i(postProcess.u_horizontal, 1);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	#pragma endregion
+
+	#pragma region do the post process stuff and draw to screen
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glUseProgram(postProcess.postProcessShader.id);
+
+		//color data
+		glUniform1i(postProcess.u_colorTexture, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[0]);
+
+		//bloom data
+		glUniform1i(postProcess.u_bloomTexture, 1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer); //!!!!!!!!!!!!!!1
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	#pragma endregion
+
+
+	#pragma region copy depth buffer for later forward rendering
 		glBindVertexArray(0);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
@@ -1210,12 +1250,13 @@ namespace gl3d
 		glBlitFramebuffer(
 		  0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
 		);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	#pragma endregion
+
 
 	}
 
@@ -1240,12 +1281,23 @@ namespace gl3d
 
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
-
+		
 		//ssao
 		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
 		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+
+		//bloom
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		}
+
+		glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
 	}
 
 	float lerp(float a, float b, float f)
@@ -1339,8 +1391,54 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColorBuffer, 0);
 		u_ssaoInput = getUniform(blurShader.id, "u_ssaoInput");
 
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void Renderer3D::PostProcess::create(int w, int h)
+	{
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+		glGenTextures(2, colorBuffers);
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			// attach texture to framebuffer
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+		}
+
+		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
+
+		
+		postProcessShader.loadShaderProgramFromFile("shaders/postProcess/postProcess.vert", "shaders/postProcess/postProcess.frag");
+		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
+		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture");
+
+		gausianBLurShader.loadShaderProgramFromFile("shaders/postProcess/gausianBlur.vert", "shaders/postProcess/gausianBlur.frag");
+		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
+		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
+
+
+		glGenFramebuffers(1, &blurFbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, blurFbo);
+
+		glGenTextures(1, &bluredColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, bluredColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer, 0);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	}
 
 };

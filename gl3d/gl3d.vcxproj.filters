@@ -86,5 +86,9 @@
     <None Include="shaders\ssao\ssao.frag" />
     <None Include="shaders\ssao\blur.frag" />
     <None Include="shaders\ssao\blur.vert" />
+    <None Include="shaders\postProcess\postProcess.frag" />
+    <None Include="shaders\postProcess\postProcess.vert" />
+    <None Include="shaders\postProcess\gausianBlur.frag" />
+    <None Include="shaders\postProcess\gausianBlur.vert" />
   </ItemGroup>
 </Project>

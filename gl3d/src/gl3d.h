@@ -166,6 +166,23 @@ namespace gl3d
 
 		}gBuffer;
 
+		struct PostProcess
+		{
+			Shader postProcessShader;
+			Shader gausianBLurShader;
+			GLint u_colorTexture;
+			GLint u_bloomTexture;
+			GLint u_toBlurcolorInput;
+			GLint u_horizontal;
+
+			GLuint fbo;
+			GLuint blurFbo;
+			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
+			GLuint bluredColorBuffer;
+			void create(int w, int h);
+
+		}postProcess;
+
 		struct SSAO
 		{
 			//https://learnopengl.com/Advanced-Lighting/SSAO
