@@ -15,6 +15,7 @@ namespace gl3d
 
 		lightShader.create();
 		skyBox.createGpuData();
+		vao.createVAOs();
 
 		showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
@@ -105,6 +106,21 @@ namespace gl3d
 
 	}
 
+	void Renderer3D::VAO::createVAOs()
+	{
+		glGenVertexArrays(1, &posNormalTexture);
+		glBindVertexArray(posNormalTexture);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+
+		glBindVertexArray(0);
+
+	}
 	
 	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
 	, std::string name)
@@ -729,32 +745,31 @@ namespace gl3d
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 
-
 		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
-		if(found == graphicModelsIndexes.end())
+		if (found == graphicModelsIndexes.end())
 		{
 			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid render object");
 			return;
 		}
 		int id = found - graphicModelsIndexes.begin();
-	
-		auto &model = graphicModels[id]; 
-	
-	
+
+		auto &model = graphicModels[id];
+
+
 		if (model.models.empty())
 		{
 			return;
 		}
-	
+
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
 		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);
-	
+
 		auto modelViewProjMat = projMat * viewMat * transformMat;
 		//auto modelView = viewMat * transformMat;
-	
+
 		lightShader.geometryPassShader.bind();
-	
+
 
 		lightShader.getSubroutines();
 
@@ -769,7 +784,7 @@ namespace gl3d
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
 		glUniform1i(lightShader.RMASamplerLocation, 3);
 
-	
+
 
 		//material buffer
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
@@ -777,16 +792,37 @@ namespace gl3d
 			, &materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
+		//glBindVertexArray(vao.posNormalTexture);
+
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		for (auto &i : model.models)
+		{
+			
+			glBindVertexArray(i.vertexArray);
+			//glBindBuffer(GL_ARRAY_BUFFER, i.vertexBuffer);
+
+			if (i.indexBuffer)
+			{
+				//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, i.indexBuffer);
+				glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+			}
+			else
+			{
+				glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+			}
+		}
+
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthFunc(GL_EQUAL);
 
 		GLsizei n;
 		glGetProgramStageiv(lightShader.geometryPassShader.id,
 		GL_FRAGMENT_SHADER,
 		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
 		&n);
-	
+
 		GLuint *indices = new GLuint[n]{ 0 };
-		bool changed = 1;
-		
+		bool changed = 1;	
 	
 		for (auto &i : model.models)
 		{
@@ -905,13 +941,16 @@ namespace gl3d
 				{
 					glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
 				}
-				glBindVertexArray(0);
 			}
 	
 		}
-	
+
+		glBindVertexArray(0);
+
 		delete[] indices;
 	
+		glDepthFunc(GL_LESS);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	}
@@ -1119,6 +1158,8 @@ namespace gl3d
 		glBindVertexArray(lightShader.quadVAO);
 		
 	#pragma region ssao
+		glViewport(0, 0, w / 2, h / 2);
+
 		glUseProgram(ssao.shader.id);
 
 		glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
@@ -1145,9 +1186,13 @@ namespace gl3d
 		glUniform1i(ssao.u_texNoise, 2);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	
+		glViewport(0, 0, w, h);
 	#pragma endregion
 
-	#pragma region ssao blur
+	#pragma region ssao "blur" (more like average blur)
+		glViewport(0, 0, w/4, h/4);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
 		ssao.blurShader.bind();
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1155,6 +1200,8 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 		glUniform1i(ssao.u_ssaoInput, 0);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glViewport(0, 0, w, h);
 	#pragma endregion
 
 	#pragma region render into the bloom post processing fbo
@@ -1211,14 +1258,33 @@ namespace gl3d
 	#pragma endregion
 
 	#pragma region bloom blur
-		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo);
-		postProcess.gausianBLurShader.bind();
-		glClear(GL_COLOR_BUFFER_BIT);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
-		glUniform1i(postProcess.u_toBlurcolorInput, 0);
-		glUniform1i(postProcess.u_horizontal, 1);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		
+		if(lightShader.bloom)
+		{
+			int blurs = 16;
+			bool horizontal = 1; bool firstTime = 1;
+			postProcess.gausianBLurShader.bind();
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(postProcess.u_toBlurcolorInput, 0);
+			glViewport(0, 0, w/2, h/2);
+			for (int i = 0; i < blurs; i++)
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
+				glClear(GL_COLOR_BUFFER_BIT);
+				glUniform1i(postProcess.u_horizontal, horizontal);
+
+				glBindTexture(GL_TEXTURE_2D,
+					firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
+
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+				horizontal = !horizontal;
+				firstTime = false;
+
+			}
+			glViewport(0, 0, w, h);
+
+		}
 
 	#pragma endregion
 
@@ -1235,7 +1301,13 @@ namespace gl3d
 		//bloom data
 		glUniform1i(postProcess.u_bloomTexture, 1);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer); //!!!!!!!!!!!!!!1
+		if(lightShader.bloom)
+		{
+			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[1]); 
+		}else
+		{
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+		}
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -1284,9 +1356,9 @@ namespace gl3d
 		
 		//ssao
 		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/2, h/2, 0, GL_RED, GL_FLOAT, NULL);
 		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/4, h/4, 0, GL_RED, GL_FLOAT, NULL);
 
 		//bloom
 		for (int i = 0; i < 2; i++)
@@ -1295,8 +1367,12 @@ namespace gl3d
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		}
 
-		glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		for(int i=0;i<2;i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		}
+
 
 	}
 
@@ -1356,8 +1432,8 @@ namespace gl3d
 
 		glGenTextures(1, &ssaoColorBuffer);
 		glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/2, h/2, 0, GL_RED, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1383,8 +1459,8 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer);
 		glGenTextures(1, &blurColorBuffer);
 		glBindTexture(GL_TEXTURE_2D, blurColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/4, h/4, 0, GL_RED, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1425,17 +1501,22 @@ namespace gl3d
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
 
 
-		glGenFramebuffers(1, &blurFbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, blurFbo);
+		glGenFramebuffers(2, blurFbo);
+		glGenTextures(2, bluredColorBuffer);
 
-		glGenTextures(1, &bluredColorBuffer);
-		glBindTexture(GL_TEXTURE_2D, bluredColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer, 0);
+		for(int i=0;i <2; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, blurFbo[i]);
+
+			glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer[i], 0);
+		}
+		
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

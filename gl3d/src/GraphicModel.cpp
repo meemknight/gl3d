@@ -810,7 +810,6 @@ namespace gl3d
 		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
 		if (indexSize % 3 != 0)return;
 
-
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
 
@@ -818,6 +817,7 @@ namespace gl3d
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
 
+		//todo if the object doesn't have texture data we should not render any material to it or just refuze to load it
 		if (noTexture)
 		{
 			glEnableVertexAttribArray(0);

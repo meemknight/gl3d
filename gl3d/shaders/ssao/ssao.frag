@@ -14,7 +14,7 @@ uniform mat4 u_view; // camera view matrix
 
 
 const int kernelSize = 64;
-float radius = 0.6;
+float radius = 0.3;
 float bias = 0.025;
 
 void main()
@@ -37,7 +37,7 @@ void main()
 	float occlusion = 0.0;
 
 
-	const int samplesTestSize = 16;
+	const int samplesTestSize = 18;
 	int begin = int((kernelSize - samplesTestSize) * abs(randomVec.x));
 
 	for(int i = begin; i < begin + samplesTestSize; ++i)

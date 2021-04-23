@@ -16,4 +16,7 @@ void main()
 
 	a_color = bloom + color;
 
+	//gamma correction
+	a_color = pow(a_color, vec3(1.0/2.2));
+
 }

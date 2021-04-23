@@ -127,7 +127,7 @@ void main()
 	vec3 pos = texture(u_positions, v_texCoord).xyz;
 	vec3 normal = texture(u_normals, v_texCoord).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
-	//albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
 
 
 	vec3 material = texture(u_materials, v_texCoord).xyz;
@@ -142,8 +142,8 @@ void main()
 		ssaof = 1;
 	}
 
-	float ssao_ambient = pow(ssaof, 4.3);
-	float ssao_finalColor = pow(ssaof, 2.7);
+	float ssao_ambient = pow(ssaof, 6.3);
+	float ssao_finalColor = pow(ssaof, 6);
 
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
@@ -168,32 +168,31 @@ void main()
 
 	}
 
-	vec3 ambientColor = vec3(0.05);
+	vec3 ambientColor = vec3(0.03);
 	ambientColor.rgb *= ssao_ambient;
 	vec3 ambient = ambientColor * albedo.rgb * material.b; //this value is made up
 	vec3 color   = Lo + ambient; 
 
 	color *= ssao_finalColor;
 
+
+	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
+
 	//HDR 
 	//color = color / (color + vec3(1.0));
 	float exposure = 1;
 	color = vec3(1.0) - exp(-color  * exposure);
 	
-	
-
-	//todo move gamma 
-	//gamma correction
-	color = pow(color, vec3(1.0/2.2));
+	//gama correction is done in the post process step
 
 
 	//color.rgb =  material.bbb;
 
-	float lightIntensity = Lo.r + Lo.g + Lo.b;
-	lightIntensity /= 3;
-	if(lightIntensity > 3)
+	if(lightIntensity > 0.9)
 	{
 		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
+		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+
 	}else
 	{
 		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	

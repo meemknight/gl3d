@@ -97,6 +97,7 @@ namespace gl3d
 
 		bool normalMap = 1; 
 		bool useSSAO = 1;
+		bool bloom = 1;
 
 		//todo clear
 	};

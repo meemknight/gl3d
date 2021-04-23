@@ -24,7 +24,7 @@ int h = 640;
 
 gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 
 #pragma region gpu
 extern "C"
@@ -53,7 +53,7 @@ int main()
 		std::cout << "err initializing glfw";
 	}
 
-	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_SAMPLES, 1);
 
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
@@ -615,6 +615,7 @@ int main()
 			renderer.lightShader.normalMap = normalMap;
 			
 			ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
+			ImGui::Checkbox("Bloom", &renderer.lightShader.bloom);
 
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);

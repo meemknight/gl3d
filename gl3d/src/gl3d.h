@@ -108,7 +108,12 @@ namespace gl3d
 
 	#pragma endregion
 
+		struct VAO
+		{
+			GLuint posNormalTexture;
 
+			void createVAOs();
+		}vao;
 
 		std::vector< GpuMultipleGraphicModel > graphicModels;
 		std::vector<int> graphicModelsIndexes;
@@ -176,9 +181,10 @@ namespace gl3d
 			GLint u_horizontal;
 
 			GLuint fbo;
-			GLuint blurFbo;
+			GLuint blurFbo[2];
+
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
-			GLuint bluredColorBuffer;
+			GLuint bluredColorBuffer[2];
 			void create(int w, int h);
 
 		}postProcess;
