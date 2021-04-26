@@ -121,7 +121,6 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 }
 
 
-
 void main()
 {
 	vec3 pos = texture(u_positions, v_texCoord).xyz;
@@ -180,10 +179,9 @@ void main()
 
 	//HDR 
 	//color = color / (color + vec3(1.0));
-	float exposure = 1;
-	color = vec3(1.0) - exp(-color  * exposure);
 	
-	//gama correction is done in the post process step
+	
+	//gama correction and hdr is done in the post process step
 
 
 	//color.rgb =  material.bbb;
@@ -195,7 +193,8 @@ void main()
 
 	}else
 	{
-		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
+		a_outBloom = vec4(0, 0, 0, 0);
 	}
 
 

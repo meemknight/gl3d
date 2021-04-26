@@ -1334,6 +1334,12 @@ namespace gl3d
 
 	void Renderer3D::updateWindowMetrics(int x, int y)
 	{
+
+		if(w == x && h == y)
+		{
+			return;
+		}
+		
 		w = x; h = y;
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
@@ -1354,24 +1360,44 @@ namespace gl3d
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
 		
+		//todo bindless stuff
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		//ssao
 		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/2, h/2, 0, GL_RED, GL_FLOAT, NULL);
 		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w/4, h/4, 0, GL_RED, GL_FLOAT, NULL);
 
+		glBindFramebuffer(GL_FRAMEBUFFER, ssao.ssaoFBO);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
 		//bloom
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		}
 
 		for(int i=0;i<2;i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[i]);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 	}
@@ -1479,7 +1505,7 @@ namespace gl3d
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1509,7 +1535,7 @@ namespace gl3d
 			glBindFramebuffer(GL_FRAMEBUFFER, blurFbo[i]);
 
 			glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
