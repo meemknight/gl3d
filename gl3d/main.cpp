@@ -69,6 +69,10 @@ int main()
 		std::cout << "err initializing glew";
 	}
 
+
+	std::cout << "version " << glGetString(GL_VERSION) << "\n";
+	std::cout << "renderer " << glGetString(GL_RENDERER) << "\n";
+
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark(); 
 
@@ -383,13 +387,13 @@ int main()
 	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 
 	PL::AverageProfiler loadProfiler;
-	loadProfiler.start();
+	loadProfiler.start(); 
 
 	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
 	
 	auto rez = loadProfiler.end();
@@ -458,6 +462,8 @@ int main()
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
+
+
 
 	#pragma region profiler ui code
 		{

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-04-20
+//built on 2021-04-26
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -140,7 +140,7 @@ namespace gl3d
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		
+
 		setTextureQuality(quality);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -165,14 +165,18 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 0);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1);
+				glAnyCheck();
+
+
 			}
 			break;
 			case nearestMipmap:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 0);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1);
 			}
 			break;
 			case linearMipmap:
@@ -1769,11 +1773,14 @@ namespace gl3d
 
 	void Renderer3D::init(int x, int y)
 	{
+
 		w = x; h = y;
 
 		lightShader.create();
 		skyBox.createGpuData();
 		vao.createVAOs();
+
+
 
 		showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
@@ -1783,7 +1790,7 @@ namespace gl3d
 		showNormalsProgram.projectionLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_projection");
 		showNormalsProgram.sizeLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_size");
 		showNormalsProgram.colorLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_color");
-		
+
 		unsigned char textureData[] =
 		{
 			20, 20, 20, 255,
@@ -1796,14 +1803,15 @@ namespace gl3d
 
 
 		//create gBuffer
-		glGenFramebuffers(1, &gBuffer.gBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-
-		glGenTextures(gBuffer.bufferCount, gBuffer.buffers);
+		glCheck(glGenFramebuffers(1, &gBuffer.gBuffer));
+		glCheck(glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer));
 
 
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glCheck(glGenTextures(gBuffer.bufferCount, gBuffer.buffers));
+
+
+		glCheck(glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]));
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1811,7 +1819,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1819,7 +1827,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1827,7 +1835,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1835,7 +1843,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glCheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2432,8 +2440,6 @@ namespace gl3d
 
 
 
-
-
 					
 				}
 
@@ -2912,6 +2918,8 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		//glAnyCheck();
+
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadVAO);
 		
@@ -3095,19 +3103,19 @@ namespace gl3d
 		w = x; h = y;
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
@@ -3198,6 +3206,11 @@ namespace gl3d
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
 
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "ssaoFBO failed\n";
+		}
+
 
 		shader.loadShaderProgramFromFile("shaders/ssao/ssao.vert", "shaders/ssao/ssao.frag");
 
@@ -3225,6 +3238,13 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColorBuffer, 0);
 		u_ssaoInput = getUniform(blurShader.id, "u_ssaoInput");
 
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "blur ssao buffer failed\n";
+		}
+
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
@@ -3249,6 +3269,10 @@ namespace gl3d
 		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 		glDrawBuffers(2, attachments);
 
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "post process fbo failed\n";
+		}
 		
 		postProcessShader.loadShaderProgramFromFile("shaders/postProcess/postProcess.vert", "shaders/postProcess/postProcess.frag");
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
@@ -3273,8 +3297,12 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer[i], 0);
-		}
 		
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				std::cout << "blur post process fbo " << i << " failed\n";
+			}
+		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

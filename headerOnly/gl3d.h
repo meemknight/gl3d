@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-04-20
+//built on 2021-04-26
 ////////////////////////////////////////////////
 
 
@@ -11,9 +11,45 @@
 #pragma once
 #include <glm\vec4.hpp>
 #include <glm\vec3.hpp>
+#include <GL\glew.h>
+#include <iostream>
 
 namespace gl3d
 {
+	inline void clearglErrors()
+	{
+		GLenum errorCode;
+		while ((errorCode = glGetError()) != GL_NO_ERROR) {}
+	}
+
+	//https://learnopengl.com/In-Practice/Debugging
+	inline GLenum checkglError(const char *file, int line, const char *command = "")
+	{
+		GLenum errorCode;
+		while ((errorCode = glGetError()) != GL_NO_ERROR)
+		{
+			const char* error = "";
+			switch (errorCode)
+			{
+				case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+				case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+				case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+				case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
+				case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
+				case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+				case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+			}
+			std::cout << error << " | " << file << " (" << line << ")" << " " << command << std::endl;
+		}
+		return errorCode;
+	}
+
+#define glCheck(x) clearglErrors(); x; checkglError(__FILE__, __LINE__, #x);
+#define glAnyCheck() checkglError(__FILE__, __LINE__);
+
+
+
+
 	template <class T>
 	struct InterfaceCheckId
 	{
@@ -535,6 +571,7 @@ namespace gl3d
 
 namespace gl3d
 {
+
 	namespace internal
 	{
 		template <class T>

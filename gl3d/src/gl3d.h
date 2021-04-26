@@ -9,6 +9,7 @@
 
 namespace gl3d
 {
+
 	namespace internal
 	{
 		template <class T>
