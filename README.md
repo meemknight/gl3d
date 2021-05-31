@@ -27,34 +27,34 @@ Features and todos:
 - [x] Sky box
 - [ ] Image based lighting
 - [x] Normal mapping (TBN calculated per vertex)
-
+---
 - [x] Deferred rendering
 - [ ] Optimize lights 
-
+---
 - [x] hdr (16 bit color channel) 
 - [ ] automatic exposure ajustment
-
+---
 - [ ] FXAA or TAA
 - [ ] Adaptive resolution
-
+---
 - [ ] Store all the render data before rendering (used for depth pre pass)
 - [ ] Improve the deferred rendering by adding bindless things
 - [ ] Remove vao for each object
 - [ ] Only one geometry buffer and a dynamic index buffer
-
+---
 - [x] SSAO
 - [ ] SSAO settings
-
+---
 - [x] Bloom
 - [ ] Bloom settings
-
+---
 - [ ] Screen space reflections
-
+---
 - [ ] Volumetric light (God rays)
-
+---
 - [ ] Directional Shadows
 - [ ] Point Shadows
-
+---
 - [ ] Transparency
 
 
