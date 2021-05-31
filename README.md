@@ -44,7 +44,7 @@ Features and todos:
 
 - [x] SSAO
 - [ ] SSAO settings
-- [ ] 
+
 - [x] Bloom
 - [ ] Bloom settings
 
