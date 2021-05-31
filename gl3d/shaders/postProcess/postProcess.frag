@@ -15,8 +15,11 @@ void main()
 	vec3 bloom = texture(u_bloomTexture, v_texCoord).rgb;
 
 	a_color = bloom + color;
+	//a_color = bloom;
 
 	//gamma correction
 	a_color = pow(a_color, vec3(1.0/2.2));
 
+	float exposure = 1;
+	color = vec3(1.0) - exp(-color  * exposure);
 }
