@@ -14,7 +14,7 @@ uniform mat4 u_view; // camera view matrix
 
 
 const int kernelSize = 64;
-float radius = 0.3;
+float radius = 0.2;
 float bias = 0.025;
 
 void main()

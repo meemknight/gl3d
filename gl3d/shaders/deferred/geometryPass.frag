@@ -61,6 +61,8 @@ mat3x3 NormalToRotation(in vec3 normal)
 	//return ColumnVectorsToMatrix(tangent0, tangent1, normal);
 }
 
+
+
 subroutine vec3 GetNormalMapFunc(vec3);
 
 subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
@@ -162,7 +164,6 @@ subroutine (GetMaterialMapped) vec3 materialRMA()
 }
 
 subroutine uniform GetMaterialMapped u_getMaterialMapped;
-
 
 
 

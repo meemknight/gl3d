@@ -142,8 +142,8 @@ void main()
 		ssaof = 1;
 	}
 
-	float ssao_ambient = pow(ssaof, 6.3);
-	float ssao_finalColor = pow(ssaof, 6);
+	float ssao_ambient = pow(ssaof, 6.4);
+	float ssao_finalColor = pow(ssaof, 5);
 
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
@@ -168,9 +168,9 @@ void main()
 
 	}
 
-	vec3 ambientColor = vec3(0.03);
+	vec3 ambientColor = vec3(0.03); //this value is made up
 	ambientColor.rgb *= ssao_ambient;
-	vec3 ambient = ambientColor * albedo.rgb * material.b; //this value is made up
+	vec3 ambient = ambientColor * albedo.rgb * material.b; 
 	vec3 color   = Lo + ambient; 
 
 	color *= ssao_finalColor;
@@ -179,8 +179,8 @@ void main()
 	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
 	//HDR 
-	//color = color / (color + vec3(1.0));
 	float exposure = 1;
+	//color = color / (color + vec3(1.0));
 	color = vec3(1.0) - exp(-color  * exposure);
 	
 	//gama correction is done in the post process step
