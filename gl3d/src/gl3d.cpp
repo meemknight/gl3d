@@ -1501,6 +1501,7 @@ namespace gl3d
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+		//one for colors the other for things to be bloomed
 		glGenTextures(2, colorBuffers);
 		for (int i = 0; i < 2; i++)
 		{
