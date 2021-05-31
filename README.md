@@ -17,3 +17,9 @@ How to compile the repo (Visual studio 2019, Windows)
   * git submodule update,
   * in the repo directory, unzip dependences,
   * You must have python 3 on your machine for the header only version to be compiled.
+
+---
+
+Features and todos:
+
+- [x] hdr (16 bit color channel) 
