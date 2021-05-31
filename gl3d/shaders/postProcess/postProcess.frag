@@ -16,10 +16,12 @@ void main()
 
 	a_color = bloom + color;
 	//a_color = bloom;
+	
+	//hdr
+	float exposure = 1;
+	color = vec3(1.0) - exp(-color  * exposure);
 
 	//gamma correction
 	a_color = pow(a_color, vec3(1.0/2.2));
 
-	float exposure = 1;
-	color = vec3(1.0) - exp(-color  * exposure);
 }

@@ -178,9 +178,9 @@ void main()
 	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
 	//HDR 
-	float exposure = 1;
+	//float exposure = 1;
 	//color = color / (color + vec3(1.0));
-	color = vec3(1.0) - exp(-color  * exposure);
+	//color = vec3(1.0) - exp(-color  * exposure);
 	
 	
 	//gama correction and hdr is done in the post process step
@@ -188,6 +188,7 @@ void main()
 
 	//color.rgb =  material.bbb;
 
+	//todo uniform for this thresshold or sthing
 	if(lightIntensity > 0.9)
 	{
 		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
@@ -196,7 +197,7 @@ void main()
 	}else
 	{
 		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
-		a_outBloom = vec4(0, 0, 0, 0);
+		//a_outBloom = vec4(0, 0, 0, 0);
 	}
 
 

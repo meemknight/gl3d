@@ -1,10 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-<<<<<<< HEAD
 //built on 2021-05-31
-=======
-//built on 2021-04-26
->>>>>>> 57c3408e0e489156fb453822606ddce69461c818
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -3143,13 +3139,13 @@ namespace gl3d
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 		}
 
 		for(int i=0;i<2;i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[i]);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -3267,7 +3263,7 @@ namespace gl3d
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -3297,7 +3293,7 @@ namespace gl3d
 			glBindFramebuffer(GL_FRAMEBUFFER, blurFbo[i]);
 
 			glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_FLOAT, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
