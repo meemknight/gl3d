@@ -1,4 +1,8 @@
 # gl3d
+- Still in working progress (the proper for the user is not ready)
+
+![](https://github.com/meemknight/photos/blob/master/gl3d1.png)
+
 
 <h3>How to integrate the library in your project:</h3>
 
