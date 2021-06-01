@@ -385,7 +385,8 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
+	//auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
+	auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");

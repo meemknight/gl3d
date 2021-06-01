@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-05-31
+//built on 2021-06-01
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -2454,8 +2454,17 @@ namespace gl3d
 					 (float *)&mesh.Vertices[0],
 					mesh.Indices.size() * 4, &mesh.Indices[0]);
 
-				gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
+
+				if(model.loader.LoadedMeshes[index].materialIndex > -1)
+				{
+					gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
+				}else
+				{
+					//if no material loaded for this object create a new default one
+					gm.material = createMaterial(glm::vec3{ 0.8 }, 0.5, 0);
+				}
 				
+
 				gm.name = model.loader.LoadedMeshes[i].MeshName;
 				char *c = new char[gm.name.size() + 1];
 				strcpy(c, gm.name.c_str());

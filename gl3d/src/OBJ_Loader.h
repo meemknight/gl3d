@@ -486,15 +486,8 @@ namespace objl
 	{
 	public:
 		// Default Constructor
-		Loader()
-		{
-
-		}
-		~Loader()
-		{
-			LoadedMeshes.clear();
-		}
-
+		Loader() = default;
+		
 		// Load a file into the loader
 		//
 		// If file is loaded return true
@@ -1094,7 +1087,10 @@ namespace objl
 
 			// If the file is not found return false
 			if (!file.is_open())
+			{
+				std::cout << "error loading mtl file: " << path << "\n";
 				return false;
+			}
 
 			Material tempMaterial;
 
