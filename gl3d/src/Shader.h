@@ -107,8 +107,10 @@ namespace gl3d
 		{
 			glm::vec4 ambientLight; //last value is not used
 			float bloomTresshold;
+			float ssao_ambient_exponent;
+			float ssao_finalColor_exponent;
 
-		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0), 1.f};
+		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0), 1.f, 6.4, 5};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;

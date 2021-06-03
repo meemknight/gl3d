@@ -2996,6 +2996,10 @@ namespace gl3d
 
 		glUseProgram(ssao.shader.id);
 
+		glBindBuffer(GL_UNIFORM_BUFFER, ssao.ssaoUniformBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(SSAO::SsaoShaderUniformBlockData),
+			&ssao.ssaoShaderUniformBlockData);
+
 		glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
 			&(camera.getProjectionMatrix())[0][0] );
 
@@ -3325,7 +3329,16 @@ namespace gl3d
 		u_texNoise = getUniform(shader.id, "u_texNoise");
 		u_samples = getUniform(shader.id, "samples[0]");
 		
+
+		glGenBuffers(1, &ssaoUniformBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, ssaoUniformBlockBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(SsaoShaderUniformBlockData),
+			&ssaoShaderUniformBlockData, GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 2, ssaoUniformBlockBuffer);
 		
+		u_SSAODATA = glGetUniformBlockIndex(shader.id, "u_SSAODATA");
+		glUniformBlockBinding(shader.id, u_SSAODATA, 2);
+
 		//blur
 		blurShader.loadShaderProgramFromFile("shaders/ssao/blur.vert", "shaders/ssao/blur.frag");
 		

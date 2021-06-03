@@ -25,6 +25,8 @@ layout (std140) uniform u_lightPassData
 {
 	vec4 ambientColor;
 	float bloomTresshold;
+	float ssao_ambient_exponent;
+	float ssao_finalColor_exponent;
 
 }lightPassData;
 
@@ -148,8 +150,8 @@ void main()
 		ssaof = 1;
 	}
 
-	float ssao_ambient = pow(ssaof, 6.4);
-	float ssao_finalColor = pow(ssaof, 5);
+	float ssao_ambient = pow(ssaof, lightPassData.ssao_ambient_exponent);
+	float ssao_finalColor = pow(ssaof, lightPassData.ssao_finalColor_exponent);
 
 
 	vec3 viewDir = normalize(u_eyePosition - pos);

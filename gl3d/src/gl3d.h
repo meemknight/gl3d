@@ -207,12 +207,22 @@ namespace gl3d
 
 			Shader shader;
 			
+			GLuint ssaoUniformBlockBuffer;
+			struct SsaoShaderUniformBlockData
+			{
+				float radius = 0.2;
+				float bias = 0.025;
+				int samplesTestSize = 16; // should be less than kernelSize (64)
+
+			}ssaoShaderUniformBlockData;
+
 			GLint u_projection = -1;
 			GLint u_view = -1;
 			GLint u_gPosition = -1;
 			GLint u_gNormal = -1;
 			GLint u_texNoise = -1;
 			GLint u_samples = -1;
+			GLuint u_SSAODATA;
 
 			std::vector<glm::vec3> ssaoKernel;
 

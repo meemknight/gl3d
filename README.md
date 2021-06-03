@@ -49,7 +49,7 @@ Features and todos:
 - [ ] Only one geometry buffer and a dynamic index buffer
 ---
 - [x] SSAO
-- [ ] SSAO settings
+- [x] SSAO settings
 ---
 - [x] Bloom
 - [x] Bloom settings

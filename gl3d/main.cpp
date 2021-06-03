@@ -403,9 +403,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
 	
 	auto rez = loadProfiler.end();
@@ -638,6 +638,11 @@ int main()
 				ImGui::PushID(__COUNTER__);
 
 				ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
+				ImGui::SliderFloat("SSAO bias", &renderer.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
+				ImGui::SliderFloat("SSAO radius", &renderer.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
+				ImGui::SliderInt("SSAO sample count", &renderer.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
+				ImGui::SliderFloat("SSAO ambient exponent", &renderer.lightShader.lightPassUniformBlockCpuData.ssao_ambient_exponent, 0, 16);
+				ImGui::SliderFloat("SSAO final color exponent", &renderer.lightShader.lightPassUniformBlockCpuData.ssao_finalColor_exponent, 0, 16);
 
 				ImGui::PopID();
 			}

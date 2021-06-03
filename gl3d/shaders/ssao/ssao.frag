@@ -14,13 +14,18 @@ uniform mat4 u_view; // camera view matrix
 
 
 const int kernelSize = 64;
-float radius = 0.2;
-float bias = 0.025;
+
+layout(std140) uniform u_SSAODATA
+{
+	float radius;
+	float bias;
+	int samplesTestSize; // should be less than kernelSize
+
+}ssaoDATA;
 
 void main()
 {
 	vec2 screenSize = textureSize(u_gPosition, 0);
-
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 
 
@@ -37,14 +42,13 @@ void main()
 	float occlusion = 0.0;
 
 
-	const int samplesTestSize = 18;
-	int begin = int((kernelSize - samplesTestSize) * abs(randomVec.x));
+	int begin = int((kernelSize - ssaoDATA.samplesTestSize) * abs(randomVec.x));
 
-	for(int i = begin; i < begin + samplesTestSize; ++i)
+	for(int i = begin; i < begin + ssaoDATA.samplesTestSize; ++i)
 	{
 		vec3 samplePos = TBN * samples[i]; // from tangent to view-space
 		//vec3 samplePos = TBN * normalize(vec3(0.5, 0.3, 0.4)); 
-		samplePos = fragPos + samplePos * radius; 
+		samplePos = fragPos + samplePos * ssaoDATA.radius; 
 		
 		vec4 offset = vec4(samplePos, 1.0);
 		offset = u_projection * offset; // from view to clip-space
@@ -58,8 +62,8 @@ void main()
 			float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
 			
 			// range check & accumulate
-			float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
-			occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+			float rangeCheck = smoothstep(0.0, 1.0, ssaoDATA.radius / abs(fragPos.z - sampleDepth));
+			occlusion += (sampleDepth >= samplePos.z + ssaoDATA.bias ? 1.0 : 0.0) * rangeCheck;
 		}
 
 	}  
