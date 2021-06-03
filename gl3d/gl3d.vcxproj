@@ -207,6 +207,7 @@
   <ItemGroup>
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
+    <None Include="shaders\convolute.frag" />
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\geometryPass.vert" />
     <None Include="shaders\deferred\lightingPass.frag" />
@@ -228,8 +229,8 @@
     <None Include="shaders\ssao\ssao.vert" />
     <None Include="shaders\stencil.frag" />
     <None Include="shaders\stencil.vert" />
-    <None Include="shaders\skyBoxHdr.frag" />
-    <None Include="shaders\skyBoxHdr.vert" />
+    <None Include="shaders\hdrToCubeMap.frag" />
+    <None Include="shaders\hdrToCubeMap.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

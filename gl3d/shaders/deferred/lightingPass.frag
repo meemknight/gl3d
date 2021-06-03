@@ -160,7 +160,7 @@ void main()
 	//vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
 	//vec3 R = reflect(I, normal);	//reflected vector
 	//vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		//this is the reflected color
-	//vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //this color is coming directly to the object
+	vec3 skyBoxDiffuse = texture(u_skybox, normal).rgb; //this color is coming directly to the object
 
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light

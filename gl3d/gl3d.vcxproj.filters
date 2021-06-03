@@ -90,7 +90,8 @@
     <None Include="shaders\postProcess\postProcess.vert" />
     <None Include="shaders\postProcess\gausianBlur.frag" />
     <None Include="shaders\postProcess\gausianBlur.vert" />
-    <None Include="shaders\skyBoxHdr.vert" />
-    <None Include="shaders\skyBoxHdr.frag" />
+    <None Include="shaders\hdrToCubeMap.vert" />
+    <None Include="shaders\hdrToCubeMap.frag" />
+    <None Include="shaders\convolute.frag" />
   </ItemGroup>
 </Project>

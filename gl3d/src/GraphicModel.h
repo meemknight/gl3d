@@ -154,6 +154,7 @@ namespace gl3d
 		void loadTexture(const char *names[6]);
 		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yet
 		void loadHDRtexture(const char *name, int w, int h); 
+		void createConvolutedTexture(int w, int h); //screen w, h
 
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
@@ -174,11 +175,19 @@ namespace gl3d
 			GLuint u_equirectangularMap;
 			GLuint modelViewUniformLocation;
 
+		}hdrtoCubeMap;
 
-		}hdrSkybox;
+		struct
+		{
+			Shader shader;
+			GLuint u_environmentMap;
+			GLuint modelViewUniformLocation;
+
+		}convolute;
 
 
 		GLuint texture;
+		GLuint convolutedTexture;
 
 		
 

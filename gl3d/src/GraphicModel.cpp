@@ -518,9 +518,14 @@ namespace gl3d
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
 
-		hdrSkybox.shader.loadShaderProgramFromFile("shaders/skyBoxHdr.vert", "shaders/skyBoxHdr.frag");
-		hdrSkybox.u_equirectangularMap = getUniform(hdrSkybox.shader.id, "u_equirectangularMap");
-		hdrSkybox.modelViewUniformLocation = getUniform(hdrSkybox.shader.id, "u_viewProjection");
+		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/hdrToCubeMap.frag");
+		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
+		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection");
+
+		convolute.shader.loadShaderProgramFromFile("shaders/hdrtoCubeMap.vert", "shaders/convolute.frag");
+		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap ");
+		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
+
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -705,6 +710,17 @@ namespace gl3d
 
 	}
 
+	static glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	static glm::mat4 captureViews[] =
+	{
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+	   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+	};
+
 	void SkyBox::loadHDRtexture(const char *name, int w, int h)
 	{
 
@@ -753,19 +769,10 @@ namespace gl3d
 
 			//rendering
 			{
-				glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-				glm::mat4 captureViews[] =
-				{
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-				};
+				
 
-				hdrSkybox.shader.bind();
-				glUniform1i(hdrSkybox.u_equirectangularMap, 0);
+				hdrtoCubeMap.shader.bind();
+				glUniform1i(hdrtoCubeMap.u_equirectangularMap, 0);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, hdrTexture);
 
@@ -777,7 +784,7 @@ namespace gl3d
 				for (unsigned int i = 0; i < 6; ++i)
 				{
 					glm::mat4 viewProjMat = captureProjection * captureViews[i];
-					glUniformMatrix4fv(hdrSkybox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+					glUniformMatrix4fv(hdrtoCubeMap.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 										   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, texture, 0);
 					glClear(GL_COLOR_BUFFER_BIT);
@@ -800,6 +807,56 @@ namespace gl3d
 
 		//
 		glDeleteTextures(1, &hdrTexture);
+
+		createConvolutedTexture(w, h);
+
+	}
+
+	void SkyBox::createConvolutedTexture(int w, int h)
+	{
+		glGenTextures(1, &convolutedTexture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, convolutedTexture);
+		for (unsigned int i = 0; i < 6; ++i)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0,
+						 GL_RGB, GL_FLOAT, nullptr);
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		GLuint captureFBO;
+		glGenFramebuffers(1, &captureFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+		convolute.shader.bind();
+		glUniform1i(convolute.u_environmentMap, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+		glViewport(0, 0, 32, 32);
+
+		glBindVertexArray(vertexArray);
+		for (unsigned int i = 0; i < 6; ++i)
+		{
+
+			glm::mat4 viewProjMat = captureProjection * captureViews[i];
+			glUniformMatrix4fv(convolute.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+								   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, convolutedTexture, 0);
+
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+
+		}
+		glBindVertexArray(0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glDeleteFramebuffers(1, &captureFBO);
+
+		//texture = convolutedTexture;
 
 	}
 
