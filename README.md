@@ -50,7 +50,7 @@ Features and todos:
 - [ ] SSAO settings
 ---
 - [x] Bloom
-- [ ] Bloom settings
+- [x] Bloom settings
 ---
 - [ ] Screen space reflections
 ---
