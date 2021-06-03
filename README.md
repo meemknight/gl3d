@@ -26,6 +26,8 @@ How to compile the repo (Visual studio 2019, Windows)
 
 Features and todos:
 
+- [x] Loading .obj files with materials and textures
+---
 - [x] Phisically based rendering
 - [x] Phisically based materials
 - [x] Sky box
