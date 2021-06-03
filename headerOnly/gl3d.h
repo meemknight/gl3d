@@ -11,6 +11,7 @@
 #pragma once
 #include <glm\vec4.hpp>
 #include <glm\vec3.hpp>
+#include <gl\glew.h>
 
 namespace gl3d
 {
@@ -99,7 +100,13 @@ namespace gl3d
 
 	};
 
-
+	void GLAPIENTRY glDebugOutput(GLenum source,
+								GLenum type,
+								unsigned int id,
+								GLenum severity,
+								GLsizei length,
+								const char *message,
+								const void *userParam);
 
 	void assertFunc(const char *expression,
 	const char *file_name,
@@ -261,6 +268,22 @@ namespace gl3d
 			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
 		};
 
+		//todo refactor and move things here
+		struct
+		{
+			//the uniform block stuff
+			GLuint u_lightPassData;
+			GLuint lightPassDataBlockBuffer;
+			//
+
+		}lightPassShaderData;
+
+
+		//to pass to the shader as an uniform block (light pass shader)
+		struct LightPassData
+		{
+			glm::vec4 ambientLight;
+		}lightPassUniformBlockCpuData{glm::vec4(0.1,0.1,0.1,0)};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;

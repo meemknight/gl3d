@@ -1213,7 +1213,7 @@ namespace gl3d
 		glViewport(0, 0, w, h);
 	#pragma endregion
 
-	#pragma region render into the bloom post processing fbo
+	#pragma region render into the post processing fbo
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1257,10 +1257,14 @@ namespace gl3d
 		
 		}
 
-
 		glUniform1i(lightShader.light_u_pointLightCount, pointLights.size());
 
 		glUniform1i(lightShader.u_useSSAO, lightShader.useSSAO);
+
+		//update the uniform block
+		glBindBuffer(GL_UNIFORM_BUFFER, lightShader.lightPassShaderData.lightPassDataBlockBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
+			&lightShader.lightPassUniformBlockCpuData);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 

@@ -275,6 +275,21 @@ namespace gl3d
 		light_u_view = getUniform(lightingPassShader.id, "u_view");
 		u_useSSAO = getUniform(lightingPassShader.id, "u_useSSAO");
 
+	#pragma region uniform buffer
+
+		lightPassShaderData.u_lightPassData = glGetUniformBlockIndex(lightingPassShader.id, "u_lightPassData");
+		glGenBuffers(1, &lightPassShaderData.lightPassDataBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, lightPassShaderData.lightPassDataBlockBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(LightPassData), &lightPassUniformBlockCpuData, GL_DYNAMIC_DRAW);
+		
+		glUniformBlockBinding(lightingPassShader.id, lightPassShaderData.u_lightPassData, 1);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 1, lightPassShaderData.lightPassDataBlockBuffer);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	#pragma endregion
+
+
 		pointLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_pointLights");
 		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);
 		glGenBuffers(1, &pointLightsBlockBuffer);

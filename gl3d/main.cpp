@@ -25,6 +25,7 @@ int h = 640;
 gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
 #define USE_GPU_ENGINE 1
+#define DEBUG_OUTPUT 1
 
 #pragma region gpu
 extern "C"
@@ -55,6 +56,10 @@ int main()
 
 	glfwWindowHint(GLFW_SAMPLES, 1);
 
+#if DEBUG_OUTPUT
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+#endif
+
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -68,6 +73,16 @@ int main()
 	{
 		std::cout << "err initializing glew";
 	}
+
+#pragma region enable debug output
+#if DEBUG_OUTPUT
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(gl3d::glDebugOutput, nullptr);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+#endif
+#pragma endregion
+
 
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark(); 
@@ -575,7 +590,7 @@ int main()
 			ImGui::NewLine();
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
-		
+
 			static bool antiAliasing = 0;
 			ImGui::Checkbox("Anti aliasing", &antiAliasing);
 			if (antiAliasing)
@@ -687,6 +702,8 @@ int main()
 			}
 
 			ImGui::NewLine();
+			ImGui::NewLine();
+			ImGui::ColorEdit3("Global Ambient color", &renderer.lightShader.lightPassUniformBlockCpuData.ambientLight[0]);
 
 		
 			ImGui::End();

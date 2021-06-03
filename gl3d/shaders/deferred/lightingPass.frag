@@ -21,6 +21,12 @@ uniform mat4 u_view;
 
 uniform int u_useSSAO;
 
+layout (std140) uniform u_lightPassData
+{
+	vec4 ambientColor;
+
+}lightPassData;
+
 struct Pointlight
 {
 	vec3 positions; // w component not used
@@ -167,7 +173,9 @@ void main()
 
 	}
 
-	vec3 ambientColor = vec3(0.03); //this value is made up
+	//vec3 ambientColor = vec3(0.03); //this value is made up
+	vec3 ambientColor = lightPassData.ambientColor.rgb;
+	
 	ambientColor.rgb *= ssao_ambient;
 	vec3 ambient = ambientColor * albedo.rgb * material.b; 
 	vec3 color   = Lo + ambient; 
