@@ -7,14 +7,15 @@ in vec2 v_texCoord;
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
 
-
+uniform float u_bloomIntensity;
 
 void main()
 {
 	vec3 color = texture(u_colorTexture, v_texCoord).rgb;
 	vec3 bloom = texture(u_bloomTexture, v_texCoord).rgb;
 
-	a_color = bloom + color;
+
+	a_color = (bloom * u_bloomIntensity) + color;
 	//a_color = bloom;
 	
 	//hdr

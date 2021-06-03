@@ -106,14 +106,19 @@ namespace gl3d
 		struct LightPassData
 		{
 			glm::vec4 ambientLight; //last value is not used
-		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0)};
+			float bloomTresshold;
+
+		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0), 1.f};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;
 
 		bool normalMap = 1; 
 		bool useSSAO = 1;
+		
+		//todo split stuff into separate things
 		bool bloom = 1;
+		int bloomBlurPasses = 4;
 
 		//todo clear
 	};

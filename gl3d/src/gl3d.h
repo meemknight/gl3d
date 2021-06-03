@@ -175,10 +175,13 @@ namespace gl3d
 		{
 			Shader postProcessShader;
 			Shader gausianBLurShader;
-			GLint u_colorTexture;
-			GLint u_bloomTexture;
+			GLint u_colorTexture;	//post process shader
+			GLint u_bloomTexture;	//post process shader
+			GLint u_bloomIntensity;	//post process shader
+
 			GLint u_toBlurcolorInput;
 			GLint u_horizontal;
+
 
 			GLuint fbo;
 			GLuint blurFbo[2];
@@ -186,6 +189,9 @@ namespace gl3d
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
 			void create(int w, int h);
+
+			//for post process shader
+			float bloomIntensty = 1;
 
 		}postProcess;
 

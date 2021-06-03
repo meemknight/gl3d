@@ -24,7 +24,7 @@ int h = 640;
 
 gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -591,6 +591,9 @@ int main()
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
 
+			
+
+
 			static bool antiAliasing = 0;
 			ImGui::Checkbox("Anti aliasing", &antiAliasing);
 			if (antiAliasing)
@@ -629,9 +632,32 @@ int main()
 			ImGui::Checkbox("Normal map", &normalMap);
 			
 			renderer.lightShader.normalMap = normalMap;
-			
-			ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
-			ImGui::Checkbox("Bloom", &renderer.lightShader.bloom);
+	
+			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			{
+				ImGui::PushID(__COUNTER__);
+
+				ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
+
+				ImGui::PopID();
+			}
+			ImGui::NewLine();
+
+	
+			if (ImGui::CollapsingHeader("Bloom", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			{
+				ImGui::PushID(__COUNTER__);
+
+				ImGui::Checkbox("Bloom", &renderer.lightShader.bloom);
+				ImGui::SliderFloat("Bloom tresshold", &renderer.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
+					0, 4);
+				ImGui::SliderFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0, 10);
+				ImGui::SliderInt("Bloom blur passes", &renderer.lightShader.bloomBlurPasses, 1, 16);
+
+				ImGui::PopID();
+			}
+			ImGui::NewLine();
+
 
 			ImGui::Checkbox("Display item border", &borderItem);
 			ImGui::Checkbox("Display normals", &showNormals);

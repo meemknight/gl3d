@@ -24,6 +24,7 @@ uniform int u_useSSAO;
 layout (std140) uniform u_lightPassData
 {
 	vec4 ambientColor;
+	float bloomTresshold;
 
 }lightPassData;
 
@@ -197,7 +198,7 @@ void main()
 	//color.rgb =  material.bbb;
 
 	//todo uniform for this thresshold or sthing
-	if(lightIntensity > 0.9)
+	if(lightIntensity > lightPassData.bloomTresshold)
 	{
 		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
 		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	

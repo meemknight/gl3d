@@ -1261,7 +1261,7 @@ namespace gl3d
 
 		glUniform1i(lightShader.u_useSSAO, lightShader.useSSAO);
 
-		//update the uniform block
+		//update the uniform block with data for the light shader
 		glBindBuffer(GL_UNIFORM_BUFFER, lightShader.lightPassShaderData.lightPassDataBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
 			&lightShader.lightPassUniformBlockCpuData);
@@ -1274,13 +1274,13 @@ namespace gl3d
 		
 		if(lightShader.bloom)
 		{
-			int blurs = 16;
+			
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
 			glActiveTexture(GL_TEXTURE0);
 			glUniform1i(postProcess.u_toBlurcolorInput, 0);
 			glViewport(0, 0, w/2, h/2);
-			for (int i = 0; i < blurs; i++)
+			for (int i = 0; i < lightShader.bloomBlurPasses*2; i++)
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
 				glClear(GL_COLOR_BUFFER_BIT);
@@ -1327,6 +1327,10 @@ namespace gl3d
 
 		}
 
+		//bloom settings
+		glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
+
+		
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -1541,6 +1545,7 @@ namespace gl3d
 		postProcessShader.loadShaderProgramFromFile("shaders/postProcess/postProcess.vert", "shaders/postProcess/postProcess.frag");
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture");
+		u_bloomIntensity = getUniform(postProcessShader.id, "u_bloomIntensity");
 
 		gausianBLurShader.loadShaderProgramFromFile("shaders/postProcess/gausianBlur.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
