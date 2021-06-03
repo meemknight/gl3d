@@ -66,6 +66,8 @@ namespace gl3d
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
+		GLint light_u_skyboxIradiance = -1;
+		
 		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -110,7 +112,7 @@ namespace gl3d
 			float ssao_ambient_exponent;
 			float ssao_finalColor_exponent;
 
-		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0), 1.f, 6.4, 5};
+		}lightPassUniformBlockCpuData{glm::vec4(1,1,1,0), 1.f, 6.4, 5};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;

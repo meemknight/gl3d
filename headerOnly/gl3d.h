@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-06-03
+//built on 2021-06-04
 ////////////////////////////////////////////////
 
 
@@ -243,6 +243,8 @@ namespace gl3d
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
+		GLint light_u_skyboxIradiance = -1;
+		
 		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -287,7 +289,7 @@ namespace gl3d
 			float ssao_ambient_exponent;
 			float ssao_finalColor_exponent;
 
-		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0), 1.f, 6.4, 5};
+		}lightPassUniformBlockCpuData{glm::vec4(1,1,1,0), 1.f, 6.4, 5};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;
@@ -518,8 +520,8 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 
 		void createGpuData();
-		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yet
+		void loadTexture(const char *names[6], int w, int h);
+		void loadTexture(const char *name, int w, int h, int format = 0); //todo add enum, also it is not working yet
 		void loadHDRtexture(const char *name, int w, int h); 
 		void createConvolutedTexture(int w, int h); //screen w, h
 

@@ -155,8 +155,8 @@ int main()
 			"resources/skyBoxes/ocean/front.jpg",
 			"resources/skyBoxes/ocean/back.jpg" };
 
-		//renderer.skyBox.loadTexture(names);
-		renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
+		renderer.skyBox.loadTexture(names, w, h);
+		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
 		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/bell_park_dawn_1k.hdr", w, h);
 		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
 		

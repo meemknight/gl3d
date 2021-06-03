@@ -542,15 +542,16 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void SkyBox::loadTexture(const char *names[6])
+	void SkyBox::loadTexture(const char *names[6], int w, int h)
 	{
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
-		int w, h, nrChannels;
-		unsigned char *data;
 		for (unsigned int i = 0; i <6; i++)
 		{
+			int w, h, nrChannels;
+			unsigned char *data;
+
 			stbi_set_flip_vertically_on_load(false);
 			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
 
@@ -586,12 +587,12 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-
+		createConvolutedTexture(w, h);
 
 	}
 
 	//todo add srgb
-	void SkyBox::loadTexture(const char *name, int format)
+	void SkyBox::loadTexture(const char *name, int w, int h, int format)
 	{
 		
 
@@ -706,7 +707,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-
+		createConvolutedTexture(w, h);
 
 	}
 
@@ -856,7 +857,7 @@ namespace gl3d
 
 		glDeleteFramebuffers(1, &captureFBO);
 
-		//texture = convolutedTexture;
+		//texture = convolutedTexture; //visualize convolutex texture
 
 	}
 

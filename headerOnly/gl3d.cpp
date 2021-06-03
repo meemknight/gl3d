@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-06-03
+//built on 2021-06-04
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -696,7 +696,10 @@ namespace gl3d
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_ssao = getUniform(lightingPassShader.id, "u_ssao");
 		light_u_view = getUniform(lightingPassShader.id, "u_view");
+		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		u_useSSAO = getUniform(lightingPassShader.id, "u_useSSAO");
+
+		
 
 	#pragma region uniform buffer
 
@@ -1483,15 +1486,16 @@ namespace gl3d
 	}
 
 	//todo add srgb
-	void SkyBox::loadTexture(const char *names[6])
+	void SkyBox::loadTexture(const char *names[6], int w, int h)
 	{
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
-		int w, h, nrChannels;
-		unsigned char *data;
 		for (unsigned int i = 0; i <6; i++)
 		{
+			int w, h, nrChannels;
+			unsigned char *data;
+
 			stbi_set_flip_vertically_on_load(false);
 			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
 
@@ -1527,12 +1531,12 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-
+		createConvolutedTexture(w, h);
 
 	}
 
 	//todo add srgb
-	void SkyBox::loadTexture(const char *name, int format)
+	void SkyBox::loadTexture(const char *name, int w, int h, int format)
 	{
 		
 
@@ -1647,7 +1651,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-
+		createConvolutedTexture(w, h);
 
 	}
 
@@ -1797,7 +1801,7 @@ namespace gl3d
 
 		glDeleteFramebuffers(1, &captureFBO);
 
-		texture = convolutedTexture;
+		//texture = convolutedTexture; //visualize convolutex texture
 
 	}
 
@@ -2864,8 +2868,6 @@ namespace gl3d
 			}
 
 
-			//glActiveTexture(GL_TEXTURE2);
-			//glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
 
 	
 			if (normalLoaded && lightShader.normalMap)
@@ -3232,6 +3234,15 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
 		//glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+
+		glUniform1i(lightShader.light_u_skybox, 5);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+
+		glUniform1i(lightShader.light_u_skyboxIradiance, 6);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
+
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);

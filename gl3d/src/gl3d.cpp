@@ -876,8 +876,6 @@ namespace gl3d
 			}
 
 
-			//glActiveTexture(GL_TEXTURE2);
-			//glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture); //note(vlod): this can be bound onlt once (refactor)
 
 	
 			if (normalLoaded && lightShader.normalMap)
@@ -1244,6 +1242,15 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
 		//glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+
+		glUniform1i(lightShader.light_u_skybox, 5);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+
+		glUniform1i(lightShader.light_u_skyboxIradiance, 6);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
+
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);

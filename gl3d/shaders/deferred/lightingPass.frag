@@ -12,6 +12,7 @@ in vec2 v_texCoord;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform samplerCube u_skybox;
+uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_ssao;
@@ -94,6 +95,10 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
 	return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
+}   
 
 vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
 	in vec3 viewDir, in vec3 color, in vec3 normal)
@@ -156,11 +161,10 @@ void main()
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
-	//note skybox is not binded
-	//vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
-	//vec3 R = reflect(I, normal);	//reflected vector
-	//vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		//this is the reflected color
-	vec3 skyBoxDiffuse = texture(u_skybox, normal).rgb; //this color is coming directly to the object
+	vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
+	vec3 R = reflect(I, normal);	//reflected vector
+	vec3 skyBoxSpecular = texture(u_skybox, R).rgb;		//this is the reflected color
+	vec3 skyBoxDiffuse = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly to the object
 
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
@@ -176,15 +180,28 @@ void main()
 
 	}
 
-	//vec3 ambientColor = vec3(0.03); //this value is made up
-	vec3 ambientColor = lightPassData.ambientColor.rgb;
+
+	vec3 ambient;
+	//compute ambient
+	{
+	//ambient = ambientColor * albedo.rgb * material.b;
 	
-	ambientColor.rgb *= ssao_ambient;
-	vec3 ambient = ambientColor * albedo.rgb * material.b; 
+	vec3 F0 = vec3(0.04); 
+	F0 = mix(F0, albedo.rgb, vec3(material.g)); //rma so g is metallic
+	
+	//vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
+	vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
+	vec3 kD = 1.0 - kS;
+	kD *= 1.0 - material.g;
+	vec3 diffuse    = skyBoxDiffuse * albedo.rgb;
+	ambient    = (kD * diffuse) * material.b * ssao_ambient * lightPassData.ambientColor.rgb; 
+	}
+
 	vec3 color   = Lo + ambient; 
 
 	color *= ssao_finalColor;
-
+	
+	//color = skyBoxDiffuse;
 
 	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
@@ -196,7 +213,7 @@ void main()
 	
 	//gama correction and hdr is done in the post process step
 
-
+	//color.rgb = skyBoxDiffuse.rgb;
 	//color.rgb =  material.bbb;
 
 	//todo uniform for this thresshold or sthing
