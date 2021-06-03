@@ -282,8 +282,8 @@ namespace gl3d
 		//to pass to the shader as an uniform block (light pass shader)
 		struct LightPassData
 		{
-			glm::vec4 ambientLight;
-		}lightPassUniformBlockCpuData{glm::vec4(0.1,0.1,0.1,0)};
+			glm::vec4 ambientLight; //last value is not used
+		}lightPassUniformBlockCpuData{glm::vec4(0.05,0.05,0.05,0)};
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;

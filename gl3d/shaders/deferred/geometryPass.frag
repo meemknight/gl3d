@@ -1,7 +1,7 @@
 #version 430
 #pragma debug(on)
 
-#extension GL_NV_shadow_samplers_cube : enable
+//#extension GL_NV_shadow_samplers_cube : enable
 
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;

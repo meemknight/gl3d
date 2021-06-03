@@ -1,7 +1,7 @@
 #version 430
 #pragma debug(on)
 
-#extension GL_NV_shadow_samplers_cube : enable
+//#extension GL_NV_shadow_samplers_cube : enable
 
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
@@ -204,8 +204,8 @@ void main()
 
 	}else
 	{
+		a_outBloom = vec4(0, 0, 0, 0); //note (vlod) keep this here
 		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
-		//a_outBloom = vec4(0, 0, 0, 0);
 	}
 
 

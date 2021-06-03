@@ -1,7 +1,7 @@
 #version 330
 #pragma debug(on)
 
-#extension GL_NV_shadow_samplers_cube : enable
+//#extension GL_NV_shadow_samplers_cube : enable
 
 out vec4 a_outColor;
 
@@ -24,7 +24,7 @@ vec3 toLinear(in vec3 v)
 void main()
 {    
 
-	a_outColor = textureCube(u_skybox, v_texCoords);
+	a_outColor = texture(u_skybox, v_texCoords);
 
 
 	//a_outColor.rgb = toGama(a_outColor.rgb);

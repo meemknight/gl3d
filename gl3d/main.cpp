@@ -24,7 +24,7 @@ int h = 640;
 
 gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -403,9 +403,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
 	auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
 	
 	auto rez = loadProfiler.end();
