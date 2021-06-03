@@ -1315,7 +1315,12 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[1]); 
 		}else
 		{
-			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			//if the bloom is not enabeled just pass the colorBuffer[1]
+			//i.e. the values that passed the bloom tresshold
+			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			//todo test on other drivers not bind a texture at all
+			glBindTexture(GL_TEXTURE_2D, 0);
+
 		}
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
