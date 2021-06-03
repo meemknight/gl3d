@@ -152,18 +152,35 @@ namespace gl3d
 
 		void createGpuData();
 		void loadTexture(const char *names[6]);
-		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yer
+		void loadTexture(const char *name, int format = 0); //todo add enum, also it is not working yet
+		void loadHDRtexture(const char *name, int w, int h); 
+
 		void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat, float gama);
+		void draw(const glm::mat4 &viewProjMat);
 
 		void bindCubeMap();
 
-		Shader shader;
+		struct
+		{
+			Shader shader;
+			GLuint samplerUniformLocation;
+			GLuint modelViewUniformLocation;
+
+		}normalSkyBox;
+
+		struct
+		{
+			Shader shader;
+			GLuint u_equirectangularMap;
+			GLuint modelViewUniformLocation;
+
+
+		}hdrSkybox;
+
+
 		GLuint texture;
 
-		GLuint samplerUniformLocation;
-		GLuint modelViewUniformLocation;
-		GLuint gamaUniformLocation;
+		
 
 	};
 

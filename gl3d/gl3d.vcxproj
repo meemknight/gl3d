@@ -228,6 +228,8 @@
     <None Include="shaders\ssao\ssao.vert" />
     <None Include="shaders\stencil.frag" />
     <None Include="shaders\stencil.vert" />
+    <None Include="shaders\skyBoxHdr.frag" />
+    <None Include="shaders\skyBoxHdr.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

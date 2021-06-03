@@ -155,7 +155,9 @@ int main()
 			"resources/skyBoxes/ocean/front.jpg",
 			"resources/skyBoxes/ocean/back.jpg" };
 
-		renderer.skyBox.loadTexture(names);
+		//renderer.skyBox.loadTexture(names);
+		renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
+		
 		//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
 		//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
 	
@@ -1046,7 +1048,7 @@ int main()
 		}
 	#pragma endregion
 
-
+		//todo move into render
 		{
 
 			auto projMat = renderer.camera.getProjectionMatrix();
@@ -1055,7 +1057,7 @@ int main()
 
 			auto viewProjMat = projMat * viewMat;
 
-			renderer.skyBox.draw(viewProjMat, gamaCorection);
+			renderer.skyBox.draw(viewProjMat);
 
 		}
 

@@ -514,12 +514,13 @@ namespace gl3d
 
 	void SkyBox::createGpuData()
 	{
-		shader.loadShaderProgramFromFile("shaders/skyBox.vert", "shaders/skyBox.frag");
+		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox.vert", "shaders/skyBox.frag");
+		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
+		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
 
-		samplerUniformLocation = getUniform(shader.id, "u_skybox");
-		modelViewUniformLocation = getUniform(shader.id, "u_viewProjection");
-		gamaUniformLocation = getUniform(shader.id, "u_gama");
-
+		hdrSkybox.shader.loadShaderProgramFromFile("shaders/skyBoxHdr.vert", "shaders/skyBoxHdr.frag");
+		hdrSkybox.u_equirectangularMap = getUniform(hdrSkybox.shader.id, "u_equirectangularMap");
+		hdrSkybox.modelViewUniformLocation = getUniform(hdrSkybox.shader.id, "u_viewProjection");
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -587,8 +588,7 @@ namespace gl3d
 	//todo add srgb
 	void SkyBox::loadTexture(const char *name, int format)
 	{
-		glGenTextures(1, &texture);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+		
 
 		int width, height, nrChannels;
 		unsigned char *data;
@@ -596,6 +596,11 @@ namespace gl3d
 
 		stbi_set_flip_vertically_on_load(false);
 		data = stbi_load(name, &width, &height, &nrChannels, 3);
+
+		if (!data) { return; }
+
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
 		//right
 		//left
@@ -700,21 +705,119 @@ namespace gl3d
 
 	}
 
+	void SkyBox::loadHDRtexture(const char *name, int w, int h)
+	{
+
+		int width, height, nrChannels;
+		float *data;
+	
+		stbi_set_flip_vertically_on_load(true);
+		data = stbi_loadf(name, &width, &height, &nrChannels, 0);
+		if (!data) { return; }
+		
+		GLuint hdrTexture;
+
+		glGenTextures(1, &hdrTexture);
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+
+		//render into the cubemap
+		//https://learnopengl.com/PBR/IBL/Diffuse-irradiance
+		{
+			GLuint captureFBO;
+			glGenFramebuffers(1, &captureFBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+			
+
+			glGenTextures(1, &texture);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+			for (unsigned int i = 0; i < 6; ++i)
+			{
+				// note that we store each face with 16 bit floating point values
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+							 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+			}
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			//rendering
+			{
+				glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+				glm::mat4 captureViews[] =
+				{
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+				};
+
+				hdrSkybox.shader.bind();
+				glUniform1i(hdrSkybox.u_equirectangularMap, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, hdrTexture);
+
+				glViewport(0, 0, 512, 512); 
+
+				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+				glBindVertexArray(vertexArray);
+				
+				for (unsigned int i = 0; i < 6; ++i)
+				{
+					glm::mat4 viewProjMat = captureProjection * captureViews[i];
+					glUniformMatrix4fv(hdrSkybox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+										   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, texture, 0);
+					glClear(GL_COLOR_BUFFER_BIT);
+
+					glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+				}
+
+				glBindVertexArray(0);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+				glViewport(0, 0, w, h);
+
+			}
+
+			glDeleteFramebuffers(1, &captureFBO);
+
+		}
+
+
+		//
+		glDeleteTextures(1, &hdrTexture);
+
+	}
+
 	void SkyBox::clearGpuData()
 	{
 	}
 
-	void SkyBox::draw(const glm::mat4 &viewProjMat, float gama)
+	void SkyBox::draw(const glm::mat4 &viewProjMat)
 	{
 		glBindVertexArray(vertexArray);
 
-		bindCubeMap();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
-		shader.bind();
+		normalSkyBox.shader.bind();
 
-		glUniformMatrix4fv(modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniform1i(samplerUniformLocation, 0);
-		glUniform1f(gamaUniformLocation, gama);
+		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
 
 		glDepthFunc(GL_LEQUAL);
 		glDrawArrays(GL_TRIANGLES, 0, 6*6);
@@ -723,6 +826,9 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
+	
+
+	//todo remove
 	void SkyBox::bindCubeMap()
 	{
 		glActiveTexture(GL_TEXTURE0);
