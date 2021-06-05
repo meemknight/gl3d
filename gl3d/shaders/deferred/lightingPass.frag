@@ -11,11 +11,12 @@ in vec2 v_texCoord;
 
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
-uniform samplerCube u_skybox;
+uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_ssao;
+uniform sampler2D u_brdfTexture;
 
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
@@ -163,11 +164,15 @@ void main()
 
 	vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
 	vec3 R = reflect(I, normal);	//reflected vector
-	vec3 skyBoxSpecular = texture(u_skybox, R).rgb;		//this is the reflected color
+	//vec3 skyBoxSpecular = texture(u_skybox, R).rgb;		//this is the reflected color
 	vec3 skyBoxDiffuse = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly to the object
 
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
+
+	float roughness = material.r;
+	float metallic = material.g;
+	float ambientOcclution = material.b;
 
 	//foreach point light
 	for(int i=0; i<u_pointLightCount;i++)
@@ -175,7 +180,7 @@ void main()
 		vec3 lightPosition = light[i].positions.xyz;
 		vec3 lightColor = light[i].color.rgb;
 
-		Lo += computePointLightSource(lightPosition, material.g, material.r, lightColor, 
+		Lo += computePointLightSource(lightPosition, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal);
 
 	}
@@ -184,17 +189,36 @@ void main()
 	vec3 ambient;
 	//compute ambient
 	{
-	//ambient = ambientColor * albedo.rgb * material.b;
+		vec3 F0 = vec3(0.04); 
+		F0 = mix(F0, albedo.rgb, vec3(metallic));
+		vec3 N = normal;
+		vec3 V = viewDir;
+
+		vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+		
+		vec3 kS = F;
+		vec3 kD = 1.0 - kS;
+		kD *= 1.0 - metallic;	  
+		
+		vec3 irradiance = skyBoxDiffuse;
+		vec3 diffuse      = irradiance * albedo;
+		
+		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+		const float MAX_REFLECTION_LOD = 5.0;
+		vec3 prefilteredColor = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+		vec2 brdf  = texture(u_brdfTexture, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+		ambient = (kD * diffuse + specular) * ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
+
+
 	
-	vec3 F0 = vec3(0.04); 
-	F0 = mix(F0, albedo.rgb, vec3(material.g)); //rma so g is metallic
-	
+	////vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
 	//vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
-	vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
-	vec3 kD = 1.0 - kS;
-	kD *= 1.0 - material.g;
-	vec3 diffuse    = skyBoxDiffuse * albedo.rgb;
-	ambient    = (kD * diffuse) * material.b * ssao_ambient * lightPassData.ambientColor.rgb; 
+	//vec3 kD = 1.0 - kS;
+	//kD *= 1.0 - metallic;
+	//vec3 diffuse    = skyBoxDiffuse * albedo.rgb;
+	//ambient    = (kD * diffuse) * ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb; 
 	}
 
 	vec3 color   = Lo + ambient; 

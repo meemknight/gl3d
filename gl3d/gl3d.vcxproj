@@ -223,6 +223,7 @@
     <None Include="shaders\showNormals.vert" />
     <None Include="shaders\skyBox.frag" />
     <None Include="shaders\skyBox.vert" />
+    <None Include="shaders\skyBox\preFilterSpecular.frag" />
     <None Include="shaders\ssao\blur.frag" />
     <None Include="shaders\ssao\blur.vert" />
     <None Include="shaders\ssao\ssao.frag" />

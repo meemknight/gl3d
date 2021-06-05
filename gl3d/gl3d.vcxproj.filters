@@ -93,5 +93,6 @@
     <None Include="shaders\hdrToCubeMap.vert" />
     <None Include="shaders\hdrToCubeMap.frag" />
     <None Include="shaders\convolute.frag" />
+    <None Include="shaders\skyBox\preFilterSpecular.frag" />
   </ItemGroup>
 </Project>

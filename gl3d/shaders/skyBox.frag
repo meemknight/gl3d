@@ -13,6 +13,6 @@ uniform samplerCube u_skybox;
 void main()
 {    
 
-	a_outColor = texture(u_skybox, v_texCoords);
+	a_outColor = textureLod(u_skybox, v_texCoords, 2);
 
 }

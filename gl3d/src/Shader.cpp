@@ -237,6 +237,15 @@ namespace gl3d
 
 	void LightShader::create()
 	{
+	#pragma region brdf texture
+		brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", TextureLoadQuality::leastPossible);
+		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	#pragma endregion
+
 		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
 		geometryPassShader.bind();
 
@@ -266,7 +275,7 @@ namespace gl3d
 
 		light_u_albedo = getUniform(lightingPassShader.id, "u_albedo");
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals");
-		light_u_skybox = getUniform(lightingPassShader.id, "u_skybox");
+		light_u_skyboxFiltered = getUniform(lightingPassShader.id, "u_skyboxFiltered");
 		light_u_positions = getUniform(lightingPassShader.id, "u_positions");
 		light_u_materials = getUniform(lightingPassShader.id, "u_materials");
 		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition");
@@ -275,7 +284,7 @@ namespace gl3d
 		light_u_view = getUniform(lightingPassShader.id, "u_view");
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		u_useSSAO = getUniform(lightingPassShader.id, "u_useSSAO");
-
+		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
 		
 
 	#pragma region uniform buffer

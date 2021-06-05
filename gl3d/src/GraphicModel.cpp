@@ -522,9 +522,14 @@ namespace gl3d
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
 		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection");
 
-		convolute.shader.loadShaderProgramFromFile("shaders/hdrtoCubeMap.vert", "shaders/convolute.frag");
-		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap ");
+		convolute.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/convolute.frag");
+		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap");
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
+
+		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
+		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection");
+		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
+		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");
 
 
 		glGenVertexArrays(1, &vertexArray);
@@ -581,14 +586,16 @@ namespace gl3d
 			
 		}
 
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 		createConvolutedTexture(w, h);
-
+		createPreFilteredMap(w, h);
 	}
 
 	//todo add srgb
@@ -698,16 +705,19 @@ namespace gl3d
 			std::cout << "err loading " << name << "\n";
 		}
 
-		//glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);	//todo disable this after generated
+		//the specular prefilter map
+		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+		//todo generate mipmaps
 		createConvolutedTexture(w, h);
+		createPreFilteredMap(w, h);
 
 	}
 
@@ -861,6 +871,69 @@ namespace gl3d
 
 	}
 
+	void SkyBox::createPreFilteredMap(int w, int h)
+	{
+
+		constexpr int maxMipMap = 5;
+
+		glGenTextures(1, &preFilteredMap);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, preFilteredMap);
+		for (unsigned int i = 0; i < 6; ++i)
+		{
+			//todo mabe be able to tweak rezolution
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+		}
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, maxMipMap);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+		preFilterSpecular.shader.bind();
+		glUniform1i(preFilterSpecular.u_environmentMap, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+		GLuint captureFBO;
+		glGenFramebuffers(1, &captureFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+		glBindVertexArray(vertexArray);
+
+		for (int mip = 0; mip < maxMipMap; mip++)
+		{
+			unsigned int mipWidth = 128 * std::pow(0.5, mip);
+			unsigned int mipHeight = 128 * std::pow(0.5, mip);
+			glViewport(0, 0, mipWidth, mipHeight);
+
+			float roughness = (float)mip / (float)(maxMipMap - 1);
+			roughness *= roughness;
+			glUniform1f(preFilterSpecular.u_roughness, roughness);
+
+			for (int i = 0; i < 6; i++)
+			{
+				glm::mat4 viewProjMat = captureProjection * captureViews[i];
+				glUniformMatrix4fv(preFilterSpecular.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+									   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, preFilteredMap, mip);
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+			}
+		}
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, w, h);
+		glBindVertexArray(0);
+		glDeleteFramebuffers(1, &captureFBO);
+	
+		//texture = preFilteredMap;
+	}
+
 	void SkyBox::clearGpuData()
 	{
 	}
@@ -884,14 +957,6 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
-	
-
-	//todo remove
-	void SkyBox::bindCubeMap()
-	{
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-	}
 
 	void MultipleGraphicModels::loadFromModel(const LoadedModelData &model)
 	{

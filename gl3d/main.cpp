@@ -107,6 +107,8 @@ int main()
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 
 #pragma endregion
 
@@ -405,13 +407,15 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	//auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
-	auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
+	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
+	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
 	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
+	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
+	//auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-06-04
+//built on 2021-06-05
 ////////////////////////////////////////////////
 
 
@@ -180,6 +180,7 @@ namespace gl3d
 #include <glm\mat4x4.hpp>
 #include <Core.h>
 #include <vector>
+#include "Texture.h"
 
 namespace gl3d
 {
@@ -236,7 +237,7 @@ namespace gl3d
 
 		GLint light_u_albedo = -1;
 		GLint light_u_normals = -1;
-		GLint light_u_skybox = -1;
+		GLint light_u_skyboxFiltered = -1;
 		GLint light_u_positions = -1;
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
@@ -244,7 +245,9 @@ namespace gl3d
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
+		GLint light_u_brdfTexture = -1;
 		
+
 		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -300,6 +303,8 @@ namespace gl3d
 		//todo split stuff into separate things
 		bool bloom = 1;
 		int bloomBlurPasses = 4;
+
+		GpuTexture brdfTexture;
 
 		//todo clear
 	};
@@ -524,11 +529,11 @@ namespace gl3d
 		void loadTexture(const char *name, int w, int h, int format = 0); //todo add enum, also it is not working yet
 		void loadHDRtexture(const char *name, int w, int h); 
 		void createConvolutedTexture(int w, int h); //screen w, h
+		void createPreFilteredMap(int w, int h); //screen w, h
 
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
 
-		void bindCubeMap();
 
 		struct
 		{
@@ -554,10 +559,19 @@ namespace gl3d
 
 		}convolute;
 
+		struct
+		{
+			Shader shader;
+			GLuint u_environmentMap;
+			GLuint u_roughness;
+			GLuint modelViewUniformLocation;
 
-		GLuint texture;
-		GLuint convolutedTexture;
+		}preFilterSpecular;
 
+
+		GLuint texture;				//environment cubemap
+		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
 		
 
 	};

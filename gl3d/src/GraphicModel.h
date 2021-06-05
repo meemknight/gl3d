@@ -155,11 +155,11 @@ namespace gl3d
 		void loadTexture(const char *name, int w, int h, int format = 0); //todo add enum, also it is not working yet
 		void loadHDRtexture(const char *name, int w, int h); 
 		void createConvolutedTexture(int w, int h); //screen w, h
+		void createPreFilteredMap(int w, int h); //screen w, h
 
 		void clearGpuData();
 		void draw(const glm::mat4 &viewProjMat);
 
-		void bindCubeMap();
 
 		struct
 		{
@@ -185,10 +185,19 @@ namespace gl3d
 
 		}convolute;
 
+		struct
+		{
+			Shader shader;
+			GLuint u_environmentMap;
+			GLuint u_roughness;
+			GLuint modelViewUniformLocation;
 
-		GLuint texture;
-		GLuint convolutedTexture;
+		}preFilterSpecular;
 
+
+		GLuint texture;				//environment cubemap
+		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
 		
 
 	};

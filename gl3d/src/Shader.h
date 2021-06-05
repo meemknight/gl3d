@@ -3,6 +3,7 @@
 #include <glm\mat4x4.hpp>
 #include <Core.h>
 #include <vector>
+#include "Texture.h"
 
 namespace gl3d
 {
@@ -59,7 +60,7 @@ namespace gl3d
 
 		GLint light_u_albedo = -1;
 		GLint light_u_normals = -1;
-		GLint light_u_skybox = -1;
+		GLint light_u_skyboxFiltered = -1;
 		GLint light_u_positions = -1;
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
@@ -67,7 +68,9 @@ namespace gl3d
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
+		GLint light_u_brdfTexture = -1;
 		
+
 		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -123,6 +126,8 @@ namespace gl3d
 		//todo split stuff into separate things
 		bool bloom = 1;
 		int bloomBlurPasses = 4;
+
+		GpuTexture brdfTexture;
 
 		//todo clear
 	};
