@@ -31,8 +31,9 @@ Features and todos:
 - [x] Phisically based rendering
 - [x] Phisically based materials
 - [x] Sky box
-- [ ] Image based lighting
+- [x] Image based lighting
 - [x] Normal mapping (TBN calculated per vertex)
+- [ ] Reflection probes
 ---
 - [x] Deferred rendering
 - [ ] Optimize lights 

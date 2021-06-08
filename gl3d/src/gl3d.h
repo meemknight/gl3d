@@ -94,7 +94,7 @@ namespace gl3d
 		std::vector<int> loadedTexturesIndexes;
 		std::vector<std::string> loadedTexturesNames;
 
-		GpuTexture defaultTexture;
+		GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
 		Texture loadTexture(std::string path, bool defaultToDefaultTexture = true);
 		GLuint getTextureOpenglId(Texture t);
@@ -105,6 +105,15 @@ namespace gl3d
 
 		//internal
 		Texture createIntenralTexture(GpuTexture t);
+
+	#pragma endregion
+
+	#pragma region skyBox
+
+		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
+		SkyBox loadSkyBox(const char *names[6]);
+		SkyBox loadSkyBox(const char *name, int format = 0);
+		SkyBox loadHDRSkyBox(const char *name);
 
 	#pragma endregion
 
@@ -138,6 +147,12 @@ namespace gl3d
 
 		void renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
+
+
+		struct
+		{
+			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+		}internal;
 
 		//internal //todo add internal namespace
 		int getMaterialIndex(Material m);
@@ -234,9 +249,10 @@ namespace gl3d
 		}ssao;
 
 
-
 		void render();
 		void updateWindowMetrics(int x, int y);
+
+
 
 		int w; int h;
 

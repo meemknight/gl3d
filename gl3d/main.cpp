@@ -132,10 +132,9 @@ int main()
 	showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
 
-	GLint normalsModelTransformLocation = glGetUniformLocation(showNormalsShader.id, "u_modelTransform");
-	GLint normalsProjectionLocation = glGetUniformLocation(showNormalsShader.id, "u_projection");
 	
 #pragma endregion
+
 
 #pragma region texture
 
@@ -148,25 +147,29 @@ int main()
 
 #pragma endregion
 
-	{
-		const char *names[6] = 
-		{	"resources/skyBoxes/ocean/right.jpg",
-			"resources/skyBoxes/ocean/left.jpg",
-			"resources/skyBoxes/ocean/top.jpg",
-			"resources/skyBoxes/ocean/bottom.jpg",
-			"resources/skyBoxes/ocean/front.jpg",
-			"resources/skyBoxes/ocean/back.jpg" };
-
-		renderer.skyBox.loadTexture(names, w, h);
-		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
-		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/bell_park_dawn_1k.hdr", w, h);
-		//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
-		
-
-		//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
-		//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
 	
-	}
+	const char *names[6] = 
+	{	"resources/skyBoxes/ocean/right.jpg",
+		"resources/skyBoxes/ocean/left.jpg",
+		"resources/skyBoxes/ocean/top.jpg",
+		"resources/skyBoxes/ocean/bottom.jpg",
+		"resources/skyBoxes/ocean/front.jpg",
+		"resources/skyBoxes/ocean/back.jpg" };
+
+	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox.loadTexture(names, w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Newport_Loft_Ref.hdr", w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/bell_park_dawn_1k.hdr", w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/canary_wharf_2k.hdr", w, h);
+	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/chinese_garden_2k.hdr", w, h);
+
+	
+
+	//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
+	//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
+	
 
 	
 	//VertexArrayContext va;
@@ -407,15 +410,16 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj", 1);
-	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj", 1);
-	auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
+	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj");
+	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
+	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
+	auto rockModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
-	auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto sphereModel = renderer.loadObject("resources/obj/sphere3.obj");
+	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
+	auto levelModel = renderer.loadObject("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
-	//auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
+	auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
 
@@ -1055,18 +1059,9 @@ int main()
 		}
 	#pragma endregion
 
-		//todo move into render
-		{
 
-			auto projMat = renderer.camera.getProjectionMatrix();
-			auto viewMat = renderer.camera.getWorldToViewMatrix();
-			viewMat = glm::mat4(glm::mat3(viewMat));
+		renderer.renderSkyBox();
 
-			auto viewProjMat = projMat * viewMat;
-
-			renderer.skyBox.draw(viewProjMat);
-
-		}
 
 	#pragma region render and events
 

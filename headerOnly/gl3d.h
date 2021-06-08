@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-06-05
+//built on 2021-06-08
 ////////////////////////////////////////////////
 
 
@@ -519,21 +519,22 @@ namespace gl3d
 		GpuTexture t;
 	};
 
+#pragma region skyBox
+
 	struct SkyBox
+	{
+		GLuint texture;				//environment cubemap
+		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+	};
+
+	struct SkyBoxLoaderAndDrawer
 	{
 		GLuint vertexArray = 0;
 		GLuint vertexBuffer = 0;
+		GLuint captureFBO;
 
 		void createGpuData();
-		void loadTexture(const char *names[6], int w, int h);
-		void loadTexture(const char *name, int w, int h, int format = 0); //todo add enum, also it is not working yet
-		void loadHDRtexture(const char *name, int w, int h); 
-		void createConvolutedTexture(int w, int h); //screen w, h
-		void createPreFilteredMap(int w, int h); //screen w, h
-
-		void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat);
-
 
 		struct
 		{
@@ -568,11 +569,14 @@ namespace gl3d
 
 		}preFilterSpecular;
 
-
-		GLuint texture;				//environment cubemap
-		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
-		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+		void loadTexture(const char *names[6], SkyBox &skyBox);
+		void loadTexture(const char *name, SkyBox &skyBox, int format = 0); //todo add enum, also it is not fully working yet
+		void loadHDRtexture(const char *name, SkyBox &skyBox);
 		
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
+
+		//void clearGpuData();
+		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox);
 
 	};
 
@@ -587,8 +591,10 @@ namespace gl3d
 
 	*/
 
+#pragma endregion
 
-};;;
+
+};
 #pragma endregion
 
 
@@ -692,7 +698,7 @@ namespace gl3d
 		std::vector<int> loadedTexturesIndexes;
 		std::vector<std::string> loadedTexturesNames;
 
-		GpuTexture defaultTexture;
+		GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
 		Texture loadTexture(std::string path, bool defaultToDefaultTexture = true);
 		GLuint getTextureOpenglId(Texture t);
@@ -703,6 +709,15 @@ namespace gl3d
 
 		//internal
 		Texture createIntenralTexture(GpuTexture t);
+
+	#pragma endregion
+
+	#pragma region skyBox
+
+		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
+		SkyBox loadSkyBox(const char *names[6]);
+		SkyBox loadSkyBox(const char *name, int format = 0);
+		SkyBox loadHDRSkyBox(const char *name);
 
 	#pragma endregion
 
@@ -736,6 +751,12 @@ namespace gl3d
 
 		void renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
+
+
+		struct
+		{
+			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+		}internal;
 
 		//internal //todo add internal namespace
 		int getMaterialIndex(Material m);
@@ -832,9 +853,10 @@ namespace gl3d
 		}ssao;
 
 
-
 		void render();
 		void updateWindowMetrics(int x, int y);
+
+
 
 		int w; int h;
 

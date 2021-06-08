@@ -145,21 +145,22 @@ namespace gl3d
 		GpuTexture t;
 	};
 
+#pragma region skyBox
+
 	struct SkyBox
+	{
+		GLuint texture;				//environment cubemap
+		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+	};
+
+	struct SkyBoxLoaderAndDrawer
 	{
 		GLuint vertexArray = 0;
 		GLuint vertexBuffer = 0;
+		GLuint captureFBO;
 
 		void createGpuData();
-		void loadTexture(const char *names[6], int w, int h);
-		void loadTexture(const char *name, int w, int h, int format = 0); //todo add enum, also it is not working yet
-		void loadHDRtexture(const char *name, int w, int h); 
-		void createConvolutedTexture(int w, int h); //screen w, h
-		void createPreFilteredMap(int w, int h); //screen w, h
-
-		void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat);
-
 
 		struct
 		{
@@ -194,11 +195,14 @@ namespace gl3d
 
 		}preFilterSpecular;
 
-
-		GLuint texture;				//environment cubemap
-		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
-		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+		void loadTexture(const char *names[6], SkyBox &skyBox);
+		void loadTexture(const char *name, SkyBox &skyBox, int format = 0); //todo add enum, also it is not fully working yet
+		void loadHDRtexture(const char *name, SkyBox &skyBox);
 		
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
+
+		//void clearGpuData();
+		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox);
 
 	};
 
@@ -213,5 +217,7 @@ namespace gl3d
 
 	*/
 
+#pragma endregion
 
-};;;
+
+};

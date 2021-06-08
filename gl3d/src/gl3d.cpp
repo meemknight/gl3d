@@ -14,8 +14,9 @@ namespace gl3d
 		w = x; h = y;
 
 		lightShader.create();
-		skyBox.createGpuData();
 		vao.createVAOs();
+		internal.skyBoxLoaderAndDrawer.createGpuData();
+
 
 		showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
@@ -1436,6 +1437,40 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	}
+
+	void Renderer3D::renderSkyBox()
+	{
+		//todo move into render
+
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		viewMat = glm::mat4(glm::mat3(viewMat));
+
+		auto viewProjMat = projMat * viewMat;
+
+		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox);
+	}
+
+	SkyBox Renderer3D::loadSkyBox(const char *names[6])
+	{
+		SkyBox skyBox = {};
+		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox);
+		return skyBox;
+	}
+
+	SkyBox Renderer3D::loadSkyBox(const char *name, int format)
+	{
+		SkyBox skyBox = {};
+		internal.skyBoxLoaderAndDrawer.loadTexture(name, skyBox, format);
+		return skyBox;
+	}
+
+	SkyBox Renderer3D::loadHDRSkyBox(const char *name)
+	{
+		SkyBox skyBox = {};
+		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, skyBox);
+		return skyBox;
 	}
 
 	float lerp(float a, float b, float f)

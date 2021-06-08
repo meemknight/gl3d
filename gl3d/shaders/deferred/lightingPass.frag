@@ -205,8 +205,10 @@ void main()
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 5.0;
-		vec3 prefilteredColor = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-		vec2 brdf  = texture(u_brdfTexture, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 prefilteredColor = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;  
+		vec2 brdfVec = vec2(max(dot(N, V), 0.0), roughness);
+		brdfVec.y = 1 - brdfVec.y; 
+		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
 		ambient = (kD * diffuse + specular) * ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
