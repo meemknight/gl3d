@@ -71,8 +71,8 @@
     <None Include="shaders\color.vert" />
     <None Include="shaders\normals.frag" />
     <None Include="shaders\normals.vert" />
-    <None Include="shaders\skyBox.vert" />
-    <None Include="shaders\skyBox.frag" />
+    <None Include="shaders\skyBox\skyBox.vert" />
+    <None Include="shaders\skyBox\skyBox.frag" />
     <None Include="shaders\stencil.frag" />
     <None Include="shaders\stencil.vert" />
     <None Include="shaders\showNormals.frag" />
@@ -81,18 +81,15 @@
     <None Include="shaders\deferred\geometryPass.vert" />
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\lightingPass.frag" />
-    <None Include="shaders\deferred\lightingPass.vert" />
-    <None Include="shaders\ssao\ssao.vert" />
     <None Include="shaders\ssao\ssao.frag" />
     <None Include="shaders\ssao\blur.frag" />
-    <None Include="shaders\ssao\blur.vert" />
     <None Include="shaders\postProcess\postProcess.frag" />
-    <None Include="shaders\postProcess\postProcess.vert" />
     <None Include="shaders\postProcess\gausianBlur.frag" />
-    <None Include="shaders\postProcess\gausianBlur.vert" />
-    <None Include="shaders\hdrToCubeMap.vert" />
-    <None Include="shaders\hdrToCubeMap.frag" />
-    <None Include="shaders\convolute.frag" />
+    <None Include="shaders\skyBox\hdrToCubeMap.vert" />
+    <None Include="shaders\skyBox\hdrToCubeMap.frag" />
+    <None Include="shaders\skyBox\convolute.frag" />
     <None Include="shaders\skyBox\preFilterSpecular.frag" />
+    <None Include="shaders\modelLoader\mergePBRmat.frag" />
+    <None Include="shaders\drawQuads.vert" />
   </ItemGroup>
 </Project>

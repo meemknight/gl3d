@@ -6,7 +6,7 @@
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
 
-in vec2 v_texCoord;
+in vec2 v_texCoords;
 
 
 uniform sampler2D u_albedo;
@@ -29,6 +29,7 @@ layout (std140) uniform u_lightPassData
 	float bloomTresshold;
 	float ssao_ambient_exponent;
 	float ssao_finalColor_exponent;
+	int lightSubScater;
 
 }lightPassData;
 
@@ -102,7 +103,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 }   
 
 vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
-	in vec3 viewDir, in vec3 color, in vec3 normal)
+	in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
 {
 
 	vec3 lightDirection = normalize(lightPosition - worldPosition);
@@ -113,8 +114,6 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 	attenuation = 1; //(option) remove light attenuation
 	vec3 radiance = lightColor * attenuation; //here the first component is the light color
 	
-	vec3 F0 = vec3(0.04); 
-	F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
 	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 
 	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
@@ -138,19 +137,19 @@ vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness
 
 void main()
 {
-	vec3 pos = texture(u_positions, v_texCoord).xyz;
-	vec3 normal = texture(u_normals, v_texCoord).xyz;
-	vec3 albedo = texture(u_albedo, v_texCoord).xyz;
+	vec3 pos = texture(u_positions, v_texCoords).xyz;
+	vec3 normal = texture(u_normals, v_texCoords).xyz;
+	vec3 albedo = texture(u_albedo, v_texCoords).xyz;
 	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
 
 
-	vec3 material = texture(u_materials, v_texCoord).xyz;
+	vec3 material = texture(u_materials, v_texCoords).xyz;
 
 	float ssaof;
 
 	if(u_useSSAO != 0)
 	{
-		ssaof = texture(u_ssao, v_texCoord).r;	
+		ssaof = texture(u_ssao, v_texCoords).r;	
 	}else
 	{
 		ssaof = 1;
@@ -174,6 +173,9 @@ void main()
 	float metallic = material.g;
 	float ambientOcclution = material.b;
 
+	vec3 F0 = vec3(0.04); 
+	F0 = mix(F0, albedo.rgb, vec3(metallic));
+
 	//foreach point light
 	for(int i=0; i<u_pointLightCount;i++)
 	{
@@ -181,7 +183,7 @@ void main()
 		vec3 lightColor = light[i].color.rgb;
 
 		Lo += computePointLightSource(lightPosition, metallic, roughness, lightColor, 
-			pos, viewDir, albedo, normal);
+			pos, viewDir, albedo, normal, F0);
 
 	}
 
@@ -189,20 +191,14 @@ void main()
 	vec3 ambient;
 	//compute ambient
 	{
-		vec3 F0 = vec3(0.04); 
-		F0 = mix(F0, albedo.rgb, vec3(metallic));
+		
 		vec3 N = normal;
 		vec3 V = viewDir;
 
 		vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-		
 		vec3 kS = F;
-		vec3 kD = 1.0 - kS;
-		kD *= 1.0 - metallic;	  
 		
 		vec3 irradiance = skyBoxDiffuse;
-		vec3 diffuse      = irradiance * albedo;
-		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 5.0;
 		vec3 radiance = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;
@@ -210,61 +206,54 @@ void main()
 		vec2 brdfVec = vec2(max(dot(N, V), 0.0), roughness);
 		//brdfVec.y = 1 - brdfVec.y; 
 		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-		vec3 specular = radiance * (F * brdf.x + brdf.y);
 
 
-		//no multiple scattering
-		ambient = (kD * diffuse + specular);
+		const int multipleScattering = 1;
 
-
+		if(lightPassData.lightSubScater == 0)
 		{
-		//http://jcgt.org/published/0008/01/03/
-		// Multiple scattering version
-		vec3 FssEss = kS * brdf.x + brdf.y;
-		float Ess = brdf.x + brdf.y;
-		float Ems = 1-Ess;
-		vec3 Favg = F0 + (1-F0)/21;
-		vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
-		// Dielectrics
-		vec3 Edss = 1 - (FssEss + Fms * Ems);
-		vec3 kD = albedo * Edss;
+			vec3 kD = 1.0 - kS;
+			kD *= 1.0 - metallic;	  
+			
+			vec3 diffuse = irradiance * albedo;
+			
+			vec3 specular = radiance * (F * brdf.x + brdf.y);
 
-		// Multiple scattering version
-		ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
+
+			//no multiple scattering
+			ambient = (kD * diffuse + specular);
+		}else
+		{
+			//http://jcgt.org/published/0008/01/03/
+			// Multiple scattering version
+			vec3 FssEss = kS * brdf.x + brdf.y;
+			float Ess = brdf.x + brdf.y;
+			float Ems = 1-Ess;
+			vec3 Favg = F0 + (1-F0)/21;
+			vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
+			// Dielectrics
+			vec3 Edss = 1 - (FssEss + Fms * Ems);
+			vec3 kD = albedo * Edss;
+
+			// Multiple scattering version
+			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 		}
 		
 		vec3 occlusionData = ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
-
 		ambient *= occlusionData;
 
-	////vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
-	//vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
-	//vec3 kD = 1.0 - kS;
-	//kD *= 1.0 - metallic;
-	//vec3 diffuse    = skyBoxDiffuse * albedo.rgb;
-	//ambient    = (kD * diffuse) * ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb; 
 	}
 
-	vec3 color   = Lo + ambient; 
+	vec3 color = Lo + ambient; 
 
 	color *= ssao_finalColor;
 	
-	//color = skyBoxDiffuse;
 
 	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
-	//HDR 
-	//float exposure = 1;
-	//color = color / (color + vec3(1.0));
-	//color = vec3(1.0) - exp(-color  * exposure);
-	
-	
 	//gama correction and hdr is done in the post process step
 
-	//color.rgb = skyBoxDiffuse.rgb;
-	//color.rgb =  material.bbb;
 
-	//todo uniform for this thresshold or sthing
 	if(lightIntensity > lightPassData.bloomTresshold)
 	{
 		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
@@ -276,7 +265,7 @@ void main()
 		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
 	}
 
-
+	//a_outColor.rgb =  material.bbb;
 	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);
 
 }

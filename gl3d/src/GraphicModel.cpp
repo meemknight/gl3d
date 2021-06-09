@@ -671,19 +671,19 @@ namespace gl3d
 
 	void SkyBoxLoaderAndDrawer::createGpuData()
 	{
-		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox.vert", "shaders/skyBox.frag");
+		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag");
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
 
-		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/hdrToCubeMap.frag");
+		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag");
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
 		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection");
 
-		convolute.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/convolute.frag");
+		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag");
 		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap");
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
 
-		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
+		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
 		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection");
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");

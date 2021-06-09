@@ -2,7 +2,7 @@
 
 layout (location = 0) out vec3 a_color;
 
-in vec2 v_texCoord;
+in vec2 v_texCoords;
 
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
@@ -11,8 +11,8 @@ uniform float u_bloomIntensity;
 
 void main()
 {
-	vec3 color = texture(u_colorTexture, v_texCoord).rgb;
-	vec3 bloom = texture(u_bloomTexture, v_texCoord).rgb;
+	vec3 color = texture(u_colorTexture, v_texCoords).rgb;
+	vec3 bloom = texture(u_bloomTexture, v_texCoords).rgb;
 
 
 	a_color = (bloom * u_bloomIntensity) + color;

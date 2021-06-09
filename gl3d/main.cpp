@@ -161,9 +161,9 @@ int main()
 	//renderer.skyBox.loadTexture(names, w, h);
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Newport_Loft_Ref.hdr", w, h);
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
-	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
+	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/chinese_garden_2k.hdr", w, h);
 	
 
@@ -647,7 +647,11 @@ int main()
 			ImGui::Checkbox("Normal map", &normalMap);
 			
 			renderer.lightShader.normalMap = normalMap;
-	
+			
+			static bool lightSubScater = 1;
+			ImGui::Checkbox("Light sub scater", &lightSubScater);
+			renderer.lightShader.lightPassUniformBlockCpuData.lightSubScater = lightSubScater;
+
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);

@@ -1162,7 +1162,7 @@ namespace gl3d
 	void Renderer3D::render()
 	{
 		//we draw a rect several times so we keep this vao binded
-		glBindVertexArray(lightShader.quadVAO);
+		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		
 	#pragma region ssao
 		glViewport(0, 0, w / 2, h / 2);
@@ -1537,7 +1537,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
 
 
-		shader.loadShaderProgramFromFile("shaders/ssao/ssao.vert", "shaders/ssao/ssao.frag");
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/ssao.frag");
 
 
 		u_projection = getUniform(shader.id, "u_projection");
@@ -1558,7 +1558,7 @@ namespace gl3d
 		glUniformBlockBinding(shader.id, u_SSAODATA, 2);
 
 		//blur
-		blurShader.loadShaderProgramFromFile("shaders/ssao/blur.vert", "shaders/ssao/blur.frag");
+		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag");
 		
 		glGenFramebuffers(1, &blurBuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer);
@@ -1598,12 +1598,12 @@ namespace gl3d
 		glDrawBuffers(2, attachments);
 
 		
-		postProcessShader.loadShaderProgramFromFile("shaders/postProcess/postProcess.vert", "shaders/postProcess/postProcess.frag");
+		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture");
 		u_bloomIntensity = getUniform(postProcessShader.id, "u_bloomIntensity");
 
-		gausianBLurShader.loadShaderProgramFromFile("shaders/postProcess/gausianBlur.vert", "shaders/postProcess/gausianBlur.frag");
+		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
 

@@ -218,8 +218,11 @@ namespace gl3d
 
 		void getSubroutines();
 
-		GLuint quadBuffer = 0;
-		GLuint quadVAO = 0;
+		struct
+		{
+			GLuint quadBuffer = 0;
+			GLuint quadVAO = 0;
+		}quadDrawer;
 
 		GLint u_transform = -1;
 		GLint u_modelTransform = -1;
@@ -287,12 +290,13 @@ namespace gl3d
 		//to pass to the shader as an uniform block (light pass shader)
 		struct LightPassData
 		{
-			glm::vec4 ambientLight; //last value is not used
-			float bloomTresshold;
-			float ssao_ambient_exponent;
-			float ssao_finalColor_exponent;
+			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
+			float bloomTresshold = 1.f;
+			float ssao_ambient_exponent = 6.4f;
+			float ssao_finalColor_exponent = 5.f;
+			int lightSubScater = 1;
 
-		}lightPassUniformBlockCpuData{glm::vec4(1,1,1,0), 1.f, 6.4, 5};
+		}lightPassUniformBlockCpuData;
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;

@@ -269,7 +269,7 @@ namespace gl3d
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
 
-		lightingPassShader.loadShaderProgramFromFile("shaders/deferred/lightingPass.vert", "shaders/deferred/lightingPass.frag");
+		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
 		lightingPassShader.bind();
 
 		light_u_albedo = getUniform(lightingPassShader.id, "u_albedo");
@@ -308,11 +308,11 @@ namespace gl3d
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
 
 
-		glGenVertexArrays(1, &quadVAO);
-		glBindVertexArray(quadVAO);
+		glGenVertexArrays(1, &quadDrawer.quadVAO);
+		glBindVertexArray(quadDrawer.quadVAO);
 
-		glGenBuffers(1, &quadBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, quadBuffer);
+		glGenBuffers(1, &quadDrawer.quadBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, quadDrawer.quadBuffer);
 
 		float quadVertices[] = {
 		   // positions        // texture Coords

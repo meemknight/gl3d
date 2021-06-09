@@ -1,5 +1,5 @@
 # gl3d
-- Still in working progress (the proper for the user is not ready)
+- Still in working progress (the proper api for the users is not ready)
 
 ![](https://github.com/meemknight/photos/blob/master/gl3d1.png)
 
@@ -27,26 +27,29 @@ How to compile the repo (Visual studio 2019, Windows)
 Features and todos:
 
 - [x] Loading .obj files with materials and textures
+- [ ] Loading .mtl files separately
 ---
+- [x] Normal mapping (TBN calculated per fragment)
 - [x] Phisically based rendering
 - [x] Phisically based materials
 - [x] Sky box
 - [x] Image based lighting
-- [x] Normal mapping (TBN calculated per vertex)
-- [ ] Reflection probes
+- [x] Multi light scattering for IBL as described here http://jcgt.org/published/0008/01/03/
+- [ ] Screen space reflections
+- [ ] Light probes
 ---
 - [x] Deferred rendering
 - [ ] Optimize lights 
 ---
-- [x] hdr (16 bit color channel) 
-- [ ] automatic exposure ajustment
+- [x] Gama correction
+- [x] HDR (16 bit color channels) 
+- [ ] Automatic exposure ajustment for HDR tonemapping
 ---
 - [ ] FXAA or TAA
 - [ ] Adaptive resolution
 ---
 - [ ] Store all the render data before rendering (used for depth pre pass)
 - [ ] Improve the deferred rendering by adding bindless things
-- [ ] Remove vao for each object
 - [ ] Only one geometry buffer and a dynamic index buffer
 ---
 - [x] SSAO
@@ -54,8 +57,6 @@ Features and todos:
 ---
 - [x] Bloom
 - [x] Bloom settings
----
-- [ ] Screen space reflections
 ---
 - [ ] Volumetric light (God rays)
 ---
