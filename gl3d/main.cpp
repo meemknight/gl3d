@@ -156,19 +156,21 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.loadSkyBox(names);
+
 	//renderer.skyBox.loadTexture(names, w, h);
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Newport_Loft_Ref.hdr", w, h);
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/bell_park_dawn_1k.hdr", w, h);
+	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/canary_wharf_2k.hdr", w, h);
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/chinese_garden_2k.hdr", w, h);
-
 	
 
+
 	//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
-	//skyBox.loadTexture("resources/skyBoxes/uffizi_cross.png", 1);
+	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/uffizi_cross.png", 1);
+	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/forest.png", 0);
 	
 
 	

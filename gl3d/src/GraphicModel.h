@@ -41,7 +41,6 @@ namespace gl3d
 
 		GLsizei primitiveCount = 0;
 
-		//todo check if indexes can be uint
 		void loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize = 0, const unsigned int * indexes = nullptr, bool noTexture = false);
 
 		//deprecated
@@ -195,8 +194,15 @@ namespace gl3d
 
 		}preFilterSpecular;
 
+		enum CrossskyBoxFormats
+		{
+			BottomOfTheCrossRight,
+			BottomOfTheCrossDown,
+			BottomOfTheCrossLeft,
+		};
+
 		void loadTexture(const char *names[6], SkyBox &skyBox);
-		void loadTexture(const char *name, SkyBox &skyBox, int format = 0); //todo add enum, also it is not fully working yet
+		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
 		
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);

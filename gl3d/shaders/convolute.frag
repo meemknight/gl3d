@@ -7,6 +7,7 @@ in vec3 v_localPos;
 uniform samplerCube u_environmentMap;
 
 const float PI = 3.14159265359;
+float u_spread = 2.0 * PI;
 
 void main()
 {		
@@ -22,7 +23,7 @@ void main()
 	
 	float sampleDelta = 0.025;
 	float nrSamples = 0.0; 
-	for(float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta)
+	for(float phi = 0.0; phi < u_spread; phi += sampleDelta)
 	{
 		for(float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta)
 		{
@@ -35,7 +36,8 @@ void main()
 			nrSamples++;
 		}
 	}
-	irradiance = PI * irradiance * (1.0 / float(nrSamples));
+
+	irradiance *= PI / float(nrSamples);
   
 	fragColor = vec4(irradiance, 1.0);
 }

@@ -1146,7 +1146,6 @@ namespace gl3d
 	int Renderer3D::getTextureIndex(Texture t)
 	{
 		int id = t.id_;
-		
 		if (id == 0) { return -1; }//todo add this optimization to other gets
 
 		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);

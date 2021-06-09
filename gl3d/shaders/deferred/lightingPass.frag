@@ -205,16 +205,38 @@ void main()
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 5.0;
-		vec3 prefilteredColor = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;  
+		vec3 radiance = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;
+
 		vec2 brdfVec = vec2(max(dot(N, V), 0.0), roughness);
-		brdfVec.y = 1 - brdfVec.y; 
+		//brdfVec.y = 1 - brdfVec.y; 
 		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-
-		ambient = (kD * diffuse + specular) * ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
+		vec3 specular = radiance * (F * brdf.x + brdf.y);
 
 
-	
+		//no multiple scattering
+		ambient = (kD * diffuse + specular);
+
+
+		{
+		//http://jcgt.org/published/0008/01/03/
+		// Multiple scattering version
+		vec3 FssEss = kS * brdf.x + brdf.y;
+		float Ess = brdf.x + brdf.y;
+		float Ems = 1-Ess;
+		vec3 Favg = F0 + (1-F0)/21;
+		vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
+		// Dielectrics
+		vec3 Edss = 1 - (FssEss + Fms * Ems);
+		vec3 kD = albedo * Edss;
+
+		// Multiple scattering version
+		ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
+		}
+		
+		vec3 occlusionData = ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
+
+		ambient *= occlusionData;
+
 	////vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
 	//vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, material.r); 
 	//vec3 kD = 1.0 - kS;

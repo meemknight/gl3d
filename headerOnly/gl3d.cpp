@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-06-08
+//built on 2021-06-09
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -169,21 +169,20 @@ namespace gl3d
 
 	}
 
-	//todo add srgb
-	//todo add quality enum
-	
 
 
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
+
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
+
 		GLenum format = GL_RGBA;
 
 		if(chanels == 3)
 		{
 			format = GL_RGB;
 		}
-		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
@@ -294,8 +293,7 @@ namespace gl3d
 		unsigned char *newImage = new unsigned char[w * h * 3];
 
 
-		//todo refactor refactor refactor
-		//todo actually compute this on the gpu
+		//actually compute this on the gpu if really needed
 
 		auto horiz = [&](int kernel)
 		{
@@ -686,7 +684,6 @@ namespace gl3d
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
-		//todo geb buffer for each material
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
 		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
 		glGenBuffers(1, &materialBlockBuffer);
@@ -1246,7 +1243,7 @@ namespace gl3d
 							finalData[((j * w) + i) * 4 + 2] = 0;
 						}
 
-						finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
+						finalData[((j * w) + i) * 4 + 3] = 255; //todo used only for imgui, remove later 
 					}
 				}
 
@@ -1516,7 +1513,7 @@ namespace gl3d
 		subModelsNames.clear();
 		models.clear();
 
-		//todo clear material buffer
+		//todo clear material buffer ref cound and stuff
 	}
 
 
@@ -1566,7 +1563,7 @@ namespace gl3d
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
 
-		//todo if the object doesn't have texture data we should not render any material to it or just refuze to load it
+		//todo this is only for rendering gizmos stuff
 		if (noTexture)
 		{
 			glEnableVertexAttribArray(0);
@@ -1663,6 +1660,8 @@ namespace gl3d
 
 	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox)
 	{
+		skyBox = {};
+
 		glGenTextures(1, &skyBox.texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 
@@ -1688,14 +1687,14 @@ namespace gl3d
 			else
 			{
 				std::cout << "err loading " << names[i] << "\n";
+				glDeleteTextures(1, &skyBox.texture);
+				return;
 			}
 
 
 		}
 
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1706,6 +1705,8 @@ namespace gl3d
 
 	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, int format)
 	{
+		skyBox = {};
+
 		int width, height, nrChannels;
 		unsigned char *data;
 
@@ -1713,7 +1714,7 @@ namespace gl3d
 		stbi_set_flip_vertically_on_load(false);
 		data = stbi_load(name, &width, &height, &nrChannels, 3);
 
-		if (!data) { return; }
+		if (!data) { std::cout << "err loading " << name << "\n"; return; }
 
 		glGenTextures(1, &skyBox.texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
@@ -1722,8 +1723,8 @@ namespace gl3d
 		//left
 		//top
 		//bottom
-		//front
-		//back
+		//front//?
+		//back //?
 
 		auto getPixel = [&](int x, int y, unsigned char *data)
 		{
@@ -1732,6 +1733,8 @@ namespace gl3d
 
 		glm::ivec2 paddings[6];
 		glm::ivec2 immageRatio = {};
+		int flipX[6] = {};
+		int flipY[6] = {};
 
 		if (format == 0)
 		{
@@ -1748,6 +1751,7 @@ namespace gl3d
 
 			memcpy(paddings, paddingscopy, sizeof(paddings));
 
+
 		}
 		else if (format == 1)
 		{
@@ -1758,12 +1762,33 @@ namespace gl3d
 				{ (width / 3) * 0, (height / 4) * 1, },
 				{ (width / 3) * 1, (height / 4) * 0, },
 				{ (width / 3) * 1, (height / 4) * 2, },
-				{ (width / 3) * 1, (height / 4) * 3, },
 				{ (width / 3) * 1, (height / 4) * 1, },
+				{ (width / 3) * 1, (height / 4) * 3, },
+			};
+
+			memcpy(paddings, paddingscopy, sizeof(paddings));
+			flipX[5] = 1;
+			flipY[5] = 1;
+
+		}else if(format == 2)
+		{
+			immageRatio = { 4, 3 };
+			glm::ivec2 paddingscopy[6] =
+			{
+				{ (width / 4) * 3, (height / 3) * 1, },
+				{ (width / 4) * 1, (height / 3) * 1, },
+				{ (width / 4) * 2, (height / 3) * 0, },
+				{ (width / 4) * 2, (height / 3) * 2, },
+				{ (width / 4) * 2, (height / 3) * 1, },
+				{ (width / 4) * 0, (height / 3) * 1, },
+
 			};
 
 			memcpy(paddings, paddingscopy, sizeof(paddings));
 
+		}else
+		{
+			gl3dAssertComment(0, "invalid format for texture");
 		}
 
 
@@ -1779,8 +1804,28 @@ namespace gl3d
 				int paddingX = paddings[i].x;
 				int paddingY = paddings[i].y;
 
-				for (int j = 0; j < height / immageRatio.y; j++)
-					for (int i = 0; i < width / immageRatio.x; i++)
+			#pragma region flip
+
+				int jBeg = 0;
+				int jAdvance = 1;
+				if(flipY[i])
+				{
+					jBeg = height / immageRatio.y - 1;
+					jAdvance = -1;
+				}
+
+				int xBeg = 0;
+				int xAdvance = 1;
+				if (flipX[i])
+				{
+					xBeg = width / immageRatio.x - 1;
+					xAdvance = -1;
+				}
+			#pragma endregion
+
+
+				for (int j = jBeg; j < height / immageRatio.y && j >= 0; j+= jAdvance)
+					for (int i = xBeg; i < width / immageRatio.x && i >= 0; i+= xAdvance)
 					{
 						extractedData[index] = *getPixel(i + paddingX, j + paddingY, data);
 						extractedData[index + 1] = *(getPixel(i + paddingX, j + paddingY, data) + 1);
@@ -1810,12 +1855,9 @@ namespace gl3d
 			std::cout << "err loading " << name << "\n";
 		}
 
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);	//todo disable this after generated
-		//the specular prefilter map
-		//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -1827,12 +1869,15 @@ namespace gl3d
 
 	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, SkyBox &skyBox)
 	{
+		skyBox = {};
+
 		int width, height, nrChannels;
 		float *data;
 
 		stbi_set_flip_vertically_on_load(true);
 		data = stbi_loadf(name, &width, &height, &nrChannels, 0);
-		if (!data) { return; }
+		if (!data) { std::cout << "err loading " << name << "\n"; return; }
+
 
 		GLuint hdrTexture;
 
@@ -1903,11 +1948,6 @@ namespace gl3d
 
 		}
 
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);	//todo disable this after generated
-		//the specular prefilter map
-
-		//
 		glDeleteTextures(1, &hdrTexture);
 
 		createConvolutedAndPrefilteredTextureData(skyBox);
@@ -1915,6 +1955,10 @@ namespace gl3d
 
 	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox)
 	{
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
 
 		GLint viewPort[4] = {};
 		glGetIntegerv(GL_VIEWPORT, viewPort);
@@ -2020,6 +2064,16 @@ namespace gl3d
 
 		//texture = convolutedTexture; //visualize convolutex texture
 		//texture = preFilteredMap;
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//todo telete mipmaps
+		//GLuint newTexture = 0;
+		//glGenTextures(1, &newTexture);
+		//int w, h;
+		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+		//glCopyTexImage2D(GL_TEXTURE_CUBE_MAP, 0, GL_SRGB, 0, 0, w, h, 0);
 
 	}
 
@@ -3199,7 +3253,6 @@ namespace gl3d
 	int Renderer3D::getTextureIndex(Texture t)
 	{
 		int id = t.id_;
-		
 		if (id == 0) { return -1; }//todo add this optimization to other gets
 
 		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);

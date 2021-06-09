@@ -263,7 +263,6 @@ namespace gl3d
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
-		//todo geb buffer for each material
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
 		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
 		glGenBuffers(1, &materialBlockBuffer);

@@ -30,21 +30,20 @@ namespace gl3d
 
 	}
 
-	//todo add srgb
-	//todo add quality enum
-	
 
 
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
+
+		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
+
 		GLenum format = GL_RGBA;
 
 		if(chanels == 3)
 		{
 			format = GL_RGB;
 		}
-		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
 
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
@@ -155,8 +154,7 @@ namespace gl3d
 		unsigned char *newImage = new unsigned char[w * h * 3];
 
 
-		//todo refactor refactor refactor
-		//todo actually compute this on the gpu
+		//actually compute this on the gpu if really needed
 
 		auto horiz = [&](int kernel)
 		{
