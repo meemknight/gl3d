@@ -3271,56 +3271,60 @@ namespace gl3d
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		
-	#pragma region ssao
-		glViewport(0, 0, w / 2, h / 2);
+		if(lightShader.useSSAO)
+		{
+		#pragma region ssao
+			glViewport(0, 0, w / 2, h / 2);
 
-		glUseProgram(ssao.shader.id);
+			glUseProgram(ssao.shader.id);
 
-		glBindBuffer(GL_UNIFORM_BUFFER, ssao.ssaoUniformBlockBuffer);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(SSAO::SsaoShaderUniformBlockData),
-			&ssao.ssaoShaderUniformBlockData);
+			glBindBuffer(GL_UNIFORM_BUFFER, ssao.ssaoUniformBlockBuffer);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(SSAO::SsaoShaderUniformBlockData),
+				&ssao.ssaoShaderUniformBlockData);
 
-		glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
-			&(camera.getProjectionMatrix())[0][0] );
+			glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
+				&(camera.getProjectionMatrix())[0][0]);
 
-		glUniformMatrix4fv(ssao.u_view, 1, GL_FALSE,
-			&(camera.getWorldToViewMatrix())[0][0]);
+			glUniformMatrix4fv(ssao.u_view, 1, GL_FALSE,
+				&(camera.getWorldToViewMatrix())[0][0]);
 
-		glUniform3fv(ssao.u_samples, 64, &(ssao.ssaoKernel[0][0]));
+			glUniform3fv(ssao.u_samples, 64, &(ssao.ssaoKernel[0][0]));
 
-		glBindFramebuffer(GL_FRAMEBUFFER, ssao.ssaoFBO);
-		glClear(GL_COLOR_BUFFER_BIT);
+			glBindFramebuffer(GL_FRAMEBUFFER, ssao.ssaoFBO);
+			glClear(GL_COLOR_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
-		glUniform1i(ssao.u_gPosition, 0);
-		
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
-		glUniform1i(ssao.u_gNormal, 1);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
+			glUniform1i(ssao.u_gPosition, 0);
 
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
-		glUniform1i(ssao.u_texNoise, 2);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+			glUniform1i(ssao.u_gNormal, 1);
 
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
+			glUniform1i(ssao.u_texNoise, 2);
+
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			glViewport(0, 0, w, h);
+		#pragma endregion
+
+		#pragma region ssao "blur" (more like average blur)
+			glViewport(0, 0, w / 4, h / 4);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
+			ssao.blurShader.bind();
+			glClear(GL_COLOR_BUFFER_BIT);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
+			glUniform1i(ssao.u_ssaoInput, 0);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			glViewport(0, 0, w, h);
+		#pragma endregion
+		}
 	
-		glViewport(0, 0, w, h);
-	#pragma endregion
-
-	#pragma region ssao "blur" (more like average blur)
-		glViewport(0, 0, w/4, h/4);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
-		ssao.blurShader.bind();
-		glClear(GL_COLOR_BUFFER_BIT);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
-		glUniform1i(ssao.u_ssaoInput, 0);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-		glViewport(0, 0, w, h);
-	#pragma endregion
 
 	#pragma region render into the post processing fbo
 

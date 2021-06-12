@@ -862,7 +862,6 @@ namespace gl3d
 
 		}ssao;
 
-
 		void render();
 		void updateWindowMetrics(int x, int y);
 

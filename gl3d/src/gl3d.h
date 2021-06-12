@@ -119,8 +119,8 @@ namespace gl3d
 
 		struct VAO
 		{
+			//this is not used
 			GLuint posNormalTexture;
-
 			void createVAOs();
 		}vao;
 
@@ -149,8 +149,16 @@ namespace gl3d
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
 
 
-		struct
+		struct InternalStruct
 		{
+			struct PBRtextureMaker
+			{
+				Shader shader;
+
+
+				void init();
+			}pBRtextureMaker;
+
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
 		}internal;
 
@@ -247,7 +255,6 @@ namespace gl3d
 			Shader blurShader;
 
 		}ssao;
-
 
 		void render();
 		void updateWindowMetrics(int x, int y);
