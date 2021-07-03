@@ -2216,6 +2216,7 @@ namespace gl3d
 		ssao.create(x, y);
 		postProcess.create(x, y);
 
+		internal.pBRtextureMaker.init();
 	}
 
 	void Renderer3D::VAO::createVAOs()
@@ -2593,8 +2594,9 @@ namespace gl3d
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
 
-					if (!mat.map_RMA.empty()) //todo not tested
+					if (!mat.map_RMA.empty()) 
 					{
+						//todo not tested
 						//gm.RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
 						//rmaQuality);
 
@@ -3753,8 +3755,52 @@ namespace gl3d
 	{
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag");
 
+		glGenFramebuffers(1, &fbo);
 
 
+
+	}
+
+	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(int w, int h, GpuTexture roughness, 
+		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO)
+	{
+		GLuint texture = 0;
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		//todo set the quality of this texture in a function parameter.
+
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0);
+
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, roughness.id);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, metallic.id);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+
+		glBindVertexArray(quadVAO);
+
+		shader.bind();
+
+		glViewport(0, 0, w, h);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+
+		glBindVertexArray(0);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		return texture;
 	}
 
 };

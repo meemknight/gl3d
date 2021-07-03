@@ -768,9 +768,14 @@ namespace gl3d
 			struct PBRtextureMaker
 			{
 				Shader shader;
-
+				GLuint fbo;
 
 				void init();
+
+				GLuint createRMAtexture(int w, int h,
+					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
+					GLuint quadVAO);
+
 			}pBRtextureMaker;
 
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;

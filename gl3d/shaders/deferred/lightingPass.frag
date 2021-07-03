@@ -191,11 +191,13 @@ void main()
 	vec3 ambient;
 	//compute ambient
 	{
-		
+
 		vec3 N = normal;
 		vec3 V = viewDir;
+		
+		float dotNVClamped = min(max(dot(N, V), 0.0), 0.99);
 
-		vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
 		vec3 irradiance = skyBoxDiffuse;
@@ -203,7 +205,7 @@ void main()
 		const float MAX_REFLECTION_LOD = 4.0;
 		vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
 
-		vec2 brdfVec = vec2(min(max(dot(N, V), 0.0), 0.99), roughness);
+		vec2 brdfVec = vec2(dotNVClamped, roughness);
 		//brdfVec.y = 1 - brdfVec.y; 
 		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
 
