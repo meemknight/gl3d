@@ -160,10 +160,10 @@ int main()
 
 	//renderer.skyBox.loadTexture(names, w, h);
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Newport_Loft_Ref.hdr", w, h);
+	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/chinese_garden_2k.hdr", w, h);
 	
 

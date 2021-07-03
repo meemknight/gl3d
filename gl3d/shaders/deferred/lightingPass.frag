@@ -161,8 +161,8 @@ void main()
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
-	vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
-	vec3 R = reflect(I, normal);	//reflected vector
+	//vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
+	vec3 R = reflect(-viewDir, normal);	//reflected vector
 	//vec3 skyBoxSpecular = texture(u_skybox, R).rgb;		//this is the reflected color
 	vec3 skyBoxDiffuse = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly to the object
 
@@ -200,25 +200,22 @@ void main()
 		
 		vec3 irradiance = skyBoxDiffuse;
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
-		const float MAX_REFLECTION_LOD = 5.0;
-		vec3 radiance = textureLod(u_skyboxFiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;
+		const float MAX_REFLECTION_LOD = 4.0;
+		vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
 
-		vec2 brdfVec = vec2(max(dot(N, V), 0.0), roughness);
+		vec2 brdfVec = vec2(min(max(dot(N, V), 0.0), 0.99), roughness);
 		//brdfVec.y = 1 - brdfVec.y; 
 		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
 
 
-		const int multipleScattering = 1;
-
 		if(lightPassData.lightSubScater == 0)
 		{
 			vec3 kD = 1.0 - kS;
-			kD *= 1.0 - metallic;	  
+			kD *= 1.0 - metallic;
 			
 			vec3 diffuse = irradiance * albedo;
 			
 			vec3 specular = radiance * (F * brdf.x + brdf.y);
-
 
 			//no multiple scattering
 			ambient = (kD * diffuse + specular);

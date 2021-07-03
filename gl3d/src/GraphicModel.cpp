@@ -1011,7 +1011,7 @@ namespace gl3d
 
 
 		GLint viewPort[4] = {};
-		glGetIntegerv(GL_VIEWPORT, viewPort);
+		glGetIntegerv(GL_VIEWPORT, viewPort); //todo remove because slow
 
 
 	#pragma region convoluted texture

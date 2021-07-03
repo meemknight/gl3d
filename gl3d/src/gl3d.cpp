@@ -43,7 +43,11 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 
 		glGenTextures(gBuffer.bufferCount, gBuffer.buffers);
+		
 
+		//todo refactor
+		//todo glGetInternalFormativ(GL_TEXTURE_2D, GL_RGBA8, GL_TEXTURE_IMAGE_FORMAT, 1, &preferred_format).
+		//https://www.khronos.org/opengl/wiki/Common_Mistakes#Extensions_and_OpenGL_Versions
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -62,7 +66,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -70,7 +74,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -751,6 +755,15 @@ namespace gl3d
 		o.id_ = 0;
 	}
 
+	//todo look into  glProgramUniform
+	//in order to send less stuff tu uniforms
+
+	//todo look into
+	//ATI/AMD created GL_ATI_meminfo. This extension is very easy to use. 
+	//You basically need to call glGetIntegerv with the appropriate token values.
+	//https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_meminfo.txt
+	//http://developer.download.nvidia.com/opengl/specs/GL_NVX_gpu_memory_info.txt
+
 	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
@@ -1362,7 +1375,6 @@ namespace gl3d
 		);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	#pragma endregion
@@ -1386,10 +1398,10 @@ namespace gl3d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
