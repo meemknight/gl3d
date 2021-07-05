@@ -709,9 +709,10 @@ namespace gl3d
 		std::vector<int> loadedTexturesIndexes;
 		std::vector<std::string> loadedTexturesNames;
 
-		GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
+		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
-		Texture loadTexture(std::string path, bool defaultToDefaultTexture = true);
+		//todo add quality here
+		Texture loadTexture(std::string path);
 		GLuint getTextureOpenglId(Texture t);
 
 		void deleteTexture(Texture t);

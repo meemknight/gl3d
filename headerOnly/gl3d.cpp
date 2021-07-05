@@ -2149,15 +2149,14 @@ namespace gl3d
 		showNormalsProgram.sizeLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_size");
 		showNormalsProgram.colorLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_color");
 		
-		unsigned char textureData[] =
-		{
-			20, 20, 20, 255,
-			212, 0, 219, 255,
-			212, 0, 219, 255,
-			20, 20, 20, 255,
-		};
-
-		defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
+		//unsigned char textureData[] =
+		//{
+		//	20, 20, 20, 255,
+		//	212, 0, 219, 255,
+		//	212, 0, 219, 255,
+		//	20, 20, 20, 255,
+		//};
+		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
 
 		//create gBuffer
@@ -2432,7 +2431,7 @@ namespace gl3d
 		return data;
 	}
 
-	Texture Renderer3D::loadTexture(std::string path, bool defaultToDefaultTexture)
+	Texture Renderer3D::loadTexture(std::string path)
 	{
 
 		if(path == "")
@@ -2454,19 +2453,13 @@ namespace gl3d
 
 		GpuTexture t(path.c_str());
 
-		if(t.id == 0 && defaultToDefaultTexture == false)
+		//if texture is not loaded, return an invalid texture
+		if(t.id == 0)
 		{
 			return Texture{ 0 };
 		}
 
-
 		int id = internal::generateNewIndex(loadedTexturesIndexes);
-
-		//if texture is not loaded, set it to default
-		if(t.id == 0)
-		{
-			t.id = defaultTexture.id;
-		}
 
 		loadedTexturesIndexes.push_back(id);
 		loadedTextures.push_back(t);
@@ -2499,11 +2492,6 @@ namespace gl3d
 
 		auto gpuTexture = loadedTextures[index];
 
-		if(gpuTexture.id != defaultTexture.id)
-		{
-			gpuTexture.clear();
-		}
-
 		loadedTexturesIndexes.erase(loadedTexturesIndexes.begin() + index);
 		loadedTextures.erase(loadedTextures.begin() + index);
 		loadedTexturesNames.erase(loadedTexturesNames.begin() + index);
@@ -2528,14 +2516,14 @@ namespace gl3d
 
 	Texture Renderer3D::createIntenralTexture(GpuTexture t)
 	{
+		//if t is null return an empty texture
+		if (t.id == 0)
+		{
+			Texture{ 0 };
+		}
 
 		int id = internal::generateNewIndex(loadedTexturesIndexes);
 
-		//if t is null initialize to default texture
-		if (t.id == 0)
-		{
-			t.id = defaultTexture.id;
-		}
 
 		loadedTexturesIndexes.push_back(id);
 		loadedTextures.push_back(t);
@@ -2602,13 +2590,13 @@ namespace gl3d
 					if (!mat.map_Kd.empty())
 					{
 						//gm.albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
-						textureData->albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd), 0);
+						textureData->albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
 					}
 
 					if (!mat.map_Kn.empty())
 					{
 						//todo add texture load quality options
-						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn), 0);
+						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
 						//gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 						//	TextureLoadQuality::linearMipmap);
 					}
@@ -2626,7 +2614,7 @@ namespace gl3d
 						textureData->RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
 
 						//todo add a function to check if a function is valid
-						if (getTextureData(textureData->RMA_Texture)->id == defaultTexture.id)
+						if (textureData->RMA_Texture.id_ != 0)
 						{
 							textureData->RMA_loadedTextures = 7; //all textures loaded
 						}
@@ -3098,7 +3086,7 @@ namespace gl3d
 			}
 
 			GpuTexture *normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
-			if(normalMapTextureData != nullptr && normalMapTextureData->id != defaultTexture.id)
+			if(normalMapTextureData != nullptr && normalMapTextureData->id != 0)
 			{
 				normalLoaded = 1;
 				glActiveTexture(GL_TEXTURE1);
@@ -3107,7 +3095,7 @@ namespace gl3d
 		
 			//todo refactor default texture, just keep it totally separate and treat -1 as default texture
 			GpuTexture *rmaTextureData = this->getTextureData(textureData.RMA_Texture);
-			if(rmaTextureData != nullptr && rmaTextureData->id != defaultTexture.id)
+			if(rmaTextureData != nullptr && rmaTextureData->id != 0)
 			{
 				rmaLoaded = 1;
 				glActiveTexture(GL_TEXTURE3);
