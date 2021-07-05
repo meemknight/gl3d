@@ -105,6 +105,7 @@ namespace gl3d
 
 		//internal
 		Texture createIntenralTexture(GpuTexture t);
+		Texture createIntenralTexture(GLuint id_);
 
 	#pragma endregion
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-03
+//built on 2021-07-05
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -147,12 +147,12 @@ namespace gl3d
 namespace gl3d
 {
 
-	void GpuTexture::loadTextureFromFile(const char *file, int quality)
+	void GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
 	{
 
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, 4);
+		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, channels);
 
 		if (!data)
 		{
@@ -162,7 +162,7 @@ namespace gl3d
 		}
 		else
 		{
-			loadTextureFromMemory(data, w, h, 4, quality);
+			loadTextureFromMemory(data, w, h, channels, quality);
 			stbi_image_free(data);
 		}
 
@@ -175,23 +175,31 @@ namespace gl3d
 		int quality)
 	{
 
-		gl3dAssertComment(chanels == 3 || chanels == 4, "invalid chanel number");
+		gl3dAssertComment(chanels == 1 || chanels == 3 || chanels == 4, "invalid chanel number");
 
 		GLenum format = GL_RGBA;
+		GLenum internalFormat = GL_RGBA8;
 
 		if(chanels == 3)
 		{
 			format = GL_RGB;
+		}else if(chanels == 1)
+		{
+			format = GL_RED;
+			internalFormat = GL_R8;
 		}
 
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, w, h, 0, format, GL_UNSIGNED_BYTE, data);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		
+		if (quality < 0)
+			return;
+
 		setTextureQuality(quality);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -206,6 +214,8 @@ namespace gl3d
 	void GpuTexture::setTextureQuality(int quality)
 	{
 		if (!id)
+			return;
+		if (quality < 0)
 			return;
 
 		glBindTexture(GL_TEXTURE_2D, id);
@@ -2112,6 +2122,11 @@ namespace gl3d
 #include <random>
 #include <string>
 
+#ifdef _MSC_VER
+//#pragma warning( disable : 4244 4305 4267 4996 4018)
+#pragma warning( disable : 26812)
+#endif
+
 namespace gl3d
 {
 	
@@ -2529,6 +2544,14 @@ namespace gl3d
 		return Texture{ id };
 	}
 
+	Texture Renderer3D::createIntenralTexture(GLuint id_)
+	{
+		GpuTexture t;
+		t.id = id_;
+		return createIntenralTexture(t);
+
+	}
+
 	static int max(int x, int y, int z)
 	{
 		return std::max(std::max(x, y), z);
@@ -2663,126 +2686,220 @@ namespace gl3d
 					//RMA trexture
 					if (textureData->RMA_loadedTextures == 0)
 					{
-						stbi_set_flip_vertically_on_load(true);
+						constexpr int MERGE_TEXTURES_ON_GPU = 1;
 
-						int w1 = 0, h1 = 0;
-						unsigned char *data1 = 0;
-						unsigned char *data2 = 0;
-						unsigned char *data3 = 0;
-
-						if (!mat.map_Pr.empty())
-						{
-							data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
-							&w1, &h1, 0, 1);
-							if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
-						}
-
-						int w2 = 0, h2 = 0;
-						if (!mat.map_Pm.empty())
-						{
-							data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
-							&w2, &h2, 0, 1);
-							if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
-						}
-
-
-						int w3 = 0, h3 = 0;
-						if (!mat.map_Ka.empty())
-						{
-							data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
-								&w3, &h3, 0, 1);
-							if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
-						}
-
-						int w = max(w1, w2, w3);
-						int h = max(h1, h2, h3);
-
-						//calculate which function to use
-						if (data1 && data2 && data3) { textureData->RMA_loadedTextures = 7; }
-						else
-						if (data2 && data3) { textureData->RMA_loadedTextures = 6; }
-						else
-						if (data1 && data3) { textureData->RMA_loadedTextures = 5; }
-						else
-						if (data1 && data2) { textureData->RMA_loadedTextures = 4; }
-						else
-						if (data3) { textureData->RMA_loadedTextures = 3; }
-						else
-						if (data2) { textureData->RMA_loadedTextures = 2; }
-						else
-						if (data1) { textureData->RMA_loadedTextures = 1; }
-						else { textureData->RMA_loadedTextures = 0; }
-
-						if (textureData->RMA_loadedTextures)
+						if constexpr (MERGE_TEXTURES_ON_GPU)
 						{
 
-							unsigned char *finalData = new unsigned char[w * h * 4];
+							GpuTexture roughness;
+							int emptyData[1] = {};
+							int roughnessLoaded = 0, metallicLoaded = 0, ambientLoaded = 0;
 
-							//todo mabe add bilinear filtering
-							//todo load less chanels if necessary
-							for (int j = 0; j < h; j++)
+							if (!mat.map_Pr.empty())
 							{
-								for (int i = 0; i < w; i++)
-								{
-
-									if (data1)	//rough
-									{
-										int texelI = (i / (float)w) * w1;
-										int texelJ = (j / float(h)) * h1;
-
-										finalData[((j * w) + i) * 4 + 0] =
-											data1[(texelJ * w1) + texelI];
-
-									}
-									else
-									{
-										finalData[((j * w) + i) * 4 + 0] = 0;
-									}
-
-									if (data2)	//metalic
-									{
-
-										int texelI = (i / (float)w) * w2;
-										int texelJ = (j / float(h)) * h2;
-
-										finalData[((j * w) + i) * 4 + 1] =
-											data2[(texelJ * w2) + texelI];
-									}
-									else
-									{
-										finalData[((j * w) + i) * 4 + 1] = 0;
-									}
-
-									if (data3)	//ambient
-									{
-										int texelI = (i / (float)w) * w3;
-										int texelJ = (j / float(h)) * h3;
-
-										finalData[((j * w) + i) * 4 + 2] =
-											data3[(texelJ * w3) + texelI];
-									}
-									else
-									{
-										finalData[((j * w) + i) * 4 + 2] = 0;
-									}
-
-									finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
-								}
+								roughness.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str(), dontSet, 1);
+								glBindTexture(GL_TEXTURE_2D, roughness.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+								roughnessLoaded = 1;
+							}
+							else
+							{
+								roughness.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
+								glBindTexture(GL_TEXTURE_2D, roughness.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 							}
 
-							//gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
-							//	rmaQuality);
+							GpuTexture metallic;
+							if (!mat.map_Pm.empty())
+							{
+								metallic.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str(), dontSet, 1);
+								glBindTexture(GL_TEXTURE_2D, metallic.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+								metallicLoaded = 1;
+							}
+							else
+							{
+								metallic.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
+								glBindTexture(GL_TEXTURE_2D, metallic.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							}
 
-							GpuTexture t;
-							t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
+							GpuTexture ambientOcclusion;
+							if (!mat.map_Ka.empty())
+							{
+								ambientOcclusion.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str(), dontSet, 1);
+								glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+								ambientLoaded = 1;
+							}
+							else
+							{
+								ambientOcclusion.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
+								glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							}
+
+							//calculate which function to use
+							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 7; }
+							else
+							if (metallicLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 6; }
+							else
+							if (roughnessLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 5; }
+							else
+							if (roughnessLoaded && metallicLoaded) { textureData->RMA_loadedTextures = 4; }
+							else
+							if (ambientLoaded) { textureData->RMA_loadedTextures = 3; }
+							else
+							if (metallicLoaded) { textureData->RMA_loadedTextures = 2; }
+							else
+							if (roughnessLoaded) { textureData->RMA_loadedTextures = 1; }
+							else { textureData->RMA_loadedTextures = 0; }
+
+							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+								roughness, metallic, ambientOcclusion, lightShader.quadDrawer.quadVAO);
+
 							textureData->RMA_Texture = this->createIntenralTexture(t);
 
-							stbi_image_free(data1);
-							stbi_image_free(data2);
-							stbi_image_free(data3);
-							delete[] finalData;
-
+							roughness.clear();
+							metallic.clear();
+							ambientOcclusion.clear();
 						}
+						else 
+						{
+							stbi_set_flip_vertically_on_load(true);
+
+							int w1 = 0, h1 = 0;
+							unsigned char* data1 = 0;
+							unsigned char* data2 = 0;
+							unsigned char* data3 = 0;
+
+							if (!mat.map_Pr.empty())
+							{
+								data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
+									&w1, &h1, 0, 1);
+								if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
+							}
+
+							int w2 = 0, h2 = 0;
+							if (!mat.map_Pm.empty())
+							{
+								data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
+									&w2, &h2, 0, 1);
+								if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
+							}
+
+
+							int w3 = 0, h3 = 0;
+							if (!mat.map_Ka.empty())
+							{
+								data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
+									&w3, &h3, 0, 1);
+								if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
+							}
+
+							int w = max(w1, w2, w3);
+							int h = max(h1, h2, h3);
+
+							//calculate which function to use
+							if (data1 && data2 && data3) { textureData->RMA_loadedTextures = 7; }
+							else
+							if (data2 && data3) { textureData->RMA_loadedTextures = 6; }
+							else
+							if (data1 && data3) { textureData->RMA_loadedTextures = 5; }
+							else
+							if (data1 && data2) { textureData->RMA_loadedTextures = 4; }
+							else
+							if (data3) { textureData->RMA_loadedTextures = 3; }
+							else
+							if (data2) { textureData->RMA_loadedTextures = 2; }
+							else
+							if (data1) { textureData->RMA_loadedTextures = 1; }
+							else { textureData->RMA_loadedTextures = 0; }
+
+							if (textureData->RMA_loadedTextures)
+							{
+
+								unsigned char* finalData = new unsigned char[w * h * 4];
+
+								//todo mabe add bilinear filtering
+								//todo load less chanels if necessary
+								for (int j = 0; j < h; j++)
+								{
+									for (int i = 0; i < w; i++)
+									{
+
+										if (data1)	//rough
+										{
+											int texelI = (i / (float)w) * w1;
+											int texelJ = (j / float(h)) * h1;
+
+											finalData[((j * w) + i) * 4 + 0] =
+												data1[(texelJ * w1) + texelI];
+
+										}
+										else
+										{
+											finalData[((j * w) + i) * 4 + 0] = 0;
+										}
+
+										if (data2)	//metalic
+										{
+
+											int texelI = (i / (float)w) * w2;
+											int texelJ = (j / float(h)) * h2;
+
+											finalData[((j * w) + i) * 4 + 1] =
+												data2[(texelJ * w2) + texelI];
+										}
+										else
+										{
+											finalData[((j * w) + i) * 4 + 1] = 0;
+										}
+
+										if (data3)	//ambient
+										{
+											int texelI = (i / (float)w) * w3;
+											int texelJ = (j / float(h)) * h3;
+
+											finalData[((j * w) + i) * 4 + 2] =
+												data3[(texelJ * w3) + texelI];
+										}
+										else
+										{
+											finalData[((j * w) + i) * 4 + 2] = 0;
+										}
+
+										finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
+									}
+								}
+
+								//gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
+								//	rmaQuality);
+
+								GpuTexture t;
+								t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
+								textureData->RMA_Texture = this->createIntenralTexture(t);
+
+								stbi_image_free(data1);
+								stbi_image_free(data2);
+								stbi_image_free(data3);
+								delete[] finalData;
+
+							}
+						}
+					
+
+
+
+						/*
+						
+						*/
 
 					}
 
@@ -3754,9 +3871,7 @@ namespace gl3d
 	void Renderer3D::InternalStruct::PBRtextureMaker::init()
 	{
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag");
-
 		glGenFramebuffers(1, &fbo);
-
 
 
 	}
@@ -3764,6 +3879,8 @@ namespace gl3d
 	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(int w, int h, GpuTexture roughness, 
 		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO)
 	{
+
+		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
 		GLuint texture = 0;
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_2D, texture);
@@ -3773,31 +3890,26 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		//todo set the quality of this texture in a function parameter.
-
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0);
-
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, roughness.id);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, metallic.id);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+		//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	
 
 		glBindVertexArray(quadVAO);
 
 		shader.bind();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, roughness.id);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, metallic.id);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
+
 
 		glViewport(0, 0, w, h);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
 		glBindVertexArray(0);
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		return texture;

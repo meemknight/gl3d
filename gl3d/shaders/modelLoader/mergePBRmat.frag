@@ -3,8 +3,8 @@
 in vec2 v_texCoords;
 out vec4 fragColor;
 
-layout(binding = 0) uniform sampler2D u_metallic;
-layout(binding = 1) uniform sampler2D u_roughness;
+layout(binding = 0) uniform sampler2D u_roughness;
+layout(binding = 1) uniform sampler2D u_metallic;
 layout(binding = 2) uniform sampler2D u_ambient;
 
 void main()

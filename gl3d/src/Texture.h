@@ -6,6 +6,7 @@ namespace gl3d
 
 	enum TextureLoadQuality
 	{
+		dontSet = -1, //won't create mipmap
 		leastPossible = 0,
 		nearestMipmap,
 		linearMipmap,
@@ -19,7 +20,7 @@ namespace gl3d
 		GpuTexture() = default;
 		GpuTexture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file, int quality = maxQuality);
+		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
 
 		void clear();
