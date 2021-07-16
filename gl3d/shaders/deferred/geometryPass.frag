@@ -19,6 +19,7 @@ uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 
 uniform sampler2D u_RMASampler;
+uniform sampler2D u_emissiveTexture;
 uniform int u_materialIndex;
 
 
@@ -26,8 +27,8 @@ uniform int u_materialIndex;
 struct MaterialStruct
 {
 	vec4 kd;
-	vec4 rma;
-	vec4 emmisive;
+	vec4 rma; //last component emmisive
+	
 	//float kdr; //= 1;
 	//float kdg; //= 1;
 	//float kdb; //= 1;
@@ -63,7 +64,6 @@ mat3x3 NormalToRotation(in vec3 normal)
 }
 
 
-
 subroutine vec3 GetNormalMapFunc(vec3);
 
 subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
@@ -82,6 +82,22 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 }
 
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
+
+
+
+subroutine vec3 GetEmmisiveFunc(vec3);
+subroutine (GetEmmisiveFunc) vec3 sampledEmmision(vec3 color)
+{
+	return texture2D(u_emissiveTexture, v_texCoord).rgb;
+}
+
+subroutine (GetEmmisiveFunc) vec3 notSampledEmmision(vec3 color)
+{
+	return color * mat[u_materialIndex].rma.a;
+}
+
+subroutine uniform GetEmmisiveFunc u_getEmmisiveFunc;
+
 
 
 //albedo
@@ -171,15 +187,15 @@ subroutine uniform GetMaterialMapped u_getMaterialMapped;
 void main()
 {
 
+	vec4 color  = u_getAlbedo(); //texture color
+	if(color.a < 0.1)discard;
+
 
 	vec3 sampledMaterial = u_getMaterialMapped();
 	float roughnessSampled = sampledMaterial.r;
 	roughnessSampled = max(0.09,roughnessSampled);
 	float metallicSampled = sampledMaterial.g;
 	float sampledAo = sampledMaterial.b;
-
-
-	vec4 color  = u_getAlbedo(); //texture color
 
 
 	vec3 noMappedNorals = normalize(v_normals);
@@ -192,6 +208,9 @@ void main()
 	a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 	a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 	a_posViewSpace = v_positionViewSpace;
-	a_emmisive = mat[u_materialIndex].emmisive.rgb;
+	//a_emmisive = a_outColor.rgb * mat[u_materialIndex].rma.a;
+
+	//a_emmisive = texture2D(u_emissiveTexture, v_texCoord).rgb;
+	a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
 
 }

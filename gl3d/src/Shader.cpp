@@ -261,8 +261,10 @@ namespace gl3d
 		RMASamplerLocation = getUniform(geometryPassShader.id, "u_RMASampler");
 		//pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
+		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
+
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
 		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
 		glGenBuffers(1, &materialBlockBuffer);
@@ -406,6 +408,13 @@ namespace gl3d
 		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"notSampledAlbedo");
 
+		//
+		emissiveSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"sampledEmmision");
+
+		emissiveSubroutine_notSampled= getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"notSampledEmmision");
+
 
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
@@ -416,6 +425,9 @@ namespace gl3d
 
 		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getAlbedo");
+
+		getEmmisiveSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"u_getEmmisiveFunc");
 
 		const char *materiaSubroutineFunctions[8] = { 
 			"materialNone",

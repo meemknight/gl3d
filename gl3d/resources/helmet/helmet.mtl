@@ -14,3 +14,4 @@ norm helmet_normal.tga
 map_Pm helmet_metalness.tga
 map_Ao helmet_occlusion.tga
 map_Pr helmet_roughness.tga
+map_emissive helmet_emission.tga

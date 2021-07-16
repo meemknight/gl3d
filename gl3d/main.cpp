@@ -160,12 +160,12 @@ int main()
 	//renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox.loadTexture(names, w, h);
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/WinterForest_Ref.hdr", w, h);
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
+	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/Milkyway_small.hdr", w, h);
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
-	//renderer.skyBox.loadHDRtexture("resources/skyBoxes/chinese_garden_2k.hdr", w, h);
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
 	
 
 
@@ -846,7 +846,7 @@ int main()
 
 					ImGui::Text("Object material");
 					ImGui::ColorEdit3("difuse", &material.kd[0]);
-					ImGui::ColorEdit3("emmisive", &material.emmisive[0]);
+					ImGui::SliderFloat("emmisive", &material.emmisive, 0, 1);
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
@@ -1040,7 +1040,6 @@ int main()
 		}
 
 
-		renderer.renderSkyBoxBefore();
 
 		renderer.render();
 
@@ -1070,7 +1069,6 @@ int main()
 	#pragma endregion
 
 
-		//renderer.renderSkyBox();
 
 
 	#pragma region render and events

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-16
+//built on 2021-07-17
 ////////////////////////////////////////////////
 
 
@@ -67,6 +67,7 @@ namespace gl3d
 		Texture normalMapTexture = {};
 
 		Texture RMA_Texture = {}; //rough metalness ambient oclusion
+		Texture emissiveTexture= {};
 		int RMA_loadedTextures = {};
 	};
 
@@ -78,10 +79,8 @@ namespace gl3d
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
-		float notUsed;
+		float emmisive = 0;
 		//rma
-
-		glm::vec4 emmisive = glm::vec4(0); //w component not used
 
 		GpuMaterial setDefaultMaterial()
 		{
@@ -240,6 +239,7 @@ namespace gl3d
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
 		GLint RMASamplerLocation = -1;
+		GLint u_emissiveTexture = -1;
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
 		GLint materialIndexLocation = -1;
@@ -270,12 +270,16 @@ namespace gl3d
 		GLint normalSubroutineLocation = -1;
 		GLint materialSubroutineLocation = -1;
 		GLint getAlbedoSubroutineLocation = -1;
+		GLint getEmmisiveSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
 		
 		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
 		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
+		
+		GLuint emissiveSubroutine_sampled = GL_INVALID_INDEX;
+		GLuint emissiveSubroutine_notSampled = GL_INVALID_INDEX;
 
 		
 		GLuint materialSubroutine_functions[8] = {
@@ -455,6 +459,7 @@ namespace gl3d
 		GpuTexture normalMapTexture;
 
 		GpuTexture RMA_Texture; //rough metalness ambient oclusion
+		GpuTexture emissiveTexture;
 		int RMA_loadedTextures;
 
 		GpuMaterial material;

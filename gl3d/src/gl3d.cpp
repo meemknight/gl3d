@@ -492,6 +492,11 @@ namespace gl3d
 						//	TextureLoadQuality::linearMipmap);
 					}
 
+					if (!mat.map_emissive.empty())
+					{
+						textureData->emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
+					}
+
 					textureData->RMA_loadedTextures = 0;
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
@@ -911,6 +916,7 @@ namespace gl3d
 		glUniform1i(lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
 		glUniform1i(lightShader.RMASamplerLocation, 3);
+		glUniform1i(lightShader.u_emissiveTexture, 4);
 
 
 
@@ -985,7 +991,6 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
 			}
 		
-			//todo refactor default texture, just keep it totally separate and treat -1 as default texture
 			GpuTexture *rmaTextureData = this->getTextureData(textureData.RMA_Texture);
 			if(rmaTextureData != nullptr && rmaTextureData->id != 0)
 			{
@@ -994,6 +999,32 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 			}
 
+			int emissiveTextureLoaded = 0;
+			GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
+			if(emissiveTextureData != nullptr && emissiveTextureData->id != 0)
+			{
+				emissiveTextureLoaded = 1;
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
+			}
+
+
+			if(emissiveTextureLoaded)
+			{
+				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_sampled)
+				{
+					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_sampled;
+					changed = 1;
+				}
+			}
+			else
+			{
+				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_notSampled)
+				{
+					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_notSampled;
+					changed = 1;
+				}
+			}
 	
 			if (normalLoaded && lightShader.normalMap)
 			{
@@ -1277,6 +1308,8 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		renderSkyBoxBefore();
+
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		

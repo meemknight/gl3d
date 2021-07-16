@@ -217,6 +217,8 @@ namespace objl
 		std::string map_ORM;
 		//RMA map
 		std::string map_RMA;
+		//Emissive map
+		std::string map_emissive;
 	};
 
 	// Structure: Mesh
@@ -1285,7 +1287,11 @@ namespace objl
 				{
 					tempMaterial.map_ORM = algorithm::tail(curline);
 				}
-
+				else
+				if (algorithm::firstToken(curline) == "map_emissive" || algorithm::firstToken(curline) == "map_Ke")
+				{
+					tempMaterial.map_emissive = algorithm::tail(curline);
+				}
 
 			}
 

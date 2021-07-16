@@ -57,6 +57,7 @@ Features and todos:
 ---
 - [x] Bloom
 - [x] Bloom settings
+- [x] Emissive materials
 ---
 - [ ] Volumetric light (God rays)
 ---

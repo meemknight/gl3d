@@ -57,6 +57,7 @@ namespace gl3d
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
 		GLint RMASamplerLocation = -1;
+		GLint u_emissiveTexture = -1;
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
 		GLint materialIndexLocation = -1;
@@ -87,12 +88,16 @@ namespace gl3d
 		GLint normalSubroutineLocation = -1;
 		GLint materialSubroutineLocation = -1;
 		GLint getAlbedoSubroutineLocation = -1;
+		GLint getEmmisiveSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
 		
 		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
 		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
+		
+		GLuint emissiveSubroutine_sampled = GL_INVALID_INDEX;
+		GLuint emissiveSubroutine_notSampled = GL_INVALID_INDEX;
 
 		
 		GLuint materialSubroutine_functions[8] = {

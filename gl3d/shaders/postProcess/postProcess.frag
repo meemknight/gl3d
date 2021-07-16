@@ -20,7 +20,7 @@ void main()
 	
 	vec3 bloom = texture(u_bloomTexture, v_texCoords).rgb;
 
-	if(color.a < 0.5 && bloom.r == 0 && bloom.g == 0 && bloom.b == 0){discard;}
+	if(color.a < 0.5 && bloom.r == 0 && bloom.g == 0 && bloom.b == 0){discard;} //this is optional
 	//if(color.a < 0.5){discard;}
 
 

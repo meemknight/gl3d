@@ -104,6 +104,7 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
+	//deprecated
 	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
 	{
 		auto &mesh = model.loader.LoadedMeshes[index];
@@ -126,6 +127,7 @@ namespace gl3d
 		albedoTexture.clear();
 		normalMapTexture.clear();
 		RMA_Texture.clear();
+		emissiveTexture.clear();
 
 		if (!mat.map_Kd.empty())
 		{
@@ -136,6 +138,12 @@ namespace gl3d
 		{
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 				TextureLoadQuality::linearMipmap);
+		}
+
+		if (!mat.map_emissive.empty())
+		{
+			emissiveTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
+				TextureLoadQuality::nearestMipmap);
 		}
 
 		RMA_loadedTextures = 0;
@@ -397,6 +405,7 @@ namespace gl3d
 		albedoTexture.clear();
 		normalMapTexture.clear();
 		RMA_Texture.clear();
+		emissiveTexture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;

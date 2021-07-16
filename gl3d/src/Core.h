@@ -57,6 +57,7 @@ namespace gl3d
 		Texture normalMapTexture = {};
 
 		Texture RMA_Texture = {}; //rough metalness ambient oclusion
+		Texture emissiveTexture= {};
 		int RMA_loadedTextures = {};
 	};
 
@@ -68,10 +69,8 @@ namespace gl3d
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
-		float notUsed;
+		float emmisive = 0;
 		//rma
-
-		glm::vec4 emmisive = glm::vec4(0); //w component not used
 
 		GpuMaterial setDefaultMaterial()
 		{

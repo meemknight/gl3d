@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-16
+//built on 2021-07-17
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -692,8 +692,10 @@ namespace gl3d
 		RMASamplerLocation = getUniform(geometryPassShader.id, "u_RMASampler");
 		//pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
+		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 		
+
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
 		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
 		glGenBuffers(1, &materialBlockBuffer);
@@ -837,6 +839,13 @@ namespace gl3d
 		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"notSampledAlbedo");
 
+		//
+		emissiveSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"sampledEmmision");
+
+		emissiveSubroutine_notSampled= getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"notSampledEmmision");
+
 
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
@@ -847,6 +856,9 @@ namespace gl3d
 
 		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getAlbedo");
+
+		getEmmisiveSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
+			"u_getEmmisiveFunc");
 
 		const char *materiaSubroutineFunctions[8] = { 
 			"materialNone",
@@ -1066,6 +1078,7 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
+	//deprecated
 	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
 	{
 		auto &mesh = model.loader.LoadedMeshes[index];
@@ -1088,6 +1101,7 @@ namespace gl3d
 		albedoTexture.clear();
 		normalMapTexture.clear();
 		RMA_Texture.clear();
+		emissiveTexture.clear();
 
 		if (!mat.map_Kd.empty())
 		{
@@ -1098,6 +1112,12 @@ namespace gl3d
 		{
 			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 				TextureLoadQuality::linearMipmap);
+		}
+
+		if (!mat.map_emissive.empty())
+		{
+			emissiveTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
+				TextureLoadQuality::nearestMipmap);
 		}
 
 		RMA_loadedTextures = 0;
@@ -1359,6 +1379,7 @@ namespace gl3d
 		albedoTexture.clear();
 		normalMapTexture.clear();
 		RMA_Texture.clear();
+		emissiveTexture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;
@@ -2633,6 +2654,11 @@ namespace gl3d
 						//	TextureLoadQuality::linearMipmap);
 					}
 
+					if (!mat.map_emissive.empty())
+					{
+						textureData->emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
+					}
+
 					textureData->RMA_loadedTextures = 0;
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
@@ -3052,6 +3078,7 @@ namespace gl3d
 		glUniform1i(lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
 		glUniform1i(lightShader.RMASamplerLocation, 3);
+		glUniform1i(lightShader.u_emissiveTexture, 4);
 
 
 
@@ -3126,7 +3153,6 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
 			}
 		
-			//todo refactor default texture, just keep it totally separate and treat -1 as default texture
 			GpuTexture *rmaTextureData = this->getTextureData(textureData.RMA_Texture);
 			if(rmaTextureData != nullptr && rmaTextureData->id != 0)
 			{
@@ -3135,6 +3161,32 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 			}
 
+			int emissiveTextureLoaded = 0;
+			GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
+			if(emissiveTextureData != nullptr && emissiveTextureData->id != 0)
+			{
+				emissiveTextureLoaded = 1;
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
+			}
+
+
+			if(emissiveTextureLoaded)
+			{
+				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_sampled)
+				{
+					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_sampled;
+					changed = 1;
+				}
+			}
+			else
+			{
+				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_notSampled)
+				{
+					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_notSampled;
+					changed = 1;
+				}
+			}
 	
 			if (normalLoaded && lightShader.normalMap)
 			{
@@ -3418,6 +3470,8 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		renderSkyBoxBefore();
+
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		
