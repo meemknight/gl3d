@@ -605,6 +605,7 @@ int main()
 			ImGui::NewLine();
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
+			ImGui::SliderFloat("Exposure", &renderer.exposure, 0.1, 10);
 
 			
 
@@ -846,6 +847,7 @@ int main()
 
 					ImGui::Text("Object material");
 					ImGui::ColorEdit3("difuse", &material.kd[0]);
+					ImGui::ColorEdit3("emmisive", &material.emmisive[0]);
 					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
 					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);

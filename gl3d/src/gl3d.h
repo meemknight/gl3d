@@ -192,6 +192,7 @@ namespace gl3d
 				albedo,
 				material,
 				positionViewSpace,
+				emissive,
 				bufferCount,
 			};
 
@@ -208,6 +209,8 @@ namespace gl3d
 			GLint u_colorTexture;	//post process shader
 			GLint u_bloomTexture;	//post process shader
 			GLint u_bloomIntensity;	//post process shader
+			GLint u_exposure;		//post process shader
+
 
 			GLint u_toBlurcolorInput;
 			GLint u_horizontal;
@@ -266,6 +269,7 @@ namespace gl3d
 		void render();
 		void updateWindowMetrics(int x, int y);
 
+		float exposure = 1;
 
 
 		int w; int h;

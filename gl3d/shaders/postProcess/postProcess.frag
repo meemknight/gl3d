@@ -8,6 +8,7 @@ uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
 
 uniform float u_bloomIntensity;
+uniform float u_exposure;
 
 void main()
 {
@@ -19,8 +20,8 @@ void main()
 	//a_color = bloom;
 	
 	//hdr
-	float exposure = 1;
-	color = vec3(1.0) - exp(-color  * exposure);
+	float exposure = u_exposure;
+	a_color = vec3(1.0) - exp(-a_color  * exposure);
 
 	//gamma correction
 	a_color = pow(a_color, vec3(1.0/2.2));

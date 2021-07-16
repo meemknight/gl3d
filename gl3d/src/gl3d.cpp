@@ -93,9 +93,17 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace], 0);
 
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive], 0);
+
 
 		unsigned int attachments[decltype(gBuffer)::bufferCount] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, 
-			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
 		glDrawBuffers(decltype(gBuffer)::bufferCount, attachments);
 
 		glGenRenderbuffers(1, &gBuffer.depthBuffer);
@@ -1328,7 +1336,7 @@ namespace gl3d
 		}
 	
 
-	#pragma region render into the post processing fbo
+	#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1367,6 +1375,11 @@ namespace gl3d
 		glUniform1i(lightShader.light_u_brdfTexture, 7);
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, lightShader.brdfTexture.id);
+
+		glUniform1i(lightShader.light_u_emmisive, 8);
+		glActiveTexture(GL_TEXTURE8);
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
+
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
 
@@ -1427,7 +1440,7 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region do the post process stuff and draw to screen
+	#pragma region do the post process stuff and draw to the screen
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(postProcess.postProcessShader.id);
@@ -1456,6 +1469,7 @@ namespace gl3d
 
 		//bloom settings
 		glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
+		glUniform1f(postProcess.u_exposure, this->exposure);
 
 		
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -1503,6 +1517,9 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
+		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+
 		glBindRenderbuffer(GL_RENDERBUFFER, gBuffer.depthBuffer);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, x, y);
 		
@@ -1523,7 +1540,7 @@ namespace gl3d
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		//bloom
+		//bloom buffer and color buffer
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[i]);
@@ -1558,7 +1575,7 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox);
+		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -1712,6 +1729,7 @@ namespace gl3d
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture");
 		u_bloomIntensity = getUniform(postProcessShader.id, "u_bloomIntensity");
+		u_exposure = getUniform(postProcessShader.id, "u_exposure");
 
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");

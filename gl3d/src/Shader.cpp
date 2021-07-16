@@ -284,6 +284,8 @@ namespace gl3d
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		u_useSSAO = getUniform(lightingPassShader.id, "u_useSSAO");
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
+		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
+		
 		
 
 	#pragma region uniform buffer

@@ -17,6 +17,8 @@ uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_ssao;
 uniform sampler2D u_brdfTexture;
+uniform sampler2D u_emmisive;
+
 
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
@@ -140,7 +142,10 @@ void main()
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
 	vec3 normal = texture(u_normals, v_texCoords).xyz;
 	vec3 albedo = texture(u_albedo, v_texCoords).xyz;
+	vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
+
 	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+	emissive  = pow(emissive , vec3(2.2,2.2,2.2)).rgb; //gamma corection
 
 
 	vec3 material = texture(u_materials, v_texCoords).xyz;
@@ -252,16 +257,22 @@ void main()
 
 	//gama correction and hdr is done in the post process step
 
-
+	//todo clamp ???????
 	if(lightIntensity > lightPassData.bloomTresshold)
 	{
-		a_outBloom = clamp(vec4(color.rgb, 1), 0, 1);
-		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+		//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
+		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+
+		a_outBloom = vec4(color.rgb, 1) + vec4(emissive.rgb, 0);
+		a_outColor = vec4(color.rgb, 1);	
 
 	}else
 	{
-		a_outBloom = vec4(0, 0, 0, 0); //note (vlod) keep this here
-		a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
+		//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
+		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
+	
+		a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
+		a_outColor = vec4(color.rgb, 1);
 	}
 
 	//a_outColor.rgb =  material.bbb;

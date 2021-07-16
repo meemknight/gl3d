@@ -62,11 +62,16 @@ namespace gl3d
 
 	struct GpuMaterial
 	{
-		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
+		glm::vec4 kd = glm::vec4(1); //w component not used
+		
+		//rma
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
 		float notUsed;
+		//rma
+
+		glm::vec4 emmisive = glm::vec4(0); //w component not used
 
 		GpuMaterial setDefaultMaterial()
 		{

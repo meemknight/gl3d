@@ -674,6 +674,7 @@ namespace gl3d
 		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag");
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
+		normalSkyBox.u_exposure = getUniform(normalSkyBox.shader.id, "u_exposure");
 
 		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag");
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
@@ -1127,7 +1128,7 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::draw(const glm::mat4 &viewProjMat, SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure)
 	{
 		glBindVertexArray(vertexArray);
 
@@ -1138,6 +1139,7 @@ namespace gl3d
 
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
+		glUniform1f(normalSkyBox.u_exposure, exposure);
 
 		glDepthFunc(GL_LEQUAL);
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 6);

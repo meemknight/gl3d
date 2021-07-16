@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-05
+//built on 2021-07-16
 ////////////////////////////////////////////////
 
 
@@ -72,11 +72,16 @@ namespace gl3d
 
 	struct GpuMaterial
 	{
-		glm::vec4 kd = glm::vec4(1);; //= 0.45;//w component not used
+		glm::vec4 kd = glm::vec4(1); //w component not used
+		
+		//rma
 		float roughness = 0.5f;
 		float metallic = 0.1;
 		float ao = 1;
 		float notUsed;
+		//rma
+
+		glm::vec4 emmisive = glm::vec4(0); //w component not used
 
 		GpuMaterial setDefaultMaterial()
 		{
@@ -250,6 +255,7 @@ namespace gl3d
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
+		GLint light_u_emmisive = -1;
 		
 
 		GLint u_useSSAO = -1;
@@ -545,7 +551,7 @@ namespace gl3d
 			Shader shader;
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
-
+			GLuint u_exposure;
 		}normalSkyBox;
 
 		struct
@@ -587,7 +593,7 @@ namespace gl3d
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox);
+		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
 
 	};
 
@@ -807,6 +813,7 @@ namespace gl3d
 				albedo,
 				material,
 				positionViewSpace,
+				emissive,
 				bufferCount,
 			};
 
@@ -823,6 +830,8 @@ namespace gl3d
 			GLint u_colorTexture;	//post process shader
 			GLint u_bloomTexture;	//post process shader
 			GLint u_bloomIntensity;	//post process shader
+			GLint u_exposure;		//post process shader
+
 
 			GLint u_toBlurcolorInput;
 			GLint u_horizontal;
@@ -881,6 +890,7 @@ namespace gl3d
 		void render();
 		void updateWindowMetrics(int x, int y);
 
+		float exposure = 1;
 
 
 		int w; int h;
