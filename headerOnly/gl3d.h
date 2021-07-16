@@ -593,7 +593,8 @@ namespace gl3d
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
+		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure);
+		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
 
 	};
 
@@ -734,6 +735,7 @@ namespace gl3d
 	#pragma region skyBox
 
 		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
+		void renderSkyBoxBefore(); //todo this thing will dissapear after the render function will do everything
 		SkyBox loadSkyBox(const char *names[6]);
 		SkyBox loadSkyBox(const char *name, int format = 0);
 		SkyBox loadHDRSkyBox(const char *name);

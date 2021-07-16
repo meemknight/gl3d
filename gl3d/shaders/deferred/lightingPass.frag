@@ -141,8 +141,10 @@ void main()
 {
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
 	vec3 normal = texture(u_normals, v_texCoords).xyz;
-	vec3 albedo = texture(u_albedo, v_texCoords).xyz;
+	vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 	vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
+
+	vec3 albedo = albedoAlpha.rgb;
 
 	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
 	emissive  = pow(emissive , vec3(2.2,2.2,2.2)).rgb; //gamma corection
@@ -257,14 +259,15 @@ void main()
 
 	//gama correction and hdr is done in the post process step
 
-	//todo clamp ???????
+	//if(albedoAlpha.a == 0) discard;
+
 	if(lightIntensity > lightPassData.bloomTresshold)
 	{
 		//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
 
-		a_outBloom = vec4(color.rgb, 1) + vec4(emissive.rgb, 0);
-		a_outColor = vec4(color.rgb, 1);	
+		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 0);
+		a_outColor = vec4(color.rgb, albedoAlpha.a);	
 
 	}else
 	{
@@ -272,10 +275,13 @@ void main()
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
 	
 		a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
-		a_outColor = vec4(color.rgb, 1);
+		a_outColor = vec4(color.rgb, albedoAlpha.a);
 	}
 
+	
+
 	//a_outColor.rgb =  material.bbb;
+	//a_outColor.rgba =  vec4(albedoAlpha.aaa, 1);
 	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);
 
 }

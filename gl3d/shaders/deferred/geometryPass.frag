@@ -5,7 +5,7 @@
 
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
-layout(location = 2) out vec3 a_outColor;
+layout(location = 2) out vec4 a_outColor;
 layout(location = 3) out vec3 a_material;
 layout(location = 4) out vec3 a_posViewSpace;
 layout(location = 5) out vec3 a_emmisive;
@@ -189,7 +189,7 @@ void main()
 
 	a_pos = v_position;
 	a_normal = normalize(normal);
-	a_outColor = clamp(color.rgb, 0, 1);
+	a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 	a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 	a_posViewSpace = v_positionViewSpace;
 	a_emmisive = mat[u_materialIndex].emmisive.rgb;

@@ -70,7 +70,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal], 0);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -920,27 +920,28 @@ namespace gl3d
 			, &materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
-
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		for (auto &i : model.models)
-		{
-			
-			glBindVertexArray(i.vertexArray);
-			//glBindBuffer(GL_ARRAY_BUFFER, i.vertexBuffer);
-
-			if (i.indexBuffer)
-			{
-				//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, i.indexBuffer);
-				glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-			}
-			else
-			{
-				glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-			}
-		}
-
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDepthFunc(GL_EQUAL);
+		//z pre pass todo add back and create a custom shader
+		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//glDepthFunc(GL_LESS);
+		//for (auto &i : model.models)
+		//{
+		//	
+		//	glBindVertexArray(i.vertexArray);
+		//	//glBindBuffer(GL_ARRAY_BUFFER, i.vertexBuffer);
+		//
+		//	if (i.indexBuffer)
+		//	{
+		//		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, i.indexBuffer);
+		//		glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+		//	}
+		//	else
+		//	{
+		//		glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+		//	}
+		//}
+		
+		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		//glDepthFunc(GL_EQUAL);
 
 		GLsizei n;
 		glGetProgramStageiv(lightShader.geometryPassShader.id,
@@ -992,8 +993,6 @@ namespace gl3d
 				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 			}
-
-
 
 	
 			if (normalLoaded && lightShader.normalMap)
@@ -1471,8 +1470,13 @@ namespace gl3d
 		glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
 		glUniform1f(postProcess.u_exposure, this->exposure);
 
-		
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glDisable(GL_BLEND);
+
 
 	#pragma endregion
 
@@ -1484,9 +1488,14 @@ namespace gl3d
 		glBlitFramebuffer(
 		  0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
 		);
-
+		
+		//clear buffers
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+		//glClear(GL_COLOR_BUFFER_BIT );
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	#pragma endregion
 
@@ -1509,7 +1518,7 @@ namespace gl3d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, x, y, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
@@ -1560,6 +1569,7 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
@@ -1568,7 +1578,6 @@ namespace gl3d
 	void Renderer3D::renderSkyBox()
 	{
 		//todo move into render
-
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
 		viewMat = glm::mat4(glm::mat3(viewMat));
@@ -1576,6 +1585,17 @@ namespace gl3d
 		auto viewProjMat = projMat * viewMat;
 
 		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure);
+	}
+
+	void Renderer3D::renderSkyBoxBefore()
+	{
+		auto projMat = camera.getProjectionMatrix();
+		auto viewMat = camera.getWorldToViewMatrix();
+		viewMat = glm::mat4(glm::mat3(viewMat));
+
+		auto viewProjMat = projMat * viewMat;
+
+		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, this->exposure);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])

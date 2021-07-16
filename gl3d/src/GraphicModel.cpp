@@ -1148,4 +1148,24 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
+	void SkyBoxLoaderAndDrawer::drawBefore(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure)
+	{
+		glBindVertexArray(vertexArray);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+
+		normalSkyBox.shader.bind();
+
+		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
+		glUniform1f(normalSkyBox.u_exposure, exposure);
+
+		glDisable(GL_DEPTH_TEST);
+		glDrawArrays(GL_TRIANGLES, 0, 6 * 6);
+		glEnable(GL_DEPTH_TEST);
+
+		glBindVertexArray(0);
+	}
+
 };

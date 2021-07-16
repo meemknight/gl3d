@@ -107,6 +107,7 @@ int main()
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 
@@ -607,8 +608,6 @@ int main()
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
 			ImGui::SliderFloat("Exposure", &renderer.exposure, 0.1, 10);
 
-			
-
 
 			static bool antiAliasing = 0;
 			ImGui::Checkbox("Anti aliasing", &antiAliasing);
@@ -1040,6 +1039,9 @@ int main()
 
 		}
 
+
+		renderer.renderSkyBoxBefore();
+
 		renderer.render();
 
 
@@ -1068,7 +1070,7 @@ int main()
 	#pragma endregion
 
 
-		renderer.renderSkyBox();
+		//renderer.renderSkyBox();
 
 
 	#pragma region render and events

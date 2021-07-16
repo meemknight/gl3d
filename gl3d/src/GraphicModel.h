@@ -208,7 +208,8 @@ namespace gl3d
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
-		void draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
+		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure);
+		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
 
 	};
 
