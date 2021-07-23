@@ -1222,7 +1222,7 @@ namespace objl
 				else
 				// Ambient Texture Map
 				if (algorithm::firstToken(curline) == "map_Ka" ||
-					algorithm::firstToken(curline) == "map_Ao") //todo ? same thing ?
+					algorithm::firstToken(curline) == "map_Ao")
 				{
 					tempMaterial.map_Ka = algorithm::tail(curline);
 				}

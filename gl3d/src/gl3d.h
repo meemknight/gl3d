@@ -11,6 +11,8 @@ namespace gl3d
 {
 	namespace internal
 	{
+
+		//todo probably just keep a counter and get the next one
 		template <class T>
 		int generateNewIndex(T indexesVec)
 		{
@@ -52,11 +54,6 @@ namespace gl3d
 		void init(int x, int y);
 		
 	#pragma region material
-
-		std::vector<GpuMaterial> materials;
-		std::vector<int> materialIndexes;
-		std::vector<std::string> materialNames;
-		std::vector<TextureDataForModel> materialTexturesData;
 		
 
 		//todo add texture data function
@@ -83,20 +80,15 @@ namespace gl3d
 		//returns true if succeded
 		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
 
-		GpuMultipleGraphicModel *getObjectData(Object o);
+		GpuMultipleGraphicModel *getModelData(Model o);
 
 	#pragma endregion
 
 	#pragma region Texture
 
 
-		std::vector <GpuTexture> loadedTextures;
-		std::vector<int> loadedTexturesIndexes;
-		std::vector<std::string> loadedTexturesNames;
-
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
-		//todo add quality here
 		Texture loadTexture(std::string path);
 		GLuint getTextureOpenglId(Texture t);
 
@@ -120,19 +112,29 @@ namespace gl3d
 
 	#pragma endregion
 
+	#pragma region model
+
+		Model loadModel(std::string path, float scale = 1);
+		void deleteModel(Model o);
+
+	#pragma endregion
+
+	#pragma region Entity
+	
+		Entity createEntity(Model m, Transform transform = {});
+		CpuEntity* getEntityData(Entity e);
+		void deleteEntity(Entity e);
+
+	#pragma endregion
+
+
+
 		struct VAO
 		{
-			//this is not used
+			//this is not used yet
 			GLuint posNormalTexture;
 			void createVAOs();
 		}vao;
-
-		std::vector< GpuMultipleGraphicModel > graphicModels;
-		std::vector<int> graphicModelsIndexes;
-
-
-		Object loadObject(std::string path, float scale = 1);
-		void deleteObject(Object o);
 
 
 
@@ -142,13 +144,13 @@ namespace gl3d
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
-		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
-		void renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation = {},
+		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
-		void renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation = {}, 
+		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = { 0.7, 0.7, 0.1 });
 
-		void renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation = {},
+		void renderSubModelBorder(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
 
 
@@ -168,12 +170,36 @@ namespace gl3d
 			}pBRtextureMaker;
 
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+
+			int getMaterialIndex(Material m);
+			int getModelIndex(Model o);
+			int getTextureIndex(Texture t);
+			int getEntityIndex(Entity t);
+
+
+			//material
+			std::vector<GpuMaterial> materials;
+			std::vector<int> materialIndexes;
+			std::vector<std::string> materialNames;
+			std::vector<TextureDataForModel> materialTexturesData;
+
+			//texture
+			std::vector <GpuTexture> loadedTextures;
+			std::vector<int> loadedTexturesIndexes;
+			std::vector<std::string> loadedTexturesNames;
+		
+			//models
+			std::vector< GpuMultipleGraphicModel > graphicModels;
+			std::vector<int> graphicModelsIndexes;
+
+			//entities
+			std::vector<CpuEntity> cpuEntities;
+			std::vector<int> entitiesIndexes;
+
+
 		}internal;
 
-		//internal //todo add internal namespace
-		int getMaterialIndex(Material m);
-		int getObjectIndex(Object o);
-		int getTextureIndex(Texture t);
+	
 
 		struct
 		{
@@ -279,13 +305,6 @@ namespace gl3d
 	};
 
 
-	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture, float gama,
-		const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
-
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights);
-	
 
 
 };

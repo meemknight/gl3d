@@ -27,11 +27,11 @@ namespace gl3d
 		Material(int id = 0):id_(id) {};
 	};
 
-	struct Object : public InterfaceCheckId< Object >
+	struct Entity : public InterfaceCheckId< Entity >
 	{
 		int id_ = {};
-
-		Object(int id = 0):id_(id) {};
+	
+		Entity(int id = 0):id_(id) {};
 	};
 
 	struct Model: public InterfaceCheckId< Model >

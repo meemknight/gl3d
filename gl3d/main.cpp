@@ -37,7 +37,7 @@ extern "C"
 
 struct ObjectAndTransform
 {
-	gl3d::Object obj = {};
+	gl3d::Model obj = {};
 	glm::vec3 position = {};
 	glm::vec3 rotation = {};
 	glm::vec3 scale = {1,1,1};
@@ -413,16 +413,16 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	auto barelModel = renderer.loadObject("resources/barrel/Barrel_01.obj");
+	auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
-	auto rockModel = renderer.loadObject("resources/helmet/helmet.obj");
+	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
 	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto levelModel = renderer.loadObject("resources/obj/sphere3.obj");
+	auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
-	auto sphereModel = renderer.loadObject("resources/obj/sphere.obj");
+	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
 
@@ -439,7 +439,7 @@ int main()
 	//auto objectTest = renderer.loadObject("resources/barrel/Barrel_01.obj");
 	//auto objectTest2 = renderer.loadObject("resources/other/crate.obj", 0.01);
 
-	std::vector< ObjectAndTransform > models;
+	std::vector< gl3d::Entity > models;
 	static std::vector < const char* > items = {}; //just models names
 
 	renderer.camera.aspectRatio = (float)w / h;
@@ -773,36 +773,35 @@ int main()
 			if (ImGui::Button("Add barrel"))
 			{
 				items.push_back("Barrel");
-				ObjectAndTransform model;
-				model.obj = barelModel;
-				models.push_back(model);
+				auto e = renderer.createEntity(barelModel);
+				models.push_back(e);
+
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add rock"))
 			{
 				items.push_back("Rock");
-				ObjectAndTransform model;
-				model.obj = rockModel;
-				models.push_back(model);
+				auto e = renderer.createEntity(rockModel);
+				models.push_back(e);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add crate"))
 			{
 				items.push_back("Crate");
-				ObjectAndTransform model;
-				model.obj = levelModel;
-				models.push_back(model);
+				auto e = renderer.createEntity(levelModel);
+				models.push_back(e);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Add sphere"))
 			{
 				items.push_back("Sphere");
-				ObjectAndTransform model;
-				model.obj = sphereModel;
-				models.push_back(model);
+				auto e = renderer.createEntity(sphereModel);
+				models.push_back(e);
 			}
 			if (ImGui::Button("Remove object") && itemCurrent < items.size() )
 			{
+				renderer.deleteEntity(models[itemCurrent]);
+
 				items.erase(items.begin() + itemCurrent);
 				models.erase(models.begin() + itemCurrent);
 				if(itemCurrent) itemCurrent--;
@@ -810,11 +809,17 @@ int main()
 			
 			if (itemCurrent < models.size())
 			{
-				auto curentModel = renderer.getObjectData(models[itemCurrent].obj);
-				int subitemsCount = curentModel->subModelsNames.size();
+				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
+				if (currentEntity)
+				{
+					auto curentModel = renderer.getModelData(currentEntity->model);
+					int subitemsCount = curentModel->subModelsNames.size();
 
-				ImGui::ListBox("Object components", &subItemCurent, 
-					curentModel->subModelsNames.data(), subitemsCount);
+					ImGui::ListBox("Object components", &subItemCurent,
+						curentModel->subModelsNames.data(), subitemsCount);
+				}
+
+			
 
 			}
 			
@@ -823,100 +828,105 @@ int main()
 
 			if(!models.empty() && itemCurrent < items.size())
 			{
-				auto curentModel = renderer.getObjectData(models[itemCurrent].obj);
+				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
 
-				ImGui::NewLine();
-
-				ImGui::Text("Object transform");
-				ImGui::DragFloat3("position", &models[itemCurrent].position[0], 0.1);
-				ImGui::DragFloat3("rotation", &models[itemCurrent].rotation[0], 0.1);
-				ImGui::DragFloat3("scale", &models[itemCurrent].scale[0], 0.1);
-				float s = 0;
-				ImGui::InputFloat("sameScale", &s);
-
-				if (s > 0)
+				if (currentEntity)
 				{
-					models[itemCurrent].scale = glm::vec3(s);
-				}
+					auto curentModel = renderer.getModelData(currentEntity->model);
 
-				if(subItemCurent < curentModel->models.size())
-				{
-					auto &material = *renderer.getMaterialData(curentModel->models[subItemCurent].material);
+					ImGui::NewLine();
 
+					ImGui::Text("Object transform");
+					ImGui::DragFloat3("position", &currentEntity->transform.position[0], 0.1);
+					ImGui::DragFloat3("rotation", &currentEntity->transform.rotation[0], 0.1);
+					ImGui::DragFloat3("scale", &currentEntity->transform.scale[0], 0.1);
+					float s = 0;
+					ImGui::InputFloat("sameScale", &s);
 
-					ImGui::Text("Object material");
-					ImGui::ColorEdit3("difuse", &material.kd[0]);
-					ImGui::SliderFloat("emmisive", &material.emmisive, 0, 1);
-					ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
-					ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
-					ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
-
-					auto drawImage = [io](const char *c, GLuint id, int w, int h, int imguiId)
+					if (s > 0)
 					{
-						ImGui::PushID(imguiId);
-						ImGui::Text(c, id);
-						ImGui::SameLine();
+						currentEntity->transform.scale = glm::vec3(s);
+					}
 
-						int my_tex_w = 20;
-						int my_tex_h = 20;
-						ImVec2 pos = ImGui::GetCursorScreenPos();
-						ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-						ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-						ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-						ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
-						ImGui::Image((void *)(id),
-							ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
+					if (subItemCurent < curentModel->models.size())
+					{
+						auto& material = *renderer.getMaterialData(curentModel->models[subItemCurent].material);
 
-						if (ImGui::IsItemHovered())
+
+						ImGui::Text("Object material");
+						ImGui::ColorEdit3("difuse", &material.kd[0]);
+						ImGui::SliderFloat("emmisive", &material.emmisive, 0, 1);
+						ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
+						ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
+						ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
+
+						auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
 						{
-							ImGui::BeginTooltip();
-							float region_sz = 64.0f * 4;
-							ImGui::Image((void *)(id)
-								, ImVec2(region_sz, region_sz ));
-							ImGui::EndTooltip();
-						}
+							ImGui::PushID(imguiId);
+							ImGui::Text(c, id);
+							ImGui::SameLine();
 
-						gl3d::GpuTexture t;
-						t.id = id;
+							int my_tex_w = 20;
+							int my_tex_h = 20;
+							ImVec2 pos = ImGui::GetCursorScreenPos();
+							ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+							ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+							ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+							ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+							ImGui::Image((void*)(id),
+								ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
 
-						int quality = t.getTextureQuality();
-						//ImGui::RadioButton("leastPossible", &quality, 0);
-						//ImGui::RadioButton("nearestMipmap", &quality, 1);
-						//ImGui::RadioButton("linearMipmap", &quality, 2);
-						//ImGui::RadioButton("maxQuality", &quality, 3);
+							if (ImGui::IsItemHovered())
+							{
+								ImGui::BeginTooltip();
+								float region_sz = 64.0f * 4;
+								ImGui::Image((void*)(id)
+									, ImVec2(region_sz, region_sz));
+								ImGui::EndTooltip();
+							}
 
-						//if (ImGui::RadioButton("leastPossible", quality == gl3d::leastPossible)) { quality = gl3d::leastPossible; }
-						//if (ImGui::RadioButton("nearestMipmap", quality == gl3d::nearestMipmap)) { quality = gl3d::nearestMipmap; }
-						//if (ImGui::RadioButton("linearMipmap", quality == gl3d::linearMipmap)) { quality = gl3d::linearMipmap; }
-						//if (ImGui::RadioButton("maxQuality", quality == gl3d::maxQuality)) { quality = gl3d::maxQuality; }
+							gl3d::GpuTexture t;
+							t.id = id;
 
-						static const char const *items[] =
-						{
-						"leastPossible",
-						"nearestMipmap",
-						"linearMipmap",
-						"maxQuality",
+							int quality = t.getTextureQuality();
+							//ImGui::RadioButton("leastPossible", &quality, 0);
+							//ImGui::RadioButton("nearestMipmap", &quality, 1);
+							//ImGui::RadioButton("linearMipmap", &quality, 2);
+							//ImGui::RadioButton("maxQuality", &quality, 3);
+
+							//if (ImGui::RadioButton("leastPossible", quality == gl3d::leastPossible)) { quality = gl3d::leastPossible; }
+							//if (ImGui::RadioButton("nearestMipmap", quality == gl3d::nearestMipmap)) { quality = gl3d::nearestMipmap; }
+							//if (ImGui::RadioButton("linearMipmap", quality == gl3d::linearMipmap)) { quality = gl3d::linearMipmap; }
+							//if (ImGui::RadioButton("maxQuality", quality == gl3d::maxQuality)) { quality = gl3d::maxQuality; }
+
+							static const char const* items[] =
+							{
+							"leastPossible",
+							"nearestMipmap",
+							"linearMipmap",
+							"maxQuality",
+							};
+
+							ImGui::Combo("Texture Quality", &quality, items, 4);
+
+							t.setTextureQuality(quality);
+							ImGui::PopID();
 						};
 
-						ImGui::Combo("Texture Quality", &quality, items, 4);
+						auto currentMateiral = curentModel->models[subItemCurent].material;
+						auto materialTextureData = renderer.getMaterialTextures(currentMateiral);
 
-						t.setTextureQuality(quality);
-						ImGui::PopID();
-					};
+						if (materialTextureData != nullptr)
+						{
+							drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData->albedoTexture), 20, 20, __COUNTER__);
+							drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData->normalMapTexture), 20, 20, __COUNTER__);
+							drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->RMA_Texture), 20, 20, __COUNTER__);
 
-					auto currentMateiral = curentModel->models[subItemCurent].material;
-					auto materialTextureData = renderer.getMaterialTextures(currentMateiral);
-
-					if(materialTextureData != nullptr)
-					{
-						drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData->albedoTexture) ,20, 20, __COUNTER__);
-						drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData->normalMapTexture), 20, 20, __COUNTER__);
-						drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->RMA_Texture), 20, 20, __COUNTER__);
+						}
 
 					}
-					
 				}
-				
+
 
 			}
 
@@ -1021,23 +1031,24 @@ int main()
 		renderDurationProfiler.start();
 		renderDurationProfilerFine.start();
 
-		for (int i = 0; i < models.size(); i++)
-		{
-			//models[i].models[0].position = models[i].position;
-			//models[i].models[0].scale = models[i].scale;
-			//models[i].models[0].rotation = models[i].rotation;
-
-			renderer.renderObject(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
-			
-		}
-
-		if(showNormals)
-		{
-			renderer.renderSubObjectNormals(models[itemCurrent].obj, subItemCurent, 
-				models[itemCurrent].position, models[itemCurrent].rotation,
-				models[itemCurrent].scale, 0.2);
-
-		}
+		//for (int i = 0; i < models.size(); i++)
+		//{
+		//	//models[i].models[0].position = models[i].position;
+		//	//models[i].models[0].scale = models[i].scale;
+		//	//models[i].models[0].rotation = models[i].rotation;
+		//
+		//	renderer.renderModel(models[i].obj, models[i].position, models[i].rotation, models[i].scale);
+		//	
+		//}
+		//
+		
+		//if(showNormals)
+		//{
+		//	renderer.renderSubModelNormals(models[itemCurrent].obj, subItemCurent, 
+		//		models[itemCurrent].position, models[itemCurrent].rotation,
+		//		models[itemCurrent].scale, 0.2);
+		//
+		//}
 
 
 

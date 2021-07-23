@@ -14,7 +14,19 @@
 namespace gl3d
 {
 
+
+
+	struct Transform
+	{
+		glm::vec3 position = {};
+		glm::vec3 rotation = {};
+		glm::vec3 scale = { 1,1,1 };
+
+		glm::mat4 getTransformMatrix();
+	};
+
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
+	glm::mat4 getTransformMatrix(const Transform &t);
 
 	struct LoadedModelData
 	{
@@ -28,7 +40,7 @@ namespace gl3d
 	};
 	
 
-	//todo this will dissapear and become an struct of arrays or sthing
+	//todo this will dissapear
 	struct GraphicModel
 	{
 		std::string name = {};
@@ -42,17 +54,6 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		void loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize = 0, const unsigned int * indexes = nullptr, bool noTexture = false);
-
-		//deprecated
-		void loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV,
-		size_t indexesCount = 0, unsigned int *indexes = nullptr);
-
-		void loadFromModelMeshIndex(const LoadedModelData &model, int index);
-
-		void loadFromModelMesh(const LoadedModelData &model);
-
-		//deprecated
-		void loadFromFile(const char *fileName);
 
 		void clear();
 
@@ -77,27 +78,7 @@ namespace gl3d
 
 	};
 
-	
-	//todo this will defenetly dissapear it is just for qucik render
-	struct MultipleGraphicModels
-	{
-		std::vector < GraphicModel >models;
-		std::vector < char *> subModelsNames;
 
-		void loadFromModel(const LoadedModelData &model);
-
-		void clear();
-
-		glm::vec3 position = {};
-		glm::vec3 rotation = {};
-		glm::vec3 scale = { 1,1,1 };
-
-		glm::mat4 getTransformMatrix()
-		{
-			return gl3d::getTransformMatrix(position, rotation, scale);
-		}
-
-	};
 	
 
 	struct GpuGraphicModel
@@ -114,15 +95,7 @@ namespace gl3d
 		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false);
 
-
 		void clear();
-
-
-		//todo probably teporarily add this things
-		//Texture albedoTexture;
-		//Texture normalMapTexture;
-		//Texture RMA_Texture; //rough metalness ambient oclusion
-		//int RMA_loadedTextures;
 
 		Material material;
 	
@@ -137,6 +110,17 @@ namespace gl3d
 
 		void clear();
 	
+	};
+
+	//the data for an entity
+	struct CpuEntity
+	{
+		Transform transform;
+
+		Model model;
+
+		//to add some flags in the future (keep them packed)
+
 	};
 
 	struct LoadedTextures

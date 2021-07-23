@@ -1033,342 +1033,7 @@ namespace gl3d
 
 	}
 
-	//deprecated
-	void GraphicModel::loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV, size_t indexesCount, unsigned int *indexes)
-	{
-		gl3dAssertComment(vertices, "Vertices are not optional");
-		gl3dAssertComment(normals, "Normals are not optional"); //todo compute
-		if (!vertices || !normals) { return; }
-
-		std::vector<float> dataForModel;
-
-		dataForModel.reserve(vertexCount * 8);
-		for (unsigned int i = 0; i < vertexCount; i++)
-		{
-			//positions normals uv
-
-			dataForModel.push_back(vertices[(8*i)+0]);
-			dataForModel.push_back(vertices[(8*i)+1]);
-			dataForModel.push_back(vertices[(8*i)+2]);
-
-			dataForModel.push_back(normals[(8 * i) + 3]);
-			dataForModel.push_back(normals[(8 * i) + 4]);
-			dataForModel.push_back(normals[(8 * i) + 5]);
-
-			if (textureUV)
-			{
-				dataForModel.push_back(normals[(8 * i) + 6]);
-				dataForModel.push_back(normals[(8 * i) + 7]);
-			}
-			else
-			{
-				dataForModel.push_back(0.f);
-				dataForModel.push_back(0.f);
-			}
-
-		}
-
-		this->loadFromComputedData(vertexCount * 4,
-		&dataForModel[0],
-			indexesCount * 4, &indexes[0], (textureUV == nullptr));
-	}
-
-	int max(int x, int y, int z)
-	{
-		return std::max(std::max(x, y), z);
-	}
-
-	//deprecated
-	void GraphicModel::loadFromModelMeshIndex(const LoadedModelData &model, int index)
-	{
-		auto &mesh = model.loader.LoadedMeshes[index];
-		loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-			 (float *)&mesh.Vertices[0],
-			mesh.Indices.size() * 4, &mesh.Indices[0]);
-
-
-		auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
-		material.setDefaultMaterial();
-
-		material.kd = glm::vec4(glm::vec3(mat.Kd), 1);
-		//material.ks = glm::vec4(glm::vec3(mat.Ks), mat.Ns);
-		//material.ka = glm::vec4(glm::vec3(mat.Ka), 0);
-		material.metallic = mat.metallic;
-		material.roughness = mat.roughness;
-		//material.ao = mat.ao;
-
-
-		albedoTexture.clear();
-		normalMapTexture.clear();
-		RMA_Texture.clear();
-		emissiveTexture.clear();
-
-		if (!mat.map_Kd.empty())
-		{
-			albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
-		}
-
-		if (!mat.map_Kn.empty())
-		{
-			normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
-				TextureLoadQuality::linearMipmap);
-		}
-
-		if (!mat.map_emissive.empty())
-		{
-			emissiveTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
-				TextureLoadQuality::nearestMipmap);
-		}
-
-		RMA_loadedTextures = 0;
-		
-		auto rmaQuality = TextureLoadQuality::linearMipmap;
-
-		if(!mat.map_RMA.empty()) //todo not tested
-		{
-			RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
-			rmaQuality);
-
-			if(RMA_Texture.id)
-			{
-				RMA_loadedTextures = 7; //all textures loaded
-			}
-
-		}
-
-		if (!mat.map_ORM.empty() && RMA_loadedTextures == 0)
-		{
-			stbi_set_flip_vertically_on_load(true);
-
-			int w = 0, h = 0;
-			unsigned char *data = 0;
-
-			
-			{
-				data = stbi_load(std::string(model.path + mat.map_ORM).c_str(),
-				&w, &h, 0, 4);
-				if (!data)
-				{ std::cout << "err loading " << std::string(model.path + mat.map_ORM) << "\n"; }
-				else
-				{
-					//convert from ORM ro RMA
-
-					for (int j = 0; j < h; j++)
-						for (int i = 0; i < w; i++)
-						{
-							unsigned char R = data[(i + j*w) * 4 + 1];
-							unsigned char M = data[(i + j*w) * 4 + 2];
-							unsigned char A = data[(i + j*w) * 4 + 0];
-
-							data[(i + j * w) * 4 + 0] = R;
-							data[(i + j * w) * 4 + 1] = M;
-							data[(i + j * w) * 4 + 2] = A;
-						}
-
-					RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
-				
-					RMA_loadedTextures = 7; //all textures loaded
-
-					stbi_image_free(data);
-				}
-			}
-			
-
-		}
-
-		//RMA trexture
-		if(RMA_loadedTextures == 0)
-		{
-			stbi_set_flip_vertically_on_load(true);
-
-			int w1=0, h1=0;
-			unsigned char *data1 = 0;
-			unsigned char *data2 = 0;
-			unsigned char *data3 = 0;
-
-			if(!mat.map_Pr.empty())
-			{
-				data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
-				&w1, &h1, 0, 1);
-				if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
-			}
-			
-			int w2=0, h2=0;
-			if(!mat.map_Pm.empty())
-			{
-				data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
-				&w2, &h2, 0, 1);
-				if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
-			}
-		
-
-			int w3=0, h3=0;
-			if(!mat.map_Ka.empty())
-			{
-			data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
-				&w3, &h3, 0, 1);
-				if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
-			}
-
-			int w = max(w1, w2, w3);
-			int h = max(h1, h2, h3);
-
-			//calculate which function to use
-			if(data1 && data2 && data3){ RMA_loadedTextures = 7;}else
-			if(			data2 && data3){ RMA_loadedTextures = 6;}else
-			if(data1 		  && data3){ RMA_loadedTextures = 5;}else
-			if(data1 && data2		  ){ RMA_loadedTextures = 4;}else
-			if(					 data3){ RMA_loadedTextures = 3;}else
-			if(			data2		  ){ RMA_loadedTextures = 2;}else
-			if(data1				  ){ RMA_loadedTextures = 1;}else
-									   { RMA_loadedTextures = 0;};
-			if (RMA_loadedTextures)
-			{
-
-				unsigned char *finalData = new unsigned char[w * h * 4];
-
-				//todo mabe add bilinear filtering
-				//todo load less chanels if necessary
-				for (int j = 0; j < h; j++)
-				{
-					for (int i = 0; i < w; i++)
-					{
-
-						if (data1)	//rough
-						{
-							int texelI = (i / (float)w) * w1;
-							int texelJ = (j / float(h)) * h1;
-
-							finalData[((j * w) + i) * 4 + 0] =
-								data1[(texelJ * w1) + texelI];
-
-						}
-						else
-						{
-							finalData[((j * w) + i) * 4 + 0] = 0;
-						}
-
-						if (data2)	//metalic
-						{
-
-							int texelI = (i / (float)w) * w2;
-							int texelJ = (j / float(h)) * h2;
-
-							finalData[((j * w) + i) * 4 + 1] =
-								data2[(texelJ * w2) + texelI];
-						}
-						else
-						{
-							finalData[((j * w) + i) * 4 + 1] = 0;
-						}
-
-						if (data3)	//ambient
-						{
-							int texelI = (i / (float)w) * w3;
-							int texelJ = (j / float(h)) * h3;
-
-							finalData[((j * w) + i) * 4 + 2] =
-								data3[(texelJ * w3) + texelI];
-						}
-						else
-						{
-							finalData[((j * w) + i) * 4 + 2] = 0;
-						}
-
-						finalData[((j * w) + i) * 4 + 3] = 255; //todo used only for imgui, remove later 
-					}
-				}
-
-				RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
-					rmaQuality);
-
-				stbi_image_free(data1);
-				stbi_image_free(data2);
-				stbi_image_free(data3);
-				delete[] finalData;
-
-			}
-
-		}
-
-
-	}
-
-	void GraphicModel::loadFromModelMesh(const LoadedModelData &model)
-	{
-		auto &mesh = model.loader.LoadedVertices;
-		loadFromComputedData(mesh.size() * 8 * 4,
-			 (float *)&mesh[0],
-			model.loader.LoadedIndices.size() * 4,
-			&model.loader.LoadedIndices[0]);
-	}
-
-	//deprecated
-	void GraphicModel::loadFromFile(const char *fileName)
-	{
-		objl::Loader loader;
-		loader.LoadFile(fileName);
-
-
-		std::vector<float> dataForModel;
-
-		auto &mesh = loader.LoadedMeshes[0];
-
-		dataForModel.reserve(mesh.Vertices.size() * 8);
-		for (unsigned int i = 0; i < mesh.Vertices.size(); i++)
-		{
-			//positions normals uv
-
-			dataForModel.push_back(mesh.Vertices[i].Position.X);
-			dataForModel.push_back(mesh.Vertices[i].Position.Y);
-			dataForModel.push_back(mesh.Vertices[i].Position.Z);
-			
-			dataForModel.push_back(mesh.Vertices[i].Normal.X);
-			dataForModel.push_back(mesh.Vertices[i].Normal.Y);
-			dataForModel.push_back(mesh.Vertices[i].Normal.Z);
-
-			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.X);
-			dataForModel.push_back(mesh.Vertices[i].TextureCoordinate.Y);
-		}
-
-		std::vector<unsigned int> indicesForModel;
-		indicesForModel.reserve(mesh.Indices.size());
-
-		for (unsigned int i = 0; i < mesh.Indices.size(); i++)
-		{
-			indicesForModel.push_back(mesh.Indices[i]);
-		}
-
-		this->loadFromComputedData(dataForModel.size() * 4,
-			&dataForModel[0],
-			indicesForModel.size() * 4, &indicesForModel[0]);
-
-
-		//vb = vertexBuffer(dataForModel.data(), dataForModel.size() * sizeof(float), GL_STATIC_DRAW);
-		//ib = indexBuffer(indicesForModel.data(), indicesForModel.size() * sizeof(unsigned int));
-		//va = std::move(vertexAttribute{ 3, 2, 3 });
-		//
-		//
-		//if (model.m.LoadedMaterials.size() > 0)
-		//{
-		//
-		//	material.ka = glm::vec3(model.m.LoadedMaterials[0].Ka.X, model.m.LoadedMaterials[0].Ka.Y, model.m.LoadedMaterials[0].Ka.Z);
-		//	material.kd = glm::vec3(model.m.LoadedMaterials[0].Kd.X, model.m.LoadedMaterials[0].Kd.Y, model.m.LoadedMaterials[0].Kd.Z);
-		//	material.ks = glm::vec3(model.m.LoadedMaterials[0].Ks.X, model.m.LoadedMaterials[0].Ks.Y, model.m.LoadedMaterials[0].Ks.Z);
-		//	material.shiny = model.m.LoadedMaterials[0].Ns;
-		//	if (material.shiny == 0) { material.shiny = 1; }
-		//
-		//	if (model.m.LoadedMaterials[0].map_Kd != "")
-		//	{
-		//
-		//		texture = manager->getData(model.m.LoadedMaterials[0].map_Kd.c_str());
-		//
-		//	}
-		//}
-
 	
-	}
-
 	void GraphicModel::clear()
 	{
 		glDeleteBuffers(1, &vertexBuffer);
@@ -1508,47 +1173,6 @@ namespace gl3d
 	};
 	
 
-	void MultipleGraphicModels::loadFromModel(const LoadedModelData &model)
-	{
-		clear();
-
-		int s = model.loader.LoadedMeshes.size();
-		models.reserve(s);
-
-		for(int i=0;i<s;i++)
-		{
-			GraphicModel gm;
-			gm.loadFromModelMeshIndex(model, i);
-			gm.name = model.loader.LoadedMeshes[i].MeshName;
-
-			char *c = new char[gm.name.size() + 1];
-			strcpy(c, gm.name.c_str());
-
-			subModelsNames.push_back(c);
-			models.push_back(gm);
-
-		}
-
-	}
-
-	void MultipleGraphicModels::clear()
-	{
-		for(auto &i : models)
-		{
-			i.clear();
-		}
-
-		for (auto &i : subModelsNames)
-		{
-			delete[] i;
-		}
-
-		subModelsNames.clear();
-		models.clear();
-
-		//todo clear material buffer ref cound and stuff
-	}
-
 
 	//todo optimize
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
@@ -1562,6 +1186,15 @@ namespace gl3d
 		return t * r * s;
 	}
 
+	glm::mat4 getTransformMatrix(const Transform& t)
+	{
+		return getTransformMatrix(t.position, t.rotation, t.scale);
+	}
+
+	glm::mat4 Transform::getTransformMatrix()
+	{
+		return gl3d::getTransformMatrix(*this);
+	}
 
 
 	void GpuMultipleGraphicModel::clear()
@@ -2306,7 +1939,7 @@ namespace gl3d
 	, std::string name)
 	{
 
-		int id = internal::generateNewIndex(materialIndexes);
+		int id = internal::generateNewIndex(internal.materialIndexes);
 
 		GpuMaterial gpuMaterial;
 		gpuMaterial.kd = glm::vec4(kd, 0);
@@ -2314,10 +1947,10 @@ namespace gl3d
 		gpuMaterial.metallic = metallic;
 		gpuMaterial.ao = ao;
 
-		materialIndexes.push_back(id);
-		materials.push_back(gpuMaterial);
-		materialNames.push_back(name);
-		materialTexturesData.push_back({});
+		internal.materialIndexes.push_back(id);
+		internal.materials.push_back(gpuMaterial);
+		internal.materialNames.push_back(name);
+		internal.materialTexturesData.push_back({});
 
 		Material m;
 		m.id_ = id;
@@ -2346,27 +1979,27 @@ namespace gl3d
 
 	void Renderer3D::deleteMaterial(Material m)
 	{
-		auto pos = std::find(materialIndexes.begin(), materialIndexes.end(), m.id_);
+		auto pos = std::find(internal.materialIndexes.begin(), internal.materialIndexes.end(), m.id_);
 
-		if (pos == materialIndexes.end())
+		if (pos == internal.materialIndexes.end())
 		{
-			gl3dAssertComment(pos == materialIndexes.end(), "invalid delete material");
+			gl3dAssertComment(pos != internal.materialIndexes.end(), "invalid delete material");
 			return;
 		}
 
-		int index = pos - materialIndexes.begin();
+		int index = pos - internal.materialIndexes.begin();
 
-		materialIndexes.erase(pos);
-		materials.erase(materials.begin() + index);
-		materialNames.erase(materialNames.begin() + index);
-		materialTexturesData.erase(materialTexturesData.begin() + index);
+		internal.materialIndexes.erase(pos);
+		internal.materials.erase(internal.materials.begin() + index);
+		internal.materialNames.erase(internal.materialNames.begin() + index);
+		internal.materialTexturesData.erase(internal.materialTexturesData.begin() + index);
 		m.id_ = 0;
 	}
 
 	void Renderer3D::copyMaterialData(Material dest, Material source)
 	{
-		int destId = getMaterialIndex(dest);
-		int sourceId = getMaterialIndex(source);
+		int destId = internal.getMaterialIndex(dest);
+		int sourceId = internal.getMaterialIndex(source);
 
 		if(destId == -1 || sourceId == -1)
 		{
@@ -2376,57 +2009,57 @@ namespace gl3d
 			return;
 		}
 
-		materials[destId] = materials[sourceId];
-		materialNames[destId] = materialNames[sourceId];
-		materialTexturesData[destId] = materialTexturesData[destId];
+		internal.materials[destId] = internal.materials[sourceId];
+		internal.materialNames[destId] = internal.materialNames[sourceId];
+		internal.materialTexturesData[destId] = internal.materialTexturesData[destId];
 
 	}
 
 	GpuMaterial *Renderer3D::getMaterialData(Material m)
 	{
-		int id = getMaterialIndex(m);
+		int id = internal.getMaterialIndex(m);
 
 		if(id == -1)
 		{
 			return nullptr;
 		}
 		
-		auto data = &materials[id];
+		auto data = &internal.materials[id];
 
 		return data;
 	}
 
 	TextureDataForModel *Renderer3D::getMaterialTextures(Material m)
 	{
-		int id = getMaterialIndex(m);
+		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
 			return nullptr;
 		}
 
-		auto data = &materialTexturesData[id];
+		auto data = &internal.materialTexturesData[id];
 
 		return data;
 	}
 
 	std::string *Renderer3D::getMaterialName(Material m)
 	{
-		int id = getMaterialIndex(m);
+		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
 			return nullptr;
 		}
 
-		auto data = &materialNames[id];
+		auto data = &internal.materialNames[id];
 
 		return data;
 	}
 
 	bool Renderer3D::getMaterialData(Material m, GpuMaterial *gpuMaterial, std::string *name, TextureDataForModel *textureData)
 	{
-		int id = getMaterialIndex(m);
+		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
@@ -2435,17 +2068,17 @@ namespace gl3d
 
 		if(gpuMaterial)
 		{
-			gpuMaterial = &materials[id];
+			gpuMaterial = &internal.materials[id];
 		}
 
 		if(name)
 		{
-			name = &materialNames[id];
+			name = &internal.materialNames[id];
 		}
 
 		if(textureData)
 		{
-			textureData = &materialTexturesData[id];
+			textureData = &internal.materialTexturesData[id];
 		}
 
 		return true;
@@ -2453,33 +2086,33 @@ namespace gl3d
 
 	bool Renderer3D::setMaterialData(Material m, const GpuMaterial &data, std::string *s)
 	{
-		int id = getMaterialIndex(m);
+		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
 			return 0;
 		}
 
-		materials[id] = data;
+		internal.materials[id] = data;
 		
 		if (s)
 		{
-			materialNames[id] = *s;
+			internal.materialNames[id] = *s;
 		}
 
 		return 1;
 	}
 
-	GpuMultipleGraphicModel *Renderer3D::getObjectData(Object o)
+	GpuMultipleGraphicModel *Renderer3D::getModelData(Model o)
 	{
-		int id = getObjectIndex(o);
+		int id = internal.getModelIndex(o);
 	
 		if (id == -1)
 		{
 			return nullptr;
 		}
 	
-		auto data = &graphicModels[id];
+		auto data = &internal.graphicModels[id];
 	
 		return data;
 	}
@@ -2493,12 +2126,12 @@ namespace gl3d
 		}
 
 		int pos = 0;
-		for (auto &i : loadedTexturesNames)
+		for (auto &i : internal.loadedTexturesNames)
 		{
 			if (i == path)
 			{
 				Texture t;
-				t.id_ = loadedTexturesIndexes[pos];
+				t.id_ = internal.loadedTexturesIndexes[pos];
 				return t;
 			}
 			pos++;
@@ -2512,11 +2145,11 @@ namespace gl3d
 			return Texture{ 0 };
 		}
 
-		int id = internal::generateNewIndex(loadedTexturesIndexes);
+		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
 
-		loadedTexturesIndexes.push_back(id);
-		loadedTextures.push_back(t);
-		loadedTexturesNames.push_back(path);
+		internal.loadedTexturesIndexes.push_back(id);
+		internal.loadedTextures.push_back(t);
+		internal.loadedTexturesNames.push_back(path);
 
 		return Texture{ id };
 	}
@@ -2536,18 +2169,18 @@ namespace gl3d
 
 	void Renderer3D::deleteTexture(Texture t)
 	{
-		int index = getTextureIndex(t);
+		int index = internal.getTextureIndex(t);
 
 		if(index < 0)
 		{
 			return;
 		}
 
-		auto gpuTexture = loadedTextures[index];
+		auto gpuTexture = internal.loadedTextures[index];
 
-		loadedTexturesIndexes.erase(loadedTexturesIndexes.begin() + index);
-		loadedTextures.erase(loadedTextures.begin() + index);
-		loadedTexturesNames.erase(loadedTexturesNames.begin() + index);
+		internal.loadedTexturesIndexes.erase(internal.loadedTexturesIndexes.begin() + index);
+		internal.loadedTextures.erase(internal.loadedTextures.begin() + index);
+		internal.loadedTexturesNames.erase(internal.loadedTexturesNames.begin() + index);
 		
 		t.id_ = 0;
 
@@ -2555,14 +2188,14 @@ namespace gl3d
 
 	GpuTexture *Renderer3D::getTextureData(Texture t)
 	{
-		int id = getTextureIndex(t);
+		int id = internal.getTextureIndex(t);
 
 		if (id == -1)
 		{
 			return nullptr;
 		}
 
-		auto data = &loadedTextures[id];
+		auto data = &internal.loadedTextures[id];
 
 		return data;
 	}
@@ -2575,12 +2208,12 @@ namespace gl3d
 			Texture{ 0 };
 		}
 
-		int id = internal::generateNewIndex(loadedTexturesIndexes);
+		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
 
 
-		loadedTexturesIndexes.push_back(id);
-		loadedTextures.push_back(t);
-		loadedTexturesNames.push_back("");
+		internal.loadedTexturesIndexes.push_back(id);
+		internal.loadedTextures.push_back(t);
+		internal.loadedTexturesNames.push_back("");
 
 		return Texture{ id };
 	}
@@ -2598,7 +2231,7 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
-	Object Renderer3D::loadObject(std::string path, float scale)
+	Model Renderer3D::loadModel(std::string path, float scale)
 	{
 
 		gl3d::LoadedModelData model(path.c_str(), scale);
@@ -2609,7 +2242,7 @@ namespace gl3d
 		
 		}
 
-		int id = internal::generateNewIndex(graphicModelsIndexes);
+		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
 	
 		GpuMultipleGraphicModel returnModel;
 		{
@@ -2632,7 +2265,6 @@ namespace gl3d
 					TextureDataForModel *textureData = this->getMaterialTextures(m);
 
 					
-
 					//auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 					//gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 
@@ -2648,7 +2280,6 @@ namespace gl3d
 
 					if (!mat.map_Kn.empty())
 					{
-						//todo add texture load quality options
 						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
 						//gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 						//	TextureLoadQuality::linearMipmap);
@@ -2671,7 +2302,6 @@ namespace gl3d
 
 						textureData->RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
 
-						//todo add a function to check if a function is valid
 						if (textureData->RMA_Texture.id_ != 0)
 						{
 							textureData->RMA_loadedTextures = 7; //all textures loaded
@@ -2941,8 +2571,6 @@ namespace gl3d
 						}
 					
 
-
-
 						/*
 						
 						*/
@@ -2964,7 +2592,6 @@ namespace gl3d
 			{
 				GpuGraphicModel gm;
 				int index = i;
-				GpuMaterial material;
 				//TextureDataForModel textureData = {};
 
 				
@@ -2997,34 +2624,69 @@ namespace gl3d
 		}
 
 		
-		graphicModelsIndexes.push_back(id);
-		graphicModels.push_back(returnModel);
+		internal.graphicModelsIndexes.push_back(id);
+		internal.graphicModels.push_back(returnModel);
 
 
-		Object o;
+		Model o;
 		o.id_ = id;
 		return o;
 
 	}
 
-	void Renderer3D::deleteObject(Object o)
+	void Renderer3D::deleteModel(Model o)
 	{
-		auto pos = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
-
-		if (pos == graphicModelsIndexes.end())
+		auto pos = internal.getModelIndex(o);
+		if (pos < 0)
 		{
-			gl3dAssertComment(pos == graphicModelsIndexes.end(), "invalid delete object");
+			gl3dAssertComment(pos >= 0, "invalid delete model");
 			return;
 		}
 
-		int index = pos - graphicModelsIndexes.begin();
+		internal.graphicModelsIndexes.erase(internal.graphicModelsIndexes.begin() + pos);
+		internal.graphicModels[pos].clear();
+		internal.graphicModels.erase(internal.graphicModels.begin() + pos);
 
-		graphicModelsIndexes.erase(pos);
+	}
 
-		graphicModels[index].clear();
-		graphicModels.erase(graphicModels.begin() + index);
+	Entity Renderer3D::createEntity(Model m, Transform transform)
+	{
+		int id = internal::generateNewIndex(internal.entitiesIndexes);
 
-		o.id_ = 0;
+		CpuEntity entity;
+		entity.model = m;
+		entity.transform = transform;
+
+		internal.entitiesIndexes.push_back(id);
+		internal.cpuEntities.push_back(entity);
+
+		Entity e;
+		e.id_ = id;
+		return e;
+	}
+
+	CpuEntity* Renderer3D::getEntityData(Entity e)
+	{
+		auto i = internal.getEntityIndex(e);
+
+		if (i < 0) { return nullptr; }
+
+		return &internal.cpuEntities[i];
+
+	}
+
+	void Renderer3D::deleteEntity(Entity e)
+	{
+		auto pos = internal.getEntityIndex(e);
+		if (pos < 0)
+		{
+			gl3dAssertComment(pos >= 0, "invalid delete entity");
+			return;
+		}
+
+		internal.entitiesIndexes.erase(internal.entitiesIndexes.begin() + pos);
+		internal.cpuEntities.erase(internal.cpuEntities.begin() + pos);
+		
 	}
 
 	//todo look into  glProgramUniform
@@ -3036,19 +2698,19 @@ namespace gl3d
 	//https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_meminfo.txt
 	//http://developer.download.nvidia.com/opengl/specs/GL_NVX_gpu_memory_info.txt
 
-	void Renderer3D::renderObject(Object o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
+	void Renderer3D::renderModel(Model o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 
-		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), o.id_);
-		if (found == graphicModelsIndexes.end())
+		auto found = std::find(internal.graphicModelsIndexes.begin(), internal.graphicModelsIndexes.end(), o.id_);
+		if (found == internal.graphicModelsIndexes.end())
 		{
-			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid render object");
+			gl3dAssertComment(found != internal.graphicModelsIndexes.end(), "invalid render object");
 			return;
 		}
-		int id = found - graphicModelsIndexes.begin();
+		int id = found - internal.graphicModelsIndexes.begin();
 
-		auto &model = graphicModels[id];
+		auto &model = internal.graphicModels[id];
 
 
 		if (model.models.empty())
@@ -3084,8 +2746,8 @@ namespace gl3d
 
 		//material buffer
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * materials.size()
-			, &materials[0], GL_STREAM_DRAW);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * internal.materials.size()
+			, &internal.materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
 		//z pre pass todo add back and create a custom shader
@@ -3123,7 +2785,7 @@ namespace gl3d
 		for (auto &i : model.models)
 		{
 			
-			int materialId = getMaterialIndex(i.material);
+			int materialId = internal.getMaterialIndex(i.material);
 
 			if (materialId == -1)
 				{ continue; }
@@ -3131,7 +2793,7 @@ namespace gl3d
 			glUniform1i(lightShader.materialIndexLocation, materialId);
 			
 
-			TextureDataForModel textureData = materialTexturesData[materialId];
+			TextureDataForModel textureData = internal.materialTexturesData[materialId];
 
 			int rmaLoaded = 0;
 			int albedoLoaded = 0;
@@ -3272,10 +2934,10 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation, 
+	void Renderer3D::renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation,
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
-		auto obj = getObjectData(o);
+		auto obj = getModelData(o);
 
 		if(!obj)
 		{
@@ -3284,12 +2946,12 @@ namespace gl3d
 
 		for(int i=0; i<obj->models.size(); i++)
 		{
-			renderSubObjectNormals(o, i, position, rotation, scale, normalSize, normalColor);
+			renderSubModelNormals(o, i, position, rotation, scale, normalSize, normalColor);
 		}
 		
 	}
 
-	void Renderer3D::renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation,
+	void Renderer3D::renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation,
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
 			
@@ -3311,9 +2973,9 @@ namespace gl3d
 
 		glUniform3fv(showNormalsProgram.colorLocation, 1, &(normalColor[0]));
 
-		auto modelIndex = this->getObjectIndex(o);
+		auto modelIndex = this->internal.getModelIndex(o);
 
-		auto obj = getObjectData(o);
+		auto obj = getModelData(o);
 		if(obj == nullptr)
 		{
 			return;
@@ -3342,7 +3004,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, float borderSize, glm::vec3 borderColor)
+	void Renderer3D::renderSubModelBorder(Model o, int index, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, float borderSize, glm::vec3 borderColor)
 	{
 		//auto modelIndex = this->getObjectIndex(o);
 		//
@@ -3424,13 +3086,13 @@ namespace gl3d
 
 	}
 
-	int Renderer3D::getMaterialIndex(Material m)
+	int Renderer3D::InternalStruct::getMaterialIndex(Material m)
 	{
 		int id = m.id_;
 		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
 		if (found == materialIndexes.end())
 		{
-			gl3dAssertComment(found == materialIndexes.end(), "invalid material");
+			gl3dAssertComment(found != materialIndexes.end(), "invalid material");
 			return -1;
 		}
 		id = found - materialIndexes.begin();
@@ -3438,13 +3100,13 @@ namespace gl3d
 		return id;
 	}
 
-	int Renderer3D::getObjectIndex(Object o)
+	int Renderer3D::InternalStruct::getModelIndex(Model o)
 	{
 		int id = o.id_;
 		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
 		if (found == graphicModelsIndexes.end())
 		{
-			gl3dAssertComment(found == graphicModelsIndexes.end(), "invalid object");
+			gl3dAssertComment(found != graphicModelsIndexes.end(), "invalid object");
 			return -1;
 		}
 		id = found - graphicModelsIndexes.begin();
@@ -3452,7 +3114,7 @@ namespace gl3d
 		return id;
 	}
 
-	int Renderer3D::getTextureIndex(Texture t)
+	int Renderer3D::InternalStruct::getTextureIndex(Texture t)
 	{
 		int id = t.id_;
 		if (id == 0) { return -1; }//todo add this optimization to other gets
@@ -3460,7 +3122,7 @@ namespace gl3d
 		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
 		if (found == loadedTexturesIndexes.end())
 		{
-			gl3dAssertComment(found == loadedTexturesIndexes.end(), "invalid texture");
+			gl3dAssertComment(found != loadedTexturesIndexes.end(), "invalid texture");
 			return -1;
 		}
 		id = found - loadedTexturesIndexes.begin();
@@ -3468,9 +3130,37 @@ namespace gl3d
 		return id;
 	}
 
+	int Renderer3D::InternalStruct::getEntityIndex(Entity t)
+	{
+		int id = t.id_;
+		if (id == 0) { return -1; }
+
+		auto found = std::find(entitiesIndexes.begin(), entitiesIndexes.end(), id);
+		if (found == entitiesIndexes.end())
+		{
+			gl3dAssertComment(found != entitiesIndexes.end(), "invalid entity");
+			return -1;
+		}
+		id = found - entitiesIndexes.begin();
+
+		return id;
+	}
+
 	void Renderer3D::render()
 	{
+
+
 		renderSkyBoxBefore();
+
+
+		//first we render the entities in the gbuffer
+		for (auto& i : internal.cpuEntities)
+		{
+			renderModel(i.model, i.transform.position, i.transform.rotation, i.transform.scale);
+
+		}
+
+
 
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);

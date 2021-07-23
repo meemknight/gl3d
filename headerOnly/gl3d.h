@@ -37,11 +37,11 @@ namespace gl3d
 		Material(int id = 0):id_(id) {};
 	};
 
-	struct Object : public InterfaceCheckId< Object >
+	struct Entity : public InterfaceCheckId< Entity >
 	{
 		int id_ = {};
-
-		Object(int id = 0):id_(id) {};
+	
+		Entity(int id = 0):id_(id) {};
 	};
 
 	struct Model: public InterfaceCheckId< Model >
@@ -403,7 +403,19 @@ namespace gl3d
 namespace gl3d
 {
 
+
+
+	struct Transform
+	{
+		glm::vec3 position = {};
+		glm::vec3 rotation = {};
+		glm::vec3 scale = { 1,1,1 };
+
+		glm::mat4 getTransformMatrix();
+	};
+
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
+	glm::mat4 getTransformMatrix(const Transform &t);
 
 	struct LoadedModelData
 	{
@@ -417,7 +429,7 @@ namespace gl3d
 	};
 	
 
-	//todo this will dissapear and become an struct of arrays or sthing
+	//todo this will dissapear
 	struct GraphicModel
 	{
 		std::string name = {};
@@ -431,17 +443,6 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		void loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize = 0, const unsigned int * indexes = nullptr, bool noTexture = false);
-
-		//deprecated
-		void loadFromData(size_t vertexCount, float *vertices, float *normals, float *textureUV,
-		size_t indexesCount = 0, unsigned int *indexes = nullptr);
-
-		void loadFromModelMeshIndex(const LoadedModelData &model, int index);
-
-		void loadFromModelMesh(const LoadedModelData &model);
-
-		//deprecated
-		void loadFromFile(const char *fileName);
 
 		void clear();
 
@@ -466,27 +467,7 @@ namespace gl3d
 
 	};
 
-	
-	//todo this will defenetly dissapear it is just for qucik render
-	struct MultipleGraphicModels
-	{
-		std::vector < GraphicModel >models;
-		std::vector < char *> subModelsNames;
 
-		void loadFromModel(const LoadedModelData &model);
-
-		void clear();
-
-		glm::vec3 position = {};
-		glm::vec3 rotation = {};
-		glm::vec3 scale = { 1,1,1 };
-
-		glm::mat4 getTransformMatrix()
-		{
-			return gl3d::getTransformMatrix(position, rotation, scale);
-		}
-
-	};
 	
 
 	struct GpuGraphicModel
@@ -503,15 +484,7 @@ namespace gl3d
 		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false);
 
-
 		void clear();
-
-
-		//todo probably teporarily add this things
-		//Texture albedoTexture;
-		//Texture normalMapTexture;
-		//Texture RMA_Texture; //rough metalness ambient oclusion
-		//int RMA_loadedTextures;
 
 		Material material;
 	
@@ -526,6 +499,17 @@ namespace gl3d
 
 		void clear();
 	
+	};
+
+	//the data for an entity
+	struct CpuEntity
+	{
+		Transform transform;
+
+		Model model;
+
+		//to add some flags in the future (keep them packed)
+
 	};
 
 	struct LoadedTextures
@@ -638,6 +622,8 @@ namespace gl3d
 {
 	namespace internal
 	{
+
+		//todo probably just keep a counter and get the next one
 		template <class T>
 		int generateNewIndex(T indexesVec)
 		{
@@ -679,11 +665,6 @@ namespace gl3d
 		void init(int x, int y);
 		
 	#pragma region material
-
-		std::vector<GpuMaterial> materials;
-		std::vector<int> materialIndexes;
-		std::vector<std::string> materialNames;
-		std::vector<TextureDataForModel> materialTexturesData;
 		
 
 		//todo add texture data function
@@ -710,20 +691,15 @@ namespace gl3d
 		//returns true if succeded
 		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
 
-		GpuMultipleGraphicModel *getObjectData(Object o);
+		GpuMultipleGraphicModel *getModelData(Model o);
 
 	#pragma endregion
 
 	#pragma region Texture
 
 
-		std::vector <GpuTexture> loadedTextures;
-		std::vector<int> loadedTexturesIndexes;
-		std::vector<std::string> loadedTexturesNames;
-
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
-		//todo add quality here
 		Texture loadTexture(std::string path);
 		GLuint getTextureOpenglId(Texture t);
 
@@ -747,19 +723,29 @@ namespace gl3d
 
 	#pragma endregion
 
+	#pragma region model
+
+		Model loadModel(std::string path, float scale = 1);
+		void deleteModel(Model o);
+
+	#pragma endregion
+
+	#pragma region Entity
+	
+		Entity createEntity(Model m, Transform transform = {});
+		CpuEntity* getEntityData(Entity e);
+		void deleteEntity(Entity e);
+
+	#pragma endregion
+
+
+
 		struct VAO
 		{
-			//this is not used
+			//this is not used yet
 			GLuint posNormalTexture;
 			void createVAOs();
 		}vao;
-
-		std::vector< GpuMultipleGraphicModel > graphicModels;
-		std::vector<int> graphicModelsIndexes;
-
-
-		Object loadObject(std::string path, float scale = 1);
-		void deleteObject(Object o);
 
 
 
@@ -769,13 +755,13 @@ namespace gl3d
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
-		void renderObject(Object o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
-		void renderObjectNormals(Object o, glm::vec3 position, glm::vec3 rotation = {},
+		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
-		void renderSubObjectNormals(Object o, int index, glm::vec3 position, glm::vec3 rotation = {}, 
+		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = { 0.7, 0.7, 0.1 });
 
-		void renderSubObjectBorder(Object o, int index, glm::vec3 position, glm::vec3 rotation = {},
+		void renderSubModelBorder(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
 
 
@@ -795,12 +781,36 @@ namespace gl3d
 			}pBRtextureMaker;
 
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+
+			int getMaterialIndex(Material m);
+			int getModelIndex(Model o);
+			int getTextureIndex(Texture t);
+			int getEntityIndex(Entity t);
+
+
+			//material
+			std::vector<GpuMaterial> materials;
+			std::vector<int> materialIndexes;
+			std::vector<std::string> materialNames;
+			std::vector<TextureDataForModel> materialTexturesData;
+
+			//texture
+			std::vector <GpuTexture> loadedTextures;
+			std::vector<int> loadedTexturesIndexes;
+			std::vector<std::string> loadedTexturesNames;
+		
+			//models
+			std::vector< GpuMultipleGraphicModel > graphicModels;
+			std::vector<int> graphicModelsIndexes;
+
+			//entities
+			std::vector<CpuEntity> cpuEntities;
+			std::vector<int> entitiesIndexes;
+
+
 		}internal;
 
-		//internal //todo add internal namespace
-		int getMaterialIndex(Material m);
-		int getObjectIndex(Object o);
-		int getTextureIndex(Texture t);
+	
 
 		struct
 		{
@@ -906,13 +916,6 @@ namespace gl3d
 	};
 
 
-	void renderLightModel(GraphicModel &model, Camera  camera, glm::vec3 lightPos, LightShader lightShader,
-		GpuTexture texture, GpuTexture normalTexture, GLuint skyBoxTexture, float gama,
-		const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
-
-	void renderLightModel(MultipleGraphicModels &model, Camera camera, glm::vec3 lightPos, LightShader lightShader,
-		GLuint skyBoxTexture, float gama, std::vector<internal::GpuPointLight> &pointLights);
-	
 
 
 };
