@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-17
+//built on 2021-07-23
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -3613,6 +3613,8 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE0);
 			glUniform1i(postProcess.u_toBlurcolorInput, 0);
 			glViewport(0, 0, w/2, h/2);
+
+
 			for (int i = 0; i < lightShader.bloomBlurPasses*2; i++)
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
@@ -3647,22 +3649,35 @@ namespace gl3d
 		//bloom data
 		glUniform1i(postProcess.u_bloomTexture, 1);
 		glActiveTexture(GL_TEXTURE1);
+
 		if(lightShader.bloom)
 		{
-			glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[1]); 
+
+			if (lightShader.bloomBlurPasses <= 0)
+			{
+				glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			}
+			else
+			{
+				glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[1]);
+			}
+
+			glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
+
 		}else
 		{
-			//if the bloom is not enabeled just pass the colorBuffer[1]
-			//i.e. the values that passed the bloom tresshold
-			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
-			//todo test on other drivers not bind a texture at all
+			glUniform1f(postProcess.u_bloomIntensity, 0);
+
 			//todo uniform block for this and also probably boolean to check if using bloom or not
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 		}
 
-		//bloom settings
-		glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
+		glUniform1i(postProcess.u_bloomNotBluredTexture, 2);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+
+		
 		glUniform1f(postProcess.u_exposure, this->exposure);
 
 		glEnable(GL_BLEND);
@@ -3943,6 +3958,7 @@ namespace gl3d
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture");
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture");
+		u_bloomNotBluredTexture = getUniform(postProcessShader.id, "u_bloomNotBluredTexture");
 		u_bloomIntensity = getUniform(postProcessShader.id, "u_bloomIntensity");
 		u_exposure = getUniform(postProcessShader.id, "u_exposure");
 

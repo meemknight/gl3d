@@ -193,7 +193,6 @@ void main()
 
 	vec3 sampledMaterial = u_getMaterialMapped();
 	float roughnessSampled = sampledMaterial.r;
-	roughnessSampled = max(0.09,roughnessSampled);
 	float metallicSampled = sampledMaterial.g;
 	float sampledAo = sampledMaterial.b;
 

@@ -176,8 +176,8 @@ void main()
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
-	float roughness = material.r;
-	float metallic = material.g;
+	float roughness = clamp(material.r, 0.09, 1.0);
+	float metallic = clamp(material.g, 0.0, 0.98);
 	float ambientOcclution = material.b;
 
 	vec3 F0 = vec3(0.04); 
@@ -267,17 +267,19 @@ void main()
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
 
 		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 0);
-		a_outColor = vec4(color.rgb, albedoAlpha.a);	
+		//a_outColor = vec4(color.rgb, albedoAlpha.a);	
+		a_outColor = vec4(0,0,0, albedoAlpha.a);	
 
 	}else
 	{
 		//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
-	
-		a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
+
+		a_outBloom = vec4(emissive.rgb, 0);
 		a_outColor = vec4(color.rgb, albedoAlpha.a);
 	}
 
+	a_outBloom = clamp(a_outBloom, 0, 1000);
 	
 
 	//a_outColor.rgb =  material.bbb;

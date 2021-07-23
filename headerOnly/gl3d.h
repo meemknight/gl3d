@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-17
+//built on 2021-07-23
 ////////////////////////////////////////////////
 
 
@@ -836,6 +836,7 @@ namespace gl3d
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader
 			GLint u_bloomTexture;	//post process shader
+			GLint u_bloomNotBluredTexture;	//post process shader
 			GLint u_bloomIntensity;	//post process shader
 			GLint u_exposure;		//post process shader
 

@@ -160,10 +160,10 @@ int main()
 	//renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox.loadTexture(names, w, h);
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
-	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
+	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
 	
@@ -674,9 +674,9 @@ int main()
 
 				ImGui::Checkbox("Bloom", &renderer.lightShader.bloom);
 				ImGui::SliderFloat("Bloom tresshold", &renderer.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
-					0, 4);
+					0, 10);
 				ImGui::SliderFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0, 10);
-				ImGui::SliderInt("Bloom blur passes", &renderer.lightShader.bloomBlurPasses, 1, 16);
+				ImGui::SliderInt("Bloom blur passes", &renderer.lightShader.bloomBlurPasses, 0, 16);
 
 				ImGui::PopID();
 			}

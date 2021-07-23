@@ -6,6 +6,7 @@ in vec2 v_texCoords;
 
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
+uniform sampler2D u_bloomNotBluredTexture;
 
 uniform float u_bloomIntensity;
 uniform float u_exposure;
@@ -19,12 +20,14 @@ void main()
 
 	
 	vec3 bloom = texture(u_bloomTexture, v_texCoords).rgb;
+	vec3 bloomNotBlurred = texture(u_bloomNotBluredTexture, v_texCoords).rgb;
 
-	if(color.a < 0.5 && bloom.r == 0 && bloom.g == 0 && bloom.b == 0){discard;} //this is optional
+
+	//if(color.a < 0.5 && bloom.r == 0 && bloom.g == 0 && bloom.b == 0){discard;} //this is optional
 	//if(color.a < 0.5){discard;}
 
 
-	a_color.rgb = (bloom * u_bloomIntensity) + color.rgb;
+	a_color.rgb = (bloom * u_bloomIntensity) + bloomNotBlurred + color.rgb;
 	//a_color = bloom;
 	
 	//hdr
