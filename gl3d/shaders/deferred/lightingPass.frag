@@ -22,7 +22,6 @@ uniform sampler2D u_emmisive;
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
 
-
 layout (std140) uniform u_lightPassData
 {
 	vec4 ambientColor;
@@ -31,20 +30,33 @@ layout (std140) uniform u_lightPassData
 
 }lightPassData;
 
-struct Pointlight
+struct PointLight
 {
-	vec3 positions; // w component not used
+	vec3 positions; 
 	float dist;
-	vec3 color; // w component not used
+	vec3 color;
 	float strength;
 };
-
 readonly layout(std140) buffer u_pointLights
 {
-	Pointlight light[];
+	PointLight light[];
 };
-
 uniform int u_pointLightCount;
+
+
+struct DirectionalLight
+{
+	vec4 direction; //w not used
+	vec4 color;		//w not used
+};
+readonly layout(std140) buffer u_directionalLights
+{
+	DirectionalLight dLight[];
+};
+uniform int u_directionalLightCount;
+
+
+
 
 
 const float PI = 3.14159265359;
@@ -100,16 +112,16 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }   
 
-vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
+vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
 	in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
 {
 
-	vec3 lightDirection = normalize(lightPosition - worldPosition);
+	//vec3 lightDirection = normalize(lightPosition - worldPosition);
 	vec3 halfwayVec = normalize(lightDirection + viewDir);
 	
-	float dist = length(lightPosition - worldPosition);
-	float attenuation = 1.0 / pow(dist,2);
-	attenuation = 1; //(option) remove light attenuation
+	//float dist = length(lightPosition - worldPosition);
+	//float attenuation = 1.0 / pow(dist,2);
+	float attenuation = 1; //(option) remove light attenuation
 	vec3 radiance = lightColor * attenuation; //here the first component is the light color
 	
 	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
@@ -172,11 +184,23 @@ void main()
 	{
 		vec3 lightPosition = light[i].positions.xyz;
 		vec3 lightColor = light[i].color.rgb;
+		vec3 lightDirection = normalize(lightPosition - pos);
 
-		Lo += computePointLightSource(lightPosition, metallic, roughness, lightColor, 
+
+		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0);
 
 	}
+
+	for(int i=0; i<u_directionalLightCount; i++)
+	{
+		vec3 lightDirection = normalize(dLight[i].direction.xyz);
+		vec3 lightColor = dLight[i].color.rgb;
+
+		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
+			pos, viewDir, albedo, normal, F0);
+	}
+
 
 
 	vec3 ambient;

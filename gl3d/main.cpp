@@ -751,6 +751,65 @@ int main()
 				ImGui::PopID();
 			}
 
+			{
+				ImGui::NewLine();
+				ImGui::NewLine();
+
+				static int directionalLightSelector = -1;
+				ImGui::Text("Directional lightd Count %d", renderer.directionalLights.size());
+				ImGui::InputInt("Current directional light:", &directionalLightSelector);
+				int n = ImGui::Button("New Directional Light"); ImGui::SameLine();
+				int remove = ImGui::Button("Remove Directional Light");
+
+				if (directionalLightSelector < -1)
+				{
+					directionalLightSelector = -1;
+				}
+
+				if (n || directionalLightSelector >= (int)renderer.directionalLights.size())
+				{
+					gl3d::internal::GpuDirectionalLight l = {};
+					l.color = { 1,1,1,0 };
+
+					renderer.directionalLights.push_back(l);
+				}
+
+				directionalLightSelector 
+					= std::min(directionalLightSelector, (int)renderer.directionalLights.size() - 1);
+
+				if (remove)
+				{
+					if (directionalLightSelector >= 0)
+					{
+						renderer.directionalLights.erase(renderer.directionalLights.begin() + directionalLightSelector);
+						directionalLightSelector = std::min(directionalLightSelector, 
+							(int)renderer.directionalLights.size() - 1);
+					}
+
+				}
+
+				ImGui::NewLine();
+
+				if (directionalLightSelector >= 0)
+				{
+					ImGui::PushID(13);
+
+					ImGui::ColorEdit3("Color##dir", &renderer.directionalLights[directionalLightSelector].color[0]);
+					ImGui::DragFloat3("Direction##dir", &renderer.directionalLights[directionalLightSelector].direction[0], 0.1);
+
+					if (glm::length(renderer.directionalLights[directionalLightSelector].direction) == 0)
+					{
+						renderer.directionalLights[directionalLightSelector].direction =
+							glm::vec4{ 0,-1,0, 0 };
+					}
+
+					renderer.directionalLights[directionalLightSelector].direction =
+						glm::normalize(renderer.directionalLights[directionalLightSelector].direction);
+
+					ImGui::PopID();
+				}
+			}
+
 			ImGui::NewLine();
 			ImGui::NewLine();
 			ImGui::ColorEdit3("Global Ambient color", &renderer.lightShader.lightPassUniformBlockCpuData.ambientLight[0]);
@@ -1050,10 +1109,7 @@ int main()
 		//
 		//}
 
-
-
 		renderer.render();
-
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });

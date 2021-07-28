@@ -69,6 +69,7 @@ namespace gl3d
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
+		GLint light_u_directionalLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
@@ -82,6 +83,10 @@ namespace gl3d
 
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint pointLightsBlockBuffer = 0;
+
+		GLuint directionalLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint directionalLightsBlockBuffer = 0;
+
 
 
 		GLint normalSubroutineLocation = -1;

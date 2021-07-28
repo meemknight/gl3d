@@ -1496,7 +1496,6 @@ namespace gl3d
 
 			
 			
-			
 			bool changed = 1;
 
 			for (auto& i : model.models)
@@ -1645,9 +1644,6 @@ namespace gl3d
 			}
 
 
-			
-
-
 
 		}
 
@@ -1764,7 +1760,7 @@ namespace gl3d
 		glUniformMatrix4fv(lightShader.light_u_view, 1, GL_FALSE, &(camera.getWorldToViewMatrix()[0][0]) );
 
 		if (pointLights.size())
-		{
+		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.pointLightsBlockBuffer);
 		
 			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
@@ -1773,8 +1769,18 @@ namespace gl3d
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lightShader.pointLightsBlockBuffer);
 		
 		}
-
 		glUniform1i(lightShader.light_u_pointLightCount, pointLights.size());
+
+		if (directionalLights.size())
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.directionalLightsBlockBuffer);
+
+			glBufferData(GL_SHADER_STORAGE_BUFFER, directionalLights.size() * sizeof(internal::GpuDirectionalLight)
+				, &directionalLights[0], GL_STREAM_DRAW);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightShader.directionalLightsBlockBuffer);
+
+		}
+		glUniform1i(lightShader.light_u_directionalLightCount, directionalLights.size());
 
 
 		//update the uniform block with data for the light shader

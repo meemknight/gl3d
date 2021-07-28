@@ -102,6 +102,13 @@ namespace gl3d
 			glm::vec4 color = { 1,1,1,0 };
 		};
 
+		struct GpuDirectionalLight
+		{
+			glm::vec4 direction = {0,-1,0, 0};
+			glm::vec4 color = { 1,1,1,0 };
+		};
+
+
 	};
 
 	void GLAPIENTRY glDebugOutput(GLenum source,
@@ -263,6 +270,7 @@ namespace gl3d
 		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
+		GLint light_u_directionalLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
@@ -276,6 +284,10 @@ namespace gl3d
 
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint pointLightsBlockBuffer = 0;
+
+		GLuint directionalLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint directionalLightsBlockBuffer = 0;
+
 
 
 		GLint normalSubroutineLocation = -1;
@@ -786,6 +798,7 @@ namespace gl3d
 		SkyBox skyBox;
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
+		std::vector<gl3d::internal::GpuDirectionalLight> directionalLights;
 
 		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 

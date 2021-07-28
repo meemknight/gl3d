@@ -44,6 +44,7 @@ namespace gl3d
 		if(chanels == 3)
 		{
 			format = GL_RGB;
+			internalFormat = GL_RGB8;
 
 		}else if(chanels == 1)
 		{

@@ -92,6 +92,13 @@ namespace gl3d
 			glm::vec4 color = { 1,1,1,0 };
 		};
 
+		struct GpuDirectionalLight
+		{
+			glm::vec4 direction = {0,-1,0, 0};
+			glm::vec4 color = { 1,1,1,0 };
+		};
+
+
 	};
 
 	void GLAPIENTRY glDebugOutput(GLenum source,
