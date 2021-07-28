@@ -26,7 +26,7 @@ namespace gl3d
 		float fovRadians = glm::radians(100.f);
 
 		float closePlane = 0.01f;
-		float farPlane = 100.f;
+		float farPlane = 300.f;
 
 
 		glm::vec3 position = {};

@@ -11,6 +11,10 @@ uniform sampler2D u_bloomNotBluredTexture;
 uniform float u_bloomIntensity;
 uniform float u_exposure;
 
+uniform int u_useSSAO;
+uniform float u_ssaoExponent;
+uniform sampler2D u_ssao;
+
 void main()
 {
 	vec4 color = texture(u_colorTexture, v_texCoords).rgba;
@@ -18,6 +22,15 @@ void main()
 	//a_color = color.aaa;
 	//return;
 
+	float ssaof = 1;
+	if(u_useSSAO != 0)
+	{
+		ssaof = texture(u_ssao, v_texCoords).r;	
+		ssaof = pow(ssaof, u_ssaoExponent);
+	}else
+	{
+		ssaof = 1;
+	}
 	
 	vec3 bloom = texture(u_bloomTexture, v_texCoords).rgb;
 	vec3 bloomNotBlurred = texture(u_bloomNotBluredTexture, v_texCoords).rgb;
@@ -27,7 +40,7 @@ void main()
 	//if(color.a < 0.5){discard;}
 
 
-	a_color.rgb = (bloom * u_bloomIntensity) + bloomNotBlurred + color.rgb;
+	a_color.rgb = (bloom * u_bloomIntensity) + (bloomNotBlurred + color.rgb) * ssaof;
 	//a_color = bloom;
 	
 	//hdr

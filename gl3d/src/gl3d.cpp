@@ -342,7 +342,8 @@ namespace gl3d
 			pos++;
 		}
 
-		GpuTexture t(path.c_str());
+		GpuTexture t;
+		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
 
 		//if texture is not loaded, return an invalid texture
 		if(t.id == 0)
@@ -479,14 +480,12 @@ namespace gl3d
 
 					if (!mat.map_Kd.empty())
 					{
-						//gm.albedoTexture.loadTextureFromFile(std::string(model.path + mat.map_Kd).c_str());
 						textureData->albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
 					}
 
 					if (!mat.map_Kn.empty())
 					{
 						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
-						//gm.normalMapTexture.loadTextureFromFile(std::string(model.path + mat.map_Kn).c_str(),
 						//	TextureLoadQuality::linearMipmap);
 					}
 
@@ -502,7 +501,6 @@ namespace gl3d
 					if (!mat.map_RMA.empty()) 
 					{
 						//todo not tested
-						//gm.RMA_Texture.loadTextureFromFile(mat.map_RMA.c_str(),
 						//rmaQuality);
 
 						textureData->RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
@@ -1353,18 +1351,313 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		glStencilMask(0xFF);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 
 		renderSkyBoxBefore();
+
+		#pragma region stuff to be bound for rendering the pre pass geometry
+
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		lightShader.prePass.shader.bind();
+
+		#pragma endregion
+
+
+		//z pre pass
+		for (auto& i : internal.cpuEntities)
+		{
+			auto id = internal.getModelIndex(i.model.id_);
+			if (id < 0)
+			{
+				continue;
+			}
+
+			auto& model = internal.graphicModels[id];
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto transformMat = i.transform.getTransformMatrix();
+			auto modelViewProjMat = projMat * viewMat * transformMat;
+			glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+
+			//z pre pass todo add back and create a custom shader
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			glDepthFunc(GL_LESS);
+			for (auto &i : model.models)
+			{
+				auto m = internal.getMaterialIndex(i.material);
+
+				if (m < 0)
+				{
+					glUniform1i(lightShader.prePass.u_hasTexture, 0);
+				}
+				else
+				{
+
+					auto t = internal.materialTexturesData[m];
+					auto tId = internal.getTextureIndex(t.albedoTexture);
+
+					if (tId < 0)
+					{
+						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+
+					}
+					else
+					{
+						auto texture = internal.loadedTextures[tId];
+
+						glUniform1i(lightShader.prePass.u_hasTexture, 1);
+						glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, texture.id);
+					}
+
+				}
+
+				glBindVertexArray(i.vertexArray);
+			
+				if (i.indexBuffer)
+				{
+					glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+				}
+				else
+				{
+					glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+				}
+			}
+
+			
+
+		}
+
+		#pragma region stuff to be bound for rendering the geometry
+
+
+		lightShader.geometryPassShader.bind();
+		lightShader.getSubroutines();
+
+		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
+		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
+		glUniform1i(lightShader.textureSamplerLocation, 0);
+		glUniform1i(lightShader.normalMapSamplerLocation, 1);
+		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
+		glUniform1i(lightShader.RMASamplerLocation, 3);
+		glUniform1i(lightShader.u_emissiveTexture, 4);
+
+
+		//material buffer
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * internal.materials.size()
+			, &internal.materials[0], GL_STREAM_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
+
+		GLsizei n;
+		glGetProgramStageiv(lightShader.geometryPassShader.id,
+			GL_FRAGMENT_SHADER,
+			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+			&n);
+
+		GLuint* indices = new GLuint[n]{ 0 };
+
+
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthFunc(GL_EQUAL);
+
+		#pragma endregion
 
 
 		//first we render the entities in the gbuffer
 		for (auto& i : internal.cpuEntities)
 		{
-			renderModel(i.model, i.transform.position, i.transform.rotation, i.transform.scale);
+			//renderModel(i.model, i.transform.position, i.transform.rotation, i.transform.scale);
+
+			auto id = internal.getModelIndex(i.model.id_);
+			if (id < 0) 
+			{ continue; }
+
+			auto& model = internal.graphicModels[id];
+
+			if (model.models.empty())
+			{
+				continue;
+			}
+
+			auto projMat = camera.getProjectionMatrix();
+			auto viewMat = camera.getWorldToViewMatrix();
+			auto transformMat = i.transform.getTransformMatrix();
+			auto modelViewProjMat = projMat * viewMat * transformMat;
+
+			glUniformMatrix4fv(lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+			glUniformMatrix4fv(lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
+			glUniformMatrix4fv(lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
+
+			
+			
+			
+			bool changed = 1;
+
+			for (auto& i : model.models)
+			{
+
+				int materialId = internal.getMaterialIndex(i.material);
+
+				if (materialId == -1)
+				{
+					continue;
+				}
+
+				glUniform1i(lightShader.materialIndexLocation, materialId);
+
+
+				TextureDataForModel textureData = internal.materialTexturesData[materialId];
+
+				int rmaLoaded = 0;
+				int albedoLoaded = 0;
+				int normalLoaded = 0;
+
+				GpuTexture* albedoTextureData = this->getTextureData(textureData.albedoTexture);
+				if (albedoTextureData != nullptr)
+				{
+					albedoLoaded = 1;
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, albedoTextureData->id);
+				}
+
+				GpuTexture* normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
+				if (normalMapTextureData != nullptr && normalMapTextureData->id != 0)
+				{
+					normalLoaded = 1;
+					glActiveTexture(GL_TEXTURE1);
+					glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
+				}
+
+				GpuTexture* rmaTextureData = this->getTextureData(textureData.RMA_Texture);
+				if (rmaTextureData != nullptr && rmaTextureData->id != 0)
+				{
+					rmaLoaded = 1;
+					glActiveTexture(GL_TEXTURE3);
+					glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
+				}
+
+				int emissiveTextureLoaded = 0;
+				GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
+				if (emissiveTextureData != nullptr && emissiveTextureData->id != 0)
+				{
+					emissiveTextureLoaded = 1;
+					glActiveTexture(GL_TEXTURE4);
+					glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
+				}
+
+
+				if (emissiveTextureLoaded)
+				{
+					if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_sampled)
+					{
+						indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_sampled;
+						changed = 1;
+					}
+				}
+				else
+				{
+					if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_notSampled)
+					{
+						indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_notSampled;
+						changed = 1;
+					}
+				}
+
+				if (normalLoaded && lightShader.normalMap)
+				{
+					if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+					{
+						indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
+						changed = 1;
+					}
+				}
+				else
+				{
+					if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
+					{
+						indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
+						changed = 1;
+					}
+				}
+
+				if (rmaLoaded)
+				{
+
+					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures])
+					{
+						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures];
+						changed = 1;
+					}
+
+				}
+				else
+				{
+					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[0])
+					{
+						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[0];
+						changed = 1;
+					}
+
+				}
+
+
+				if (albedoLoaded != 0)
+				{
+					if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
+					{
+						indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
+						changed = 1;
+					}
+				}
+				else
+					if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
+					{
+						indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
+						changed = 1;
+					}
+
+
+				if (changed)
+				{
+					glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
+				}
+				changed = 0;
+
+				{
+					glBindVertexArray(i.vertexArray);
+
+					if (i.indexBuffer)
+					{
+						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+					}
+					else
+					{
+						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+					}
+				}
+
+			}
+
+
+			
+
+
 
 		}
 
+		delete[] indices;
+
+		glBindVertexArray(0);
+
+		glDepthFunc(GL_LESS);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 		//we draw a rect several times so we keep this vao binded
@@ -1448,25 +1741,21 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
 
-		glUniform1i(lightShader.light_u_ssao, 4);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
-		//glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
 
-		glUniform1i(lightShader.light_u_skyboxFiltered, 5);
-		glActiveTexture(GL_TEXTURE5);
+		glUniform1i(lightShader.light_u_skyboxFiltered, 4);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.preFilteredMap);
 
-		glUniform1i(lightShader.light_u_skyboxIradiance, 6);
-		glActiveTexture(GL_TEXTURE6);
+		glUniform1i(lightShader.light_u_skyboxIradiance, 5);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
 
-		glUniform1i(lightShader.light_u_brdfTexture, 7);
-		glActiveTexture(GL_TEXTURE7);
+		glUniform1i(lightShader.light_u_brdfTexture, 6);
+		glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D, lightShader.brdfTexture.id);
 
-		glUniform1i(lightShader.light_u_emmisive, 8);
-		glActiveTexture(GL_TEXTURE8);
+		glUniform1i(lightShader.light_u_emmisive, 7);
+		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
 
 
@@ -1487,7 +1776,6 @@ namespace gl3d
 
 		glUniform1i(lightShader.light_u_pointLightCount, pointLights.size());
 
-		glUniform1i(lightShader.u_useSSAO, lightShader.useSSAO);
 
 		//update the uniform block with data for the light shader
 		glBindBuffer(GL_UNIFORM_BUFFER, lightShader.lightPassShaderData.lightPassDataBlockBuffer);
@@ -1568,6 +1856,24 @@ namespace gl3d
 
 		}
 
+		if (lightShader.useSSAO)
+		{
+			glUniform1i(postProcess.u_useSSAO, 1);
+			//todo change ssao_finalColor_exponent
+			glUniform1f(postProcess.u_ssaoExponent, ssao_finalColor_exponent);
+			
+			
+			glUniform1i(postProcess.u_ssao, 3);
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
+			
+
+		}else
+		{
+			glUniform1i(postProcess.u_useSSAO, 0);
+
+		}
+
 		glUniform1i(postProcess.u_bloomNotBluredTexture, 2);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
@@ -1593,14 +1899,8 @@ namespace gl3d
 		glBlitFramebuffer(
 		  0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
 		);
+
 		
-		//clear buffers
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		//glClear(GL_COLOR_BUFFER_BIT );
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	#pragma endregion
 
@@ -1721,6 +2021,13 @@ namespace gl3d
 	{
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, skyBox);
+		return skyBox;
+	}
+
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, float g, float g2)
+	{
+		SkyBox skyBox = {};
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, g, g2, skyBox);
 		return skyBox;
 	}
 
@@ -1856,6 +2163,11 @@ namespace gl3d
 		u_bloomNotBluredTexture = getUniform(postProcessShader.id, "u_bloomNotBluredTexture");
 		u_bloomIntensity = getUniform(postProcessShader.id, "u_bloomIntensity");
 		u_exposure = getUniform(postProcessShader.id, "u_exposure");
+
+		u_useSSAO = getUniform(postProcessShader.id, "u_useSSAO");
+		u_ssaoExponent = getUniform(postProcessShader.id, "u_ssaoExponent");
+		u_ssao = getUniform(postProcessShader.id, "u_ssao");
+
 
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");

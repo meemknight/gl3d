@@ -44,6 +44,7 @@ namespace gl3d
 		if(chanels == 3)
 		{
 			format = GL_RGB;
+
 		}else if(chanels == 1)
 		{
 			format = GL_RED;
@@ -64,6 +65,66 @@ namespace gl3d
 		setTextureQuality(quality);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
+	}
+
+	
+
+	int GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int quality, int channels)
+	{
+		int w, h, nrChannels;
+		stbi_set_flip_vertically_on_load(true);
+		unsigned char* data = stbi_load(file, &w, &h, &nrChannels, channels);
+
+		int alphaData = 0;
+
+		if (!data)
+		{
+			//todo err messages
+			std::cout << "err: " << file << "\n";
+			id = 0;
+		}
+		else
+		{
+			//first look if there is alpha data in the file or if it is wanted at all
+			if(nrChannels != 4 && channels != 4) 
+			{
+				alphaData = 0;
+			}
+			else
+			{
+				for (int i = 0; i < w * h; i++)
+				{
+					if (data[4 * i + 3] != UCHAR_MAX)
+					{
+						alphaData = 1;
+						break;
+					}
+				}
+			}
+
+			// if there is no alpha channel in file clamp channels to max 3
+			if (!alphaData && channels == 4)
+			{
+				int writePos = 0;
+				int readPos = 0;
+
+				for (int i = 0; i < w * h; i++)
+				{
+					data[writePos++] = data[readPos++];
+					data[writePos++] = data[readPos++];
+					data[writePos++] = data[readPos++];
+					readPos++;//skip alpha
+				}
+
+				channels = 3;
+
+			}
+
+			loadTextureFromMemory(data, w, h, channels, quality);
+			stbi_image_free(data);
+		}
+
+		return alphaData;
 	}
 
 	void GpuTexture::clear()

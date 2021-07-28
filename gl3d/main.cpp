@@ -167,10 +167,12 @@ int main()
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
 	
+	//renderer.skyBox = renderer.atmosfericScattering(glm::normalize(glm::vec3{ -1, 1, -1 }), 10, 50);
 
 
 	//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
-	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/uffizi_cross.png", 1);
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
+	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/sky.png", 0);
 	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/forest.png", 0);
 	
 
@@ -417,10 +419,11 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	//auto levelModel = renderer.loadObject("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
-	auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
+	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
 	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	
@@ -484,9 +487,7 @@ int main()
 		glfwGetWindowSize(wind, &w, &h);
 		w = std::max(w, 1);
 		h = std::max(h, 1);
-		glStencilMask(0xFF);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
+		
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
@@ -660,8 +661,7 @@ int main()
 				ImGui::SliderFloat("SSAO bias", &renderer.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
 				ImGui::SliderFloat("SSAO radius", &renderer.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
 				ImGui::SliderInt("SSAO sample count", &renderer.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
-				ImGui::SliderFloat("SSAO ambient exponent", &renderer.lightShader.lightPassUniformBlockCpuData.ssao_ambient_exponent, 0, 16);
-				ImGui::SliderFloat("SSAO final color exponent", &renderer.lightShader.lightPassUniformBlockCpuData.ssao_finalColor_exponent, 0, 16);
+				ImGui::SliderFloat("SSAO exponent", &renderer.ssao_finalColor_exponent, 0, 16);
 
 				ImGui::PopID();
 			}
@@ -689,7 +689,7 @@ int main()
 			ImGui::PushID(234);
 
 			ImGui::Image((void *)(renderer.gBuffer.buffers[renderer.gBuffer.albedo]),
-							ImVec2(80, 80));
+				ImVec2(80, 80), { 0,1 }, { 1,0 });
 			ImGui::Text("gBufferTexture: %d", renderer.gBuffer.buffers[renderer.gBuffer.albedo]);
 
 

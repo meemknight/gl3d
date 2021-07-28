@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-23
+//built on 2021-07-28
 ////////////////////////////////////////////////
 
 
@@ -156,10 +156,13 @@ namespace gl3d
 		GLuint id = 0;
 
 		GpuTexture() = default;
-		GpuTexture(const char *file) { loadTextureFromFile(file); };
+		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
+
+		//one if there is alpha data
+		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);
 
 		void clear();
 
@@ -168,6 +171,15 @@ namespace gl3d
 
 	};
 
+	namespace internal
+	{
+		struct GpuTextureWithFlags
+		{
+			GpuTextureWithFlags() = default;
+			GpuTexture texture;
+			unsigned int flags = 0; //
+		};
+	};
 
 	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel);
 
@@ -258,7 +270,6 @@ namespace gl3d
 		GLint light_u_emmisive = -1;
 		
 
-		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -303,11 +314,17 @@ namespace gl3d
 		{
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
 			float bloomTresshold = 1.f;
-			float ssao_ambient_exponent = 6.4f;
-			float ssao_finalColor_exponent = 5.f;
 			int lightSubScater = 1;
 
 		}lightPassUniformBlockCpuData;
+
+		struct
+		{
+			Shader shader;
+			GLint u_transform;
+			GLint u_hasTexture;
+			GLint u_albedoSampler;
+		}prePass;
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;
@@ -362,7 +379,7 @@ namespace gl3d
 		float fovRadians = glm::radians(100.f);
 
 		float closePlane = 0.01f;
-		float farPlane = 100.f;
+		float farPlane = 300.f;
 
 
 		glm::vec3 position = {};
@@ -522,9 +539,11 @@ namespace gl3d
 
 	struct SkyBox
 	{
-		GLuint texture;				//environment cubemap
-		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
-		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+		GLuint texture = 0;				//environment cubemap
+		GLuint convolutedTexture = 0;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap = 0;		//multiple mipmaps used for speclar 
+
+		void clearData();
 	};
 
 	struct SkyBoxLoaderAndDrawer
@@ -568,6 +587,16 @@ namespace gl3d
 
 		}preFilterSpecular;
 
+		struct
+		{
+			Shader shader;
+			//GLuint u_lightPos;
+			//GLuint u_g;
+			//GLuint u_g2;
+			GLuint modelViewUniformLocation;
+
+		}atmosphericScatteringShader;
+
 		enum CrossskyBoxFormats
 		{
 			BottomOfTheCrossRight,
@@ -578,7 +607,8 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox);
 		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
-		
+		void atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox);
+
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
@@ -721,6 +751,8 @@ namespace gl3d
 		SkyBox loadSkyBox(const char *name, int format = 0);
 		SkyBox loadHDRSkyBox(const char *name);
 
+		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
+
 	#pragma endregion
 
 	#pragma region model
@@ -756,6 +788,8 @@ namespace gl3d
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
 		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+
+
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
 		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
@@ -849,6 +883,9 @@ namespace gl3d
 			GLint u_bloomNotBluredTexture;	//post process shader
 			GLint u_bloomIntensity;	//post process shader
 			GLint u_exposure;		//post process shader
+			GLint u_useSSAO;	//post process shader
+			GLint u_ssaoExponent;	//post process shader
+			GLint u_ssao;	//post process shader
 
 
 			GLint u_toBlurcolorInput;
@@ -909,7 +946,7 @@ namespace gl3d
 		void updateWindowMetrics(int x, int y);
 
 		float exposure = 1;
-
+		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;
 

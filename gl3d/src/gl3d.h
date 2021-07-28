@@ -110,6 +110,8 @@ namespace gl3d
 		SkyBox loadSkyBox(const char *name, int format = 0);
 		SkyBox loadHDRSkyBox(const char *name);
 
+		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
+
 	#pragma endregion
 
 	#pragma region model
@@ -145,6 +147,8 @@ namespace gl3d
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 
 		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
+
+
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
 		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
@@ -238,6 +242,9 @@ namespace gl3d
 			GLint u_bloomNotBluredTexture;	//post process shader
 			GLint u_bloomIntensity;	//post process shader
 			GLint u_exposure;		//post process shader
+			GLint u_useSSAO;	//post process shader
+			GLint u_ssaoExponent;	//post process shader
+			GLint u_ssao;	//post process shader
 
 
 			GLint u_toBlurcolorInput;
@@ -298,7 +305,7 @@ namespace gl3d
 		void updateWindowMetrics(int x, int y);
 
 		float exposure = 1;
-
+		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;
 

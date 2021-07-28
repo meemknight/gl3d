@@ -91,5 +91,7 @@
     <None Include="shaders\skyBox\preFilterSpecular.frag" />
     <None Include="shaders\modelLoader\mergePBRmat.frag" />
     <None Include="shaders\drawQuads.vert" />
+    <None Include="shaders\deferred\zPrePass.frag" />
+    <None Include="shaders\skyBox\atmosphericScattering.frag" />
   </ItemGroup>
 </Project>

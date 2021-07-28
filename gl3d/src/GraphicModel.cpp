@@ -331,6 +331,14 @@ namespace gl3d
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");
 
+		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
+			"shaders/skyBox/atmosphericScattering.frag");
+		//atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
+		//atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
+		//atmosphericScatteringShader.u_g2 = getUniform(atmosphericScatteringShader.shader.id, "u_g2");
+		atmosphericScatteringShader.modelViewUniformLocation 
+			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection");
+
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -589,7 +597,7 @@ namespace gl3d
 		//render into the cubemap
 		//https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 		{
-			GLuint captureFBO;
+			GLuint captureFBO; //todo cache this
 			glGenFramebuffers(1, &captureFBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 
@@ -644,6 +652,68 @@ namespace gl3d
 		glDeleteTextures(1, &hdrTexture);
 
 		createConvolutedAndPrefilteredTextureData(skyBox);
+	}
+
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox)
+	{
+		skyBox = {};
+
+		//render into the cubemap
+		{
+			GLuint captureFBO; 
+			glGenFramebuffers(1, &captureFBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+
+			glGenTextures(1, &skyBox.texture);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
+			for (unsigned int i = 0; i < 6; ++i)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, //todo 16 is probably too much
+					512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+			}
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			//rendering
+			{
+
+				atmosphericScatteringShader.shader.bind();
+				//glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
+				//glUniform1f(atmosphericScatteringShader.u_g, g);
+				//glUniform1f(atmosphericScatteringShader.u_g2, g2);
+
+				glViewport(0, 0, 512, 512);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+				glBindVertexArray(vertexArray);
+
+				for (unsigned int i = 0; i < 6; ++i)
+				{
+					glm::mat4 viewProjMat = captureProjection * captureViews[i];
+					glUniformMatrix4fv(atmosphericScatteringShader.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, skyBox.texture, 0);
+					glClear(GL_COLOR_BUFFER_BIT);
+
+					glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+				}
+
+				glBindVertexArray(0);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			}
+
+			glDeleteFramebuffers(1, &captureFBO);
+
+		}
+
+
+		createConvolutedAndPrefilteredTextureData(skyBox);
+
 	}
 
 	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox)
@@ -808,6 +878,12 @@ namespace gl3d
 		glEnable(GL_DEPTH_TEST);
 
 		glBindVertexArray(0);
+	}
+
+	void SkyBox::clearData()
+	{
+		glDeleteTextures(3, (GLuint*)this);
+		*this = {};
 	}
 
 };

@@ -15,7 +15,6 @@ uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
 uniform sampler2D u_materials;
-uniform sampler2D u_ssao;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 
@@ -23,14 +22,11 @@ uniform sampler2D u_emmisive;
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
 
-uniform int u_useSSAO;
 
 layout (std140) uniform u_lightPassData
 {
 	vec4 ambientColor;
 	float bloomTresshold;
-	float ssao_ambient_exponent;
-	float ssao_finalColor_exponent;
 	int lightSubScater;
 
 }lightPassData;
@@ -152,18 +148,6 @@ void main()
 
 	vec3 material = texture(u_materials, v_texCoords).xyz;
 
-	float ssaof;
-
-	if(u_useSSAO != 0)
-	{
-		ssaof = texture(u_ssao, v_texCoords).r;	
-	}else
-	{
-		ssaof = 1;
-	}
-
-	float ssao_ambient = pow(ssaof, lightPassData.ssao_ambient_exponent);
-	float ssao_finalColor = pow(ssaof, lightPassData.ssao_finalColor_exponent);
 
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
@@ -176,7 +160,7 @@ void main()
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
-	float roughness = clamp(material.r, 0.09, 1.0);
+	float roughness = clamp(material.r, 0.09, 0.99);
 	float metallic = clamp(material.g, 0.0, 0.98);
 	float ambientOcclution = material.b;
 
@@ -202,7 +186,7 @@ void main()
 		vec3 N = normal;
 		vec3 V = viewDir;
 		
-		float dotNVClamped = min(max(dot(N, V), 0.0), 0.99);
+		float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
 
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
@@ -245,14 +229,13 @@ void main()
 			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 		}
 		
-		vec3 occlusionData = ambientOcclution * ssao_ambient * lightPassData.ambientColor.rgb;
+		vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
 		ambient *= occlusionData;
 
 	}
 
 	vec3 color = Lo + ambient; 
 
-	color *= ssao_finalColor;
 	
 
 	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
@@ -281,7 +264,6 @@ void main()
 
 	a_outBloom = clamp(a_outBloom, 0, 1000);
 	
-
 	//a_outColor.rgb =  material.bbb;
 	//a_outColor.rgba =  vec4(albedoAlpha.aaa, 1);
 	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);

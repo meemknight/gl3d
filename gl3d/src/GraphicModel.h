@@ -133,9 +133,11 @@ namespace gl3d
 
 	struct SkyBox
 	{
-		GLuint texture;				//environment cubemap
-		GLuint convolutedTexture;	//convoluted environment (used for difuse iradiance)
-		GLuint preFilteredMap;		//multiple mipmaps used for speclar 
+		GLuint texture = 0;				//environment cubemap
+		GLuint convolutedTexture = 0;	//convoluted environment (used for difuse iradiance)
+		GLuint preFilteredMap = 0;		//multiple mipmaps used for speclar 
+
+		void clearData();
 	};
 
 	struct SkyBoxLoaderAndDrawer
@@ -179,6 +181,16 @@ namespace gl3d
 
 		}preFilterSpecular;
 
+		struct
+		{
+			Shader shader;
+			//GLuint u_lightPos;
+			//GLuint u_g;
+			//GLuint u_g2;
+			GLuint modelViewUniformLocation;
+
+		}atmosphericScatteringShader;
+
 		enum CrossskyBoxFormats
 		{
 			BottomOfTheCrossRight,
@@ -189,7 +201,8 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox);
 		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
-		
+		void atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox);
+
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();

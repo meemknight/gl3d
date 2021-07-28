@@ -23,7 +23,6 @@ uniform sampler2D u_emissiveTexture;
 uniform int u_materialIndex;
 
 
-
 struct MaterialStruct
 {
 	vec4 kd;

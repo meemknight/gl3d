@@ -207,6 +207,7 @@
   <ItemGroup>
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
+    <None Include="shaders\deferred\zPrePass.frag" />
     <None Include="shaders\drawQuads.vert" />
     <None Include="shaders\modelLoader\mergePBRmat.frag" />
     <None Include="shaders\skyBox\convolute.frag" />
@@ -220,6 +221,7 @@
     <None Include="shaders\normals.vert" />
     <None Include="shaders\showNormals.frag" />
     <None Include="shaders\showNormals.vert" />
+    <None Include="shaders\skyBox\atmosphericScattering.frag" />
     <None Include="shaders\skyBox\skyBox.frag" />
     <None Include="shaders\skyBox\skyBox.vert" />
     <None Include="shaders\skyBox\preFilterSpecular.frag" />

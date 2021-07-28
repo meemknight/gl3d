@@ -18,10 +18,13 @@ namespace gl3d
 		GLuint id = 0;
 
 		GpuTexture() = default;
-		GpuTexture(const char *file) { loadTextureFromFile(file); };
+		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
+
+		//one if there is alpha data
+		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);
 
 		void clear();
 
@@ -30,6 +33,15 @@ namespace gl3d
 
 	};
 
+	namespace internal
+	{
+		struct GpuTextureWithFlags
+		{
+			GpuTextureWithFlags() = default;
+			GpuTexture texture;
+			unsigned int flags = 0; //
+		};
+	};
 
 	void gausianBlurRGB(unsigned char *data, int w, int h, int kernel);
 

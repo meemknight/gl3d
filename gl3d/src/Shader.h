@@ -76,7 +76,6 @@ namespace gl3d
 		GLint light_u_emmisive = -1;
 		
 
-		GLint u_useSSAO = -1;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -121,11 +120,17 @@ namespace gl3d
 		{
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
 			float bloomTresshold = 1.f;
-			float ssao_ambient_exponent = 6.4f;
-			float ssao_finalColor_exponent = 5.f;
 			int lightSubScater = 1;
 
 		}lightPassUniformBlockCpuData;
+
+		struct
+		{
+			Shader shader;
+			GLint u_transform;
+			GLint u_hasTexture;
+			GLint u_albedoSampler;
+		}prePass;
 
 		Shader geometryPassShader;
 		Shader lightingPassShader;
