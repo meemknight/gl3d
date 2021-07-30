@@ -1427,6 +1427,8 @@ namespace gl3d
 
 			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
+			directionalLights[0].lightSpaceMatrix = lightSpaceMatrix;
+
 			//render shadow of the models
 			for (auto& i : internal.cpuEntities)
 			{
@@ -1632,7 +1634,6 @@ namespace gl3d
 			glUniformMatrix4fv(lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 			glUniformMatrix4fv(lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 			glUniformMatrix4fv(lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
-
 			
 			
 			bool changed = 1;
@@ -1892,6 +1893,10 @@ namespace gl3d
 		glUniform1i(lightShader.light_u_emmisive, 7);
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
+
+		glUniform1i(lightShader.light_u_directionalShadow, 8);
+		glActiveTexture(GL_TEXTURE8);
+		glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture);
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);

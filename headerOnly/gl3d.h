@@ -11,6 +11,7 @@
 #pragma once
 #include <glm\vec4.hpp>
 #include <glm\vec3.hpp>
+#include <glm\mat4x4.hpp>
 #include <gl\glew.h>
 
 namespace gl3d
@@ -106,6 +107,8 @@ namespace gl3d
 		{
 			glm::vec4 direction = {0,-1,0, 0};
 			glm::vec4 color = { 1,1,1,0 };
+			glm::mat4 lightSpaceMatrix = glm::mat4{ 1.f };
+
 		};
 
 
@@ -276,7 +279,7 @@ namespace gl3d
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		
+		GLint light_u_directionalShadow = -1;
 
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;

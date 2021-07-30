@@ -75,7 +75,7 @@ namespace gl3d
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		
+		GLint light_u_directionalShadow = -1;
 
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;

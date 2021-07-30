@@ -17,6 +17,7 @@ uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
+uniform sampler2D u_directionalShadow;
 
 
 uniform vec3 u_eyePosition;
@@ -48,14 +49,13 @@ struct DirectionalLight
 {
 	vec4 direction; //w not used
 	vec4 color;		//w not used
+	mat4 lightSpaceMatrix;
 };
 readonly layout(std140) buffer u_directionalLights
 {
 	DirectionalLight dLight[];
 };
 uniform int u_directionalLightCount;
-
-
 
 
 
@@ -148,6 +148,39 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 }
 
 
+float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+{
+	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+	projCoords = projCoords * 0.5 + 0.5;
+	float closestDepth = texture(u_directionalShadow, projCoords.xy).r; 
+	float currentDepth = projCoords.z;
+
+	float bias = max(0.01 * (1.0 - dot(normal, lightDir)), 0.002);
+	//float bias = 0.1;
+	
+	float shadow = 0.0;
+	vec2 texelSize = 1.0 / textureSize(u_directionalShadow, 0);
+	for(int x = -1; x <= 1; ++x)
+	{
+		for(int y = -1; y <= 1; ++y)
+		{
+			float pcfDepth = texture(u_directionalShadow, projCoords.xy + vec2(x, y) * texelSize).r; 
+			shadow += (currentDepth - bias) < pcfDepth  ? 1.0 : 0.0;        
+		}    
+	}
+	shadow /= 9.0;
+	
+	shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
+
+	// keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+	//if(projCoords.z > 1.0)
+	//	shadow = 0;
+		
+	return shadow;
+}
+
+
+
 void main()
 {
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
@@ -189,7 +222,6 @@ void main()
 		vec3 lightColor = light[i].color.rgb;
 		vec3 lightDirection = normalize(lightPosition - pos);
 
-
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0);
 
@@ -197,11 +229,16 @@ void main()
 
 	for(int i=0; i<u_directionalLightCount; i++)
 	{
-		vec3 lightDirection = -normalize(dLight[i].direction.xyz);
+		
+		vec3 lightDirection = normalize(dLight[i].direction.xyz);
 		vec3 lightColor = dLight[i].color.rgb;
 
-		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
-			pos, viewDir, albedo, normal, F0);
+		vec4 fragPosLightSpace = dLight[i].lightSpaceMatrix * vec4(pos,1);
+
+		float shadow = shadowCalculation(fragPosLightSpace, normal, lightDirection);
+
+		Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
+			pos, viewDir, albedo, normal, F0) * shadow;
 	}
 
 
