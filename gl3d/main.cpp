@@ -419,8 +419,8 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
-	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
+	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
@@ -688,9 +688,10 @@ int main()
 
 			ImGui::PushID(234);
 
-			ImGui::Image((void *)(renderer.gBuffer.buffers[renderer.gBuffer.albedo]),
+
+			ImGui::Image((void *)(renderer.renderDepthMap.texture),
 				ImVec2(80, 80), { 0,1 }, { 1,0 });
-			ImGui::Text("gBufferTexture: %d", renderer.gBuffer.buffers[renderer.gBuffer.albedo]);
+			ImGui::Text("gBufferTexture: %d", renderer.renderDepthMap.texture);
 
 
 			ImGui::PopID();
@@ -1110,6 +1111,7 @@ int main()
 		//}
 
 		renderer.render();
+		renderer.renderADepthMap(renderer.directionalShadows.depthMapTexture);
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });

@@ -97,8 +97,8 @@ namespace gl3d
 		GpuTexture *getTextureData(Texture t);
 
 		//internal
-		Texture createIntenralTexture(GpuTexture t);
-		Texture createIntenralTexture(GLuint id_);
+		Texture createIntenralTexture(GpuTexture t, int alphaData);
+		Texture createIntenralTexture(GLuint id_, int alphaData);
 
 	#pragma endregion
 
@@ -189,7 +189,7 @@ namespace gl3d
 			std::vector<TextureDataForModel> materialTexturesData;
 
 			//texture
-			std::vector <GpuTexture> loadedTextures;
+			std::vector <internal::GpuTextureWithFlags> loadedTextures;
 			std::vector<int> loadedTexturesIndexes;
 			std::vector<std::string> loadedTexturesNames;
 		
@@ -301,6 +301,31 @@ namespace gl3d
 			Shader blurShader;
 
 		}ssao;
+
+		struct DirectionalShadows
+		{
+			void create();
+			GLuint depthMapFBO;
+			GLuint depthMapTexture;
+			static constexpr int shadowSize = 1024;
+
+
+		}directionalShadows;
+
+
+		struct RenderDepthMap
+		{
+			void create();
+
+			Shader shader;
+			GLint u_depth = -1;
+
+			GLuint fbo;
+			GLuint texture;
+
+		}renderDepthMap;
+
+		void renderADepthMap(GLuint texture);
 
 		void render();
 		void updateWindowMetrics(int x, int y);

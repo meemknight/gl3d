@@ -115,8 +115,11 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
 	in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
 {
-
+	//lightDirection = direction to light
 	//vec3 lightDirection = normalize(lightPosition - worldPosition);
+
+	float dotNVclamped = clamp(dot(normal, viewDir), 0.0, 0.99);
+
 	vec3 halfwayVec = normalize(lightDirection + viewDir);
 	
 	//float dist = length(lightPosition - worldPosition);
@@ -129,7 +132,7 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
 	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
 
-	float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
+	float denominator = 4.0 * dotNVclamped  
 		* max(dot(normal, lightDirection), 0.0);
 	vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
 
@@ -137,7 +140,7 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
 	kD *= 1.0 - metallic;	//metallic surfaces are darker
 	
-	// scale light by NdotL
+	
 	float NdotL = max(dot(normal, lightDirection), 0.0);        
 	vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;
 
@@ -194,7 +197,7 @@ void main()
 
 	for(int i=0; i<u_directionalLightCount; i++)
 	{
-		vec3 lightDirection = normalize(dLight[i].direction.xyz);
+		vec3 lightDirection = -normalize(dLight[i].direction.xyz);
 		vec3 lightColor = dLight[i].color.rgb;
 
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 

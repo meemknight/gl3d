@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-28
+//built on 2021-07-30
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -2064,6 +2064,8 @@ namespace gl3d
 
 		ssao.create(x, y);
 		postProcess.create(x, y);
+		directionalShadows.create();
+		renderDepthMap.create();
 
 		internal.pBRtextureMaker.init();
 	}
@@ -2287,7 +2289,11 @@ namespace gl3d
 		}
 
 		GpuTexture t;
+		internal::GpuTextureWithFlags text;
 		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
+
+		text.texture = t;
+		text.flags = alphaExists;
 
 		//if texture is not loaded, return an invalid texture
 		if(t.id == 0)
@@ -2297,8 +2303,9 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
 
+
 		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(t);
+		internal.loadedTextures.push_back(text);
 		internal.loadedTexturesNames.push_back(path);
 
 		return Texture{ id };
@@ -2347,10 +2354,10 @@ namespace gl3d
 
 		auto data = &internal.loadedTextures[id];
 
-		return data;
+		return &data->texture;
 	}
 
-	Texture Renderer3D::createIntenralTexture(GpuTexture t)
+	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData)
 	{
 		//if t is null return an empty texture
 		if (t.id == 0)
@@ -2360,19 +2367,22 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
 
+		internal::GpuTextureWithFlags text;
+		text.texture = t;
+		text.flags= alphaData;
 
 		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(t);
+		internal.loadedTextures.push_back(text);
 		internal.loadedTexturesNames.push_back("");
 
 		return Texture{ id };
 	}
 
-	Texture Renderer3D::createIntenralTexture(GLuint id_)
+	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData)
 	{
 		GpuTexture t;
 		t.id = id_;
-		return createIntenralTexture(t);
+		return createIntenralTexture(t, alphaData);
 
 	}
 
@@ -2494,8 +2504,8 @@ namespace gl3d
 
 								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 								GpuTexture t;
-								t.loadTextureFromMemory(data, w, h, 4, rmaQuality);
-								textureData->RMA_Texture = this->createIntenralTexture(t);
+								t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
+								textureData->RMA_Texture = this->createIntenralTexture(t, 0);
 
 								textureData->RMA_loadedTextures = 7; //all textures loaded
 
@@ -2587,7 +2597,7 @@ namespace gl3d
 							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
 								roughness, metallic, ambientOcclusion, lightShader.quadDrawer.quadVAO);
 
-							textureData->RMA_Texture = this->createIntenralTexture(t);
+							textureData->RMA_Texture = this->createIntenralTexture(t, 0);
 
 							roughness.clear();
 							metallic.clear();
@@ -2707,7 +2717,7 @@ namespace gl3d
 
 								GpuTexture t;
 								t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-								textureData->RMA_Texture = this->createIntenralTexture(t);
+								textureData->RMA_Texture = this->createIntenralTexture(t, 0);
 
 								stbi_image_free(data1);
 								stbi_image_free(data2);
@@ -2845,6 +2855,7 @@ namespace gl3d
 	//https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_meminfo.txt
 	//http://developer.download.nvidia.com/opengl/specs/GL_NVX_gpu_memory_info.txt
 
+	//deprecated
 	void Renderer3D::renderModel(Model o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
@@ -2897,7 +2908,6 @@ namespace gl3d
 			, &internal.materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
-		//z pre pass todo add back and create a custom shader
 		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 		//glDepthFunc(GL_LESS);
 		//for (auto &i : model.models)
@@ -3178,7 +3188,6 @@ namespace gl3d
 		//
 		//auto viewProjMat = projMat * viewMat * transformMat;
 		//
-		////todo implement a light weight shader here
 		////lightShader.bind(viewProjMat, transformMat,
 		////	lightCubeModel.position, renderer.camera.position, gamaCorection,
 		////	models[itemCurrent].models[subItemCurent].material, renderer.pointLights);
@@ -3264,7 +3273,7 @@ namespace gl3d
 	int Renderer3D::InternalStruct::getTextureIndex(Texture t)
 	{
 		int id = t.id_;
-		if (id == 0) { return -1; }//todo add this optimization to other gets
+		if (id == 0) { return -1; }
 
 		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
 		if (found == loadedTexturesIndexes.end())
@@ -3293,25 +3302,154 @@ namespace gl3d
 		return id;
 	}
 
+	//todo add to other projects and places
+	glm::mat4 lookAtSafe(glm::vec3 const& eye, glm::vec3 const& center, glm::vec3 const& upVec)
+	{
+		glm::vec3 up = glm::normalize(upVec);
+
+		glm::vec3 f;
+		glm::vec3 s;
+		glm::vec3 u;
+
+		f = (normalize(center - eye));
+		if (f == up || f == -up)
+		{
+			s = glm::vec3(up.z, up.x, up.y);
+			u = (cross(s, f));
+
+		}
+		else
+		{
+			s = (normalize(cross(f, up)));
+			u = (cross(s, f));
+		}
+		
+		glm::mat4 Result(1);
+		Result[0][0] = s.x;
+		Result[1][0] = s.y;
+		Result[2][0] = s.z;
+		Result[0][1] = u.x;
+		Result[1][1] = u.y;
+		Result[2][1] = u.z;
+		Result[0][2] = -f.x;
+		Result[1][2] = -f.y;
+		Result[2][2] = -f.z;
+		Result[3][0] = -dot(s, eye);
+		Result[3][1] = -dot(u, eye);
+		Result[3][2] = dot(f, eye);
+		return Result;
+	}
+
 	void Renderer3D::render()
 	{
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glDepthFunc(GL_LESS);
 
 
 		renderSkyBoxBefore();
 
-		#pragma region stuff to be bound for rendering the pre pass geometry
-
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		lightShader.prePass.shader.bind();
+
+
+		#pragma region render shadow maps
+		if (directionalLights.size())
+		{
+
+			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
+			glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO);
+			glClear(GL_DEPTH_BUFFER_BIT);
+
+			
+			glm::vec3 lightDir = directionalLights[0].direction;
+			glm::vec3 lightPosition = -lightDir * glm::vec3(15);
+
+			float near_plane = 2.f, far_plane = 26.f;
+			glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
+			glm::mat4 lightView = lookAtSafe(lightPosition, { 0.f,0.f,0.f }, { 0.f,1.f,0.f });
+
+			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+			//render shadow of the models
+			for (auto& i : internal.cpuEntities)
+			{
+				auto id = internal.getModelIndex(i.model.id_);
+				if (id < 0)
+				{
+					continue;
+				}
+				
+				auto& model = internal.graphicModels[id];
+				auto transformMat = i.transform.getTransformMatrix();
+				auto modelViewProjMat = lightSpaceMatrix * transformMat;
+
+				glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+
+				for (auto& i : model.models)
+				{
+					auto m = internal.getMaterialIndex(i.material);
+
+					if (m < 0)
+					{
+						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+					}
+					else
+					{
+
+						auto t = internal.materialTexturesData[m];
+						auto tId = internal.getTextureIndex(t.albedoTexture);
+
+						if (tId < 0)
+						{
+							glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						}
+						else
+						{
+							auto texture = internal.loadedTextures[tId];
+
+							glUniform1i(lightShader.prePass.u_hasTexture, 1);
+							glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+							glActiveTexture(GL_TEXTURE0);
+							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+						}
+					}
+
+					glBindVertexArray(i.vertexArray);
+
+					if (i.indexBuffer)
+					{
+						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+					}
+					else
+					{
+						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+					}
+				}
+
+			}
+			
+
+
+			glViewport(0, 0, w, h);
+		}
 
 		#pragma endregion
 
 
-		//z pre pass
+		#pragma region stuff to be bound for rendering the pre pass geometry
+
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+
+		#pragma endregion
+
+
+
+		#pragma region z pre pass
 		for (auto& i : internal.cpuEntities)
 		{
 			auto id = internal.getModelIndex(i.model.id_);
@@ -3327,9 +3465,6 @@ namespace gl3d
 			auto modelViewProjMat = projMat * viewMat * transformMat;
 			glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 
-			//z pre pass todo add back and create a custom shader
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			glDepthFunc(GL_LESS);
 			for (auto &i : model.models)
 			{
 				auto m = internal.getMaterialIndex(i.material);
@@ -3356,7 +3491,7 @@ namespace gl3d
 						glUniform1i(lightShader.prePass.u_hasTexture, 1);
 						glUniform1i(lightShader.prePass.u_albedoSampler, 0);
 						glActiveTexture(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, texture.id);
+						glBindTexture(GL_TEXTURE_2D, texture.texture.id);
 					}
 
 				}
@@ -3376,6 +3511,11 @@ namespace gl3d
 			
 
 		}
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		#pragma endregion 
+
+
+
 
 		#pragma region stuff to be bound for rendering the geometry
 
@@ -3407,7 +3547,6 @@ namespace gl3d
 		GLuint* indices = new GLuint[n]{ 0 };
 
 
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glDepthFunc(GL_EQUAL);
 
 		#pragma endregion
@@ -3930,6 +4069,36 @@ namespace gl3d
 
 	}
 
+	void Renderer3D::renderADepthMap(GLuint texture)
+	{
+		glDisable(GL_DEPTH_TEST);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, renderDepthMap.fbo);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+
+		renderDepthMap.shader.bind();
+		glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(0, 0, 1024, 1024);
+
+		glBindVertexArray(lightShader.quadDrawer.quadVAO);
+		
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glUniform1i(renderDepthMap.u_depth, 0);
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glViewport(0, 0, w, h);
+
+		glBindVertexArray(0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		
+		glEnable(GL_DEPTH_TEST);
+
+	}
+
 	void Renderer3D::renderSkyBox()
 	{
 		//todo move into render
@@ -4190,6 +4359,62 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		return texture;
+	}
+
+	void Renderer3D::DirectionalShadows::create()
+	{
+		glGenFramebuffers(1, &depthMapFBO);
+
+
+		glGenTextures(1, &depthMapTexture);
+		glBindTexture(GL_TEXTURE_2D, depthMapTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowSize, shadowSize, 0,
+			GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+		
+	}
+
+	void Renderer3D::RenderDepthMap::create()
+	{
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "renderdepth map frame buffer failed\n";
+		}
+
+
+		shader.loadShaderProgramFromFile
+			("shaders/drawQuads.vert", "shaders/drawDepth.frag");
+		u_depth = getUniform(shader.id, "u_depth");
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	}
 
 };

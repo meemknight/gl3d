@@ -23,7 +23,7 @@ namespace gl3d
 		glm::vec3 up = { 0.f,1.f,0.f };
 
 		float aspectRatio = 1;
-		float fovRadians = glm::radians(100.f);
+		float fovRadians = glm::radians(60.f);
 
 		float closePlane = 0.01f;
 		float farPlane = 300.f;
