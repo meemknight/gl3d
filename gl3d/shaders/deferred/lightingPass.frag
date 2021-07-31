@@ -147,35 +147,76 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	return Lo;
 }
 
+float testShadowValue(sampler2D map, vec2 coords, float currentDepth, float bias)
+{
+	float closestDepth = texture(u_directionalShadow, coords).r; 
+
+	return  (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;
+}
+
+//https://www.youtube.com/watch?v=yn5UJzMqxj0&ab_channel=thebennybox
+float sampleShadowLinear(sampler2D map, vec2 coords, vec2 texelSize, float currentDepth, float bias)
+{
+
+	vec2 pixelPos = coords / texelSize + vec2(0.5);
+	vec2 fracPart = fract(pixelPos);
+	vec2 startTexel = (pixelPos-fracPart) * texelSize;
+
+	float blTexture = testShadowValue(map, startTexel, currentDepth, bias).r;
+	float brTexture = testShadowValue(map, startTexel + vec2(texelSize.x, 0), currentDepth, bias).r;
+	float tlTexture = testShadowValue(map, startTexel + vec2(0, texelSize.y), currentDepth, bias).r;
+	float trTexture = testShadowValue(map, startTexel + texelSize, currentDepth, bias).r;
+
+	float mixA = mix(blTexture, tlTexture, fracPart.y);
+	float mixB = mix(brTexture, trTexture, fracPart.y);
+
+	return mix(mixA, mixB, fracPart.x);
+}
+
+
 
 float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 {
+	//transform to depth buffer coords
 	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 	projCoords = projCoords * 0.5 + 0.5;
+
+	// keep the shadow at 1.0 when outside the far_plane region of the light's frustum.
+	if(projCoords.z > 1.0)
+		return 1.f;
+
+
 	float closestDepth = texture(u_directionalShadow, projCoords.xy).r; 
 	float currentDepth = projCoords.z;
 
-	float bias = max(0.01 * (1.0 - dot(normal, lightDir)), 0.002);
+
+	float bias = max((3.f/1024.f) * (1.0 - dot(normal, lightDir)), 2.f/1024.f);
 	//float bias = 0.1;
 	
 	float shadow = 0.0;
 	vec2 texelSize = 1.0 / textureSize(u_directionalShadow, 0);
+	vec2 offset = texelSize;
 	for(int x = -1; x <= 1; ++x)
 	{
 		for(int y = -1; y <= 1; ++y)
 		{
-			float pcfDepth = texture(u_directionalShadow, projCoords.xy + vec2(x, y) * texelSize).r; 
-			shadow += (currentDepth - bias) < pcfDepth  ? 1.0 : 0.0;        
+			
+			//float s = testShadowValue(u_directionalShadow, projCoords.xy + vec2(x, y) * offset, 
+			//	currentDepth, bias); 
+			
+			float s = sampleShadowLinear(u_directionalShadow, projCoords.xy + vec2(x, y) * offset,
+				texelSize, currentDepth, bias); 
+			
+			shadow += s;
 		}    
 	}
 	shadow /= 9.0;
 	
-	shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
+	//float shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
 
-	// keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-	//if(projCoords.z > 1.0)
-	//	shadow = 0;
-		
+
+	//shadow = pow(shadow, 4);
+	
 	return shadow;
 }
 

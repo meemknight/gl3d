@@ -1419,9 +1419,9 @@ namespace gl3d
 
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::vec3 lightPosition = -lightDir * glm::vec3(15);
+			glm::vec3 lightPosition = -lightDir * glm::vec3(11);
 
-			float near_plane = 2.f, far_plane = 26.f;
+			float near_plane = 1.f, far_plane = 26.f;
 			glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
 			glm::mat4 lightView = lookAtSafe(lightPosition, { 0.f,0.f,0.f }, { 0.f,1.f,0.f });
 
@@ -2169,7 +2169,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure);
+		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	void Renderer3D::renderSkyBoxBefore()
@@ -2180,7 +2181,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, this->exposure);
+		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, this->exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -2434,8 +2436,10 @@ namespace gl3d
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);

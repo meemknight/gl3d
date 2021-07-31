@@ -130,14 +130,12 @@ namespace gl3d
 	#pragma endregion
 
 
-
 		struct VAO
 		{
 			//this is not used yet
 			GLuint posNormalTexture;
 			void createVAOs();
 		}vao;
-
 
 
 		LightShader lightShader;
@@ -205,7 +203,6 @@ namespace gl3d
 		}internal;
 
 	
-
 		struct
 		{
 			Shader shader;
@@ -307,7 +304,7 @@ namespace gl3d
 			void create();
 			GLuint depthMapFBO;
 			GLuint depthMapTexture;
-			static constexpr int shadowSize = 1024;
+			static constexpr int shadowSize = 2048;
 
 
 		}directionalShadows;

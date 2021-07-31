@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-30
+//built on 2021-08-01
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1365,6 +1365,7 @@ namespace gl3d
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
 		normalSkyBox.u_exposure = getUniform(normalSkyBox.shader.id, "u_exposure");
+		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient");
 
 		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag");
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
@@ -1888,7 +1889,8 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure)
+	void SkyBoxLoaderAndDrawer::draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure,
+		glm::vec3 ambient)
 	{
 		glBindVertexArray(vertexArray);
 
@@ -1900,6 +1902,7 @@ namespace gl3d
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
 		glUniform1f(normalSkyBox.u_exposure, exposure);
+		glUniform3f(normalSkyBox.u_ambient, ambient.r, ambient.g, ambient.b);
 
 		glDepthFunc(GL_LEQUAL);
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 6);
@@ -1908,7 +1911,8 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
-	void SkyBoxLoaderAndDrawer::drawBefore(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure)
+	void SkyBoxLoaderAndDrawer::drawBefore(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,
+		glm::vec3 ambient)
 	{
 		glBindVertexArray(vertexArray);
 
@@ -1920,6 +1924,7 @@ namespace gl3d
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
 		glUniform1f(normalSkyBox.u_exposure, exposure);
+		glUniform3f(normalSkyBox.u_ambient, ambient.r, ambient.g, ambient.b);
 
 		glDisable(GL_DEPTH_TEST);
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 6);
@@ -3364,9 +3369,9 @@ namespace gl3d
 
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::vec3 lightPosition = -lightDir * glm::vec3(15);
+			glm::vec3 lightPosition = -lightDir * glm::vec3(11);
 
-			float near_plane = 2.f, far_plane = 26.f;
+			float near_plane = 1.f, far_plane = 26.f;
 			glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
 			glm::mat4 lightView = lookAtSafe(lightPosition, { 0.f,0.f,0.f }, { 0.f,1.f,0.f });
 
@@ -4114,7 +4119,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure);
+		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, this->exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	void Renderer3D::renderSkyBoxBefore()
@@ -4125,7 +4131,8 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, this->exposure);
+		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, this->exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -4379,8 +4386,10 @@ namespace gl3d
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);

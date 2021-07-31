@@ -394,8 +394,11 @@ int main()
 	20, 22, 21, 20, 23, 22, // Bottom
 	};
 
-	renderer.pointLights.push_back(gl3d::internal::GpuPointLight());
-	renderer.pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
+	//renderer.pointLights.push_back(gl3d::internal::GpuPointLight());
+	//renderer.pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
+
+	renderer.directionalLights.push_back(gl3d::internal::GpuDirectionalLight());
+	renderer.directionalLights[0].direction = glm::vec4(glm::normalize(glm::vec3(0, -1, 0.2)),0);
 
 	gl3d::GraphicModel lightCubeModel;
 	lightCubeModel.loadFromComputedData(sizeof(cubePositions),
@@ -595,7 +598,31 @@ int main()
 		static bool lightEditor = 1;
 		static bool cubeEditor = 1;
 		static bool showStats = 0;
-	
+		
+		auto drawImageNoQuality = [io](const char* c, GLuint id, int w, int h, int newW, int newH, int imguiId)
+		{
+			ImGui::PushID(imguiId);
+			ImGui::Text(c, id);
+			ImGui::SameLine();
+
+			ImVec2 pos = ImGui::GetCursorScreenPos();
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+			ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+			ImGui::Image((void*)(id),
+				ImVec2(w, h), uv_min, uv_max, tint_col, border_col);
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::BeginTooltip();
+				ImGui::Image((void*)(id)
+					, ImVec2(newW, newH));
+				ImGui::EndTooltip();
+			}
+			ImGui::PopID();
+		};
+
 		//imgui main menu
 		{
 			ImGui::Begin("Menu");
@@ -689,9 +716,8 @@ int main()
 			ImGui::PushID(234);
 
 
-			ImGui::Image((void *)(renderer.renderDepthMap.texture),
-				ImVec2(80, 80), { 0,1 }, { 1,0 });
-			ImGui::Text("gBufferTexture: %d", renderer.renderDepthMap.texture);
+			drawImageNoQuality("gBufferTexture: %d", renderer.directionalShadows.depthMapTexture,
+				40, 40, 400, 400, __COUNTER__);
 
 
 			ImGui::PopID();
@@ -756,7 +782,7 @@ int main()
 				ImGui::NewLine();
 				ImGui::NewLine();
 
-				static int directionalLightSelector = -1;
+				static int directionalLightSelector = 0;
 				ImGui::Text("Directional lightd Count %d", renderer.directionalLights.size());
 				ImGui::InputInt("Current directional light:", &directionalLightSelector);
 				int n = ImGui::Button("New Directional Light"); ImGui::SameLine();
@@ -1111,7 +1137,6 @@ int main()
 		//}
 
 		renderer.render();
-		renderer.renderADepthMap(renderer.directionalShadows.depthMapTexture);
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });

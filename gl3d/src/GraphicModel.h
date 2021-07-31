@@ -154,6 +154,8 @@ namespace gl3d
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
 			GLuint u_exposure;
+			GLuint u_ambient;
+
 		}normalSkyBox;
 
 		struct
@@ -206,8 +208,10 @@ namespace gl3d
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
-		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure);
-		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
+		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,
+			glm::vec3 ambient);
+		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure,
+			glm::vec3 ambient);
 
 	};
 

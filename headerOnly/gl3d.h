@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-07-30
+//built on 2021-08-01
 ////////////////////////////////////////////////
 
 
@@ -575,6 +575,8 @@ namespace gl3d
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
 			GLuint u_exposure;
+			GLuint u_ambient;
+
 		}normalSkyBox;
 
 		struct
@@ -627,8 +629,10 @@ namespace gl3d
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
 		//void clearGpuData();
-		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure);
-		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure);
+		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,
+			glm::vec3 ambient);
+		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure,
+			glm::vec3 ambient);
 
 	};
 
@@ -786,14 +790,12 @@ namespace gl3d
 	#pragma endregion
 
 
-
 		struct VAO
 		{
 			//this is not used yet
 			GLuint posNormalTexture;
 			void createVAOs();
 		}vao;
-
 
 
 		LightShader lightShader;
@@ -861,7 +863,6 @@ namespace gl3d
 		}internal;
 
 	
-
 		struct
 		{
 			Shader shader;
@@ -963,7 +964,7 @@ namespace gl3d
 			void create();
 			GLuint depthMapFBO;
 			GLuint depthMapTexture;
-			static constexpr int shadowSize = 1024;
+			static constexpr int shadowSize = 2048;
 
 
 		}directionalShadows;
