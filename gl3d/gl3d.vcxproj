@@ -211,6 +211,7 @@
     <None Include="shaders\deferred\zPrePass.frag" />
     <None Include="shaders\drawQuads.vert" />
     <None Include="shaders\modelLoader\mergePBRmat.frag" />
+    <None Include="shaders\shadows\varienceShadowMap.frag" />
     <None Include="shaders\skyBox\convolute.frag" />
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\geometryPass.vert" />

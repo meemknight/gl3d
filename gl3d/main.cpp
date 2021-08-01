@@ -715,8 +715,9 @@ int main()
 
 			ImGui::PushID(234);
 
-
-			drawImageNoQuality("gBufferTexture: %d", renderer.directionalShadows.depthMapTexture,
+			drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.depthMapTexture,
+				40, 40, 400, 400, __COUNTER__);
+			drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
 				40, 40, 400, 400, __COUNTER__);
 
 

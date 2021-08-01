@@ -966,6 +966,14 @@ namespace gl3d
 			GLuint depthMapTexture;
 			static constexpr int shadowSize = 2048;
 
+			GLuint varianceShadowFBO;
+			GLuint varianceShadowTexture;
+			GLuint depthForVarianceTexture;
+
+			Shader varianceShadowShader;
+			GLint u_transform;
+			GLint u_hasTexture;
+			GLint u_albedoSampler;
 
 		}directionalShadows;
 

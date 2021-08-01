@@ -1406,24 +1406,37 @@ namespace gl3d
 		renderSkyBoxBefore();
 
 
-		lightShader.prePass.shader.bind();
-
+		constexpr int useVarianceShadows = 0;
 
 		#pragma region render shadow maps
 		if (directionalLights.size())
 		{
-
 			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
-			glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO);
-			glClear(GL_DEPTH_BUFFER_BIT);
 
+			if (useVarianceShadows)
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.varianceShadowFBO);
+				directionalShadows.varianceShadowShader.bind();
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			}
+			else
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO);
+				lightShader.prePass.shader.bind();
+				glClear(GL_DEPTH_BUFFER_BIT);
+			}
+
+
+			glm::vec3 yOffset = glm::vec3(0, 10, 0);
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::vec3 lightPosition = -lightDir * glm::vec3(11);
+			glm::vec3 lightPosition = -lightDir * glm::vec3(10) + camera.position + yOffset;
+
+			float shadowDistance = 50;
 
 			float near_plane = 1.f, far_plane = 26.f;
 			glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
-			glm::mat4 lightView = lookAtSafe(lightPosition, { 0.f,0.f,0.f }, { 0.f,1.f,0.f });
+			glm::mat4 lightView = lookAtSafe(lightPosition, { camera.position + yOffset }, { 0.f,1.f,0.f });
 
 			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
@@ -1442,7 +1455,14 @@ namespace gl3d
 				auto transformMat = i.transform.getTransformMatrix();
 				auto modelViewProjMat = lightSpaceMatrix * transformMat;
 
-				glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				if (useVarianceShadows)
+				{
+					glUniformMatrix4fv(directionalShadows.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				}
+				else
+				{
+					glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				}
 
 				for (auto& i : model.models)
 				{
@@ -1450,7 +1470,14 @@ namespace gl3d
 
 					if (m < 0)
 					{
-						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						if (useVarianceShadows)
+						{
+							glUniform1i(directionalShadows.u_hasTexture, 0);
+						}
+						else
+						{
+							glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						}
 					}
 					else
 					{
@@ -1460,14 +1487,30 @@ namespace gl3d
 
 						if (tId < 0)
 						{
-							glUniform1i(lightShader.prePass.u_hasTexture, 0);
+							if (useVarianceShadows)
+							{
+								glUniform1i(directionalShadows.u_hasTexture, 0);
+							}
+							else
+							{
+								glUniform1i(lightShader.prePass.u_hasTexture, 0);
+							}
 						}
 						else
 						{
 							auto texture = internal.loadedTextures[tId];
 
-							glUniform1i(lightShader.prePass.u_hasTexture, 1);
-							glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+							if (useVarianceShadows)
+							{
+								glUniform1i(directionalShadows.u_hasTexture, 1);
+								glUniform1i(directionalShadows.u_albedoSampler, 0);
+							}
+							else
+							{
+								glUniform1i(lightShader.prePass.u_hasTexture, 1);
+								glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+							}
+
 							glActiveTexture(GL_TEXTURE0);
 							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
 						}
@@ -1496,6 +1539,9 @@ namespace gl3d
 
 
 		#pragma region stuff to be bound for rendering the pre pass geometry
+
+		lightShader.prePass.shader.bind();
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 
@@ -1896,7 +1942,15 @@ namespace gl3d
 
 		glUniform1i(lightShader.light_u_directionalShadow, 8);
 		glActiveTexture(GL_TEXTURE8);
-		glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture);
+		if (useVarianceShadows)
+		{
+			glBindTexture(GL_TEXTURE_2D, directionalShadows.varianceShadowTexture);
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture);
+		}
+
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -2426,8 +2480,9 @@ namespace gl3d
 
 	void Renderer3D::DirectionalShadows::create()
 	{
-		glGenFramebuffers(1, &depthMapFBO);
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+	#pragma region PCF shadow map
 
 		glGenTextures(1, &depthMapTexture);
 		glBindTexture(GL_TEXTURE_2D, depthMapTexture);
@@ -2438,19 +2493,58 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-
+		glGenFramebuffers(1, &depthMapFBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture, 0);
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
+	#pragma endregion
+
+	#pragma region variance shadow map
+
+		glGenTextures(1, &varianceShadowTexture);
+		glBindTexture(GL_TEXTURE_2D, varianceShadowTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, shadowSize, shadowSize, 0,
+			GL_RGBA, GL_FLOAT, nullptr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+		glGenFramebuffers(1, &varianceShadowFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, varianceShadowFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, varianceShadowTexture, 0);
+
+		glGenTextures(1, &depthForVarianceTexture);
+		glBindTexture(GL_TEXTURE_2D, depthForVarianceTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowSize, shadowSize, 0,
+			GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthForVarianceTexture, 0);
+	#pragma endregion
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-
+	#pragma region variance shadow
+		varianceShadowShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert",
+			"shaders/shadows/varienceShadowMap.frag");
 		
+		u_transform = getUniform(varianceShadowShader.id, "u_transform");
+		u_hasTexture = getUniform(varianceShadowShader.id, "u_hasTexture");
+		u_albedoSampler = getUniform(varianceShadowShader.id, "u_albedoSampler");
+		
+	#pragma endregion
+
 	}
 
 	void Renderer3D::RenderDepthMap::create()

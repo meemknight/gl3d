@@ -94,5 +94,6 @@
     <None Include="shaders\deferred\zPrePass.frag" />
     <None Include="shaders\skyBox\atmosphericScattering.frag" />
     <None Include="resources\drawDepth.frag" />
+    <None Include="shaders\shadows\varienceShadowMap.frag" />
   </ItemGroup>
 </Project>

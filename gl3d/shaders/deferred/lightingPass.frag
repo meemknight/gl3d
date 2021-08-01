@@ -181,8 +181,8 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 	projCoords = projCoords * 0.5 + 0.5;
 
-	// keep the shadow at 1.0 when outside the far_plane region of the light's frustum.
-	if(projCoords.z > 1.0)
+	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
+	if(projCoords.z > 0.99)
 		return 1.f;
 
 
@@ -190,7 +190,7 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	float currentDepth = projCoords.z;
 
 
-	float bias = max((3.f/1024.f) * (1.0 - dot(normal, lightDir)), 2.f/1024.f);
+	float bias = max((4.f/1024.f) * (1.0 - dot(normal, lightDir)), 3.f/1024.f);
 	//float bias = 0.1;
 	
 	float shadow = 0.0;
@@ -215,7 +215,7 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	//float shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
 
 
-	//shadow = pow(shadow, 4);
+	shadow = pow(shadow, 4);
 	
 	return shadow;
 }
