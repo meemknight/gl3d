@@ -190,7 +190,7 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	float currentDepth = projCoords.z;
 
 
-	float bias = max((4.f/1024.f) * (1.0 - dot(normal, lightDir)), 3.f/1024.f);
+	float bias = max((4.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
 	//float bias = 0.1;
 	
 	float shadow = 0.0;
@@ -215,9 +215,46 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	//float shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
 
 
-	shadow = pow(shadow, 4);
+	//shadow = pow(shadow, 4);
 	
 	return shadow;
+}
+
+float linStep(float v, float low, float high)
+{
+	return clamp((v-low) / (high-low), 0.0, 1.0);
+
+};
+
+//https://www.youtube.com/watch?v=LGFDifcbsoQ&ab_channel=thebennybox
+float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+{
+	//transform to depth buffer coords
+	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+	projCoords = projCoords * 0.5 + 0.5;
+
+	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
+	if(projCoords.z > 0.99)
+		return 1.f;
+
+
+	vec2 sampled = texture(u_directionalShadow, projCoords.xy).rg; 
+	float closestDepth = sampled.r; 
+	float closestDepthSquared = sampled.g; 
+	float currentDepth = projCoords.z;
+
+
+	float bias = max(0.5 * (1.0 - dot(normal, -lightDir)), 0.09);
+	//float bias = 0.0;
+	
+	float shadow = step(currentDepth-bias, closestDepth);       
+	float variance = max(closestDepthSquared - closestDepth*closestDepth, 0.00002);
+
+	float d = currentDepth - closestDepth; //distanceFromMean
+	float pMax = linStep(variance / (variance+ d*d), bias, 1); 
+
+	return min(max(d, pMax), 1.0);
+
 }
 
 
@@ -276,7 +313,7 @@ void main()
 
 		vec4 fragPosLightSpace = dLight[i].lightSpaceMatrix * vec4(pos,1);
 
-		float shadow = shadowCalculation(fragPosLightSpace, normal, lightDirection);
+		float shadow = varianceShadowCalculation(fragPosLightSpace, normal, lightDirection);
 
 		Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * shadow;

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-01
+//built on 2021-08-04
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -3355,8 +3355,7 @@ namespace gl3d
 
 		renderSkyBoxBefore();
 
-
-		constexpr int useVarianceShadows = 0;
+		constexpr int useVarianceShadows = 1;
 
 		#pragma region render shadow maps
 		if (directionalLights.size())
@@ -3384,9 +3383,34 @@ namespace gl3d
 
 			float shadowDistance = 50;
 
-			float near_plane = 1.f, far_plane = 26.f;
-			glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
-			glm::mat4 lightView = lookAtSafe(lightPosition, { camera.position + yOffset }, { 0.f,1.f,0.f });
+			glm::vec3 finalPos = camera.position + yOffset;
+			glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+			glm::vec2 ortoMin = { -20, -20 };
+			glm::vec2 ortoMax = {  20,  20 };
+
+			ortoMin.x += finalPos.x;
+			ortoMin.y += finalPos.y;
+
+			ortoMax.x += finalPos.x;
+			ortoMax.y += finalPos.y;
+
+			glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
+
+			//remove shadow flicker
+			ortoMin /= worldUnitsPerTexel;
+			ortoMin = glm::floor(ortoMin);
+			ortoMin *= worldUnitsPerTexel;
+
+			ortoMax /= worldUnitsPerTexel;
+			ortoMax = glm::floor(ortoMax);
+			ortoMax *= worldUnitsPerTexel;
+
+			float near_plane = -10.f, far_plane = 26.f;
+			glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
+			//glm::mat4 lightView = lookAtSafe(lightPosition, finalPos, { 0.f,1.f,0.f });
+			glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
+
 
 			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
@@ -4035,6 +4059,7 @@ namespace gl3d
 		
 		glUniform1f(postProcess.u_exposure, this->exposure);
 
+		//blend with skybox
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -4134,6 +4159,7 @@ namespace gl3d
 
 	}
 
+	//todo remove
 	void Renderer3D::renderADepthMap(GLuint texture)
 	{
 		glDisable(GL_DEPTH_TEST);
@@ -4459,8 +4485,8 @@ namespace gl3d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, shadowSize, shadowSize, 0,
 			GL_RGBA, GL_FLOAT, nullptr);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);

@@ -736,7 +736,7 @@ int main()
 			ImGui::Begin("Light Editor", &lightEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 		
-			static int pointLightSelector = 0;
+			static int pointLightSelector = -1;
 			ImGui::Text("Point lightd Count %d", renderer.pointLights.size());
 			ImGui::InputInt("Current Point light:", &pointLightSelector);
 			int n = ImGui::Button("New Light"); ImGui::SameLine();

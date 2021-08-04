@@ -7,6 +7,7 @@ in vec2 v_texCoord;
 
 out vec2 outColor;
 
+//https://www.youtube.com/watch?v=F5QAkUloGOs&ab_channel=thebennybox
 void main()
 {
 	if(u_hasTexture != 0)
@@ -16,6 +17,15 @@ void main()
 				discard;
 	}
 
-	outColor = vec2(gl_FragCoord.z, gl_FragCoord.z * gl_FragCoord.z);
+	float zVal = gl_FragCoord.z;
+	float zVal2 = zVal*zVal;
+
+	float dx = dFdx(zVal);
+	float dy = dFdy(zVal);
+
+	float moment2 = zVal2 + 0.25 * (dx * dx + dy * dy);
+
+	//outColor = vec2(zVal, moment2);
+	outColor = vec2(zVal, zVal2);
 
 }
