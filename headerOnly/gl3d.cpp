@@ -3441,155 +3441,174 @@ namespace gl3d
 
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::vec3 rVector = {};
-			glm::vec3 upVectpr = {};
-			generateTangentSpace(lightDir, upVectpr, rVector);
-
-			glm::vec2 nearDimensions{};
-			glm::vec2 farDimensions{};
-			glm::vec3 centerNear{};
-			glm::vec3 centerFar{};
-
-			computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
-				0.0001, 10, nearDimensions, farDimensions, centerNear, centerFar);
-
-			glm::vec3 nearTopLeft{};
-			glm::vec3 nearTopRight{};
-			glm::vec3 nearBottomLeft{};
-			glm::vec3 nearBottomRight{};
-			glm::vec3 farTopLeft{};
-			glm::vec3 farTopRight{};
-			glm::vec3 farBottomLeft{};
-			glm::vec3 farBottomRight{};
-
-			computeFrustumSplitCorners(camera.viewDirection, nearDimensions, farDimensions, centerNear, centerFar,
-				nearTopLeft,
-				nearTopRight,
-				nearBottomLeft,
-				nearBottomRight,
-				farTopLeft,
-				farTopRight,
-				farBottomLeft,
-				farBottomRight
-			);
-
-			//glm::mat4 lightView;
-			//lightView[0] = glm::vec4(rVector, 0);
-			//lightView[1] = glm::vec4(upVectpr, 0);
-			//lightView[2] = glm::vec4(lightDir, 0);
-			//lightView[3] = glm::vec4(0, 0, 0, 1);
-			//lightView = glm::transpose(lightView);
 			glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-			glm::vec3 corners[] =
+			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, float farPlane)
 			{
-				nearTopLeft,
-				nearTopRight,
-				nearBottomLeft,
-				nearBottomRight,
-				farTopLeft,
-				farTopRight,
-				farBottomLeft,
-				farBottomRight,
+				glm::vec3 rVector = {};
+				glm::vec3 upVectpr = {};
+				generateTangentSpace(lightDir, upVectpr, rVector);
+
+				glm::vec2 nearDimensions{};
+				glm::vec2 farDimensions{};
+				glm::vec3 centerNear{};
+				glm::vec3 centerFar{};
+
+				computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
+					0.0001, farPlane, nearDimensions, farDimensions, centerNear, centerFar);
+
+				glm::vec3 nearTopLeft{};
+				glm::vec3 nearTopRight{};
+				glm::vec3 nearBottomLeft{};
+				glm::vec3 nearBottomRight{};
+				glm::vec3 farTopLeft{};
+				glm::vec3 farTopRight{};
+				glm::vec3 farBottomLeft{};
+				glm::vec3 farBottomRight{};
+
+				computeFrustumSplitCorners(camera.viewDirection, nearDimensions, farDimensions, centerNear, centerFar,
+					nearTopLeft,
+					nearTopRight,
+					nearBottomLeft,
+					nearBottomRight,
+					farTopLeft,
+					farTopRight,
+					farBottomLeft,
+					farBottomRight
+				);
+
+
+				glm::vec3 corners[] =
+				{
+					nearTopLeft,
+					nearTopRight,
+					nearBottomLeft,
+					nearBottomRight,
+					farTopLeft,
+					farTopRight,
+					farBottomLeft,
+					farBottomRight,
+				};
+
+				float longestDiagonal = glm::distance(nearTopLeft, farBottomRight);
+
+				glm::vec3 minVal{};
+				glm::vec3 maxVal{};
+
+				for (int i = 0; i < 8; i++)
+				{
+					glm::vec4 corner(corners[i], 1);
+
+					glm::vec4 lightViewCorner = lightView * corner;
+
+					if (i == 0)
+					{
+						minVal = lightViewCorner;
+						maxVal = lightViewCorner;
+					}
+					else
+					{
+						if (lightViewCorner.x < minVal.x) { minVal.x = lightViewCorner.x; }
+						if (lightViewCorner.y < minVal.y) { minVal.y = lightViewCorner.y; }
+						if (lightViewCorner.z < minVal.z) { minVal.z = lightViewCorner.z; }
+
+						if (lightViewCorner.x > maxVal.x) { maxVal.x = lightViewCorner.x; }
+						if (lightViewCorner.y > maxVal.y) { maxVal.y = lightViewCorner.y; }
+						if (lightViewCorner.z > maxVal.z) { maxVal.z = lightViewCorner.z; }
+
+					}
+
+				}
+
+				//keep them square and the same size:
+				//https://www.youtube.com/watch?v=u0pk1LyLKYQ&t=99s&ab_channel=WesleyLaFerriere
+				if (1)
+				{
+					float firstSize = maxVal.x - minVal.x;
+					float secondSize = maxVal.y - minVal.y;
+					float thirdSize = maxVal.z - minVal.z;
+
+					{
+						float ratio = longestDiagonal / firstSize;
+
+						glm::vec2 newVecValues = { minVal.x, maxVal.x };
+						float dimension = firstSize;
+						float dimensionOver2 = dimension / 2.f;
+
+						newVecValues -= glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+						newVecValues *= ratio;
+						newVecValues += glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+
+						minVal.x = newVecValues.x;
+						maxVal.x = newVecValues.y;
+					}
+
+					{
+						float ratio = longestDiagonal / secondSize;
+
+						glm::vec2 newVecValues = { minVal.y, maxVal.y };
+						float dimension = secondSize;
+						float dimensionOver2 = dimension / 2.f;
+
+						newVecValues -= glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+						newVecValues *= ratio;
+						newVecValues += glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+
+						minVal.y = newVecValues.x;
+						maxVal.y = newVecValues.y;
+					}
+
+					{
+						float ratio = longestDiagonal / thirdSize;
+
+						glm::vec2 newVecValues = { minVal.z, maxVal.z };
+						float dimension = thirdSize;
+						float dimensionOver2 = dimension / 2.f;
+
+						newVecValues -= glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
+						newVecValues *= ratio;
+						newVecValues += glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
+
+						minVal.z = newVecValues.x;
+						maxVal.z = newVecValues.y;
+					}
+
+				}
+
+				float near_plane = minVal.z;
+				float far_plane = maxVal.z;
+
+				glm::vec3 pos = camera.position;
+
+				glm::vec2 ortoMin = { minVal.x, minVal.y };
+				glm::vec2 ortoMax = { maxVal.x, maxVal.y };
+
+				//remove shadow flicker
+				if (1)
+				{
+					glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
+					glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
+
+					ortoMin /= worldUnitsPerTexel;
+					ortoMin = glm::floor(ortoMin);
+					ortoMin *= worldUnitsPerTexel;
+
+					ortoMax /= worldUnitsPerTexel;
+					ortoMax = glm::floor(ortoMax);
+					ortoMax *= worldUnitsPerTexel;
+				}
+
+				glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
+
+				return lightProjection;
+
 			};
-
-			float longestDiagonal = glm::distance(nearTopLeft, farBottomRight);
-
-			glm::vec3 minVal{};
-			glm::vec3 maxVal{};
-
-			for (int i = 0; i < 8; i++)
-			{
-				glm::vec4 corner(corners[i], 1);
-
-				glm::vec4 lightViewCorner = lightView * corner;
-
-				if (i == 0)
-				{
-					minVal = lightViewCorner;
-					maxVal = lightViewCorner;
-				}
-				else
-				{
-					if (lightViewCorner.x < minVal.x) { minVal.x = lightViewCorner.x; }
-					if (lightViewCorner.y < minVal.y) { minVal.y = lightViewCorner.y; }
-					if (lightViewCorner.z < minVal.z) { minVal.z = lightViewCorner.z; }
-
-					if (lightViewCorner.x > maxVal.x) { maxVal.x = lightViewCorner.x; }
-					if (lightViewCorner.y > maxVal.y) { maxVal.y = lightViewCorner.y; }
-					if (lightViewCorner.z > maxVal.z) { maxVal.z = lightViewCorner.z; }
-					
-				}
-
-			}
-
-
-			//keep them square:
-			//https://www.youtube.com/watch?v=u0pk1LyLKYQ&t=99s&ab_channel=WesleyLaFerriere
-			if(1)
-			{
-				float firstSize = maxVal.x - minVal.x;
-				float secondSize = maxVal.y - minVal.y;
-
-				{
-					float ratio = longestDiagonal / firstSize;
-
-					glm::vec2 newVecValues = { minVal.x, maxVal.x };
-					float dimension = firstSize;
-					float dimensionOver2 = dimension / 2.f;
-
-					newVecValues -= glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
-					newVecValues *= ratio;
-					newVecValues += glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
-					
-					minVal.x = newVecValues.x;
-					maxVal.x = newVecValues.y;
-				}
-
-				{
-					float ratio = longestDiagonal / secondSize;
-
-					glm::vec2 newVecValues = { minVal.y, maxVal.y };
-					float dimension = secondSize;
-					float dimensionOver2 = dimension / 2.f;
-
-					newVecValues -= glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
-					newVecValues *= ratio;
-					newVecValues += glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
-
-					minVal.y = newVecValues.x;
-					maxVal.y = newVecValues.y;
-				}
-
-			}
-
-			float near_plane = minVal.z;
-			float far_plane = maxVal.z;
-
-			glm::vec3 pos = camera.position;
-
-			glm::vec2 ortoMin = { minVal.x, minVal.y };
-			glm::vec2 ortoMax = { maxVal.x, maxVal.y };
-
-			//remove shadow flicker
-			{
-				glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
-				glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
-
-				ortoMin /= worldUnitsPerTexel;
-				ortoMin = glm::floor(ortoMin);
-				ortoMin *= worldUnitsPerTexel;
-
-				ortoMax /= worldUnitsPerTexel;
-				ortoMax = glm::floor(ortoMax);
-				ortoMax *= worldUnitsPerTexel;
-			}
-
-			glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
+			
+			
+			glm::mat4 lightProjection = calculateLightProjectionMatrix(lightDir, lightView, 2);
 
 
 			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
 			directionalLights[0].lightSpaceMatrix = lightSpaceMatrix;
 
 			//render shadow of the models
