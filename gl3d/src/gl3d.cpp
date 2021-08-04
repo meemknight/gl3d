@@ -1358,6 +1358,7 @@ namespace gl3d
 		return id;
 	}
 
+
 	//todo add to other projects and places
 	glm::mat4 lookAtSafe(glm::vec3 const& eye, glm::vec3 const& center, glm::vec3 const& upVec)
 	{
@@ -1425,41 +1426,153 @@ namespace gl3d
 				glClear(GL_DEPTH_BUFFER_BIT);
 			}
 
-
-			glm::vec3 yOffset = glm::vec3(0, 10, 0);
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::vec3 lightPosition = -lightDir * glm::vec3(10) + camera.position + yOffset;
+			glm::vec3 rVector = {};
+			glm::vec3 upVectpr = {};
+			generateTangentSpace(lightDir, upVectpr, rVector);
 
-			float shadowDistance = 50;
+			glm::vec2 nearDimensions{};
+			glm::vec2 farDimensions{};
+			glm::vec3 centerNear{};
+			glm::vec3 centerFar{};
 
-			glm::vec3 finalPos = camera.position + yOffset;
-			glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
+			computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
+				0.0001, 4, nearDimensions, farDimensions, centerNear, centerFar);
 
-			glm::vec2 ortoMin = { -20, -20 };
-			glm::vec2 ortoMax = {  20,  20 };
+			glm::vec3 nearTopLeft{};
+			glm::vec3 nearTopRight{};
+			glm::vec3 nearBottomLeft{};
+			glm::vec3 nearBottomRight{};
+			glm::vec3 farTopLeft{};
+			glm::vec3 farTopRight{};
+			glm::vec3 farBottomLeft{};
+			glm::vec3 farBottomRight{};
 
-			ortoMin.x += finalPos.x;
-			ortoMin.y += finalPos.y;
+			computeFrustumSplitCorners(camera.viewDirection, nearDimensions, farDimensions, centerNear, centerFar,
+				nearTopLeft,
+				nearTopRight,
+				nearBottomLeft,
+				nearBottomRight,
+				farTopLeft,
+				farTopRight,
+				farBottomLeft,
+				farBottomRight
+			);
 
-			ortoMax.x += finalPos.x;
-			ortoMax.y += finalPos.y;
+			//glm::mat4 lightView;
+			//lightView[0] = glm::vec4(rVector, 0);
+			//lightView[1] = glm::vec4(upVectpr, 0);
+			//lightView[2] = glm::vec4(lightDir, 0);
+			//lightView[3] = glm::vec4(0, 0, 0, 1);
+			//lightView = glm::transpose(lightView);
+			glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-			glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
+			glm::vec3 corners[] =
+			{
+				nearTopLeft,
+				nearTopRight,
+				nearBottomLeft,
+				nearBottomRight,
+				farTopLeft,
+				farTopRight,
+				farBottomLeft,
+				farBottomRight,
+			};
+
+			float longestDiagonal = glm::distance(nearTopLeft, farBottomRight);
+
+			glm::vec3 minVal{};
+			glm::vec3 maxVal{};
+
+			for (int i = 0; i < 8; i++)
+			{
+				glm::vec4 corner(corners[i], 1);
+
+				glm::vec4 lightViewCorner = lightView * corner;
+
+				if (i == 0)
+				{
+					minVal = lightViewCorner;
+					maxVal = lightViewCorner;
+				}
+				else
+				{
+					if (lightViewCorner.x < minVal.x) { minVal.x = lightViewCorner.x; }
+					if (lightViewCorner.y < minVal.y) { minVal.y = lightViewCorner.y; }
+					if (lightViewCorner.z < minVal.z) { minVal.z = lightViewCorner.z; }
+
+					if (lightViewCorner.x > maxVal.x) { maxVal.x = lightViewCorner.x; }
+					if (lightViewCorner.y > maxVal.y) { maxVal.y = lightViewCorner.y; }
+					if (lightViewCorner.z > maxVal.z) { maxVal.z = lightViewCorner.z; }
+					
+				}
+
+			}
+
+
+			//keep them square:
+			//https://www.youtube.com/watch?v=u0pk1LyLKYQ&t=99s&ab_channel=WesleyLaFerriere
+			if(1)
+			{
+				float firstSize = maxVal.x - minVal.x;
+				float secondSize = maxVal.y - minVal.y;
+
+				{
+					float ratio = longestDiagonal / firstSize;
+
+					glm::vec2 newVecValues = { minVal.x, maxVal.x };
+					float dimension = firstSize;
+					float dimensionOver2 = dimension / 2.f;
+
+					newVecValues -= glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+					newVecValues *= ratio;
+					newVecValues += glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+					
+					minVal.x = newVecValues.x;
+					maxVal.x = newVecValues.y;
+				}
+
+				{
+					float ratio = longestDiagonal / secondSize;
+
+					glm::vec2 newVecValues = { minVal.y, maxVal.y };
+					float dimension = secondSize;
+					float dimensionOver2 = dimension / 2.f;
+
+					newVecValues -= glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+					newVecValues *= ratio;
+					newVecValues += glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+
+					minVal.y = newVecValues.x;
+					maxVal.y = newVecValues.y;
+				}
+
+			}
+
+			float near_plane = minVal.z;
+			float far_plane = maxVal.z;
+
+			glm::vec3 pos = camera.position;
+
+			glm::vec2 ortoMin = { minVal.x, minVal.y };
+			glm::vec2 ortoMax = { maxVal.x, maxVal.y };
 
 			//remove shadow flicker
-			ortoMin /= worldUnitsPerTexel;
-			ortoMin = glm::floor(ortoMin);
-			ortoMin *= worldUnitsPerTexel;
+			{
+				glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
+				glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
 
-			ortoMax /= worldUnitsPerTexel;
-			ortoMax = glm::floor(ortoMax);
-			ortoMax *= worldUnitsPerTexel;
+				ortoMin /= worldUnitsPerTexel;
+				ortoMin = glm::floor(ortoMin);
+				ortoMin *= worldUnitsPerTexel;
 
-			float near_plane = -10.f, far_plane = 26.f;
+				ortoMax /= worldUnitsPerTexel;
+				ortoMax = glm::floor(ortoMax);
+				ortoMax *= worldUnitsPerTexel;
+			}
+
 			glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
-			//glm::mat4 lightView = lookAtSafe(lightPosition, finalPos, { 0.f,1.f,0.f });
-			glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
 
 			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
@@ -2507,6 +2620,7 @@ namespace gl3d
 	void Renderer3D::DirectionalShadows::create()
 	{
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float borderColorVariance[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	#pragma region PCF shadow map
 
@@ -2539,7 +2653,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColorVariance);
 
 		glGenFramebuffers(1, &varianceShadowFBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, varianceShadowFBO);

@@ -606,8 +606,8 @@ int main()
 			ImGui::SameLine();
 
 			ImVec2 pos = ImGui::GetCursorScreenPos();
-			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImVec2 uv_min = ImVec2(0.0f, 1.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 0.0f);                 // Lower-right
 			ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 			ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 			ImGui::Image((void*)(id),
@@ -617,7 +617,7 @@ int main()
 			{
 				ImGui::BeginTooltip();
 				ImGui::Image((void*)(id)
-					, ImVec2(newW, newH));
+					, ImVec2(newW, newH), uv_min, uv_max, tint_col, border_col);
 				ImGui::EndTooltip();
 			}
 			ImGui::PopID();

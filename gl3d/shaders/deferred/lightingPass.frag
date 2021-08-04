@@ -184,7 +184,8 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
 	if(projCoords.z > 0.99)
 		return 1.f;
-
+	if(projCoords.z < 0)
+		return 1.f;
 
 	float closestDepth = texture(u_directionalShadow, projCoords.xy).r; 
 	float currentDepth = projCoords.z;
@@ -236,6 +237,10 @@ float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightD
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
 	if(projCoords.z > 0.99)
 		return 1.f;
+	if(projCoords.z < 0)
+		return 1.f;
+	if(projCoords.x < 0 || projCoords.y < 0 || projCoords.x > 1 || projCoords.y > 1)
+		return 1.f;
 
 
 	vec2 sampled = texture(u_directionalShadow, projCoords.xy).rg; 
@@ -244,14 +249,15 @@ float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightD
 	float currentDepth = projCoords.z;
 
 
-	float bias = max(0.5 * (1.0 - dot(normal, -lightDir)), 0.09);
+	float bias = max(0.3 * (1.0 - dot(normal, -lightDir)), 0.09);
 	//float bias = 0.0;
 	
-	float shadow = step(currentDepth-bias, closestDepth);       
+	//float shadow = step(currentDepth-bias, closestDepth);       
 	float variance = max(closestDepthSquared - closestDepth*closestDepth, 0.00002);
 
 	float d = currentDepth - closestDepth; //distanceFromMean
 	float pMax = linStep(variance / (variance+ d*d), bias, 1); 
+
 
 	return min(max(d, pMax), 1.0);
 
