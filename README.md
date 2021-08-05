@@ -32,7 +32,7 @@ Features and todos:
 - [x] Normal mapping (TBN calculated per fragment)
 - [x] Phisically based rendering
 - [x] Phisically based materials
-- [x] Sky box
+- [x] Sky box (can load many formats)
 - [x] Image based lighting
 - [x] Multi light scattering for IBL as described here http://jcgt.org/published/0008/01/03/
 - [ ] Screen space reflections
