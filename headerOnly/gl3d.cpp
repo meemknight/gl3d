@@ -786,8 +786,9 @@ namespace gl3d
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_directionalShadow = getUniform(lightingPassShader.id, "u_directionalShadow");
+		light_u_secondDirShadow = getUniform(lightingPassShader.id, "u_secondDirShadow");
 		
-
+		
 	#pragma region uniform buffer
 
 		lightPassShaderData.u_lightPassData = glGetUniformBlockIndex(lightingPassShader.id, "u_lightPassData");
@@ -3419,29 +3420,19 @@ namespace gl3d
 
 		renderSkyBoxBefore();
 
-		constexpr int useVarianceShadows = 1;
+		constexpr int useVarianceShadows = 0;
 
 		#pragma region render shadow maps
 		if (directionalLights.size())
 		{
-			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
-
-			if (useVarianceShadows)
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.varianceShadowFBO);
-				directionalShadows.varianceShadowShader.bind();
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			}
-			else
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO);
-				lightShader.prePass.shader.bind();
-				glClear(GL_DEPTH_BUFFER_BIT);
-			}
-
+			
 			
 			glm::vec3 lightDir = directionalLights[0].direction;
-			glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
+			//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
+
+			glm::mat4 lightView = lookAtSafe(camera.position - (lightDir*3.f), camera.position, { 0.f,1.f,0.f });
+			//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
+
 
 			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, float farPlane)
 			{
@@ -3558,7 +3549,7 @@ namespace gl3d
 						maxVal.y = newVecValues.y;
 					}
 
-					{
+					{//todo this size probably can be far-close
 						float ratio = longestDiagonal / thirdSize;
 
 						glm::vec2 newVecValues = { minVal.z, maxVal.z };
@@ -3605,56 +3596,62 @@ namespace gl3d
 			};
 			
 			
-			glm::mat4 lightProjection = calculateLightProjectionMatrix(lightDir, lightView, 2);
+			glm::mat4 firstLightProjection = calculateLightProjectionMatrix(lightDir, lightView, 
+				lightShader.lightPassUniformBlockCpuData.firstFrustumSplit);
 
+			glm::mat4 secondLightProjection = calculateLightProjectionMatrix(lightDir, lightView,
+				lightShader.lightPassUniformBlockCpuData.frustumEnd);
 
-			glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-			directionalLights[0].lightSpaceMatrix = lightSpaceMatrix;
+			glm::mat4 firstLightSpaceMatrix = firstLightProjection * lightView;
+			directionalLights[0].firstLightSpaceMatrix = firstLightSpaceMatrix;
 
-			//render shadow of the models
-			for (auto& i : internal.cpuEntities)
+			glm::mat4 secondLightSpaceMatrix = secondLightProjection * lightView;
+			directionalLights[0].secondLightSpaceMatrix = secondLightSpaceMatrix;
+
+			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+			if (useVarianceShadows)
 			{
-				auto id = internal.getModelIndex(i.model.id_);
-				if (id < 0)
-				{
-					continue;
-				}
-				
-				auto& model = internal.graphicModels[id];
-				auto transformMat = i.transform.getTransformMatrix();
-				auto modelViewProjMat = lightSpaceMatrix * transformMat;
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.varianceShadowFBO);
+				directionalShadows.varianceShadowShader.bind();
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			}
+			else
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[0]);
+				lightShader.prePass.shader.bind();
+				glClear(GL_DEPTH_BUFFER_BIT);
+			}
 
-				if (useVarianceShadows)
+			auto renderModels = [&](glm::mat4 & lightSpaceMatrix)
+			{
+				//render shadow of the models
+				for (auto& i : internal.cpuEntities)
 				{
-					glUniformMatrix4fv(directionalShadows.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
-				}
-				else
-				{
-					glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
-				}
-
-				for (auto& i : model.models)
-				{
-					auto m = internal.getMaterialIndex(i.material);
-
-					if (m < 0)
+					auto id = internal.getModelIndex(i.model.id_);
+					if (id < 0)
 					{
-						if (useVarianceShadows)
-						{
-							glUniform1i(directionalShadows.u_hasTexture, 0);
-						}
-						else
-						{
-							glUniform1i(lightShader.prePass.u_hasTexture, 0);
-						}
+						continue;
+					}
+
+					auto& model = internal.graphicModels[id];
+					auto transformMat = i.transform.getTransformMatrix();
+					auto modelViewProjMat = lightSpaceMatrix * transformMat;
+
+					if (useVarianceShadows)
+					{
+						glUniformMatrix4fv(directionalShadows.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 					}
 					else
 					{
+						glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+					}
 
-						auto t = internal.materialTexturesData[m];
-						auto tId = internal.getTextureIndex(t.albedoTexture);
+					for (auto& i : model.models)
+					{
+						auto m = internal.getMaterialIndex(i.material);
 
-						if (tId < 0)
+						if (m < 0)
 						{
 							if (useVarianceShadows)
 							{
@@ -3667,38 +3664,63 @@ namespace gl3d
 						}
 						else
 						{
-							auto texture = internal.loadedTextures[tId];
 
-							if (useVarianceShadows)
+							auto t = internal.materialTexturesData[m];
+							auto tId = internal.getTextureIndex(t.albedoTexture);
+
+							if (tId < 0)
 							{
-								glUniform1i(directionalShadows.u_hasTexture, 1);
-								glUniform1i(directionalShadows.u_albedoSampler, 0);
+								if (useVarianceShadows)
+								{
+									glUniform1i(directionalShadows.u_hasTexture, 0);
+								}
+								else
+								{
+									glUniform1i(lightShader.prePass.u_hasTexture, 0);
+								}
 							}
 							else
 							{
-								glUniform1i(lightShader.prePass.u_hasTexture, 1);
-								glUniform1i(lightShader.prePass.u_albedoSampler, 0);
-							}
+								auto texture = internal.loadedTextures[tId];
 
-							glActiveTexture(GL_TEXTURE0);
-							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+								if (useVarianceShadows)
+								{
+									glUniform1i(directionalShadows.u_hasTexture, 1);
+									glUniform1i(directionalShadows.u_albedoSampler, 0);
+								}
+								else
+								{
+									glUniform1i(lightShader.prePass.u_hasTexture, 1);
+									glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+								}
+
+								glActiveTexture(GL_TEXTURE0);
+								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							}
+						}
+
+						glBindVertexArray(i.vertexArray);
+
+						if (i.indexBuffer)
+						{
+							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						}
+						else
+						{
+							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
 						}
 					}
 
-					glBindVertexArray(i.vertexArray);
-
-					if (i.indexBuffer)
-					{
-						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-					}
-					else
-					{
-						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-					}
 				}
-
-			}
+			};
 			
+			renderModels(firstLightSpaceMatrix);
+
+
+			glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[1]);
+			lightShader.prePass.shader.bind();
+			glClear(GL_DEPTH_BUFFER_BIT);
+			renderModels(secondLightSpaceMatrix);
 
 
 			glViewport(0, 0, w, h);
@@ -4109,17 +4131,24 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
 
-		glUniform1i(lightShader.light_u_directionalShadow, 8);
-		glActiveTexture(GL_TEXTURE8);
+
 		if (useVarianceShadows)
 		{
+			glUniform1i(lightShader.light_u_directionalShadow, 8);
+			glActiveTexture(GL_TEXTURE8);
 			glBindTexture(GL_TEXTURE_2D, directionalShadows.varianceShadowTexture);
 		}
 		else
 		{
-			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture);
-		}
+			glUniform1i(lightShader.light_u_directionalShadow, 8);
+			glActiveTexture(GL_TEXTURE8);
+			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture[0]);
+		
+			glUniform1i(lightShader.light_u_secondDirShadow, 9);
+			glActiveTexture(GL_TEXTURE9);
+			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture[1]);
 
+		}
 
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -4656,22 +4685,28 @@ namespace gl3d
 
 	#pragma region PCF shadow map
 
-		glGenTextures(1, &depthMapTexture);
-		glBindTexture(GL_TEXTURE_2D, depthMapTexture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowSize, shadowSize, 0,
-			GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		glGenTextures(CASCADES, depthMapTexture);
+		glGenFramebuffers(CASCADES, depthMapFBO);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+		for (int i = 0; i < CASCADES; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, depthMapTexture[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowSize, shadowSize, 0,
+				GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
-		glGenFramebuffers(1, &depthMapFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture, 0);
-		glDrawBuffer(GL_NONE);
-		glReadBuffer(GL_NONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO[i]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture[i], 0);
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+		}
+
+		
 	#pragma endregion
 
 	#pragma region variance shadow map

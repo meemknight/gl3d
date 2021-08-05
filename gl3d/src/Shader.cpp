@@ -293,8 +293,9 @@ namespace gl3d
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_directionalShadow = getUniform(lightingPassShader.id, "u_directionalShadow");
+		light_u_secondDirShadow = getUniform(lightingPassShader.id, "u_secondDirShadow");
 		
-
+		
 	#pragma region uniform buffer
 
 		lightPassShaderData.u_lightPassData = glGetUniformBlockIndex(lightingPassShader.id, "u_lightPassData");

@@ -107,7 +107,8 @@ namespace gl3d
 		{
 			glm::vec4 direction = {0,-1,0, 0};
 			glm::vec4 color = { 1,1,1,0 };
-			glm::mat4 lightSpaceMatrix = glm::mat4{ 1.f };
+			glm::mat4 firstLightSpaceMatrix = glm::mat4{ 1.f };
+			glm::mat4 secondLightSpaceMatrix = glm::mat4{ 1.f };
 
 		};
 
@@ -280,6 +281,7 @@ namespace gl3d
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
 		GLint light_u_directionalShadow = -1;
+		GLint light_u_secondDirShadow = -1;
 
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -330,6 +332,8 @@ namespace gl3d
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
 			float bloomTresshold = 1.f;
 			int lightSubScater = 1;
+			float firstFrustumSplit = 3;
+			float frustumEnd = 5;
 
 		}lightPassUniformBlockCpuData;
 
@@ -977,8 +981,10 @@ namespace gl3d
 		struct DirectionalShadows
 		{
 			void create();
-			GLuint depthMapFBO;
-			GLuint depthMapTexture;
+			constexpr static int CASCADES = 2;
+
+			GLuint depthMapFBO[CASCADES];
+			GLuint depthMapTexture[CASCADES];
 			static constexpr int shadowSize = 2048;
 
 			GLuint varianceShadowFBO;

@@ -18,6 +18,7 @@ uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 uniform sampler2D u_directionalShadow;
+uniform sampler2D u_secondDirShadow;
 
 
 uniform vec3 u_eyePosition;
@@ -28,6 +29,8 @@ layout (std140) uniform u_lightPassData
 	vec4 ambientColor;
 	float bloomTresshold;
 	int lightSubScater;
+	float firstFrustumSplit;
+	float frustumEnd;
 
 }lightPassData;
 
@@ -49,7 +52,8 @@ struct DirectionalLight
 {
 	vec4 direction; //w not used
 	vec4 color;		//w not used
-	mat4 lightSpaceMatrix;
+	mat4 firstLightSpaceMatrix;
+	mat4 secondLightSpaceMatrix;
 };
 readonly layout(std140) buffer u_directionalLights
 {
@@ -149,7 +153,7 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 
 float testShadowValue(sampler2D map, vec2 coords, float currentDepth, float bias)
 {
-	float closestDepth = texture(u_directionalShadow, coords).r; 
+	float closestDepth = texture(map, coords).r; 
 
 	return  (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;
 }
@@ -174,8 +178,7 @@ float sampleShadowLinear(sampler2D map, vec2 coords, vec2 texelSize, float curre
 }
 
 
-
-float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap)
 {
 	//transform to depth buffer coords
 	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -184,10 +187,10 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
 	if(projCoords.z > 0.99)
 		return 1.f;
-	if(projCoords.z < 0)
-		return 1.f;
+	//if(projCoords.z < 0)
+	//	return 1.f;
 
-	float closestDepth = texture(u_directionalShadow, projCoords.xy).r; 
+	//float closestDepth = texture(shadowMap, projCoords.xy).r; 
 	float currentDepth = projCoords.z;
 
 
@@ -195,17 +198,17 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	//float bias = 0.1;
 	
 	float shadow = 0.0;
-	vec2 texelSize = 1.0 / textureSize(u_directionalShadow, 0);
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
 	vec2 offset = texelSize;
 	for(int x = -1; x <= 1; ++x)
 	{
 		for(int y = -1; y <= 1; ++y)
 		{
 			
-			//float s = testShadowValue(u_directionalShadow, projCoords.xy + vec2(x, y) * offset, 
+			//float s = testShadowValue(shadowMap, projCoords.xy + vec2(x, y) * offset, 
 			//	currentDepth, bias); 
 			
-			float s = sampleShadowLinear(u_directionalShadow, projCoords.xy + vec2(x, y) * offset,
+			float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
 				texelSize, currentDepth, bias); 
 			
 			shadow += s;
@@ -219,6 +222,26 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 	//shadow = pow(shadow, 4);
 	
 	return shadow;
+}
+
+float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
+{
+	
+	vec4 viewSpacePos = u_view * vec4(pos, 1);
+	float depth = -viewSpacePos.z; //zfar
+
+	if(depth < lightPassData.firstFrustumSplit)
+	{
+	//return 1;
+		vec4 fragPosLightSpace = dLight[index].firstLightSpaceMatrix * vec4(pos,1);
+		return shadowCalculation(fragPosLightSpace, normal, lightDir, u_directionalShadow);
+	}else
+	{
+	//return 0;
+		vec4 fragPosLightSpace = dLight[index].secondLightSpaceMatrix * vec4(pos,1);
+		return shadowCalculation(fragPosLightSpace, normal, lightDir, u_secondDirShadow);
+	}
+
 }
 
 float linStep(float v, float low, float high)
@@ -317,9 +340,10 @@ void main()
 		vec3 lightDirection = normalize(dLight[i].direction.xyz);
 		vec3 lightColor = dLight[i].color.rgb;
 
-		vec4 fragPosLightSpace = dLight[i].lightSpaceMatrix * vec4(pos,1);
+		//vec4 fragPosLightSpace = dLight[i].firstLightSpaceMatrix * vec4(pos,1);
+		//float shadow = shadowCalculation(fragPosLightSpace, normal, lightDirection);
 
-		float shadow = varianceShadowCalculation(fragPosLightSpace, normal, lightDirection);
+		float shadow = cascadedShadowCalculation(pos, normal, lightDirection, i);
 
 		Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * shadow;

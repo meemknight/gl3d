@@ -97,7 +97,8 @@ namespace gl3d
 		{
 			glm::vec4 direction = {0,-1,0, 0};
 			glm::vec4 color = { 1,1,1,0 };
-			glm::mat4 lightSpaceMatrix = glm::mat4{ 1.f };
+			glm::mat4 firstLightSpaceMatrix = glm::mat4{ 1.f };
+			glm::mat4 secondLightSpaceMatrix = glm::mat4{ 1.f };
 
 		};
 

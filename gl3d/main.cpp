@@ -422,8 +422,8 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
-	auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
@@ -715,10 +715,12 @@ int main()
 
 			ImGui::PushID(234);
 
-			drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.depthMapTexture,
+			drawImageNoQuality("cascade 0: %d", renderer.directionalShadows.depthMapTexture[0],
 				40, 40, 400, 400, __COUNTER__);
-			drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
+			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[1],
 				40, 40, 400, 400, __COUNTER__);
+			//drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
+			//	40, 40, 400, 400, __COUNTER__);
 
 
 			ImGui::PopID();
