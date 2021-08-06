@@ -599,6 +599,7 @@ int main()
 		static bool cubeEditor = 1;
 		static bool showStats = 0;
 		
+
 		auto drawImageNoQuality = [io](const char* c, GLuint id, int w, int h, int newW, int newH, int imguiId)
 		{
 			ImGui::PushID(imguiId);
@@ -622,6 +623,7 @@ int main()
 			}
 			ImGui::PopID();
 		};
+		
 
 		//imgui main menu
 		{
@@ -718,6 +720,8 @@ int main()
 			drawImageNoQuality("cascade 0: %d", renderer.directionalShadows.depthMapTexture[0],
 				40, 40, 400, 400, __COUNTER__);
 			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[1],
+				40, 40, 400, 400, __COUNTER__);
+			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[2],
 				40, 40, 400, 400, __COUNTER__);
 			//drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
 			//	40, 40, 400, 400, __COUNTER__);
@@ -835,6 +839,13 @@ int main()
 
 					renderer.directionalLights[directionalLightSelector].direction =
 						glm::normalize(renderer.directionalLights[directionalLightSelector].direction);
+
+					ImGui::SliderFloat("firstFrustumSplit",
+						&renderer.lightShader.lightPassUniformBlockCpuData.firstFrustumSplit, 0, 10);
+					ImGui::SliderFloat("secondFrustumSplit",
+						&renderer.lightShader.lightPassUniformBlockCpuData.secondFrustumSplit, 0, 10);
+					ImGui::SliderFloat("thirdFrustumSplit",
+						&renderer.lightShader.lightPassUniformBlockCpuData.thirdFrustumSplit, 0, 10);
 
 					ImGui::PopID();
 				}
@@ -1166,9 +1177,13 @@ int main()
 	#pragma endregion
 
 
-
-
 	#pragma region render and events
+
+		for (int i = 0; i < renderer.directionalShadows.CASCADES; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.depthMapTexture[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		}
 
 		imguiRenderDuration.start();
 
@@ -1190,6 +1205,13 @@ int main()
 		}
 
 		imguiRenderDuration.end();
+
+		for (int i = 0; i < renderer.directionalShadows.CASCADES; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.depthMapTexture[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		}
+
 
 		swapBuffersDuration.start();
 		

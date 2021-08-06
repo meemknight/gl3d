@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-05
+//built on 2021-08-06
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -787,6 +787,7 @@ namespace gl3d
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_directionalShadow = getUniform(lightingPassShader.id, "u_directionalShadow");
 		light_u_secondDirShadow = getUniform(lightingPassShader.id, "u_secondDirShadow");
+		light_u_thirdDirShadow = getUniform(lightingPassShader.id, "u_thirdDirShadow");
 		
 		
 	#pragma region uniform buffer
@@ -3426,15 +3427,15 @@ namespace gl3d
 		if (directionalLights.size())
 		{
 			
-			
 			glm::vec3 lightDir = directionalLights[0].direction;
 			//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-			glm::mat4 lightView = lookAtSafe(camera.position - (lightDir*3.f), camera.position, { 0.f,1.f,0.f });
+			glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
 			//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
 
-
-			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, float farPlane)
+			//zoffset is used to move the light further
+			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, float farPlane,
+				float zOffset)
 			{
 				glm::vec3 rVector = {};
 				glm::vec3 upVectpr = {};
@@ -3566,10 +3567,9 @@ namespace gl3d
 
 				}
 
-				float near_plane = minVal.z;
+				float near_plane = minVal.z - zOffset;
 				float far_plane = maxVal.z;
 
-				glm::vec3 pos = camera.position;
 
 				glm::vec2 ortoMin = { minVal.x, minVal.y };
 				glm::vec2 ortoMax = { maxVal.x, maxVal.y };
@@ -3587,6 +3587,16 @@ namespace gl3d
 					ortoMax /= worldUnitsPerTexel;
 					ortoMax = glm::floor(ortoMax);
 					ortoMax *= worldUnitsPerTexel;
+
+					float zWorldUnitsPerTexel = (far_plane - near_plane) / directionalShadows.shadowSize;
+
+					near_plane /= zWorldUnitsPerTexel;
+					far_plane /= zWorldUnitsPerTexel;
+					near_plane = glm::floor(near_plane);
+					far_plane = glm::floor(far_plane);
+					near_plane *= zWorldUnitsPerTexel;
+					far_plane *= zWorldUnitsPerTexel;
+
 				}
 
 				glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
@@ -3595,35 +3605,7 @@ namespace gl3d
 
 			};
 			
-			
-			glm::mat4 firstLightProjection = calculateLightProjectionMatrix(lightDir, lightView, 
-				lightShader.lightPassUniformBlockCpuData.firstFrustumSplit);
-
-			glm::mat4 secondLightProjection = calculateLightProjectionMatrix(lightDir, lightView,
-				lightShader.lightPassUniformBlockCpuData.frustumEnd);
-
-			glm::mat4 firstLightSpaceMatrix = firstLightProjection * lightView;
-			directionalLights[0].firstLightSpaceMatrix = firstLightSpaceMatrix;
-
-			glm::mat4 secondLightSpaceMatrix = secondLightProjection * lightView;
-			directionalLights[0].secondLightSpaceMatrix = secondLightSpaceMatrix;
-
-			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
-
-			if (useVarianceShadows)
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.varianceShadowFBO);
-				directionalShadows.varianceShadowShader.bind();
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			}
-			else
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[0]);
-				lightShader.prePass.shader.bind();
-				glClear(GL_DEPTH_BUFFER_BIT);
-			}
-
-			auto renderModels = [&](glm::mat4 & lightSpaceMatrix)
+			auto renderModels = [&](glm::mat4& lightSpaceMatrix)
 			{
 				//render shadow of the models
 				for (auto& i : internal.cpuEntities)
@@ -3713,14 +3695,52 @@ namespace gl3d
 
 				}
 			};
+
+			float zOffsets[] = { 10,0,0 };
+
+			glViewport(0, 0, directionalShadows.shadowSize, directionalShadows.shadowSize);
+			for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+			{
+
+				 auto projection = calculateLightProjectionMatrix(lightDir, lightView,
+					*((&lightShader.lightPassUniformBlockCpuData.firstFrustumSplit)+i), zOffsets[i]);
+
+				 directionalLights[0].lightSpaceMatrix[i] = projection * lightView;
+
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[i]);
+				lightShader.prePass.shader.bind();
+				glClear(GL_DEPTH_BUFFER_BIT);
+				renderModels(directionalLights[0].lightSpaceMatrix[i]);				
+
+			}
+
+
+			//glm::mat4 firstLightProjection = calculateLightProjectionMatrix(lightDir, lightViewClose,
+			//	lightShader.lightPassUniformBlockCpuData.firstFrustumSplit);
+			//
+			//glm::mat4 secondLightProjection = calculateLightProjectionMatrix(lightDir, lightViewClose,
+			//	lightShader.lightPassUniformBlockCpuData.secondFrustumSplit);
+			//
+			//glm::mat4 firstLightSpaceMatrix = firstLightProjection * lightViewClose;
+			//directionalLights[0].firstLightSpaceMatrix = firstLightSpaceMatrix;
+			//
+			//glm::mat4 secondLightSpaceMatrix = secondLightProjection * lightViewClose;
+			//directionalLights[0].secondLightSpaceMatrix = secondLightSpaceMatrix;
+
+
+			//if (useVarianceShadows)
+			//{
+			//	glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.varianceShadowFBO);
+			//	directionalShadows.varianceShadowShader.bind();
+			//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//}
+			//else
+			//{
+			//	glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[0]);
+			//	lightShader.prePass.shader.bind();
+			//	glClear(GL_DEPTH_BUFFER_BIT);
+			//}
 			
-			renderModels(firstLightSpaceMatrix);
-
-
-			glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.depthMapFBO[1]);
-			lightShader.prePass.shader.bind();
-			glClear(GL_DEPTH_BUFFER_BIT);
-			renderModels(secondLightSpaceMatrix);
 
 
 			glViewport(0, 0, w, h);
@@ -3741,7 +3761,6 @@ namespace gl3d
 
 
 		#pragma endregion
-
 
 
 		#pragma region z pre pass
@@ -4147,6 +4166,10 @@ namespace gl3d
 			glUniform1i(lightShader.light_u_secondDirShadow, 9);
 			glActiveTexture(GL_TEXTURE9);
 			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture[1]);
+
+			glUniform1i(lightShader.light_u_thirdDirShadow, 10);
+			glActiveTexture(GL_TEXTURE10);
+			glBindTexture(GL_TEXTURE_2D, directionalShadows.depthMapTexture[2]);
 
 		}
 
@@ -4694,11 +4717,15 @@ namespace gl3d
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowSize, shadowSize, 0,
 				GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+			
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO[i]);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture[i], 0);

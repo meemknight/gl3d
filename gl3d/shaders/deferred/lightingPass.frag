@@ -17,8 +17,9 @@ uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
-uniform sampler2D u_directionalShadow;
-uniform sampler2D u_secondDirShadow;
+uniform sampler2DShadow u_directionalShadow;
+uniform sampler2DShadow u_secondDirShadow;
+uniform sampler2DShadow u_thirdDirShadow;
 
 
 uniform vec3 u_eyePosition;
@@ -30,7 +31,8 @@ layout (std140) uniform u_lightPassData
 	float bloomTresshold;
 	int lightSubScater;
 	float firstFrustumSplit;
-	float frustumEnd;
+	float secondFrustumSplit;
+	float thirdFrustumSplit;
 
 }lightPassData;
 
@@ -54,6 +56,8 @@ struct DirectionalLight
 	vec4 color;		//w not used
 	mat4 firstLightSpaceMatrix;
 	mat4 secondLightSpaceMatrix;
+	mat4 thirdLightSpaceMatrix;
+
 };
 readonly layout(std140) buffer u_directionalLights
 {
@@ -64,6 +68,20 @@ uniform int u_directionalLightCount;
 
 
 const float PI = 3.14159265359;
+
+const float randomNumbers[100] = {
+0.05535,	0.22262,	0.93768,	0.80063,	0.40089,	0.49459,	0.44997,	0.27060,	0.58789,	0.61765,
+0.87949,	0.38913,	0.23154,	0.27249,	0.93448,	0.71567,	0.26940,	0.32226,	0.73918,	0.30905,
+0.98754,	0.82585,	0.84031,	0.60059,	0.56027,	0.10819,	0.55848,	0.95612,	0.88034,	0.94950,
+0.53892,	0.86421,	0.84131,	0.39158,	0.25861,	0.10192,	0.19673,	0.25165,	0.68675,	0.79157,
+0.94730,	0.36948,	0.27978,	0.66377,	0.38935,	0.93795,	0.83168,	0.01452,	0.51242,	0.12272,
+0.61045,	0.34752,	0.13781,	0.92361,	0.73422,	0.31213,	0.55513,	0.81074,	0.56166,	0.31797,
+0.09507,	0.50049,	0.44248,	0.38244,	0.58468,	0.32327,	0.61830,	0.67908,	0.16011,	0.82861,
+0.36502,	0.12052,	0.28872,	0.73448,	0.51443,	0.99355,	0.75244,	0.22432,	0.95501,	0.90914,
+0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,
+0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505,
+};
+
 
 //n normal
 //h halfway vector
@@ -151,15 +169,17 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	return Lo;
 }
 
-float testShadowValue(sampler2D map, vec2 coords, float currentDepth, float bias)
+float testShadowValue(sampler2DShadow map, vec2 coords, float currentDepth, float bias)
 {
-	float closestDepth = texture(map, coords).r; 
+	//float closestDepth = texture(map, coords).r; 
+	//return  (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;
 
-	return  (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;
+	return texture(map, vec3(coords, currentDepth-bias)).r;
+
 }
 
 //https://www.youtube.com/watch?v=yn5UJzMqxj0&ab_channel=thebennybox
-float sampleShadowLinear(sampler2D map, vec2 coords, vec2 texelSize, float currentDepth, float bias)
+float sampleShadowLinear(sampler2DShadow map, vec2 coords, vec2 texelSize, float currentDepth, float bias)
 {
 
 	vec2 pixelPos = coords / texelSize + vec2(0.5);
@@ -177,15 +197,12 @@ float sampleShadowLinear(sampler2D map, vec2 coords, vec2 texelSize, float curre
 	return mix(mixA, mixB, fracPart.x);
 }
 
-
-float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap)
+//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
+float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DShadow shadowMap)
 {
-	//transform to depth buffer coords
-	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-	projCoords = projCoords * 0.5 + 0.5;
 
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
-	if(projCoords.z > 0.99)
+	if(projCoords.z > 0.9995)
 		return 1.f;
 	//if(projCoords.z < 0)
 	//	return 1.f;
@@ -197,31 +214,101 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, samp
 	float bias = max((4.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
 	//float bias = 0.1;
 	
-	float shadow = 0.0;
+	//todo move
 	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-	vec2 offset = texelSize;
-	for(int x = -1; x <= 1; ++x)
+	float shadow = 0.0;
+
+	bool fewSamples = true;
+	int kernelSize = 5;
+	int kernelSize2 = kernelSize*kernelSize;
+	int kernelHalf = kernelSize/2;
+
+	float shadowValueAtCentre = 0;
+
 	{
-		for(int y = -1; y <= 1; ++y)
+		float offsetSize = kernelSize/2;
+		vec2 offsets[] = 
 		{
-			
-			//float s = testShadowValue(shadowMap, projCoords.xy + vec2(x, y) * offset, 
-			//	currentDepth, bias); 
-			
-			float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
-				texelSize, currentDepth, bias); 
-			
-			shadow += s;
-		}    
+			vec2(offsetSize,offsetSize),
+			vec2(-offsetSize,offsetSize),
+			vec2(offsetSize,-offsetSize),
+			vec2(-offsetSize,-offsetSize),
+		};
+
+		fewSamples = true;
+		
+		float s1 = testShadowValue(shadowMap, projCoords.xy, 
+					currentDepth, bias); 
+		shadowValueAtCentre = s1;
+
+		for(int i=1;i<4; i++)
+		{
+			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize, 
+					currentDepth, bias); 
+			if(s1 != s2)
+			{
+				fewSamples = false;
+				break;
+			}	
+			s1 = s2;
+		}
 	}
-	shadow /= 9.0;
+
+
+	if(fewSamples)
+	{
+		
+		shadow = shadowValueAtCentre;
+
+	}else
+	{
+
+
+		for(int x = -kernelHalf; x <= kernelHalf; ++x)
+		{
+			for(int y = -kernelHalf; y <= kernelHalf; ++y)
+			{
+				vec2 offset = vec2(x, y);
+
+				if(false)
+				{
+					int randomOffset1 = (x*kernelSize) + y;
+					int randomOffset2 = randomOffset1 + kernelSize2;
+					offset += vec2(randomNumbers[randomOffset1, randomOffset2]);
+				}
+				
+				if(false)
+				{
+					float u = (offset.x + kernelHalf+1)/float(kernelSize);
+					float v = (offset.x + kernelHalf+1)/float(kernelSize);
+					offset.x = sqrt(v) * cos(2*PI * u)* kernelSize / 2.f;
+					offset.y = sqrt(v) * sin(2*PI * u)* kernelSize / 2.f;
+				}
+
+				float s = testShadowValue(shadowMap, projCoords.xy + offset * texelSize, 
+					currentDepth, bias); 
+				
+				//float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
+				//	texelSize, currentDepth, bias); 
+				
+				shadow += s;
+			}    
+		}
+		shadow /= kernelSize2;
 	
-	//float shadow = (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;        
+	}
 
-
-	//shadow = pow(shadow, 4);
+	//shadow = pow(shadow, 0.5);
 	
 	return shadow;
+}
+
+vec3 getProjCoords(in mat4 matrix, in vec3 pos)
+{
+	vec4 p = matrix * vec4(pos,1);
+	vec3 r = p .xyz / p .w;
+	r = r * 0.5 + 0.5;
+	return r;
 }
 
 float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
@@ -230,16 +317,42 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 	vec4 viewSpacePos = u_view * vec4(pos, 1);
 	float depth = -viewSpacePos.z; //zfar
 
-	if(depth < lightPassData.firstFrustumSplit)
+	vec3 firstProjCoords = getProjCoords(dLight[index].firstLightSpaceMatrix, pos);
+	vec3 secondProjCoords = getProjCoords(dLight[index].secondLightSpaceMatrix, pos);
+	vec3 thirdProjCoords = getProjCoords(dLight[index].thirdLightSpaceMatrix, pos);
+
+
+	if(
+		firstProjCoords.x < 0.98 &&
+		firstProjCoords.x > 0.01 &&
+		firstProjCoords.y < 0.98 &&
+		firstProjCoords.y > 0.01 &&
+		firstProjCoords.z < 0.98 &&
+		firstProjCoords.z > 0
+	)
 	{
-	//return 1;
-		vec4 fragPosLightSpace = dLight[index].firstLightSpaceMatrix * vec4(pos,1);
-		return shadowCalculation(fragPosLightSpace, normal, lightDir, u_directionalShadow);
-	}else
+		//return 0;
+		
+		return shadowCalculation(firstProjCoords, normal, lightDir, u_directionalShadow);
+	}else 
+	if(
+		secondProjCoords.x > 0 &&
+		secondProjCoords.x < 1 &&
+		secondProjCoords.y > 0 &&
+		secondProjCoords.y < 1 &&
+		//secondProjCoords.z > 0 &&
+		secondProjCoords.z < 0.98
+	)
 	{
-	//return 0;
-		vec4 fragPosLightSpace = dLight[index].secondLightSpaceMatrix * vec4(pos,1);
-		return shadowCalculation(fragPosLightSpace, normal, lightDir, u_secondDirShadow);
+		//return 1;
+		
+		return shadowCalculation(secondProjCoords, normal, lightDir, u_secondDirShadow);
+	}
+	else
+	{
+		//return 2;
+		
+		return shadowCalculation(thirdProjCoords, normal, lightDir, u_thirdDirShadow);
 	}
 
 }
@@ -251,40 +364,40 @@ float linStep(float v, float low, float high)
 };
 
 //https://www.youtube.com/watch?v=LGFDifcbsoQ&ab_channel=thebennybox
-float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
-{
-	//transform to depth buffer coords
-	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-	projCoords = projCoords * 0.5 + 0.5;
-
-	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
-	if(projCoords.z > 0.99)
-		return 1.f;
-	if(projCoords.z < 0)
-		return 1.f;
-	if(projCoords.x < 0 || projCoords.y < 0 || projCoords.x > 1 || projCoords.y > 1)
-		return 1.f;
-
-
-	vec2 sampled = texture(u_directionalShadow, projCoords.xy).rg; 
-	float closestDepth = sampled.r; 
-	float closestDepthSquared = sampled.g; 
-	float currentDepth = projCoords.z;
-
-
-	float bias = max(0.3 * (1.0 - dot(normal, -lightDir)), 0.09);
-	//float bias = 0.0;
-	
-	//float shadow = step(currentDepth-bias, closestDepth);       
-	float variance = max(closestDepthSquared - closestDepth*closestDepth, 0.00002);
-
-	float d = currentDepth - closestDepth; //distanceFromMean
-	float pMax = linStep(variance / (variance+ d*d), bias, 1); 
-
-
-	return min(max(d, pMax), 1.0);
-
-}
+//float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+//{
+//	//transform to depth buffer coords
+//	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+//	projCoords = projCoords * 0.5 + 0.5;
+//
+//	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
+//	if(projCoords.z > 0.99)
+//		return 1.f;
+//	if(projCoords.z < 0)
+//		return 1.f;
+//	if(projCoords.x < 0 || projCoords.y < 0 || projCoords.x > 1 || projCoords.y > 1)
+//		return 1.f;
+//
+//
+//	vec2 sampled = texture(u_directionalShadow, projCoords.xy).rg; 
+//	float closestDepth = sampled.r; 
+//	float closestDepthSquared = sampled.g; 
+//	float currentDepth = projCoords.z;
+//
+//
+//	float bias = max(0.3 * (1.0 - dot(normal, -lightDir)), 0.09);
+//	//float bias = 0.0;
+//	
+//	//float shadow = step(currentDepth-bias, closestDepth);       
+//	float variance = max(closestDepthSquared - closestDepth*closestDepth, 0.00002);
+//
+//	float d = currentDepth - closestDepth; //distanceFromMean
+//	float pMax = linStep(variance / (variance+ d*d), bias, 1); 
+//
+//
+//	return min(max(d, pMax), 1.0);
+//
+//}
 
 
 
@@ -340,10 +453,19 @@ void main()
 		vec3 lightDirection = normalize(dLight[i].direction.xyz);
 		vec3 lightColor = dLight[i].color.rgb;
 
-		//vec4 fragPosLightSpace = dLight[i].firstLightSpaceMatrix * vec4(pos,1);
-		//float shadow = shadowCalculation(fragPosLightSpace, normal, lightDirection);
-
 		float shadow = cascadedShadowCalculation(pos, normal, lightDirection, i);
+		
+		//if(shadow == 0)
+		//{
+		//	albedo.rgb = vec3(1,0,0);
+		//}else if(shadow >= 0.9 && shadow <= 1.1)
+		//{
+		//	albedo.rgb = vec3(0,1,0);
+		//}else
+		//{
+		//	albedo.rgb = vec3(0,0,1);
+		//}
+		//shadow = 1;
 
 		Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * shadow;

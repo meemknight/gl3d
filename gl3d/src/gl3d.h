@@ -302,7 +302,7 @@ namespace gl3d
 		struct DirectionalShadows
 		{
 			void create();
-			constexpr static int CASCADES = 2;
+			constexpr static int CASCADES = 3;
 
 			GLuint depthMapFBO[CASCADES];
 			GLuint depthMapTexture[CASCADES];
