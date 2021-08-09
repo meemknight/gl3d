@@ -17,7 +17,7 @@ uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
-uniform sampler2DShadow u_cascades;
+uniform sampler2DArrayShadow u_cascades;
 
 
 uniform vec3 u_eyePosition;
@@ -165,36 +165,36 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	return Lo;
 }
 
-float testShadowValue(sampler2DShadow map, vec2 coords, float currentDepth, float bias)
+float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth, float bias, int index)
 {
 	//float closestDepth = texture(map, coords).r; 
 	//return  (currentDepth - bias) < closestDepth  ? 1.0 : 0.0;
 
-	return texture(map, vec3(coords, currentDepth-bias)).r;
+	return texture(map, vec4(coords, index, currentDepth-bias)).r;
 
 }
 
 //https://www.youtube.com/watch?v=yn5UJzMqxj0&ab_channel=thebennybox
-float sampleShadowLinear(sampler2DShadow map, vec2 coords, vec2 texelSize, float currentDepth, float bias)
-{
-
-	vec2 pixelPos = coords / texelSize + vec2(0.5);
-	vec2 fracPart = fract(pixelPos);
-	vec2 startTexel = (pixelPos-fracPart) * texelSize;
-
-	float blTexture = testShadowValue(map, startTexel, currentDepth, bias).r;
-	float brTexture = testShadowValue(map, startTexel + vec2(texelSize.x, 0), currentDepth, bias).r;
-	float tlTexture = testShadowValue(map, startTexel + vec2(0, texelSize.y), currentDepth, bias).r;
-	float trTexture = testShadowValue(map, startTexel + texelSize, currentDepth, bias).r;
-
-	float mixA = mix(blTexture, tlTexture, fracPart.y);
-	float mixB = mix(brTexture, trTexture, fracPart.y);
-
-	return mix(mixA, mixB, fracPart.x);
-}
+//float sampleShadowLinear(sampler2DArrayShadow map, vec2 coords, vec2 texelSize, float currentDepth, float bias)
+//{
+//
+//	vec2 pixelPos = coords / texelSize + vec2(0.5);
+//	vec2 fracPart = fract(pixelPos);
+//	vec2 startTexel = (pixelPos-fracPart) * texelSize;
+//
+//	float blTexture = testShadowValue(map, startTexel, currentDepth, bias).r;
+//	float brTexture = testShadowValue(map, startTexel + vec2(texelSize.x, 0), currentDepth, bias).r;
+//	float tlTexture = testShadowValue(map, startTexel + vec2(0, texelSize.y), currentDepth, bias).r;
+//	float trTexture = testShadowValue(map, startTexel + texelSize, currentDepth, bias).r;
+//
+//	float mixA = mix(blTexture, tlTexture, fracPart.y);
+//	float mixB = mix(brTexture, trTexture, fracPart.y);
+//
+//	return mix(mixA, mixB, fracPart.x);
+//}
 
 //https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
-float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DShadow shadowMap, int index)
+float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
 {
 
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
@@ -207,11 +207,11 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 	float currentDepth = projCoords.z;
 
 
-	float bias = max((4.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
+	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
 	//float bias = 0.1;
 	
 	//todo move
-	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
 	float shadow = 0.0;
 
 	bool fewSamples = false;
@@ -236,13 +236,13 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 		fewSamples = true;
 		
 		float s1 = testShadowValue(shadowMap, projCoords.xy, 
-					currentDepth, bias); 
+					currentDepth, bias, index); 
 		shadowValueAtCentre = s1;
 
 		for(int i=0;i<OFFSETS; i++)
 		{
 			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize, 
-					currentDepth, bias); 
+					currentDepth, bias, index); 
 			if(s1 != s2)
 			{
 				fewSamples = false;
@@ -284,7 +284,7 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 				}
 
 				float s = testShadowValue(shadowMap, projCoords.xy + offset * texelSize, 
-					currentDepth, bias); 
+					currentDepth, bias, index); 
 				
 				//float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
 				//	texelSize, currentDepth, bias); 

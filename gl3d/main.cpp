@@ -722,8 +722,8 @@ int main()
 			//	40, 40, 400, 400, __COUNTER__);
 			//drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[2],
 			//	40, 40, 400, 400, __COUNTER__);
-			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.cascadesTexture,
-				40, 120, 160, 480, __COUNTER__);
+			//drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.cascadesTexture,
+			//	40, 120, 160, 480, __COUNTER__);
 			
 			//drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
 			//	40, 40, 400, 400, __COUNTER__);
@@ -1178,8 +1178,8 @@ int main()
 
 	#pragma region render and events
 
-		glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.cascadesTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		//glBindTexture(GL_TEXTURE_2D_ARRAY, renderer.directionalShadows.cascadesTexture);
+		//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 		imguiRenderDuration.start();
 
@@ -1202,8 +1202,8 @@ int main()
 
 		imguiRenderDuration.end();
 
-		glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.cascadesTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		//glBindTexture(GL_TEXTURE_2D_ARRAY, renderer.directionalShadows.cascadesTexture);
+		//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
 		swapBuffersDuration.start();
 		

@@ -979,22 +979,18 @@ namespace gl3d
 		struct DirectionalShadows
 		{
 			void create();
+			void allocateTextures(int count);
+
 			constexpr static int CASCADES = 3;
+
+			int textureCount = 0;
 
 			GLuint cascadesTexture;
 			GLuint cascadesFbo;
-			static constexpr int shadowSize = 1024;
+			static constexpr int shadowSize = 2048;
 
 			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
 
-			GLuint varianceShadowFBO;
-			GLuint varianceShadowTexture;
-			GLuint depthForVarianceTexture;
-
-			Shader varianceShadowShader;
-			GLint u_transform;
-			GLint u_hasTexture;
-			GLint u_albedoSampler;
 
 		}directionalShadows;
 
