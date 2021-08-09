@@ -75,9 +75,7 @@ namespace gl3d
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		GLint light_u_directionalShadow = -1;
-		GLint light_u_secondDirShadow = -1;
-		GLint light_u_thirdDirShadow = -1;
+		GLint light_u_cascades= -1;
 
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -128,9 +126,7 @@ namespace gl3d
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
 			float bloomTresshold = 1.f;
 			int lightSubScater = 1;
-			float firstFrustumSplit = 4; //todo array
-			float secondFrustumSplit = 7;
-			float thirdFrustumSplit = 10;
+			float exposure = 1;
 
 		}lightPassUniformBlockCpuData;
 

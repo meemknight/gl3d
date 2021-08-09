@@ -17,9 +17,7 @@ uniform sampler2D u_positions;
 uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
-uniform sampler2DShadow u_directionalShadow;
-uniform sampler2DShadow u_secondDirShadow;
-uniform sampler2DShadow u_thirdDirShadow;
+uniform sampler2DShadow u_cascades;
 
 
 uniform vec3 u_eyePosition;
@@ -30,9 +28,7 @@ layout (std140) uniform u_lightPassData
 	vec4 ambientColor;
 	float bloomTresshold;
 	int lightSubScater;
-	float firstFrustumSplit;
-	float secondFrustumSplit;
-	float thirdFrustumSplit;
+	float exposure;
 
 }lightPassData;
 
@@ -53,7 +49,7 @@ uniform int u_pointLightCount;
 struct DirectionalLight
 {
 	vec4 direction; //w not used
-	vec4 color;		//w not used
+	vec4 color;		//w is a hardness exponent
 	mat4 firstLightSpaceMatrix;
 	mat4 secondLightSpaceMatrix;
 	mat4 thirdLightSpaceMatrix;
@@ -198,7 +194,7 @@ float sampleShadowLinear(sampler2DShadow map, vec2 coords, vec2 texelSize, float
 }
 
 //https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
-float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DShadow shadowMap)
+float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DShadow shadowMap, int index)
 {
 
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
@@ -218,16 +214,18 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
 	float shadow = 0.0;
 
-	bool fewSamples = true;
+	bool fewSamples = false;
 	int kernelSize = 5;
 	int kernelSize2 = kernelSize*kernelSize;
 	int kernelHalf = kernelSize/2;
 
 	float shadowValueAtCentre = 0;
 
+	if(false)
 	{
 		float offsetSize = kernelSize/2;
-		vec2 offsets[] = 
+		const int OFFSETS = 4;
+		vec2 offsets[OFFSETS] = 
 		{
 			vec2(offsetSize,offsetSize),
 			vec2(-offsetSize,offsetSize),
@@ -241,7 +239,7 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 					currentDepth, bias); 
 		shadowValueAtCentre = s1;
 
-		for(int i=1;i<4; i++)
+		for(int i=0;i<OFFSETS; i++)
 		{
 			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize, 
 					currentDepth, bias); 
@@ -298,7 +296,7 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DSh
 	
 	}
 
-	//shadow = pow(shadow, 0.5);
+	shadow = pow(shadow, dLight[index].color.w);
 	
 	return shadow;
 }
@@ -332,8 +330,9 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 	)
 	{
 		//return 0;
-		
-		return shadowCalculation(firstProjCoords, normal, lightDir, u_directionalShadow);
+		firstProjCoords.y /= 3.f;
+
+		return shadowCalculation(firstProjCoords, normal, lightDir, u_cascades, index);
 	}else 
 	if(
 		secondProjCoords.x > 0 &&
@@ -345,14 +344,18 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 	)
 	{
 		//return 1;
-		
-		return shadowCalculation(secondProjCoords, normal, lightDir, u_secondDirShadow);
+		secondProjCoords.y /= 3.f;
+		secondProjCoords.y += 1.f / 3.f;
+
+		return shadowCalculation(secondProjCoords, normal, lightDir, u_cascades, index);
 	}
 	else
 	{
 		//return 2;
-		
-		return shadowCalculation(thirdProjCoords, normal, lightDir, u_thirdDirShadow);
+		thirdProjCoords.y /= 3.f;
+		thirdProjCoords.y += 2.f / 3.f;
+
+		return shadowCalculation(thirdProjCoords, normal, lightDir, u_cascades, index);
 	}
 
 }
@@ -472,9 +475,8 @@ void main()
 	}
 
 
-
-	vec3 ambient;
 	//compute ambient
+	vec3 ambient;
 	{
 
 		vec3 N = normal;
@@ -532,7 +534,12 @@ void main()
 
 	
 
-	float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
+	vec3 hdrCorrectedColor = color;
+	hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
+	hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
+
+
+	float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
 	//gama correction and hdr is done in the post process step
 

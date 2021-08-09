@@ -304,9 +304,11 @@ namespace gl3d
 			void create();
 			constexpr static int CASCADES = 3;
 
-			GLuint depthMapFBO[CASCADES];
-			GLuint depthMapTexture[CASCADES];
-			static constexpr int shadowSize = 2048;
+			GLuint cascadesTexture;
+			GLuint cascadesFbo;
+			static constexpr int shadowSize = 1024;
+
+			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
 
 			GLuint varianceShadowFBO;
 			GLuint varianceShadowTexture;
@@ -337,7 +339,6 @@ namespace gl3d
 		void render();
 		void updateWindowMetrics(int x, int y);
 
-		float exposure = 1;
 		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;

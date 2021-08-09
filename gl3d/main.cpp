@@ -164,6 +164,7 @@ int main()
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
 	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBox.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
 	
@@ -175,11 +176,9 @@ int main()
 	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/sky.png", 0);
 	//renderer.skyBox = renderer.loadSkyBox("resources/skyBoxes/forest.png", 0);
 	
-
 	
 	//VertexArrayContext va;
 	//va.create();
-
 
 
 	float cubePositions[] = {
@@ -636,7 +635,7 @@ int main()
 			ImGui::NewLine();
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
-			ImGui::SliderFloat("Exposure", &renderer.exposure, 0.1, 10);
+			ImGui::SliderFloat("Exposure", &renderer.lightShader.lightPassUniformBlockCpuData.exposure , 0.1, 10);
 
 
 			static bool antiAliasing = 0;
@@ -717,12 +716,15 @@ int main()
 
 			ImGui::PushID(234);
 
-			drawImageNoQuality("cascade 0: %d", renderer.directionalShadows.depthMapTexture[0],
-				40, 40, 400, 400, __COUNTER__);
-			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[1],
-				40, 40, 400, 400, __COUNTER__);
-			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[2],
-				40, 40, 400, 400, __COUNTER__);
+			//drawImageNoQuality("cascade 0: %d", renderer.directionalShadows.depthMapTexture[0],
+			//	40, 40, 400, 400, __COUNTER__);
+			//drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[1],
+			//	40, 40, 400, 400, __COUNTER__);
+			//drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.depthMapTexture[2],
+			//	40, 40, 400, 400, __COUNTER__);
+			drawImageNoQuality("cascade 1: %d", renderer.directionalShadows.cascadesTexture,
+				40, 120, 160, 480, __COUNTER__);
+			
 			//drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
 			//	40, 40, 400, 400, __COUNTER__);
 
@@ -803,7 +805,7 @@ int main()
 				if (n || directionalLightSelector >= (int)renderer.directionalLights.size())
 				{
 					gl3d::internal::GpuDirectionalLight l = {};
-					l.color = { 1,1,1,0 };
+					l.color = { 1,1,1 };
 
 					renderer.directionalLights.push_back(l);
 				}
@@ -830,6 +832,7 @@ int main()
 
 					ImGui::ColorEdit3("Color##dir", &renderer.directionalLights[directionalLightSelector].color[0]);
 					ImGui::DragFloat3("Direction##dir", &renderer.directionalLights[directionalLightSelector].direction[0], 0.1);
+					ImGui::SliderFloat("Hardness##dir", &renderer.directionalLights[directionalLightSelector].hardness, 0.1, 10);
 
 					if (glm::length(renderer.directionalLights[directionalLightSelector].direction) == 0)
 					{
@@ -840,12 +843,8 @@ int main()
 					renderer.directionalLights[directionalLightSelector].direction =
 						glm::normalize(renderer.directionalLights[directionalLightSelector].direction);
 
-					ImGui::SliderFloat("firstFrustumSplit",
-						&renderer.lightShader.lightPassUniformBlockCpuData.firstFrustumSplit, 0, 10);
-					ImGui::SliderFloat("secondFrustumSplit",
-						&renderer.lightShader.lightPassUniformBlockCpuData.secondFrustumSplit, 0, 10);
-					ImGui::SliderFloat("thirdFrustumSplit",
-						&renderer.lightShader.lightPassUniformBlockCpuData.thirdFrustumSplit, 0, 10);
+					ImGui::SliderFloat3("frustumSplit",
+						&renderer.directionalShadows.frustumSplits[0], 0, 1);
 
 					ImGui::PopID();
 				}
@@ -1179,11 +1178,8 @@ int main()
 
 	#pragma region render and events
 
-		for (int i = 0; i < renderer.directionalShadows.CASCADES; i++)
-		{
-			glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.depthMapTexture[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		}
+		glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.cascadesTexture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 		imguiRenderDuration.start();
 
@@ -1206,12 +1202,8 @@ int main()
 
 		imguiRenderDuration.end();
 
-		for (int i = 0; i < renderer.directionalShadows.CASCADES; i++)
-		{
-			glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.depthMapTexture[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		}
-
+		glBindTexture(GL_TEXTURE_2D, renderer.directionalShadows.cascadesTexture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
 		swapBuffersDuration.start();
 		

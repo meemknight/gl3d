@@ -96,7 +96,8 @@ namespace gl3d
 		struct GpuDirectionalLight
 		{
 			glm::vec4 direction = {0,-1,0, 0};
-			glm::vec4 color = { 1,1,1,0 };
+			glm::vec3 color = { 1,1,1 };
+			float hardness = 1;
 			glm::mat4 lightSpaceMatrix[3]; //todo magic number
 		
 		};

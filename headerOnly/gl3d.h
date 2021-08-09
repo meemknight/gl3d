@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-06
+//built on 2021-08-09
 ////////////////////////////////////////////////
 
 
@@ -106,7 +106,8 @@ namespace gl3d
 		struct GpuDirectionalLight
 		{
 			glm::vec4 direction = {0,-1,0, 0};
-			glm::vec4 color = { 1,1,1,0 };
+			glm::vec3 color = { 1,1,1 };
+			float hardness = 1;
 			glm::mat4 lightSpaceMatrix[3]; //todo magic number
 		
 		};
@@ -279,9 +280,7 @@ namespace gl3d
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		GLint light_u_directionalShadow = -1;
-		GLint light_u_secondDirShadow = -1;
-		GLint light_u_thirdDirShadow = -1;
+		GLint light_u_cascades= -1;
 
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -332,9 +331,7 @@ namespace gl3d
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
 			float bloomTresshold = 1.f;
 			int lightSubScater = 1;
-			float firstFrustumSplit = 4; //todo array
-			float secondFrustumSplit = 7;
-			float thirdFrustumSplit = 10;
+			float exposure = 1;
 
 		}lightPassUniformBlockCpuData;
 
@@ -413,7 +410,7 @@ namespace gl3d
 		float fovRadians = glm::radians(60.f);
 
 		float closePlane = 0.01f;
-		float farPlane = 300.f;
+		float farPlane = 200.f;
 
 
 		glm::vec3 position = {};
@@ -984,9 +981,11 @@ namespace gl3d
 			void create();
 			constexpr static int CASCADES = 3;
 
-			GLuint depthMapFBO[CASCADES];
-			GLuint depthMapTexture[CASCADES];
-			static constexpr int shadowSize = 2048;
+			GLuint cascadesTexture;
+			GLuint cascadesFbo;
+			static constexpr int shadowSize = 1024;
+
+			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
 
 			GLuint varianceShadowFBO;
 			GLuint varianceShadowTexture;
@@ -1017,7 +1016,6 @@ namespace gl3d
 		void render();
 		void updateWindowMetrics(int x, int y);
 
-		float exposure = 1;
 		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;
