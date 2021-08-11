@@ -102,6 +102,21 @@ namespace gl3d
 		
 		};
 
+		struct GpuSpotLight
+		{
+			glm::vec3 position = {};
+			float cosHalfAngle = std::cos(3.14159/4.f);
+			glm::vec3 direction = { 0,-1,0 };
+			float dist = 1;
+			glm::vec3 color = { 1, 1, 1 };
+			float attenuation = 1;
+			float hardness = 1;
+			float notUsed1;
+			float notUsed2;
+			float notUsed3;
+			glm::mat4 lightSpaceMatrix;
+		};
+
 
 	};
 

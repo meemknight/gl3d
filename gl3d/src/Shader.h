@@ -70,13 +70,15 @@ namespace gl3d
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
+		GLint light_u_spotLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		GLint light_u_cascades= -1;
-
+		GLint light_u_cascades = -1;
+		GLint light_u_spotShadows = -1;
+		
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -87,6 +89,8 @@ namespace gl3d
 		GLuint directionalLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint directionalLightsBlockBuffer = 0;
 
+		GLuint spotLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint spotLightsBlockBuffer = 0;
 
 
 		GLint normalSubroutineLocation = -1;

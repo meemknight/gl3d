@@ -18,6 +18,7 @@ uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
+uniform sampler2DArrayShadow u_spotShadows;
 
 
 uniform vec3 u_eyePosition;
@@ -62,6 +63,24 @@ readonly restrict layout(std140) buffer u_directionalLights
 uniform int u_directionalLightCount;
 
 
+struct SpotLight
+{
+	vec4 position; //w = cos(half angle)
+	vec4 direction; //w dist
+	vec4 color; //w attenuation
+	float hardness;
+	float notUsed1;
+	float notUsed2;
+	float notUsed3;
+	mat4 lightSpaceMatrix;
+};
+readonly restrict layout(std140) buffer u_spotLights
+{
+	SpotLight spotLights[];
+};
+uniform int u_spotLightCount;
+
+
 
 const float PI = 3.14159265359;
 
@@ -77,6 +96,21 @@ const float randomNumbers[100] = {
 0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,
 0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505,
 };
+
+
+
+float attenuationFunctionNotClamped(float x, float r, float p)
+{
+
+	float p4 = p*p*p*p;
+	float power = pow(x/r, p4);
+
+	float rez = (1-power);
+	rez = rez * rez;
+	
+	return rez;
+
+}
 
 
 //n normal
@@ -193,12 +227,11 @@ float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth,
 //	return mix(mixA, mixB, fracPart.x);
 //}
 
-//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
-float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
+float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadowMap, int index)
 {
 
 	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
-	if(projCoords.z > 0.9995)
+	if(projCoords.z > 0.99995)
 		return 1.f;
 	//if(projCoords.z < 0)
 	//	return 1.f;
@@ -206,10 +239,6 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DAr
 	//float closestDepth = texture(shadowMap, projCoords.xy).r; 
 	float currentDepth = projCoords.z;
 
-
-	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
-	//float bias = 0.1;
-	
 	//todo move
 	vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
 	float shadow = 0.0;
@@ -296,9 +325,21 @@ float shadowCalculation(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DAr
 	
 	}
 
-	shadow = pow(shadow, dLight[index].color.w);
 	
-	return shadow;
+	return clamp(shadow, 0, 1);
+}
+
+float shadowCalculationLinear(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
+{
+	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
+	return shadowCalculation(projCoords, bias, shadowMap, index);
+}
+
+//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
+float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
+{
+	float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
+	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
 vec3 getProjCoords(in mat4 matrix, in vec3 pos)
@@ -332,7 +373,7 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 		//return 0;
 		firstProjCoords.y /= 3.f;
 
-		return shadowCalculation(firstProjCoords, normal, lightDir, u_cascades, index);
+		return shadowCalculationLinear(firstProjCoords, normal, lightDir, u_cascades, index);
 	}else 
 	if(
 		secondProjCoords.x > 0 &&
@@ -347,7 +388,7 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 		secondProjCoords.y /= 3.f;
 		secondProjCoords.y += 1.f / 3.f;
 
-		return shadowCalculation(secondProjCoords, normal, lightDir, u_cascades, index);
+		return shadowCalculationLinear(secondProjCoords, normal, lightDir, u_cascades, index);
 	}
 	else
 	{
@@ -355,7 +396,7 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 		thirdProjCoords.y /= 3.f;
 		thirdProjCoords.y += 2.f / 3.f;
 
-		return shadowCalculation(thirdProjCoords, normal, lightDir, u_cascades, index);
+		return shadowCalculationLinear(thirdProjCoords, normal, lightDir, u_cascades, index);
 	}
 
 }
@@ -453,11 +494,14 @@ void main()
 	for(int i=0; i<u_directionalLightCount; i++)
 	{
 		
-		vec3 lightDirection = normalize(dLight[i].direction.xyz);
+		vec3 lightDirection = dLight[i].direction.xyz;
 		vec3 lightColor = dLight[i].color.rgb;
 
 		float shadow = cascadedShadowCalculation(pos, normal, lightDirection, i);
 		
+		shadow = pow(shadow, dLight[i].color.w);
+	
+
 		//if(shadow == 0)
 		//{
 		//	albedo.rgb = vec3(1,0,0);
@@ -472,6 +516,51 @@ void main()
 
 		Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * shadow;
+	}
+
+	for(int i=0; i<u_spotLightCount; i++)
+	{
+		vec3 lightPosition = spotLights[i].position.xyz;
+		vec3 lightColor = spotLights[i].color.rgb;
+		vec3 lightDirection = spotLights[i].direction.xyz;
+
+		float angle = spotLights[i].position.w;
+		float dist = spotLights[i].direction.w;
+		float at = spotLights[i].color.w;
+
+		float dotAngle = dot(normalize(vec3(pos - lightPosition)), lightDirection);
+
+		float currentDist = distance(lightPosition, pos);
+
+		if(currentDist >= dist)
+		{
+			continue;
+		}
+
+
+		if(dotAngle > angle && dotAngle > 0)
+		{
+			float attenuation = attenuationFunctionNotClamped(currentDist, dist, at);
+			//attenuation = 1;
+
+			float smoothingVal = 0.01; //
+			float innerAngle = angle + smoothingVal;
+
+			float smoothing = clamp((dotAngle-angle)/smoothingVal,0.0,1.0);
+			//smoothing = 1;
+
+			vec3 shadowProjCoords = getProjCoords(spotLights[i].lightSpaceMatrix, pos);
+
+			float shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
+				u_spotShadows, i);
+
+			shadow = pow(shadow, spotLights[i].hardness);
+			smoothing = pow(smoothing, spotLights[i].hardness);
+
+			Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
+				pos, viewDir, albedo, normal, F0) * smoothing * attenuation * shadow;
+		}
+
 	}
 
 

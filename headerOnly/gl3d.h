@@ -112,6 +112,21 @@ namespace gl3d
 		
 		};
 
+		struct GpuSpotLight
+		{
+			glm::vec3 position = {};
+			float cosHalfAngle = std::cos(3.14159/4.f);
+			glm::vec3 direction = { 0,-1,0 };
+			float dist = 1;
+			glm::vec3 color = { 1, 1, 1 };
+			float attenuation = 1;
+			float hardness = 1;
+			float notUsed1;
+			float notUsed2;
+			float notUsed3;
+			glm::mat4 lightSpaceMatrix;
+		};
+
 
 	};
 
@@ -275,13 +290,15 @@ namespace gl3d
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
+		GLint light_u_spotLightCount = -1;
 		GLint light_u_ssao = -1;
 		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
-		GLint light_u_cascades= -1;
-
+		GLint light_u_cascades = -1;
+		GLint light_u_spotShadows = -1;
+		
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -292,6 +309,8 @@ namespace gl3d
 		GLuint directionalLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint directionalLightsBlockBuffer = 0;
 
+		GLuint spotLightsBlockLocation = GL_INVALID_INDEX;
+		GLuint spotLightsBlockBuffer = 0;
 
 
 		GLint normalSubroutineLocation = -1;
@@ -821,6 +840,7 @@ namespace gl3d
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 		std::vector<gl3d::internal::GpuDirectionalLight> directionalLights;
+		std::vector<gl3d::internal::GpuSpotLight> spotLights;
 
 		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 
@@ -993,6 +1013,20 @@ namespace gl3d
 
 
 		}directionalShadows;
+
+		struct SpotShadows
+		{
+			void create();
+			void allocateTextures(int count);
+			int textureCount = 0;
+
+			GLuint shadowTextures;
+			GLuint fbo;
+			static constexpr int shadowSize = 1024;
+
+			
+
+		}spotShadows;
 
 
 		struct RenderDepthMap

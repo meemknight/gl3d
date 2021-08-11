@@ -144,6 +144,7 @@ namespace gl3d
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 		std::vector<gl3d::internal::GpuDirectionalLight> directionalLights;
+		std::vector<gl3d::internal::GpuSpotLight> spotLights;
 
 		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 
@@ -316,6 +317,20 @@ namespace gl3d
 
 
 		}directionalShadows;
+
+		struct SpotShadows
+		{
+			void create();
+			void allocateTextures(int count);
+			int textureCount = 0;
+
+			GLuint shadowTextures;
+			GLuint fbo;
+			static constexpr int shadowSize = 1024;
+
+			
+
+		}spotShadows;
 
 
 		struct RenderDepthMap

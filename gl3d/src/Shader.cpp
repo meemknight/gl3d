@@ -287,13 +287,14 @@ namespace gl3d
 		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition");
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_directionalLightCount = getUniform(lightingPassShader.id, "u_directionalLightCount");
+		light_u_spotLightCount = getUniform(lightingPassShader.id, "u_spotLightCount");
 		light_u_ssao = getUniform(lightingPassShader.id, "u_ssao");
 		light_u_view = getUniform(lightingPassShader.id, "u_view");
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
-		
+		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
 		
 	#pragma region uniform buffer
 
@@ -323,6 +324,14 @@ namespace gl3d
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, directionalLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, directionalLightsBlockBuffer);
+
+		spotLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_spotLights");
+		glShaderStorageBlockBinding(lightingPassShader.id, spotLightsBlockLocation, 3);
+		glGenBuffers(1, &spotLightsBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, spotLightsBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, spotLightsBlockBuffer);
+
 	#pragma endregion
 
 

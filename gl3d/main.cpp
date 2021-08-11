@@ -396,8 +396,8 @@ int main()
 	//renderer.pointLights.push_back(gl3d::internal::GpuPointLight());
 	//renderer.pointLights[0].position = glm::vec4(0, 0.42, 2.44, 0);
 
-	renderer.directionalLights.push_back(gl3d::internal::GpuDirectionalLight());
-	renderer.directionalLights[0].direction = glm::vec4(glm::normalize(glm::vec3(0, -1, 0.2)),0);
+	//renderer.directionalLights.push_back(gl3d::internal::GpuDirectionalLight());
+	//renderer.directionalLights[0].direction = glm::vec4(glm::normalize(glm::vec3(0, -1, 0.2)),0);
 
 	gl3d::GraphicModel lightCubeModel;
 	lightCubeModel.loadFromComputedData(sizeof(cubePositions),
@@ -421,9 +421,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
-	auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
+	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
@@ -789,9 +789,8 @@ int main()
 
 			{
 				ImGui::NewLine();
-				ImGui::NewLine();
 
-				static int directionalLightSelector = 0;
+				static int directionalLightSelector = -1;
 				ImGui::Text("Directional lightd Count %d", renderer.directionalLights.size());
 				ImGui::InputInt("Current directional light:", &directionalLightSelector);
 				int n = ImGui::Button("New Directional Light"); ImGui::SameLine();
@@ -843,8 +842,85 @@ int main()
 					renderer.directionalLights[directionalLightSelector].direction =
 						glm::normalize(renderer.directionalLights[directionalLightSelector].direction);
 
-					ImGui::SliderFloat3("frustumSplit",
-						&renderer.directionalShadows.frustumSplits[0], 0, 1);
+					//ImGui::SliderFloat3("frustumSplit",
+					//	&renderer.directionalShadows.frustumSplits[0], 0, 1);
+
+					ImGui::PopID();
+				}
+			}
+
+			{
+				ImGui::NewLine();
+
+				static int spotLightSelector = 0;
+				ImGui::Text("Spot lightd Count %d", renderer.spotLights.size());
+				ImGui::InputInt("Current spot light:", &spotLightSelector);
+				int n = ImGui::Button("New Spot Light"); ImGui::SameLine();
+				int remove = ImGui::Button("Remove Spot Light");
+
+				if (spotLightSelector < -1)
+				{
+					spotLightSelector = -1;
+				}
+
+				if (n || spotLightSelector >= (int)renderer.spotLights.size())
+				{
+					gl3d::internal::GpuSpotLight l = {};
+					l.color = { 1,1,1 };
+
+					renderer.spotLights.push_back(l);
+				}
+
+				spotLightSelector
+					= std::min(spotLightSelector, (int)renderer.spotLights.size() - 1);
+
+				if (remove)
+				{
+					if (spotLightSelector >= 0)
+					{
+						renderer.spotLights.erase(renderer.spotLights.begin() + spotLightSelector);
+						spotLightSelector = std::min(spotLightSelector,
+							(int)renderer.spotLights.size() - 1);
+					}
+
+				}
+
+				ImGui::NewLine();
+
+				if (spotLightSelector >= 0)
+				{
+					ImGui::PushID(14);
+
+					ImGui::ColorEdit3("Color##spot", &renderer.spotLights[spotLightSelector].color[0]);
+					ImGui::DragFloat3("Position##spot", &renderer.spotLights[spotLightSelector].position[0], 0.1);
+					ImGui::DragFloat3("Direction##spot", &renderer.spotLights[spotLightSelector].direction[0], 0.05);
+					ImGui::DragFloat("Distance##spot", &renderer.spotLights[spotLightSelector].dist, 0.05, 0);
+					ImGui::DragFloat("Attenuation##spot", &renderer.spotLights[spotLightSelector].attenuation, 0.05, 0);
+					ImGui::DragFloat("Hardness##spot", &renderer.spotLights[spotLightSelector].hardness, 0.05, 0, 20);
+					
+					float angle = renderer.spotLights[spotLightSelector].cosHalfAngle;
+					
+					angle = std::acos(angle);
+					angle *= 2;
+					
+					ImGui::SliderAngle("Radius", &angle, 0, 180);
+
+					angle /= 2.f;
+					angle = std::cos(angle);
+
+					renderer.spotLights[spotLightSelector].cosHalfAngle = angle;
+
+
+					if (glm::length(renderer.spotLights[spotLightSelector].direction) == 0)
+					{
+						renderer.spotLights[spotLightSelector].direction =
+							glm::vec4{ 0,-1,0, 0 };
+					}
+
+					renderer.spotLights[spotLightSelector].direction =
+						glm::normalize(renderer.spotLights[spotLightSelector].direction);
+
+				
 
 					ImGui::PopID();
 				}
@@ -1160,7 +1236,7 @@ int main()
 		renderDurationProfilerFine.end();
 
 	#pragma region light cube
-		for (auto &i : renderer.pointLights)
+		for (auto &i : renderer.spotLights)
 		{
 			lightCubeModel.position = i.position;
 

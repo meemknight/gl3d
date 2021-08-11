@@ -121,7 +121,9 @@ namespace gl3d
 		ssao.create(x, y);
 		postProcess.create(x, y);
 		directionalShadows.create();
+		spotShadows.create();
 		renderDepthMap.create();
+		
 
 		internal.pBRtextureMaker.init();
 	}
@@ -1407,6 +1409,71 @@ namespace gl3d
 		renderSkyBoxBefore();
 
 		#pragma region render shadow maps
+		
+		auto renderModelsShadows = [&](glm::mat4& lightSpaceMatrix)
+		{
+			//render shadow of the models
+			for (auto& i : internal.cpuEntities)
+			{
+				auto id = internal.getModelIndex(i.model.id_);
+				if (id < 0)
+				{
+					continue;
+				}
+
+				auto& model = internal.graphicModels[id];
+				auto transformMat = i.transform.getTransformMatrix();
+				auto modelViewProjMat = lightSpaceMatrix * transformMat;
+
+				glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+
+				for (auto& i : model.models)
+				{
+					auto m = internal.getMaterialIndex(i.material);
+
+					if (m < 0)
+					{
+						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+					}
+					else
+					{
+
+						auto t = internal.materialTexturesData[m];
+						auto tId = internal.getTextureIndex(t.albedoTexture);
+
+						if (tId < 0)
+						{
+							glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						}
+						else
+						{
+							auto texture = internal.loadedTextures[tId];
+
+							glUniform1i(lightShader.prePass.u_hasTexture, 1);
+							glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+
+							glActiveTexture(GL_TEXTURE0);
+							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+						}
+					}
+
+					glBindVertexArray(i.vertexArray);
+
+					if (i.indexBuffer)
+					{
+						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+					}
+					else
+					{
+						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+					}
+				}
+
+			}
+		};
+		
+		lightShader.prePass.shader.bind();
+
 		if (directionalLights.size())
 		{
 			
@@ -1586,68 +1653,6 @@ namespace gl3d
 
 			};
 
-			auto renderModels = [&](glm::mat4& lightSpaceMatrix)
-			{
-				//render shadow of the models
-				for (auto& i : internal.cpuEntities)
-				{
-					auto id = internal.getModelIndex(i.model.id_);
-					if (id < 0)
-					{
-						continue;
-					}
-
-					auto& model = internal.graphicModels[id];
-					auto transformMat = i.transform.getTransformMatrix();
-					auto modelViewProjMat = lightSpaceMatrix * transformMat;
-
-
-					glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
-
-					for (auto& i : model.models)
-					{
-						auto m = internal.getMaterialIndex(i.material);
-
-						if (m < 0)
-						{
-							glUniform1i(lightShader.prePass.u_hasTexture, 0);
-						}
-						else
-						{
-
-							auto t = internal.materialTexturesData[m];
-							auto tId = internal.getTextureIndex(t.albedoTexture);
-
-							if (tId < 0)
-							{
-								glUniform1i(lightShader.prePass.u_hasTexture, 0);
-							}
-							else
-							{
-								auto texture = internal.loadedTextures[tId];
-
-								glUniform1i(lightShader.prePass.u_hasTexture, 1);
-								glUniform1i(lightShader.prePass.u_albedoSampler, 0);
-
-								glActiveTexture(GL_TEXTURE0);
-								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
-							}
-						}
-
-						glBindVertexArray(i.vertexArray);
-
-						if (i.indexBuffer)
-						{
-							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-						}
-						else
-						{
-							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-						}
-					}
-
-				}
-			};
 
 			for (int lightIndex = 0; lightIndex < directionalLights.size(); lightIndex++)
 			{
@@ -1679,18 +1684,56 @@ namespace gl3d
 
 					directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
 
-					lightShader.prePass.shader.bind();
-					renderModels(directionalLights[lightIndex].lightSpaceMatrix[i]);
+					renderModelsShadows(directionalLights[lightIndex].lightSpaceMatrix[i]);
 
 
 				}
 
 			}
-
 			
 
 			glViewport(0, 0, w, h);
 		}
+
+		if (spotLights.size())
+		{
+
+			if (spotLights.size() != spotShadows.textureCount)
+			{
+				spotShadows.allocateTextures(spotLights.size());
+			}
+
+			glViewport(0, 0, spotShadows.shadowSize, spotShadows.shadowSize);
+
+			for (int lightIndex = 0; lightIndex < spotLights.size(); lightIndex++)
+			{
+				glm::vec3 lightDir = spotLights[lightIndex].direction;
+				glm::vec3 lightPos = spotLights[lightIndex].position;
+
+				glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
+
+				glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
+				glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+					spotShadows.shadowTextures, 0, lightIndex);
+
+				glClear(GL_DEPTH_BUFFER_BIT);
+				
+				float fov = spotLights[lightIndex].cosHalfAngle;
+				fov = std::acos(fov);
+				fov *= 2;
+
+				auto projection = glm::perspective(fov, 1.f, 0.01f, spotLights[lightIndex].dist);
+
+				spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
+
+				renderModelsShadows(spotLights[lightIndex].lightSpaceMatrix);
+
+			}
+
+			glViewport(0, 0, w, h);
+
+		}
+
 
 		#pragma endregion
 
@@ -1775,8 +1818,6 @@ namespace gl3d
 		#pragma endregion 
 
 
-
-
 		#pragma region stuff to be bound for rendering the geometry
 
 
@@ -1811,6 +1852,8 @@ namespace gl3d
 
 		#pragma endregion
 
+
+		#pragma region g buffer render
 
 		//first we render the entities in the gbuffer
 		for (auto& i : internal.cpuEntities)
@@ -1991,19 +2034,21 @@ namespace gl3d
 
 		delete[] indices;
 
+		#pragma endregion
+
+
 		glBindVertexArray(0);
-
 		glDepthFunc(GL_LESS);
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		
+	#pragma region ssao
+
 		if(lightShader.useSSAO)
 		{
-		#pragma region ssao
 			glViewport(0, 0, w / 2, h / 2);
 
 			glUseProgram(ssao.shader.id);
@@ -2038,7 +2083,6 @@ namespace gl3d
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 			glViewport(0, 0, w, h);
-		#pragma endregion
 
 		#pragma region ssao "blur" (more like average blur)
 			glViewport(0, 0, w / 4, h / 4);
@@ -2054,7 +2098,8 @@ namespace gl3d
 			glViewport(0, 0, w, h);
 		#pragma endregion
 		}
-	
+	#pragma endregion
+
 
 	#pragma region do the lighting pass
 
@@ -2100,6 +2145,9 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, directionalShadows.cascadesTexture);
 
+		glUniform1i(lightShader.light_u_spotShadows, 9);
+		glActiveTexture(GL_TEXTURE9);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, spotShadows.shadowTextures);
 
 		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
 
@@ -2127,6 +2175,16 @@ namespace gl3d
 
 		}
 		glUniform1i(lightShader.light_u_directionalLightCount, directionalLights.size());
+
+		if (spotLights.size())
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.spotLightsBlockBuffer);
+
+			glBufferData(GL_SHADER_STORAGE_BUFFER, spotLights.size() * sizeof(internal::GpuSpotLight),
+				spotLights.data(), GL_STREAM_DRAW);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, lightShader.spotLightsBlockBuffer);
+		}
+		glUniform1i(lightShader.light_u_spotLightCount, spotLights.size());
 
 
 		//update the uniform block with data for the light shader
@@ -2696,6 +2754,41 @@ namespace gl3d
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	}
+
+	void Renderer3D::SpotShadows::create()
+	{
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		glGenTextures(1, &shadowTextures);
+		glGenFramebuffers(1, &fbo);
+
+		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void Renderer3D::SpotShadows::allocateTextures(int count)
+	{
+		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
+
+		textureCount = count;
+
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	}
 
 };

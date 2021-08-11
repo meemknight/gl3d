@@ -61,12 +61,15 @@ Features and todos:
 ---
 - [ ] Volumetric light (God rays)
 ---
-- [x] Directional Shadows
-- [x] Sofr directional shadows
-- [ ] Directional Shadows for multiple lights
-- [ ] Directional Shadows settings per light
-- [ ] Cascaded Shadow Maps
-- [ ] Point Shadows
+- [x] Directional Lights
+- [x] Shadows for directional lights
+- [x] Cascaded Shadow Maps
+- [x] Spot Lights
+- [x] Shadows for spot lights
+- [x] Point lights
+- [ ] Shadows for point lights
+- [x] Hardness / softness for shadows
+- [x] Shadows settings per light
 ---
 - [ ] Transparency
 
