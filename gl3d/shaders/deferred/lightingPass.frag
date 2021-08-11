@@ -39,7 +39,7 @@ struct PointLight
 	vec3 color;
 	float strength;
 };
-readonly layout(std140) buffer u_pointLights
+readonly restrict layout(std140) buffer u_pointLights
 {
 	PointLight light[];
 };
@@ -55,7 +55,7 @@ struct DirectionalLight
 	mat4 thirdLightSpaceMatrix;
 
 };
-readonly layout(std140) buffer u_directionalLights
+readonly restrict layout(std140) buffer u_directionalLights
 {
 	DirectionalLight dLight[];
 };

@@ -314,12 +314,14 @@ namespace gl3d
 		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);
 		glGenBuffers(1, &pointLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
 
 		directionalLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_directionalLights");
 		glShaderStorageBlockBinding(lightingPassShader.id, directionalLightsBlockLocation, 2);
 		glGenBuffers(1, &directionalLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, directionalLightsBlockBuffer);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, directionalLightsBlockBuffer);
 	#pragma endregion
 

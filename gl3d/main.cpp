@@ -421,9 +421,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
-	//auto levelModel = renderer.loadObject("resources/sponza/sponza.obj");
+	auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadObject("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
