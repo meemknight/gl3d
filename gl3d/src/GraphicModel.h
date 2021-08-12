@@ -23,6 +23,20 @@ namespace gl3d
 		glm::vec3 scale = { 1,1,1 };
 
 		glm::mat4 getTransformMatrix();
+
+		bool operator==(const Transform& other)
+		{
+			return 
+				(position == other.position)
+				&&(rotation == other.rotation)
+				&&(scale == other.scale)
+				;
+		};
+
+		bool operator!=(const Transform& other)
+		{
+			return !(*this == other);
+		};
 	};
 
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
@@ -40,12 +54,10 @@ namespace gl3d
 	};
 	
 
-	//todo this will dissapear
-	struct GraphicModel
+	struct DebugGraphicModel
 	{
 		std::string name = {};
 
-		//todo this might disapear
 		GLuint vertexArray = 0;
 
 		GLuint vertexBuffer = 0;
@@ -66,22 +78,10 @@ namespace gl3d
 		
 		glm::mat4 getTransformMatrix();
 
-		//todo probably teporarily add this things
-		GpuTexture albedoTexture;
-		GpuTexture normalMapTexture;
-
-		GpuTexture RMA_Texture; //rough metalness ambient oclusion
-		GpuTexture emissiveTexture;
-		int RMA_loadedTextures;
-
-		GpuMaterial material;
-
 	};
 
 
-	
-
-	struct GpuGraphicModel
+	struct GraphicModel
 	{
 		std::string name;
 
@@ -102,11 +102,11 @@ namespace gl3d
 	};
 
 
-	struct GpuMultipleGraphicModel
+	struct MultipleGraphicModel
 	{
 
-		std::vector < GpuGraphicModel >models;
-		std::vector < char* > subModelsNames;
+		std::vector < GraphicModel >models;
+		std::vector < char* > subModelsNames; //for imgui
 
 		void clear();
 	
@@ -119,7 +119,21 @@ namespace gl3d
 
 		Model model;
 
-		//to add some flags in the future (keep them packed)
+		unsigned char flags = {}; // lsb -> 1 static
+
+		bool isStatic() { return (flags & 0b0000'0001); }
+		void setStatic(bool s)
+		{
+			if (s)
+			{
+				flags = flags | 0b0000'0001;
+			}
+			else
+			{
+				flags = flags & ~(0b0000'0001);
+			}
+		}
+
 
 	};
 

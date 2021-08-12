@@ -26,6 +26,9 @@ namespace gl3d
 		glm::vec3& farTopLeft, glm::vec3& farTopRight, glm::vec3& farBottomLeft, glm::vec3& farBottomRight
 		);
 
+	glm::vec3 fromAnglesToDirection(float zenith, float azimuth);
+	glm::vec2 fromDirectionToAngles(glm::vec3 direction);
+
 	struct Camera
 	{
 		Camera() = default;

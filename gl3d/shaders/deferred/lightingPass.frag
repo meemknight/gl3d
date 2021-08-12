@@ -38,7 +38,7 @@ struct PointLight
 	vec3 positions; 
 	float dist;
 	vec3 color;
-	float strength;
+	float attenuation;
 };
 readonly restrict layout(std140) buffer u_pointLights
 {
@@ -69,9 +69,9 @@ struct SpotLight
 	vec4 direction; //w dist
 	vec4 color; //w attenuation
 	float hardness;
-	float notUsed1;
-	float notUsed2;
-	float notUsed3;
+	int shadowIndex;
+	int castShadows;		
+	int changedThisFrame; //not used in the gpu
 	mat4 lightSpaceMatrix;
 };
 readonly restrict layout(std140) buffer u_spotLights
@@ -486,6 +486,9 @@ void main()
 		vec3 lightColor = light[i].color.rgb;
 		vec3 lightDirection = normalize(lightPosition - pos);
 
+		float currentDist = distance(lightPosition, pos);
+		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);
+
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0);
 
@@ -500,7 +503,7 @@ void main()
 		float shadow = cascadedShadowCalculation(pos, normal, lightDirection, i);
 		
 		shadow = pow(shadow, dLight[i].color.w);
-	
+		
 
 		//if(shadow == 0)
 		//{
@@ -550,11 +553,17 @@ void main()
 			//smoothing = 1;
 
 			vec3 shadowProjCoords = getProjCoords(spotLights[i].lightSpaceMatrix, pos);
+			
+			float shadow = 1;
+			
+			if(spotLights[i].castShadows != 0)
+			{
+				shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
+					u_spotShadows, spotLights[i].shadowIndex);
+				shadow = pow(shadow, spotLights[i].hardness);
+			}
 
-			float shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
-				u_spotShadows, i);
 
-			shadow = pow(shadow, spotLights[i].hardness);
 			smoothing = pow(smoothing, spotLights[i].hardness);
 
 			Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 

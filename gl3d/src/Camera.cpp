@@ -114,6 +114,43 @@ namespace gl3d
 
 	}
 
+	glm::vec3 fromAnglesToDirection(float zenith, float azimuth)
+	{
+		glm::vec4 vec(0, 1, 0, 0);
+
+		auto zenithRotate = glm::rotate(-zenith, glm::vec3( 1.f,0.f,0.f ));
+		vec = zenithRotate * vec;
+
+		auto azimuthRotate = glm::rotate(-azimuth, glm::vec3(0.f, 1.f, 0.f));
+		vec = azimuthRotate * vec;
+
+		return glm::normalize(glm::vec3(vec));
+	}
+
+	glm::vec2 fromDirectionToAngles(glm::vec3 direction)
+	{
+		if (direction == glm::vec3(0, 1, 0))
+		{
+			return glm::vec2(0, 0);
+		}
+		else
+		{
+			glm::vec3 zenith(0, 1, 0);
+			float zenithCos = glm::dot(zenith, direction);
+			float zenithAngle = std::acos(zenithCos);
+			
+			glm::vec3 north(0, 0, -1);
+			glm::vec3 projectedVector(direction.x, 0, direction.z);
+			projectedVector = glm::normalize(projectedVector);
+
+			float azmuthCos = glm::dot(north, projectedVector);
+			float azmuthAngle = std::acos(azmuthCos);
+
+			return glm::vec2(zenithAngle, azmuthAngle);
+		}
+
+	}
+
 	
 
 	void Camera::moveFPS(glm::vec3 direction)

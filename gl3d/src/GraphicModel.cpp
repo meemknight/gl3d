@@ -8,7 +8,7 @@
 namespace gl3d 
 {
 
-	void GraphicModel::loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize,
+	void DebugGraphicModel::loadFromComputedData(size_t vertexSize, const float * vercies, size_t indexSize,
 		const unsigned int * indexes, bool noTexture)
 	{
 
@@ -60,17 +60,12 @@ namespace gl3d
 	}
 
 	
-	void GraphicModel::clear()
+	void DebugGraphicModel::clear()
 	{
 		glDeleteBuffers(1, &vertexBuffer);
 		glDeleteBuffers(1, &indexBuffer);
 
 		glDeleteVertexArrays(1, &vertexArray);
-
-		albedoTexture.clear();
-		normalMapTexture.clear();
-		RMA_Texture.clear();
-		emissiveTexture.clear();
 
 		vertexBuffer = 0;
 		indexBuffer = 0;
@@ -78,7 +73,7 @@ namespace gl3d
 		vertexArray = 0;
 	}
 
-	void GraphicModel::draw()
+	void DebugGraphicModel::draw()
 	{
 		glBindVertexArray(vertexArray);
 
@@ -100,7 +95,7 @@ namespace gl3d
 
 	}
 
-	glm::mat4 GraphicModel::getTransformMatrix()
+	glm::mat4 DebugGraphicModel::getTransformMatrix()
 	{
 		return gl3d::getTransformMatrix(position, rotation, scale);
 
@@ -223,7 +218,7 @@ namespace gl3d
 	}
 
 
-	void GpuMultipleGraphicModel::clear()
+	void MultipleGraphicModel::clear()
 	{
 		for (auto &i : models)
 		{
@@ -234,15 +229,15 @@ namespace gl3d
 		{
 			delete[] i;
 		}
-
 		subModelsNames.clear();
+		
 		models.clear();
 
 	}
 
 	
 
-	void GpuGraphicModel::loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize, const unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize, const unsigned int *indexes, bool noTexture)
 	{
 
 		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
@@ -294,7 +289,7 @@ namespace gl3d
 
 	}
 
-	void GpuGraphicModel::clear()
+	void GraphicModel::clear()
 	{
 		glDeleteBuffers(1, &vertexBuffer);
 		glDeleteBuffers(1, &indexBuffer);

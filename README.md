@@ -65,6 +65,7 @@ Features and todos:
 - [x] Shadows for directional lights
 - [x] Cascaded Shadow Maps
 - [x] Spot Lights
+- [x] Baked spot lights shadows for static geometry
 - [x] Shadows for spot lights
 - [x] Point lights
 - [ ] Shadows for point lights

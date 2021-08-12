@@ -6,50 +6,23 @@
 
 namespace gl3d
 {
-	template <class T>
-	struct InterfaceCheckId
-	{
-		bool isNotNull()
-		{
-			return static_cast<T*>(this)->id_;
-		}
+	//todo optimization also hold the last found position
 
-		bool isNull()
-		{
-			return !this->isNotNull();
-		}
+#define CREATE_RENDERER_OBJECT_HANDLE(x)	\
+	struct x								\
+	{										\
+		int id_ = {};						\
+		x (int id=0):id_(id){};				\
+	}
 
-	};
+	CREATE_RENDERER_OBJECT_HANDLE(Material);
+	CREATE_RENDERER_OBJECT_HANDLE(Entity);
+	CREATE_RENDERER_OBJECT_HANDLE(Model);
+	CREATE_RENDERER_OBJECT_HANDLE(Texture);
+	CREATE_RENDERER_OBJECT_HANDLE(SpotLight);
 
-	struct Material : public InterfaceCheckId< Material >
-	{
-		int id_ = {};
+#undef CREATE_RENDERER_OBJECT_HANDLE(x)
 
-		Material(int id = 0):id_(id) {};
-	};
-
-	struct Entity : public InterfaceCheckId< Entity >
-	{
-		int id_ = {};
-	
-		Entity(int id = 0):id_(id) {};
-	};
-
-	struct Model: public InterfaceCheckId< Model >
-	{
-		int id_ = {};
-
-		Model(int id = 0):id_(id) {};
-	};
-
-	
-
-	struct Texture : public InterfaceCheckId< Texture >
-	{
-		int id_ = {};
-		
-		Texture(int id = 0):id_(id) {};
-	};
 
 
 	struct TextureDataForModel
@@ -89,8 +62,11 @@ namespace gl3d
 		//todo move
 		struct GpuPointLight
 		{
-			glm::vec4 position = {};
-			glm::vec4 color = { 1,1,1,0 };
+			glm::vec3 position = {};
+			float dist = 20;
+			glm::vec3 color = { 1,1,1 };
+			float attenuation = 2;
+
 		};
 
 		struct GpuDirectionalLight
@@ -107,13 +83,13 @@ namespace gl3d
 			glm::vec3 position = {};
 			float cosHalfAngle = std::cos(3.14159/4.f);
 			glm::vec3 direction = { 0,-1,0 };
-			float dist = 1;
+			float dist = 20;
 			glm::vec3 color = { 1, 1, 1 };
-			float attenuation = 1;
+			float attenuation = 2;
 			float hardness = 1;
-			float notUsed1;
-			float notUsed2;
-			float notUsed3;
+			int shadowIndex = 0;
+			int castShadows = 1;	//todo implement
+			int	changedThisFrame = true; //this is sent to the gpu but not used there
 			glm::mat4 lightSpaceMatrix;
 		};
 

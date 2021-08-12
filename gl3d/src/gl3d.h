@@ -80,7 +80,7 @@ namespace gl3d
 		//returns true if succeded
 		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
 
-		GpuMultipleGraphicModel *getModelData(Model o);
+		MultipleGraphicModel *getModelData(Model o);
 
 	#pragma endregion
 
@@ -94,7 +94,7 @@ namespace gl3d
 
 		void deleteTexture(Texture t);
 
-		GpuTexture *getTextureData(Texture t);
+		GpuTexture* getTextureData(Texture t);
 
 		//internal
 		Texture createIntenralTexture(GpuTexture t, int alphaData);
@@ -106,9 +106,9 @@ namespace gl3d
 
 		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
 		void renderSkyBoxBefore(); //todo this thing will dissapear after the render function will do everything
-		SkyBox loadSkyBox(const char *names[6]);
-		SkyBox loadSkyBox(const char *name, int format = 0);
-		SkyBox loadHDRSkyBox(const char *name);
+		SkyBox loadSkyBox(const char* names[6]);
+		SkyBox loadSkyBox(const char* name, int format = 0);
+		SkyBox loadHDRSkyBox(const char* name);
 
 		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
 
@@ -120,15 +120,54 @@ namespace gl3d
 		void deleteModel(Model o);
 
 	#pragma endregion
-
-	#pragma region Entity
 	
-		Entity createEntity(Model m, Transform transform = {});
-		CpuEntity* getEntityData(Entity e);
-		void deleteEntity(Entity e);
+	#pragma region spot light
+
+		SpotLight createSpotLight(glm::vec3 position, float fov,
+			glm::vec3 direction, float dist = 20, float attenuation = 1, 
+			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
+
+		//angles is the angle from zenith and azimuth
+		SpotLight createSpotLight(glm::vec3 position, float fov,
+			glm::vec2 angles, float dist = 20, float attenuation = 1,
+			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
+
+		void deleteSpotLight(SpotLight& l);
+
+		glm::vec3 getSpotLightPosition(SpotLight& l);
+		void setSpotLightPosition(SpotLight& l, glm::vec3 position);
+		bool isSpotLight(SpotLight& l);
+		glm::vec3 getSpotLightColor(SpotLight& l);
+		void setSpotLightColor(SpotLight& l, glm::vec3 color);
+		float getSpotLightFov(SpotLight& l);
+		void setSpotLightFov(SpotLight& l, float fov);
+		glm::vec3 getSpotLightDirection(SpotLight& l);
+		void setSpotLightDirection(SpotLight& l, glm::vec3 direction);
+		float getSpotLightDistance(SpotLight& l); //light distance
+		void setSpotLightDistance(SpotLight& l, float distance); //light distance
+		float getSpotLightAttenuation(SpotLight& l); //light distance
+		void setSpotLightAttenuation(SpotLight& l, float attenuation); //light distance
+		float getSpotLightHardness(SpotLight& l);
+		void setSpotLightHardness(SpotLight& l, float hardness);
+		void setSpotLightShadows(SpotLight& l, bool castShadows);
+		bool getSpotLightShadows(SpotLight& l);
 
 	#pragma endregion
 
+
+	#pragma region Entity
+	
+		Entity createEntity(Model m, Transform transform = {}, bool staticGeometry = 0);
+		CpuEntity* getEntityData(Entity &e); //todo this will probably dissapear
+		Transform getEntityTransform(Entity &e);
+		void setEntityTransform(Entity &e, Transform transform);
+		bool isEntityStatic(Entity &e);
+		void setEntityStatic(Entity &e, bool s = true);
+		void deleteEntity(Entity& e);
+		int getEntitySubModelCount(Entity& e);
+		bool isEntity(Entity& e);
+
+	#pragma endregion
 
 		struct VAO
 		{
@@ -144,9 +183,6 @@ namespace gl3d
 
 		std::vector<gl3d::internal::GpuPointLight> pointLights;
 		std::vector<gl3d::internal::GpuDirectionalLight> directionalLights;
-		std::vector<gl3d::internal::GpuSpotLight> spotLights;
-
-		void renderModel(Model o, glm::vec3 position, glm::vec3 rotation = {}, glm::vec3 scale = {1,1,1});
 
 
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
@@ -179,7 +215,7 @@ namespace gl3d
 			int getModelIndex(Model o);
 			int getTextureIndex(Texture t);
 			int getEntityIndex(Entity t);
-
+			int getSpotLightIndex(SpotLight l);
 
 			//material
 			std::vector<GpuMaterial> materials;
@@ -193,12 +229,23 @@ namespace gl3d
 			std::vector<std::string> loadedTexturesNames;
 		
 			//models
-			std::vector< GpuMultipleGraphicModel > graphicModels;
+			std::vector< MultipleGraphicModel > graphicModels;
 			std::vector<int> graphicModelsIndexes;
 
 			//entities
 			std::vector<CpuEntity> cpuEntities;
 			std::vector<int> entitiesIndexes;
+
+			//spot lights
+			std::vector<internal::GpuSpotLight> spotLights;
+			std::vector<int> spotLightIndexes;
+
+			struct PerFrameFlags
+			{
+				bool staticGeometryChanged = 0;
+				bool shouldUpdateSpotShadows = 0;
+
+			}perFrameFlags;
 
 
 		}internal;
@@ -325,7 +372,10 @@ namespace gl3d
 			int textureCount = 0;
 
 			GLuint shadowTextures;
+			GLuint staticGeometryTextures;
 			GLuint fbo;
+			GLuint staticGeometryfbo;
+
 			static constexpr int shadowSize = 1024;
 
 			

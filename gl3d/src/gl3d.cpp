@@ -312,7 +312,7 @@ namespace gl3d
 		return 1;
 	}
 
-	GpuMultipleGraphicModel *Renderer3D::getModelData(Model o)
+	MultipleGraphicModel *Renderer3D::getModelData(Model o)
 	{
 		int id = internal.getModelIndex(o);
 	
@@ -462,7 +462,7 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
 	
-		GpuMultipleGraphicModel returnModel;
+		MultipleGraphicModel returnModel;
 		{
 
 			int s = model.loader.LoadedMeshes.size();
@@ -805,7 +805,7 @@ namespace gl3d
 
 			for (int i = 0; i < s; i++)
 			{
-				GpuGraphicModel gm;
+				GraphicModel gm;
 				int index = i;
 				//TextureDataForModel textureData = {};
 
@@ -864,13 +864,262 @@ namespace gl3d
 
 	}
 
-	Entity Renderer3D::createEntity(Model m, Transform transform)
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec3 direction,
+		float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
+	{
+		int id = internal::generateNewIndex(internal.spotLightIndexes);
+
+		internal::GpuSpotLight light = {};
+		light.position = position;
+		
+		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f));
+		fov /= 2.f;
+		fov = std::cos(fov);
+		light.cosHalfAngle = fov;
+		
+		if (glm::length(direction) == 0)
+		{
+			direction = glm::vec3{0, -1, 0};
+		}
+		else
+		{
+			direction = glm::normalize(direction);
+		}
+		light.direction = direction;
+		
+		light.dist = glm::max(0.f, dist);
+		light.attenuation = glm::max(attenuation, 0.f);
+		light.color = color;
+		light.hardness = glm::max(hardness, 0.001f);
+		light.castShadows = castShadows;
+		light.changedThisFrame = true;
+
+		if (castShadows)
+		{
+			internal.perFrameFlags.shouldUpdateSpotShadows = true;
+		}
+
+		internal.spotLightIndexes.push_back(id);
+		internal.spotLights.push_back(light);
+
+		return { id };
+	}
+
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec2 angles, float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
+	{
+		glm::vec3 direction = fromAnglesToDirection(angles.x, angles.y);
+
+		return createSpotLight(position, fov, direction, dist, attenuation,
+			color, hardness, castShadows);
+
+	}
+
+	void Renderer3D::deleteSpotLight(SpotLight& l)
+	{
+		auto pos = internal.getSpotLightIndex(l);
+		if (pos < 0)
+		{
+			gl3dAssertComment(pos >= 0, "invalid delete spot light");
+			return;
+		}
+
+
+		if (internal.spotLights[pos].castShadows)
+		{ 
+			internal.perFrameFlags.shouldUpdateSpotShadows = true;
+		}
+
+		internal.spotLightIndexes.erase(internal.spotLightIndexes.begin() + pos);
+		internal.spotLights.erase(internal.spotLights.begin() + pos);
+
+	}
+
+	glm::vec3 Renderer3D::getSpotLightPosition(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.spotLights[i].position;
+
+	}
+
+	void Renderer3D::setSpotLightPosition(SpotLight& l, glm::vec3 position)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return ; } //warn or sthing
+
+		if (internal.spotLights[i].position != position)
+		{
+			internal.spotLights[i].position = position;
+			internal.spotLights[i].changedThisFrame = true;
+		}
+	}
+
+	bool Renderer3D::isSpotLight(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	glm::vec3 Renderer3D::getSpotLightColor(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.spotLights[i].color;
+	}
+
+	void Renderer3D::setSpotLightColor(SpotLight& l, glm::vec3 color)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.spotLights[i].color = color;
+	}
+
+	float Renderer3D::getSpotLightFov(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+
+		float angle =  internal.spotLights[i].cosHalfAngle;
+		angle = std::acos(angle);
+		angle *= 2;
+
+		return angle;
+	}
+
+	void Renderer3D::setSpotLightFov(SpotLight& l, float fov)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f)); //todo magic number
+		fov /= 2.f;
+		fov = std::cos(fov);
+
+		if(internal.spotLights[i].cosHalfAngle != fov)
+		{
+			internal.spotLights[i].cosHalfAngle = fov;
+			internal.spotLights[i].changedThisFrame= true;
+		}
+	}
+
+	glm::vec3 Renderer3D::getSpotLightDirection(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+
+		return internal.spotLights[i].direction;
+	}
+
+	void Renderer3D::setSpotLightDirection(SpotLight& l, glm::vec3 direction)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		if (glm::length(direction) == 0)
+		{
+			direction = glm::vec3{ 0, -1, 0 };
+		}
+		else
+		{
+			direction = glm::normalize(direction);
+		}
+
+		if (internal.spotLights[i].direction != direction)
+		{
+			internal.spotLights[i].direction = direction;
+			internal.spotLights[i].changedThisFrame = true;
+		}
+	}
+
+	float Renderer3D::getSpotLightDistance(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+
+		return internal.spotLights[i].dist;
+	}
+
+	void Renderer3D::setSpotLightDistance(SpotLight& l, float distance)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		distance = glm::max(0.f, distance);
+
+		if (internal.spotLights[i].dist != distance)
+		{
+			internal.spotLights[i].dist = distance;
+			internal.spotLights[i].changedThisFrame = true;
+		}
+	}
+
+	float Renderer3D::getSpotLightAttenuation(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.spotLights[i].attenuation;
+	}
+
+	void Renderer3D::setSpotLightAttenuation(SpotLight& l, float attenuation)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.spotLights[i].attenuation = glm::max(attenuation, 0.f);;
+	}
+
+	float Renderer3D::getSpotLightHardness(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.spotLights[i].hardness;
+	}
+
+	void Renderer3D::setSpotLightHardness(SpotLight& l, float hardness)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.spotLights[i].hardness = glm::max(hardness, 0.001f);
+	}
+
+	void Renderer3D::setSpotLightShadows(SpotLight& l, bool castShadows)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		if (internal.spotLights[i].castShadows != castShadows)
+		{
+			
+			internal.spotLights[i].castShadows = castShadows;
+			internal.spotLights[i].changedThisFrame = true;
+			internal.perFrameFlags.shouldUpdateSpotShadows = true;
+		}
+	}
+
+	bool Renderer3D::getSpotLightShadows(SpotLight& l)
+	{
+		auto i = internal.getSpotLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.spotLights[i].castShadows;
+	}
+
+
+	Entity Renderer3D::createEntity(Model m, Transform transform,
+		bool staticGeometry)
 	{
 		int id = internal::generateNewIndex(internal.entitiesIndexes);
 
 		CpuEntity entity;
 		entity.model = m;
 		entity.transform = transform;
+		entity.setStatic(staticGeometry);
+
 
 		internal.entitiesIndexes.push_back(id);
 		internal.cpuEntities.push_back(entity);
@@ -880,7 +1129,7 @@ namespace gl3d
 		return e;
 	}
 
-	CpuEntity* Renderer3D::getEntityData(Entity e)
+	CpuEntity* Renderer3D::getEntityData(Entity &e)
 	{
 		auto i = internal.getEntityIndex(e);
 
@@ -890,7 +1139,56 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::deleteEntity(Entity e)
+	Transform Renderer3D::getEntityTransform(Entity &e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return Transform{}; } //warn or sthing
+	
+		return internal.cpuEntities[i].transform;
+	}
+
+	void Renderer3D::setEntityTransform(Entity &e, Transform transform)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+		
+		if (internal.cpuEntities[i].isStatic())
+		{
+			if (internal.cpuEntities[i].transform != transform)
+			{
+				internal.perFrameFlags.staticGeometryChanged = true;
+			};
+		}
+
+		internal.cpuEntities[i].transform = transform;
+
+	}
+
+	bool Renderer3D::isEntityStatic(Entity &e)
+	{
+
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		return internal.cpuEntities[i].isStatic();
+	}
+
+	void Renderer3D::setEntityStatic(Entity &e, bool s)
+	{
+
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		if (internal.cpuEntities[i].isStatic() != s)
+		{
+			internal.cpuEntities[i].setStatic(s);
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
+
+
+	}
+
+	void Renderer3D::deleteEntity(Entity &e)
 	{
 		auto pos = internal.getEntityIndex(e);
 		if (pos < 0)
@@ -902,6 +1200,36 @@ namespace gl3d
 		internal.entitiesIndexes.erase(internal.entitiesIndexes.begin() + pos);
 		internal.cpuEntities.erase(internal.cpuEntities.begin() + pos);
 		
+		e.id_ = 0;
+
+	}
+
+	int Renderer3D::getEntitySubModelCount(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		auto curentModel = getModelData(internal.cpuEntities[i].model);
+
+		if (curentModel != nullptr)
+		{
+			return curentModel->models.size();
+		}
+
+		return 0;
+	}
+
+	bool Renderer3D::isEntity(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) 
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
 	}
 
 	//todo look into  glProgramUniform
@@ -912,243 +1240,7 @@ namespace gl3d
 	//You basically need to call glGetIntegerv with the appropriate token values.
 	//https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_meminfo.txt
 	//http://developer.download.nvidia.com/opengl/specs/GL_NVX_gpu_memory_info.txt
-
-	//deprecated
-	void Renderer3D::renderModel(Model o, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-
-		auto found = std::find(internal.graphicModelsIndexes.begin(), internal.graphicModelsIndexes.end(), o.id_);
-		if (found == internal.graphicModelsIndexes.end())
-		{
-			gl3dAssertComment(found != internal.graphicModelsIndexes.end(), "invalid render object");
-			return;
-		}
-		int id = found - internal.graphicModelsIndexes.begin();
-
-		auto &model = internal.graphicModels[id];
-
-
-		if (model.models.empty())
-		{
-			return;
-		}
-
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		auto transformMat = gl3d::getTransformMatrix(position, rotation, scale);
-
-		auto modelViewProjMat = projMat * viewMat * transformMat;
-		//auto modelView = viewMat * transformMat;
-
-		lightShader.geometryPassShader.bind();
-
-
-		lightShader.getSubroutines();
-
-
-		glUniformMatrix4fv(lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
-		glUniformMatrix4fv(lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
-		glUniformMatrix4fv(lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
-		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
-		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(lightShader.textureSamplerLocation, 0);
-		glUniform1i(lightShader.normalMapSamplerLocation, 1);
-		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
-		glUniform1i(lightShader.RMASamplerLocation, 3);
-		glUniform1i(lightShader.u_emissiveTexture, 4);
-
-
-
-		//material buffer
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * internal.materials.size()
-			, &internal.materials[0], GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
-
-		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		//glDepthFunc(GL_LESS);
-		//for (auto &i : model.models)
-		//{
-		//	
-		//	glBindVertexArray(i.vertexArray);
-		//	//glBindBuffer(GL_ARRAY_BUFFER, i.vertexBuffer);
-		//
-		//	if (i.indexBuffer)
-		//	{
-		//		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, i.indexBuffer);
-		//		glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-		//	}
-		//	else
-		//	{
-		//		glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-		//	}
-		//}
-		
-		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		//glDepthFunc(GL_EQUAL);
-
-		GLsizei n;
-		glGetProgramStageiv(lightShader.geometryPassShader.id,
-		GL_FRAGMENT_SHADER,
-		GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-		&n);
-
-		GLuint *indices = new GLuint[n]{ 0 };
-		bool changed = 1;	
 	
-		for (auto &i : model.models)
-		{
-			
-			int materialId = internal.getMaterialIndex(i.material);
-
-			if (materialId == -1)
-				{ continue; }
-
-			glUniform1i(lightShader.materialIndexLocation, materialId);
-			
-
-			TextureDataForModel textureData = internal.materialTexturesData[materialId];
-
-			int rmaLoaded = 0;
-			int albedoLoaded = 0;
-			int normalLoaded = 0;
-
-			GpuTexture *albedoTextureData = this->getTextureData(textureData.albedoTexture);
-			if(albedoTextureData != nullptr )
-			{
-				albedoLoaded = 1;
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, albedoTextureData->id);
-			}
-
-			GpuTexture *normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
-			if(normalMapTextureData != nullptr && normalMapTextureData->id != 0)
-			{
-				normalLoaded = 1;
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
-			}
-		
-			GpuTexture *rmaTextureData = this->getTextureData(textureData.RMA_Texture);
-			if(rmaTextureData != nullptr && rmaTextureData->id != 0)
-			{
-				rmaLoaded = 1;
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
-			}
-
-			int emissiveTextureLoaded = 0;
-			GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
-			if(emissiveTextureData != nullptr && emissiveTextureData->id != 0)
-			{
-				emissiveTextureLoaded = 1;
-				glActiveTexture(GL_TEXTURE4);
-				glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
-			}
-
-
-			if(emissiveTextureLoaded)
-			{
-				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_sampled)
-				{
-					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_sampled;
-					changed = 1;
-				}
-			}
-			else
-			{
-				if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_notSampled)
-				{
-					indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_notSampled;
-					changed = 1;
-				}
-			}
-	
-			if (normalLoaded && lightShader.normalMap)
-			{
-				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
-				{
-					indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
-					changed = 1;
-				}
-			}
-			else
-			{
-				if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
-				{
-					indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
-					changed = 1;
-				}
-			}
-	
-			if(rmaLoaded)
-			{
-
-				if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures])
-				{
-					indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures];
-					changed = 1;
-				}
-			
-			}else
-			{
-				if(indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[0])
-				{
-					indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[0];
-					changed = 1;
-				}
-
-			}
-
-			
-			if(albedoLoaded != 0)
-			{
-				if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
-				{
-					indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
-					changed = 1;
-				}
-			}
-			else
-			if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
-			{
-				indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
-				changed = 1;
-			}
-
-
-			if (changed)
-			{
-				glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, n, indices);
-			}
-			changed = 0;
-	
-			{
-				glBindVertexArray(i.vertexArray);
-
-				if (i.indexBuffer)
-				{
-					glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-				}
-				else
-				{
-					glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-				}
-			}
-	
-		}
-
-		glBindVertexArray(0);
-
-		delete[] indices;
-	
-		glDepthFunc(GL_LESS);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	}
-
 	void Renderer3D::renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation,
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
@@ -1303,6 +1395,8 @@ namespace gl3d
 	int Renderer3D::InternalStruct::getMaterialIndex(Material m)
 	{
 		int id = m.id_;
+		if (id <= 0) { return -1; }
+
 		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
 		if (found == materialIndexes.end())
 		{
@@ -1317,6 +1411,8 @@ namespace gl3d
 	int Renderer3D::InternalStruct::getModelIndex(Model o)
 	{
 		int id = o.id_;
+		if (id <= 0) { return -1; }
+
 		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
 		if (found == graphicModelsIndexes.end())
 		{
@@ -1331,7 +1427,7 @@ namespace gl3d
 	int Renderer3D::InternalStruct::getTextureIndex(Texture t)
 	{
 		int id = t.id_;
-		if (id == 0) { return -1; }
+		if (id <= 0) { return -1; }
 
 		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
 		if (found == loadedTexturesIndexes.end())
@@ -1347,7 +1443,7 @@ namespace gl3d
 	int Renderer3D::InternalStruct::getEntityIndex(Entity t)
 	{
 		int id = t.id_;
-		if (id == 0) { return -1; }
+		if (id <= 0) { return -1; }
 
 		auto found = std::find(entitiesIndexes.begin(), entitiesIndexes.end(), id);
 		if (found == entitiesIndexes.end())
@@ -1356,6 +1452,22 @@ namespace gl3d
 			return -1;
 		}
 		id = found - entitiesIndexes.begin();
+
+		return id;
+	}
+
+	int Renderer3D::InternalStruct::getSpotLightIndex(SpotLight l)
+	{
+		int id = l.id_;
+		if (id <= 0) { return -1; }
+
+		auto found = std::find(spotLightIndexes.begin(), spotLightIndexes.end(), id);
+		if (found == spotLightIndexes.end())
+		{
+			gl3dAssertComment(found != spotLightIndexes.end(), "invalid spot light");
+			return -1;
+		}
+		id = found - spotLightIndexes.begin();
 
 		return id;
 	}
@@ -1410,11 +1522,21 @@ namespace gl3d
 
 		#pragma region render shadow maps
 		
-		auto renderModelsShadows = [&](glm::mat4& lightSpaceMatrix)
+		//filter true and onlyStatic true renders only static geometry
+		auto renderModelsShadows = [&](glm::mat4& lightSpaceMatrix, bool filter =0, bool onlyStatic=0)
 		{
 			//render shadow of the models
 			for (auto& i : internal.cpuEntities)
 			{
+
+				if (filter)
+				{
+					if (onlyStatic != i.isStatic())
+					{
+						continue;
+					}
+				}
+
 				auto id = internal.getModelIndex(i.model.id_);
 				if (id < 0)
 				{
@@ -1429,6 +1551,7 @@ namespace gl3d
 
 				for (auto& i : model.models)
 				{
+
 					auto m = internal.getMaterialIndex(i.material);
 
 					if (m < 0)
@@ -1482,7 +1605,8 @@ namespace gl3d
 				directionalShadows.allocateTextures(directionalLights.size());
 			}
 
-			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, float farPlane,
+			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, 
+				float nearPlane, float farPlane,
 				float zOffset)
 			{
 				glm::vec3 rVector = {};
@@ -1495,7 +1619,7 @@ namespace gl3d
 				glm::vec3 centerFar{};
 
 				computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
-					0.0001, farPlane, nearDimensions, farDimensions, centerNear, centerFar);
+					nearPlane, farPlane, nearDimensions, farDimensions, centerNear, centerFar);
 
 				glm::vec3 nearTopLeft{};
 				glm::vec3 nearTopRight{};
@@ -1673,6 +1797,7 @@ namespace gl3d
 					directionalShadows.cascadesTexture, 0, lightIndex); //last is layer
 
 				glClear(GL_DEPTH_BUFFER_BIT);
+				float lastNearPlane = 0.0001;
 
 				for (int i = 0; i < DirectionalShadows::CASCADES; i++)
 				{
@@ -1680,7 +1805,12 @@ namespace gl3d
 						directionalShadows.shadowSize, directionalShadows.shadowSize);
 
 					auto projection = calculateLightProjectionMatrix(lightDir, lightView,
-						directionalShadows.frustumSplits[i] * camera.farPlane, zOffsets[i] * camera.farPlane);
+						directionalShadows.frustumSplits[i] * camera.farPlane, 
+						lastNearPlane,
+						zOffsets[i] * camera.farPlane);
+
+					//this will add some precision but add artefacts todo?
+					//lastNearPlane = zOffsets[i] * camera.farPlane;
 
 					directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
 
@@ -1695,39 +1825,76 @@ namespace gl3d
 			glViewport(0, 0, w, h);
 		}
 
-		if (spotLights.size())
+		if (internal.spotLights.size())
 		{
-
-			if (spotLights.size() != spotShadows.textureCount)
+			bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged;
+			if (internal.spotLights.size() != spotShadows.textureCount)
 			{
-				spotShadows.allocateTextures(spotLights.size());
+				spotShadows.allocateTextures(internal.spotLights.size());
+				shouldRenderStaticGeometryAllLights = true; 
+			}
+			if (internal.perFrameFlags.shouldUpdateSpotShadows) //some lights changed
+			{
+				shouldRenderStaticGeometryAllLights = true;
+				internal.perFrameFlags.shouldUpdateSpotShadows = false;
 			}
 
 			glViewport(0, 0, spotShadows.shadowSize, spotShadows.shadowSize);
 
-			for (int lightIndex = 0; lightIndex < spotLights.size(); lightIndex++)
+			glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.staticGeometryfbo);
+			
+			int shadowCastCount = 0;
+			for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
 			{
-				glm::vec3 lightDir = spotLights[lightIndex].direction;
-				glm::vec3 lightPos = spotLights[lightIndex].position;
+				if (internal.spotLights[lightIndex].castShadows)
+				{
+					if (shouldRenderStaticGeometryAllLights || internal.spotLights[lightIndex].changedThisFrame)
+					{
+						glm::vec3 lightDir = internal.spotLights[lightIndex].direction;
+						glm::vec3 lightPos = internal.spotLights[lightIndex].position;
+						glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
+						float fov = internal.spotLights[lightIndex].cosHalfAngle;
+						fov = std::acos(fov);
+						fov *= 2;
+						auto projection = glm::perspective(fov, 1.f, 0.01f, internal.spotLights[lightIndex].dist);
+						internal.spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
+						internal.spotLights[lightIndex].shadowIndex = shadowCastCount;
+					
+						internal.spotLights[lightIndex].changedThisFrame = false;
 
-				glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
+						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+							spotShadows.staticGeometryTextures, 0, lightIndex);
+						glClear(GL_DEPTH_BUFFER_BIT);
+						//render only static geometry first
+						renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, true);
 
-				glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
-				glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-					spotShadows.shadowTextures, 0, lightIndex);
+					}
 
-				glClear(GL_DEPTH_BUFFER_BIT);
+					shadowCastCount++;
+				}
 				
-				float fov = spotLights[lightIndex].cosHalfAngle;
-				fov = std::acos(fov);
-				fov *= 2;
+			}
 
-				auto projection = glm::perspective(fov, 1.f, 0.01f, spotLights[lightIndex].dist);
+			//copy static geometry
+			glCopyImageSubData(spotShadows.staticGeometryTextures, GL_TEXTURE_2D_ARRAY, 0,
+				0, 0, 0,
+				spotShadows.shadowTextures, GL_TEXTURE_2D_ARRAY, 0,
+				0, 0, 0,
+				spotShadows.shadowSize, spotShadows.shadowSize, internal.spotLights.size()
+			);
 
-				spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
+			//render dynamic geometry on top
+			glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
+			for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
+			{
+				if (internal.spotLights[lightIndex].castShadows)
+				{
+					glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+						spotShadows.shadowTextures, 0, lightIndex);
 
-				renderModelsShadows(spotLights[lightIndex].lightSpaceMatrix);
-
+					renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, false);
+				}
+				
 			}
 
 			glViewport(0, 0, w, h);
@@ -1858,7 +2025,6 @@ namespace gl3d
 		//first we render the entities in the gbuffer
 		for (auto& i : internal.cpuEntities)
 		{
-			//renderModel(i.model, i.transform.position, i.transform.rotation, i.transform.scale);
 
 			auto id = internal.getModelIndex(i.model.id_);
 			if (id < 0) 
@@ -2045,7 +2211,7 @@ namespace gl3d
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(lightShader.quadDrawer.quadVAO);
 		
-	#pragma region ssao
+		#pragma region ssao
 
 		if(lightShader.useSSAO)
 		{
@@ -2101,7 +2267,7 @@ namespace gl3d
 	#pragma endregion
 
 
-	#pragma region do the lighting pass
+		#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -2176,15 +2342,15 @@ namespace gl3d
 		}
 		glUniform1i(lightShader.light_u_directionalLightCount, directionalLights.size());
 
-		if (spotLights.size())
+		if (internal.spotLights.size())
 		{
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.spotLightsBlockBuffer);
 
-			glBufferData(GL_SHADER_STORAGE_BUFFER, spotLights.size() * sizeof(internal::GpuSpotLight),
-				spotLights.data(), GL_STREAM_DRAW);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.spotLights.size() * sizeof(internal::GpuSpotLight),
+				internal.spotLights.data(), GL_STREAM_DRAW);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, lightShader.spotLightsBlockBuffer);
 		}
-		glUniform1i(lightShader.light_u_spotLightCount, spotLights.size());
+		glUniform1i(lightShader.light_u_spotLightCount, internal.spotLights.size());
 
 
 		//update the uniform block with data for the light shader
@@ -2196,7 +2362,7 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region bloom blur
+		#pragma region bloom blur
 		
 		if(lightShader.bloom)
 		{
@@ -2229,7 +2395,7 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region do the post process stuff and draw to the screen
+		#pragma region do the post process stuff and draw to the screen
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(postProcess.postProcessShader.id);
@@ -2302,7 +2468,7 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region copy depth buffer for later forward rendering
+		#pragma region copy depth buffer for later forward rendering
 		glBindVertexArray(0);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
@@ -2314,6 +2480,10 @@ namespace gl3d
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	#pragma endregion
+
+
+		//reset per frame flags
+		internal.perFrameFlags = {};
 
 	}
 
@@ -2761,7 +2931,10 @@ namespace gl3d
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 		glGenTextures(1, &shadowTextures);
+		glGenTextures(1, &staticGeometryTextures);
+
 		glGenFramebuffers(1, &fbo);
+		glGenFramebuffers(1, &staticGeometryfbo);
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2769,14 +2942,26 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
+		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, staticGeometryfbo);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -2784,11 +2969,14 @@ namespace gl3d
 	void Renderer3D::SpotShadows::allocateTextures(int count)
 	{
 		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
-
 		textureCount = count;
-
 		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
 			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	
+		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
 	}
 
 };
