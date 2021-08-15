@@ -1,4 +1,4 @@
-#version 330 core
+#version 150 core
 out vec4 FragColor;
 in vec3 v_localPos;
 //https://learnopengl.com/PBR/IBL/Diffuse-irradiance

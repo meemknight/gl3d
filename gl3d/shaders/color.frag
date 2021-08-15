@@ -1,7 +1,8 @@
-#version 330
+#version 150
 #pragma debug(on)
 
-out layout(location = 0) vec4 outColor;
+//out layout(location = 0) vec4 outColor;
+out vec4 outColor;
 
 in vec3 v_colors;
 

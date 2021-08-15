@@ -1,0 +1,81 @@
+#version 150
+in vec2 v_texCoords;
+uniform sampler2D u_toBlurcolorInput;
+out vec3 fragColor;
+uniform bool u_horizontal;
+void main ()
+{
+  vec3 result_1;
+  vec2 texOffset_2;
+  texOffset_2 = (1.0/(vec2(textureSize (u_toBlurcolorInput, 0))));
+  result_1 = (texture (u_toBlurcolorInput, v_texCoords).xyz * 0.227027);
+  if (u_horizontal) {
+    vec2 tmpvar_3;
+    tmpvar_3.y = 0.0;
+    tmpvar_3.x = texOffset_2.x;
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_3)).xyz * 0.1945946));
+    vec2 tmpvar_4;
+    tmpvar_4.y = 0.0;
+    tmpvar_4.x = texOffset_2.x;
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_4)).xyz * 0.1945946));
+    vec2 tmpvar_5;
+    tmpvar_5.y = 0.0;
+    tmpvar_5.x = (texOffset_2.x * 2.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_5)).xyz * 0.1216216));
+    vec2 tmpvar_6;
+    tmpvar_6.y = 0.0;
+    tmpvar_6.x = (texOffset_2.x * 2.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_6)).xyz * 0.1216216));
+    vec2 tmpvar_7;
+    tmpvar_7.y = 0.0;
+    tmpvar_7.x = (texOffset_2.x * 3.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_7)).xyz * 0.054054));
+    vec2 tmpvar_8;
+    tmpvar_8.y = 0.0;
+    tmpvar_8.x = (texOffset_2.x * 3.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_8)).xyz * 0.054054));
+    vec2 tmpvar_9;
+    tmpvar_9.y = 0.0;
+    tmpvar_9.x = (texOffset_2.x * 4.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_9)).xyz * 0.016216));
+    vec2 tmpvar_10;
+    tmpvar_10.y = 0.0;
+    tmpvar_10.x = (texOffset_2.x * 4.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_10)).xyz * 0.016216));
+  } else {
+    vec2 tmpvar_11;
+    tmpvar_11.x = 0.0;
+    tmpvar_11.y = texOffset_2.y;
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_11)).xyz * 0.1945946));
+    vec2 tmpvar_12;
+    tmpvar_12.x = 0.0;
+    tmpvar_12.y = texOffset_2.y;
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_12)).xyz * 0.1945946));
+    vec2 tmpvar_13;
+    tmpvar_13.x = 0.0;
+    tmpvar_13.y = (texOffset_2.y * 2.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_13)).xyz * 0.1216216));
+    vec2 tmpvar_14;
+    tmpvar_14.x = 0.0;
+    tmpvar_14.y = (texOffset_2.y * 2.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_14)).xyz * 0.1216216));
+    vec2 tmpvar_15;
+    tmpvar_15.x = 0.0;
+    tmpvar_15.y = (texOffset_2.y * 3.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_15)).xyz * 0.054054));
+    vec2 tmpvar_16;
+    tmpvar_16.x = 0.0;
+    tmpvar_16.y = (texOffset_2.y * 3.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_16)).xyz * 0.054054));
+    vec2 tmpvar_17;
+    tmpvar_17.x = 0.0;
+    tmpvar_17.y = (texOffset_2.y * 4.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_17)).xyz * 0.016216));
+    vec2 tmpvar_18;
+    tmpvar_18.x = 0.0;
+    tmpvar_18.y = (texOffset_2.y * 4.0);
+    result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_18)).xyz * 0.016216));
+  };
+  fragColor = result_1;
+}
+

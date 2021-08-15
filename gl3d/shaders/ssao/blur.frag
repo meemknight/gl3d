@@ -1,4 +1,4 @@
-#version 330 core
+#version 150 core
 
 in vec2 v_texCoords;
 uniform sampler2D u_ssaoInput;

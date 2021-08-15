@@ -1,6 +1,7 @@
-#version 330 core
+#version 150 core
 
-layout(location = 0) out vec4 outColor;
+//layout(location = 0) out vec4 outColor;
+out vec4 outColor;
 
 in vec2 v_texCoords;
 

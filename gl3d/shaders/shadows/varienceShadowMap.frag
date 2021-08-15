@@ -1,4 +1,4 @@
-#version 330
+#version 150
 #pragma debug(on)
 
 uniform sampler2D u_albedoSampler;

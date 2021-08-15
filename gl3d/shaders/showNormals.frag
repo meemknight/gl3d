@@ -1,4 +1,4 @@
-#version 330 
+#version 150 
 #pragma debug(on)
 
 out vec4 a_outColor;
