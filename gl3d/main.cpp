@@ -133,7 +133,6 @@ int main()
 	showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
 
-	
 #pragma endregion
 
 
@@ -421,9 +420,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
-	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
+	auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
@@ -448,6 +447,8 @@ int main()
 	static std::vector < const char* > items = {}; //just models names
 
 	std::vector< gl3d::SpotLight > spotLights;
+	std::vector< gl3d::PointLight > pointLights;
+	std::vector< gl3d::DirectionalLight > directionalLights;
 
 
 	renderer.camera.aspectRatio = (float)w / h;
@@ -748,7 +749,7 @@ int main()
 			ImGui::SetWindowFontScale(1.2f);
 		
 			static int pointLightSelector = -1;
-			ImGui::Text("Point lightd Count %d", renderer.pointLights.size());
+			ImGui::Text("Point lightd Count %d", pointLights.size());
 			ImGui::InputInt("Current Point light:", &pointLightSelector);
 			int n = ImGui::Button("New Light"); ImGui::SameLine();
 			int remove = ImGui::Button("Remove Light");
@@ -758,22 +759,20 @@ int main()
 				pointLightSelector = -1;
 			}
 
-			if(n || pointLightSelector >= (int)renderer.pointLights.size())
+			if(n || (pointLightSelector >= (int)pointLights.size()) )
 			{
-				gl3d::internal::GpuPointLight l = {};
-				l.color = { 1,1,1 };
-
-				renderer.pointLights.push_back(l);
+				pointLights.push_back(renderer.createPointLight({ 0,0,0 }));
 			}
 
-			pointLightSelector = std::min(pointLightSelector, (int)renderer.pointLights.size() - 1);
+			pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
 
 			if(remove)
 			{
 				if(pointLightSelector>=0)
 				{
-					renderer.pointLights.erase(renderer.pointLights.begin() + pointLightSelector);
-					pointLightSelector = std::min(pointLightSelector, (int)renderer.pointLights.size() - 1);
+					renderer.detletePointLight(pointLights[pointLightSelector]);
+					pointLights.erase(pointLights.begin() + pointLightSelector);
+					pointLightSelector = std::min(pointLightSelector, (int)pointLights.size() - 1);
 				}
 			
 			}
@@ -783,9 +782,22 @@ int main()
 			if(pointLightSelector >= 0)
 			{
 				ImGui::PushID(12);
+				
+				glm::vec3 color = renderer.getPointLightColor(pointLights[pointLightSelector]);
+				ImGui::ColorEdit3("Color", &color[0]);
+				renderer.setPointLightColor(pointLights[pointLightSelector], color);
 
-				ImGui::ColorEdit3("Color", &renderer.pointLights[pointLightSelector].color[0]);
-				ImGui::DragFloat3("Position", &renderer.pointLights[pointLightSelector].position[0], 0.1);
+				glm::vec3 position = renderer.getPointLightPosition(pointLights[pointLightSelector]);
+				ImGui::DragFloat3("Position", &position[0]);
+				renderer.setPointLightPosition(pointLights[pointLightSelector], position);
+
+				float distance = renderer.getPointLightDistance(pointLights[pointLightSelector]);
+				ImGui::DragFloat("Distance##point", &distance, 0.05, 0);
+				renderer.setPointLightDistance(pointLights[pointLightSelector], distance);
+
+				float attenuation = renderer.getPointLightAttenuation(pointLights[pointLightSelector]);
+				ImGui::DragFloat("Attenuation##point", &attenuation, 0.05, 0);
+				renderer.setPointLightAttenuation(pointLights[pointLightSelector], attenuation);
 				
 				ImGui::PopID();
 			}
@@ -794,7 +806,7 @@ int main()
 				ImGui::NewLine();
 
 				static int directionalLightSelector = -1;
-				ImGui::Text("Directional lightd Count %d", renderer.directionalLights.size());
+				ImGui::Text("Directional lightd Count %d", directionalLights.size());
 				ImGui::InputInt("Current directional light:", &directionalLightSelector);
 				int n = ImGui::Button("New Directional Light"); ImGui::SameLine();
 				int remove = ImGui::Button("Remove Directional Light");
@@ -804,24 +816,22 @@ int main()
 					directionalLightSelector = -1;
 				}
 
-				if (n || directionalLightSelector >= (int)renderer.directionalLights.size())
+				if (n || directionalLightSelector >= (int)directionalLights.size())
 				{
-					gl3d::internal::GpuDirectionalLight l = {};
-					l.color = { 1,1,1 };
-
-					renderer.directionalLights.push_back(l);
+					directionalLights.push_back(renderer.createDirectionalLight(glm::vec3(0.f)));
 				}
 
 				directionalLightSelector 
-					= std::min(directionalLightSelector, (int)renderer.directionalLights.size() - 1);
+					= std::min(directionalLightSelector, (int)directionalLights.size() - 1);
 
 				if (remove)
 				{
 					if (directionalLightSelector >= 0)
 					{
-						renderer.directionalLights.erase(renderer.directionalLights.begin() + directionalLightSelector);
+						renderer.deleteDirectionalLight(directionalLights[directionalLightSelector]);
+						directionalLights.erase(directionalLights.begin() + directionalLightSelector);
 						directionalLightSelector = std::min(directionalLightSelector, 
-							(int)renderer.directionalLights.size() - 1);
+							(int)directionalLights.size() - 1);
 					}
 
 				}
@@ -832,18 +842,22 @@ int main()
 				{
 					ImGui::PushID(13);
 
-					ImGui::ColorEdit3("Color##dir", &renderer.directionalLights[directionalLightSelector].color[0]);
-					ImGui::DragFloat3("Direction##dir", &renderer.directionalLights[directionalLightSelector].direction[0], 0.1);
-					ImGui::SliderFloat("Hardness##dir", &renderer.directionalLights[directionalLightSelector].hardness, 0.1, 10);
+					glm::vec3 color = renderer.getDirectionalLightColor(directionalLights[directionalLightSelector]);
+					ImGui::ColorEdit3("Color##dir", &color[0]);
+					renderer.setDirectionalLightColor(directionalLights[directionalLightSelector], color);
 
-					if (glm::length(renderer.directionalLights[directionalLightSelector].direction) == 0)
-					{
-						renderer.directionalLights[directionalLightSelector].direction =
-							glm::vec4{ 0,-1,0, 0 };
-					}
+					glm::vec3 direction = renderer.getDirectionalLightDirection(directionalLights[directionalLightSelector]);
+					ImGui::DragFloat3("Direction##dir", &direction[0], 0.1);
+					renderer.setDirectionalLightDirection(directionalLights[directionalLightSelector], direction);
 
-					renderer.directionalLights[directionalLightSelector].direction =
-						glm::normalize(renderer.directionalLights[directionalLightSelector].direction);
+					float hardness = renderer.getDirectionalLightHardness(directionalLights[directionalLightSelector]);
+					ImGui::SliderFloat("Hardness##dir", &hardness, 0.1, 10);
+					renderer.setDirectionalLightHardness(directionalLights[directionalLightSelector], hardness);
+
+					bool castShadows = renderer.getDirectionalLightShadows(directionalLights[directionalLightSelector]);
+					ImGui::Checkbox("Cast shadows##dir", &castShadows);
+					renderer.setDirectionalLightShadows(directionalLights[directionalLightSelector], castShadows);
+
 
 					//ImGui::SliderFloat3("frustumSplit",
 					//	&renderer.directionalShadows.frustumSplits[0], 0, 1);
@@ -924,6 +938,10 @@ int main()
 					float angle = renderer.getSpotLightFov(spotLights[spotLightSelector]);
 					ImGui::SliderAngle("fov", &angle, 0, 180);
 					renderer.setSpotLightFov(spotLights[spotLightSelector], angle);
+
+					bool castShadows = renderer.getSpotLightShadows(spotLights[spotLightSelector]);
+					ImGui::Checkbox("Cast shadows##spot", &castShadows);
+					renderer.setSpotLightShadows(spotLights[spotLightSelector], castShadows);
 
 
 					ImGui::PopID();

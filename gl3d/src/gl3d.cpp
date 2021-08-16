@@ -864,6 +864,287 @@ namespace gl3d
 
 	}
 
+#pragma region point light
+
+	PointLight Renderer3D::createPointLight(glm::vec3 position, glm::vec3 color,
+		float dist, float attenuation)
+	{
+		int id = internal::generateNewIndex(internal.pointLightIndexes);
+		internal::GpuPointLight light;
+		light.position = position;
+		light.color = color;
+		light.dist = glm::max(0.f, dist);
+		light.attenuation = glm::max(0.f, attenuation);
+
+		internal.pointLightIndexes.push_back(id);
+		internal.pointLights.push_back(light);
+
+		return { id };
+	}
+
+	void Renderer3D::detletePointLight(PointLight& l)
+	{
+		auto pos = internal.getPointLightIndex(l);
+		if (pos < 0)
+		{
+			gl3dAssertComment(pos >= 0, "invalid delete point light");
+			return;
+		}
+
+		//if (internal.spotLights[pos].castShadows)
+		//{
+		//	internal.perFrameFlags.shouldUpdateSpotShadows = true;
+		//}
+
+		internal.pointLightIndexes.erase(internal.pointLightIndexes.begin() + pos);
+		internal.pointLights.erase(internal.pointLights.begin() + pos);
+
+		l.id_ = 0;
+	}
+
+	glm::vec3 Renderer3D::getPointLightPosition(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.pointLights[i].position;
+	}
+
+	void Renderer3D::setPointLightPosition(PointLight& l, glm::vec3 position)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		if (internal.pointLights[i].position != position)
+		{
+			internal.pointLights[i].position = position;
+			//internal.pointLights[i].changedThisFrame = true;
+		}
+	
+	}
+
+	bool Renderer3D::isPointLight(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	glm::vec3 Renderer3D::getPointLightColor(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.pointLights[i].color;
+	}
+
+	void Renderer3D::setPointLightColor(PointLight& l, glm::vec3 color)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.pointLights[i].color = color;
+	}
+
+	float Renderer3D::getPointLightDistance(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+
+		return internal.pointLights[i].dist;
+	}
+
+	void Renderer3D::setPointLightDistance(PointLight& l, float distance)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		distance = glm::max(0.f, distance);
+
+		if (internal.pointLights[i].dist != distance)
+		{
+			internal.pointLights[i].dist = distance;
+			//internal.pointLights[i].changedThisFrame = true;
+		}
+	}
+
+	float Renderer3D::getPointLightAttenuation(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.pointLights[i].attenuation;
+	}
+
+	void Renderer3D::setPointLightAttenuation(PointLight& l, float attenuation)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.pointLights[i].attenuation = glm::max(attenuation, 0.f);
+	}
+
+#pragma endregion
+
+
+#pragma region directional light
+
+	DirectionalLight Renderer3D::createDirectionalLight(glm::vec3 direction,
+		glm::vec3 color, float hardness, bool castShadows)
+	{
+		int id = internal::generateNewIndex(internal.directionalLightIndexes);
+		internal::GpuDirectionalLight light;
+		light.color = color;
+		light.hardness = glm::max(hardness, 0.001f);
+		if (castShadows)
+		{
+			light.castShadowsIndex = 1;
+		}
+		else
+		{
+			light.castShadowsIndex = -1;
+		}
+
+		if (glm::length(direction) == 0)
+		{
+			direction = glm::vec3{ 0, -1, 0 };
+		}
+		else
+		{
+			direction = glm::normalize(direction);
+		}
+		light.direction = glm::vec4(direction, 0);
+
+		internal.directionalLightIndexes.push_back(id);
+		internal.directionalLights.push_back(light);
+
+		return { id };
+	}
+
+	void Renderer3D::deleteDirectionalLight(DirectionalLight& l)
+	{
+		auto pos = internal.getDirectionalLightIndex(l);
+		if (pos < 0)
+		{
+			gl3dAssertComment(pos >= 0, "invalid delete directional light");
+			return;
+		}
+
+
+		//if (internal.directionalLights[pos].castShadows)
+		//{
+		//	internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
+		//}
+
+		internal.directionalLightIndexes.erase(internal.directionalLightIndexes.begin() + pos);
+		internal.directionalLights.erase(internal.directionalLights.begin() + pos);
+
+		l.id_ = 0;
+	}
+
+	bool Renderer3D::isDirectionalLight(DirectionalLight& l)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	glm::vec3 Renderer3D::getDirectionalLightDirection(DirectionalLight& l)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.directionalLights[i].direction;
+	}
+
+	void Renderer3D::setDirectionalLightDirection(DirectionalLight& l, glm::vec3 direction)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		if (glm::length(direction) == 0)
+		{
+			direction = glm::vec3{ 0, -1, 0 };
+		}
+		else
+		{
+			direction = glm::normalize(direction);
+		}
+
+		if (glm::vec3(internal.directionalLights[i].direction) != direction)
+		{
+			internal.directionalLights[i].direction = glm::vec4(direction, 0);
+			//internal.directionalLights[i].changedThisFrame = true;
+		}
+	}
+
+	glm::vec3 Renderer3D::getDirectionalLightColor(DirectionalLight& l)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.directionalLights[i].color;
+	}
+
+	void Renderer3D::setDirectionalLightColor(DirectionalLight& l, glm::vec3 color)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.directionalLights[i].color = color;
+	}
+
+	float Renderer3D::getDirectionalLightHardness(DirectionalLight& l)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.directionalLights[i].hardness;
+	}
+
+	void Renderer3D::setDirectionalLightHardness(DirectionalLight& l, float hardness)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.directionalLights[i].hardness = glm::max(hardness, 0.001f);
+	}
+
+	bool Renderer3D::getDirectionalLightShadows(DirectionalLight& l)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		if (internal.directionalLights[i].castShadowsIndex >= 0)
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	void Renderer3D::setDirectionalLightShadows(DirectionalLight& l, bool castShadows)
+	{
+		auto i = internal.getDirectionalLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		if (castShadows)
+		{
+			internal.directionalLights[i].castShadowsIndex = 1;
+		}
+		else
+		{
+			internal.directionalLights[i].castShadowsIndex = -1;
+		}
+	}
+
+#pragma endregion
+
+
+#pragma region spot light
+
 	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec3 direction,
 		float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
 	{
@@ -932,6 +1213,7 @@ namespace gl3d
 		internal.spotLightIndexes.erase(internal.spotLightIndexes.begin() + pos);
 		internal.spotLights.erase(internal.spotLights.begin() + pos);
 
+		l.id_ = 0;
 	}
 
 	glm::vec3 Renderer3D::getSpotLightPosition(SpotLight& l)
@@ -1071,7 +1353,7 @@ namespace gl3d
 	{
 		auto i = internal.getSpotLightIndex(l);
 		if (i < 0) { return; } //warn or sthing
-		internal.spotLights[i].attenuation = glm::max(attenuation, 0.f);;
+		internal.spotLights[i].attenuation = glm::max(attenuation, 0.f);
 	}
 
 	float Renderer3D::getSpotLightHardness(SpotLight& l)
@@ -1109,6 +1391,7 @@ namespace gl3d
 		return internal.spotLights[i].castShadows;
 	}
 
+#pragma endregion
 
 	Entity Renderer3D::createEntity(Model m, Transform transform,
 		bool staticGeometry)
@@ -1472,6 +1755,38 @@ namespace gl3d
 		return id;
 	}
 
+	int Renderer3D::InternalStruct::getPointLightIndex(PointLight l)
+	{
+		int id = l.id_;
+		if (id <= 0) { return -1; }
+
+		auto found = std::find(pointLightIndexes.begin(), pointLightIndexes.end(), id);
+		if (found == pointLightIndexes.end())
+		{
+			gl3dAssertComment(found != pointLightIndexes.end(), "invalid point light");
+			return -1;
+		}
+		id = found - pointLightIndexes.begin();
+
+		return id;
+	}
+
+	int Renderer3D::InternalStruct::getDirectionalLightIndex(DirectionalLight l)
+	{
+		int id = l.id_;
+		if (id <= 0) { return -1; }
+
+		auto found = std::find(directionalLightIndexes.begin(), directionalLightIndexes.end(), id);
+		if (found == directionalLightIndexes.end())
+		{
+			gl3dAssertComment(found != directionalLightIndexes.end(), "invalid directional light");
+			return -1;
+		}
+		id = found - directionalLightIndexes.begin();
+
+		return id;
+	}
+
 
 	//todo add to other projects and places
 	glm::mat4 lookAtSafe(glm::vec3 const& eye, glm::vec3 const& center, glm::vec3 const& upVec)
@@ -1597,13 +1912,19 @@ namespace gl3d
 		
 		lightShader.prePass.shader.bind();
 
-		if (directionalLights.size())
+		if (internal.directionalLights.size())
 		{
-			
-			if (directionalLights.size() != directionalShadows.textureCount) 
+			int directionalLightsShadows = 0;
+			for (const auto& i : internal.directionalLights)
 			{
-				directionalShadows.allocateTextures(directionalLights.size());
+				if (i.castShadowsIndex >= 0) { directionalLightsShadows++; }
 			}
+
+			if (directionalLightsShadows != directionalShadows.textureCount)
+			{
+				directionalShadows.allocateTextures(directionalLightsShadows);
+			}
+			
 
 			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, 
 				float nearPlane, float farPlane,
@@ -1777,48 +2098,53 @@ namespace gl3d
 
 			};
 
-
-			for (int lightIndex = 0; lightIndex < directionalLights.size(); lightIndex++)
+			int shadowCastCount = 0;
+			for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
 			{
-
-				glm::vec3 lightDir = directionalLights[lightIndex].direction;
-				//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
-
-				glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
-				//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
-
-				//zoffset is used to move the light further
-
-
-				float zOffsets[] = { 15 / 200.f,0,0 };
-
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
-				glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-					directionalShadows.cascadesTexture, 0, lightIndex); //last is layer
-
-				glClear(GL_DEPTH_BUFFER_BIT);
-				float lastNearPlane = 0.0001;
-
-				for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+				if (internal.directionalLights[lightIndex].castShadowsIndex >= 0)
 				{
-					glViewport(0, directionalShadows.shadowSize * i,
-						directionalShadows.shadowSize, directionalShadows.shadowSize);
+					internal.directionalLights[lightIndex].castShadowsIndex = shadowCastCount;
 
-					auto projection = calculateLightProjectionMatrix(lightDir, lightView,
-						directionalShadows.frustumSplits[i] * camera.farPlane, 
-						lastNearPlane,
-						zOffsets[i] * camera.farPlane);
+					glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
+					//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-					//this will add some precision but add artefacts todo?
-					//lastNearPlane = zOffsets[i] * camera.farPlane;
+					glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
+					//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
 
-					directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
-
-					renderModelsShadows(directionalLights[lightIndex].lightSpaceMatrix[i]);
+					//zoffset is used to move the light further
 
 
+					float zOffsets[] = { 15 / 200.f,0,0 };
+
+					glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
+					glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+						directionalShadows.cascadesTexture, 0, shadowCastCount); //last is layer
+
+					glClear(GL_DEPTH_BUFFER_BIT);
+					float lastNearPlane = 0.0001;
+
+					for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+					{
+						glViewport(0, directionalShadows.shadowSize * i,
+							directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+						auto projection = calculateLightProjectionMatrix(lightDir, lightView,
+							directionalShadows.frustumSplits[i] * camera.farPlane,
+							lastNearPlane,
+							zOffsets[i] * camera.farPlane);
+
+						//this will add some precision but add artefacts todo?
+						//lastNearPlane = zOffsets[i] * camera.farPlane;
+
+						internal.directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
+
+						renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i]);
+
+
+					}
+
+					shadowCastCount++;
 				}
-
 			}
 			
 
@@ -1828,9 +2154,15 @@ namespace gl3d
 		if (internal.spotLights.size())
 		{
 			bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged;
-			if (internal.spotLights.size() != spotShadows.textureCount)
+			int spotLightsShadowsCount = 0;
+			for (const auto& i : internal.spotLights)
 			{
-				spotShadows.allocateTextures(internal.spotLights.size());
+				if (i.castShadows) { spotLightsShadowsCount++; }
+			}
+
+			if (spotLightsShadowsCount != spotShadows.textureCount)
+			{
+				spotShadows.allocateTextures(spotLightsShadowsCount);
 				shouldRenderStaticGeometryAllLights = true; 
 			}
 			if (internal.perFrameFlags.shouldUpdateSpotShadows) //some lights changed
@@ -1863,7 +2195,7 @@ namespace gl3d
 						internal.spotLights[lightIndex].changedThisFrame = false;
 
 						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							spotShadows.staticGeometryTextures, 0, lightIndex);
+							spotShadows.staticGeometryTextures, 0, shadowCastCount);
 						glClear(GL_DEPTH_BUFFER_BIT);
 						//render only static geometry first
 						renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, true);
@@ -1880,19 +2212,21 @@ namespace gl3d
 				0, 0, 0,
 				spotShadows.shadowTextures, GL_TEXTURE_2D_ARRAY, 0,
 				0, 0, 0,
-				spotShadows.shadowSize, spotShadows.shadowSize, internal.spotLights.size()
+				spotShadows.shadowSize, spotShadows.shadowSize, spotLightsShadowsCount
 			);
 
 			//render dynamic geometry on top
 			glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
+			shadowCastCount = 0;
 			for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
 			{
 				if (internal.spotLights[lightIndex].castShadows)
 				{
 					glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-						spotShadows.shadowTextures, 0, lightIndex);
+						spotShadows.shadowTextures, 0, shadowCastCount);
 
 					renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, false);
+					shadowCastCount++;
 				}
 				
 			}
@@ -2319,28 +2653,28 @@ namespace gl3d
 
 		glUniformMatrix4fv(lightShader.light_u_view, 1, GL_FALSE, &(camera.getWorldToViewMatrix()[0][0]) );
 
-		if (pointLights.size())
+		if (internal.pointLights.size())
 		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.pointLightsBlockBuffer);
 		
-			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
-				, &pointLights[0], GL_STREAM_DRAW);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.pointLights.size() * sizeof(internal::GpuPointLight)
+				, &internal.pointLights[0], GL_STREAM_DRAW);
 		
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lightShader.pointLightsBlockBuffer);
 		
 		}
-		glUniform1i(lightShader.light_u_pointLightCount, pointLights.size());
+		glUniform1i(lightShader.light_u_pointLightCount, internal.pointLights.size());
 
-		if (directionalLights.size())
+		if (internal.directionalLights.size())
 		{
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.directionalLightsBlockBuffer);
 
-			glBufferData(GL_SHADER_STORAGE_BUFFER, directionalLights.size() * sizeof(internal::GpuDirectionalLight)
-				, &directionalLights[0], GL_STREAM_DRAW);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.directionalLights.size() * sizeof(internal::GpuDirectionalLight)
+				, &internal.directionalLights[0], GL_STREAM_DRAW);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightShader.directionalLightsBlockBuffer);
 
 		}
-		glUniform1i(lightShader.light_u_directionalLightCount, directionalLights.size());
+		glUniform1i(lightShader.light_u_directionalLightCount, internal.directionalLights.size());
 
 		if (internal.spotLights.size())
 		{

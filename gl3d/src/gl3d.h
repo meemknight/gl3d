@@ -121,6 +121,45 @@ namespace gl3d
 
 	#pragma endregion
 	
+	#pragma region point lights
+		PointLight createPointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.f),
+			float dist = 20, float attenuation = 1);
+		void detletePointLight(PointLight& l);
+
+		glm::vec3 getPointLightPosition(PointLight& l);
+		void setPointLightPosition(PointLight& l, glm::vec3 position);
+		bool isPointLight(PointLight& l);
+		glm::vec3 getPointLightColor(PointLight& l);
+		void setPointLightColor(PointLight& l, glm::vec3 color);
+		float getPointLightDistance(PointLight& l); //light distance
+		void setPointLightDistance(PointLight& l, float distance); //light distance
+		float getPointLightAttenuation(PointLight& l); //light distance
+		void setPointLightAttenuation(PointLight& l, float attenuation); //light distance
+
+	#pragma endregion
+
+	#pragma region directional light
+
+		DirectionalLight createDirectionalLight(glm::vec3 direction, 
+			glm::vec3 color = glm::vec3(1.f), float hardness = 1, bool castShadows = 1);
+		void deleteDirectionalLight(DirectionalLight& l);
+		bool isDirectionalLight(DirectionalLight& l);
+		
+		glm::vec3 getDirectionalLightDirection(DirectionalLight& l);
+		void setDirectionalLightDirection(DirectionalLight& l, glm::vec3 direction);
+
+		glm::vec3 getDirectionalLightColor(DirectionalLight& l);
+		void setDirectionalLightColor(DirectionalLight& l, glm::vec3 color);
+
+		float getDirectionalLightHardness(DirectionalLight& l);
+		void setDirectionalLightHardness(DirectionalLight& l, float hardness);
+		
+		bool getDirectionalLightShadows(DirectionalLight& l);
+		void setDirectionalLightShadows(DirectionalLight& l, bool castShadows);
+		
+
+	#pragma endregion
+
 	#pragma region spot light
 
 		SpotLight createSpotLight(glm::vec3 position, float fov,
@@ -181,10 +220,6 @@ namespace gl3d
 		Camera camera;
 		SkyBox skyBox;
 
-		std::vector<gl3d::internal::GpuPointLight> pointLights;
-		std::vector<gl3d::internal::GpuDirectionalLight> directionalLights;
-
-
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
 		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
@@ -216,6 +251,8 @@ namespace gl3d
 			int getTextureIndex(Texture t);
 			int getEntityIndex(Entity t);
 			int getSpotLightIndex(SpotLight l);
+			int getPointLightIndex(PointLight l);
+			int getDirectionalLightIndex(DirectionalLight l);
 
 			//material
 			std::vector<GpuMaterial> materials;
@@ -239,6 +276,15 @@ namespace gl3d
 			//spot lights
 			std::vector<internal::GpuSpotLight> spotLights;
 			std::vector<int> spotLightIndexes;
+
+			//point lights
+			std::vector<internal::GpuPointLight> pointLights;
+			std::vector<int> pointLightIndexes;
+
+			//directional lights
+			std::vector<internal::GpuDirectionalLight> directionalLights;
+			std::vector<int> directionalLightIndexes;
+
 
 			struct PerFrameFlags
 			{

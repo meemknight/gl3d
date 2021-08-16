@@ -49,7 +49,8 @@ uniform int u_pointLightCount;
 
 struct DirectionalLight
 {
-	vec4 direction; //w not used
+	vec3 direction; 
+	int castShadowsIndex; //this is both the index and the toggle
 	vec4 color;		//w is a hardness exponent
 	mat4 firstLightSpaceMatrix;
 	mat4 secondLightSpaceMatrix;
@@ -96,7 +97,6 @@ const float randomNumbers[100] = {
 0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,
 0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505,
 };
-
 
 
 float attenuationFunctionNotClamped(float x, float r, float p)
@@ -487,10 +487,15 @@ void main()
 		vec3 lightDirection = normalize(lightPosition - pos);
 
 		float currentDist = distance(lightPosition, pos);
-		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);
+		if(currentDist >= light[i].dist)
+		{
+			continue;
+		}
+
+		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
-			pos, viewDir, albedo, normal, F0);
+			pos, viewDir, albedo, normal, F0) * attenuation;
 
 	}
 
@@ -500,10 +505,13 @@ void main()
 		vec3 lightDirection = dLight[i].direction.xyz;
 		vec3 lightColor = dLight[i].color.rgb;
 
-		float shadow = cascadedShadowCalculation(pos, normal, lightDirection, i);
-		
-		shadow = pow(shadow, dLight[i].color.w);
-		
+		float shadow = 1;
+
+		if(dLight[i].castShadowsIndex >= 0)
+		{	
+			shadow = cascadedShadowCalculation(pos, normal, lightDirection, dLight[i].castShadowsIndex);
+			shadow = pow(shadow, dLight[i].color.w);
+		}
 
 		//if(shadow == 0)
 		//{

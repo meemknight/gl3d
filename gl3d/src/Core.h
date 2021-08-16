@@ -20,6 +20,8 @@ namespace gl3d
 	CREATE_RENDERER_OBJECT_HANDLE(Model);
 	CREATE_RENDERER_OBJECT_HANDLE(Texture);
 	CREATE_RENDERER_OBJECT_HANDLE(SpotLight);
+	CREATE_RENDERER_OBJECT_HANDLE(PointLight);
+	CREATE_RENDERER_OBJECT_HANDLE(DirectionalLight);
 
 #undef CREATE_RENDERER_OBJECT_HANDLE(x)
 
@@ -71,7 +73,8 @@ namespace gl3d
 
 		struct GpuDirectionalLight
 		{
-			glm::vec4 direction = {0,-1,0, 0};
+			glm::vec3 direction = {0,-1,0};
+			int castShadowsIndex = 1;
 			glm::vec3 color = { 1,1,1 };
 			float hardness = 1;
 			glm::mat4 lightSpaceMatrix[3]; //todo magic number
