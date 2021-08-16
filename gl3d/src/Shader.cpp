@@ -1,11 +1,94 @@
 #include "Shader.h"
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 
 namespace gl3d
 {
+	
+	GLint createShaderFromData(const char* data, GLenum shaderType)
+	{
+		GLuint shaderId = glCreateShader(shaderType);
+		glShaderSource(shaderId, 1, &data, nullptr);
+		glCompileShader(shaderId);
 
-	GLint createShaderFromFile(const char *source, GLenum shaderType)
+		GLint rezult = 0;
+		glGetShaderiv(shaderId, GL_COMPILE_STATUS, &rezult);
+
+		if (!rezult)
+		{
+			char* message = 0;
+			int   l = 0;
+
+			glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &l);
+
+			if (l)
+			{
+				message = new char[l];
+
+				glGetShaderInfoLog(shaderId, l, &l, message);
+
+				message[l - 1] = 0;
+
+				std::cout << data << ":\n" << message << "\n";
+
+				delete[] message;
+
+			}
+			else
+			{
+				std::cout << data << ":\n" << "unknown error" << "\n";
+			}
+
+			glDeleteShader(shaderId);
+
+			shaderId = 0;
+			return shaderId;
+		}
+
+		return shaderId;
+
+	}
+
+#ifdef GL3D_LOAD_SHADERS_FROM_HEADER_ONLY
+
+	std::unordered_map<std::string, const char*> headerOnlyShaders =
+	{
+
+		//std::pair< std::string, const char*>{"name", "value"}
+		//#pragma shaderSources
+	
+
+
+	};
+	
+	GLint createShaderFromFile(const char* source, GLenum shaderType)
+	{
+		std::string newFileName;
+		std::string strSource = source;
+		newFileName.reserve(30);
+
+		for(int i=strSource.size()-1; i >= 0; i--)
+		{
+			if (strSource[i] != '\\' && strSource[i] != '/') 
+			{
+				newFileName.insert(newFileName.begin(), strSource[i]);
+			}
+			else
+			{
+				break;
+			}
+
+		}
+
+		auto rez = createShaderFromData(source, shaderType);
+		return rez;
+	
+	}
+
+#else
+
+	GLint createShaderFromFile(const char* source, GLenum shaderType)
 	{
 		std::ifstream file;
 		file.open(source);
@@ -21,54 +104,27 @@ namespace gl3d
 		size = file.tellg();
 		file.seekg(0, file.beg);
 
-		char *fileContent = new char[size] {};
+		char* fileContent = new char[size+1] {};
 
 		file.read(fileContent, size);
 
 
 		file.close();
 
-		GLuint shaderId = glCreateShader(shaderType);
-		glShaderSource(shaderId, 1, &fileContent, &size);
-		glCompileShader(shaderId);
+		auto rez = createShaderFromData(fileContent, shaderType);
 
 		delete[] fileContent;
 
-		GLint rezult = 0;
-		glGetShaderiv(shaderId, GL_COMPILE_STATUS, &rezult);
+		return rez;
 
-		if (!rezult)
-		{
-			char *message = 0;
-			int   l = 0;
-
-			glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &l);
-
-			if(l)
-			{
-				message = new char[l];
-
-				glGetShaderInfoLog(shaderId, l, &l, message);
-
-				message[l - 1] = 0;
-
-				std::cout << source << ": " << message << "\n";
-
-				delete[] message;
-				
-			}else
-			{
-				std::cout << source << ": " << "unknown error"<< "\n";
-			}
-
-			glDeleteShader(shaderId);
-
-			shaderId = 0;
-			return shaderId;
-		}
-
-		return shaderId;
 	}
+
+#endif
+
+
+
+
+
 
 	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader)
 	{
@@ -234,7 +290,7 @@ namespace gl3d
 	};
 
 
-
+	//todo move
 	void LightShader::create()
 	{
 	#pragma region brdf texture
