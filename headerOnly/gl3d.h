@@ -49,7 +49,7 @@ namespace gl3d
 
 	struct GpuMaterial
 	{
-		glm::vec4 kd = glm::vec4(1); //w component not used
+		glm::vec4 kd = glm::vec4(1); //w component not used //rename to albedo or color
 		
 		//rma
 		float roughness = 0.5f;
@@ -64,6 +64,22 @@ namespace gl3d
 
 			return *this;
 		}
+
+		bool operator==(const GpuMaterial& other)
+		{
+			return
+				(kd == other.kd)
+				&& (roughness == other.roughness)
+				&& (metallic == other.metallic)
+				&& (ao == other.ao)
+				&& (emmisive == other.emmisive)
+				;
+		};
+
+		bool operator!=(const GpuMaterial& other)
+		{
+			return !(*this == other);
+		};
 	};
 
 	//todo move
@@ -541,7 +557,8 @@ namespace gl3d
 		void clear();
 
 		Material material;
-	
+		int ownMaterial = 0;
+
 	};
 
 
@@ -550,7 +567,6 @@ namespace gl3d
 
 		std::vector < GraphicModel >models;
 		std::vector < char* > subModelsNames; //for imgui
-
 		void clear();
 	
 	};
@@ -560,7 +576,9 @@ namespace gl3d
 	{
 		Transform transform;
 
-		Model model;
+		std::vector < GraphicModel >models;
+		std::vector < char* > subModelsNames; //for imgui
+		void clear();
 
 		unsigned char flags = {}; // lsb -> 1 static
 
@@ -928,12 +946,19 @@ namespace gl3d
 		bool isEntityStatic(Entity &e);
 		void setEntityStatic(Entity &e, bool s = true);
 		void deleteEntity(Entity& e);
-		int getEntitySubModelCount(Entity& e);
 		bool isEntity(Entity& e);
 		bool isEntityVisible(Entity& e);
 		void setEntityVisible(Entity& e, bool v = true);
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
+		
+		int getEntityMeshesCount(Entity& e);
+		GpuMaterial getEntityMeshMaterialData(Entity& e, int meshIndex);
+		void setEntityMeshMaterialData(Entity& e, int meshIndex, GpuMaterial mat);
+
+		std::string getEntityMeshMaterialName(Entity& e, int meshIndex);
+		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name);
+
 
 	#pragma endregion
 

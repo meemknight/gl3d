@@ -39,7 +39,7 @@ namespace gl3d
 
 	struct GpuMaterial
 	{
-		glm::vec4 kd = glm::vec4(1); //w component not used
+		glm::vec4 kd = glm::vec4(1); //w component not used //rename to albedo or color
 		
 		//rma
 		float roughness = 0.5f;
@@ -54,6 +54,22 @@ namespace gl3d
 
 			return *this;
 		}
+
+		bool operator==(const GpuMaterial& other)
+		{
+			return
+				(kd == other.kd)
+				&& (roughness == other.roughness)
+				&& (metallic == other.metallic)
+				&& (ao == other.ao)
+				&& (emmisive == other.emmisive)
+				;
+		};
+
+		bool operator!=(const GpuMaterial& other)
+		{
+			return !(*this == other);
+		};
 	};
 
 	//todo move

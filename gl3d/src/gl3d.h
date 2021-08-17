@@ -206,12 +206,19 @@ namespace gl3d
 		bool isEntityStatic(Entity &e);
 		void setEntityStatic(Entity &e, bool s = true);
 		void deleteEntity(Entity& e);
-		int getEntitySubModelCount(Entity& e);
 		bool isEntity(Entity& e);
 		bool isEntityVisible(Entity& e);
 		void setEntityVisible(Entity& e, bool v = true);
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
+		
+		int getEntityMeshesCount(Entity& e);
+		GpuMaterial getEntityMeshMaterialData(Entity& e, int meshIndex);
+		void setEntityMeshMaterialData(Entity& e, int meshIndex, GpuMaterial mat);
+
+		std::string getEntityMeshMaterialName(Entity& e, int meshIndex);
+		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name);
+
 
 	#pragma endregion
 

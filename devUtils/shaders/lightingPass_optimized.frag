@@ -356,10 +356,17 @@ float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir,
 sampler2DArrayShadow shadowMap, int index, float near, float far)
 {
 	//float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
-	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
+	float bias = max((0.01f) * (1.0 - dot(normal, -lightDir)), 0.001f);
 	
-	bias = nonLinearDepth(bias, near, far);
-	
+	//bias = nonLinearDepth(bias, near, far);
+	float currentDepth = projCoords.z;
+	float liniarizedDepth = linearizeDepth(currentDepth, near, far);
+	liniarizedDepth += bias;
+	float biasedLogDepth = nonLinearDepth(liniarizedDepth, near, far);
+
+	bias = biasedLogDepth - currentDepth;
+	bias += 0.00003f;
+
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
@@ -554,13 +561,14 @@ void main()
 	{
 		vec3 lightPosition = spotLights[i].position.xyz;
 		vec3 lightColor = spotLights[i].color.rgb;
-		vec3 lightDirection = spotLights[i].direction.xyz;
+		vec3 spotLightDirection = spotLights[i].direction.xyz;
+		vec3 lightDirection = -normalize(lightPosition - pos);
 
 		float angle = spotLights[i].position.w;
 		float dist = spotLights[i].direction.w;
 		float at = spotLights[i].color.w;
 
-		float dotAngle = dot(normalize(vec3(pos - lightPosition)), lightDirection);
+		float dotAngle = dot(normalize(vec3(pos - lightPosition)), spotLightDirection);
 
 		float currentDist = distance(lightPosition, pos);
 

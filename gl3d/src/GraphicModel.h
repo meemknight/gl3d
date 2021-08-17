@@ -98,7 +98,8 @@ namespace gl3d
 		void clear();
 
 		Material material;
-	
+		int ownMaterial = 0;
+
 	};
 
 
@@ -107,7 +108,6 @@ namespace gl3d
 
 		std::vector < GraphicModel >models;
 		std::vector < char* > subModelsNames; //for imgui
-
 		void clear();
 	
 	};
@@ -117,7 +117,9 @@ namespace gl3d
 	{
 		Transform transform;
 
-		Model model;
+		std::vector < GraphicModel >models;
+		std::vector < char* > subModelsNames; //for imgui
+		void clear();
 
 		unsigned char flags = {}; // lsb -> 1 static
 

@@ -420,9 +420,9 @@ int main()
 	//auto barelModel = renderer.loadObject("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
-	auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
+	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
@@ -1008,17 +1008,19 @@ int main()
 				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
 				if (currentEntity)
 				{
-					auto curentModel = renderer.getModelData(currentEntity->model);
-					int subitemsCount = curentModel->models.size();
+					int subitemsCount = renderer.getEntityMeshesCount(models[itemCurrent]);
 
 					ImGui::ListBox("Object components", &subItemCurent,
-						curentModel->subModelsNames.data(), subitemsCount);
+						currentEntity->subModelsNames.data(), subitemsCount);
 				}
-
 			
 
 			}
 			
+			ImGui::NewLine();
+			ImGui::Text("Total materials: %d", 
+				renderer.internal.materialIndexes.size());
+
 			ImGui::NewLine();
 
 
@@ -1029,7 +1031,6 @@ int main()
 
 				if (currentEntity)
 				{
-					auto curentModel = renderer.getModelData(currentEntity->model);
 
 					ImGui::NewLine();
 
@@ -1063,17 +1064,29 @@ int main()
 
 					renderer.setEntityTransform(models[itemCurrent], transform);
 
-					if (subItemCurent < curentModel->models.size())
+					if (subItemCurent < renderer.getEntityMeshesCount(models[itemCurrent]))
 					{
-						auto& material = *renderer.getMaterialData(curentModel->models[subItemCurent].material);
+						auto& material = *renderer.getMaterialData(
+							currentEntity->models[subItemCurent].material);
 
+						std::string name = renderer.getEntityMeshMaterialName(
+							models[itemCurrent], subItemCurent);
+
+						auto materialData = renderer.getEntityMeshMaterialData(
+							models[itemCurrent], subItemCurent);
+
+						name = "Material name: " + name;
 
 						ImGui::Text("Object material");
-						ImGui::ColorEdit3("difuse", &material.kd[0]);
-						ImGui::SliderFloat("emmisive", &material.emmisive, 0, 1);
-						ImGui::SliderFloat("roughness", &material.roughness, 0, 1);
-						ImGui::SliderFloat("metallic", &material.metallic, 0, 1);
-						ImGui::SliderFloat("ambient oclusion", &material.ao, 0, 1);
+						ImGui::Text(name.c_str());
+						ImGui::ColorEdit3("difuse", &materialData.kd[0]);
+						ImGui::SliderFloat("emmisive", &materialData.emmisive, 0, 1);
+						ImGui::SliderFloat("roughness", &materialData.roughness, 0, 1);
+						ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);
+						ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
+
+						renderer.setEntityMeshMaterialData(
+							models[itemCurrent], subItemCurent, materialData);
 
 						auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
 						{
@@ -1128,7 +1141,7 @@ int main()
 							ImGui::PopID();
 						};
 
-						auto currentMateiral = curentModel->models[subItemCurent].material;
+						auto currentMateiral = currentEntity->models[subItemCurent].material;
 						auto materialTextureData = renderer.getMaterialTextures(currentMateiral);
 
 						if (materialTextureData != nullptr)

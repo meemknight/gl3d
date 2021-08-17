@@ -365,7 +365,7 @@ sampler2DArrayShadow shadowMap, int index, float near, float far)
 	float biasedLogDepth = nonLinearDepth(liniarizedDepth, near, far);
 
 	bias = biasedLogDepth - currentDepth;
-	bias += 0.00002f;
+	bias += 0.00003f;
 
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
