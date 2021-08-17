@@ -73,6 +73,10 @@ struct SpotLight
 	int shadowIndex;
 	int castShadows;		
 	int changedThisFrame; //not used in the gpu
+	float near;
+	float far;
+	float notUsed1;
+	float notUsed2;
 	mat4 lightSpaceMatrix;
 };
 readonly restrict layout(std140) buffer u_spotLights
@@ -335,10 +339,27 @@ float shadowCalculationLinear(vec3 projCoords, vec3 normal, vec3 lightDir, sampl
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
-//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
-float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
+float linearizeDepth(float depth, float near, float far)
 {
-	float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
+	float z = depth * 2.0 - 1.0; // Back to NDC 
+	return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
+float nonLinearDepth(float depth, float near, float far)
+{
+	return ((1.f/depth) - (1.f/near)) / ((1.f/far) - (1.f/near));
+
+}
+
+//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
+float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir,
+sampler2DArrayShadow shadowMap, int index, float near, float far)
+{
+	//float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
+	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
+	
+	bias = nonLinearDepth(bias, near, far);
+	
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
@@ -567,7 +588,8 @@ void main()
 			if(spotLights[i].castShadows != 0)
 			{
 				shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
-					u_spotShadows, spotLights[i].shadowIndex);
+					u_spotShadows, spotLights[i].shadowIndex, spotLights[i].near, spotLights[i].far);
+
 				shadow = pow(shadow, spotLights[i].hardness);
 			}
 

@@ -196,7 +196,10 @@ namespace gl3d
 
 	#pragma region Entity
 	
-		Entity createEntity(Model m, Transform transform = {}, bool staticGeometry = 0);
+		Entity createEntity(Model m, Transform transform = {}, 
+			bool staticGeometry = 1, bool visible = 1, bool castShadows = 1);
+		void setEntityModel(Entity& e, Model m);
+		void clearEntityModel(Entity& e);
 		CpuEntity* getEntityData(Entity &e); //todo this will probably dissapear
 		Transform getEntityTransform(Entity &e);
 		void setEntityTransform(Entity &e, Transform transform);
@@ -205,8 +208,26 @@ namespace gl3d
 		void deleteEntity(Entity& e);
 		int getEntitySubModelCount(Entity& e);
 		bool isEntity(Entity& e);
+		bool isEntityVisible(Entity& e);
+		void setEntityVisible(Entity& e, bool v = true);
+		void setEntityCastShadows(Entity& e, bool s = true);
+		bool getEntityCastShadows(Entity& e);
 
 	#pragma endregion
+
+	#pragma region settings
+
+		void enableNormalMapping(bool normalMapping = 1);
+		bool isNormalMappingEnabeled();
+
+		void enableLightSubScattering(bool lightSubScatter = 1);
+		bool isLightSubScatteringEnabeled();
+
+		void enableSSAO(bool ssao = 1);
+		bool isSSAOenabeled();
+
+	#pragma endregion
+
 
 		struct VAO
 		{

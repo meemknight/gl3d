@@ -92,7 +92,11 @@ namespace gl3d
 			float hardness = 1;
 			int shadowIndex = 0;
 			int castShadows = 1;	//todo implement
-			int	changedThisFrame = true; //this is sent to the gpu but not used there
+			int	changedThisFrame = 1; //this is sent to the gpu but not used there
+			float nearPlane = 0.1;
+			float farPlane = 10;
+			float notUsed1 = 0;
+			float notUsed2 = 0;
 			glm::mat4 lightSpaceMatrix;
 		};
 

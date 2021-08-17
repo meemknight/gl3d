@@ -18,6 +18,8 @@ namespace gl3d
 	{
 		w = x; h = y;
 
+		glEnable(GL_CULL_FACE);
+
 		lightShader.create();
 		vao.createVAOs();
 		internal.skyBoxLoaderAndDrawer.createGpuData();
@@ -1394,7 +1396,7 @@ namespace gl3d
 #pragma endregion
 
 	Entity Renderer3D::createEntity(Model m, Transform transform,
-		bool staticGeometry)
+		bool staticGeometry, bool visible, bool castShadows)
 	{
 		int id = internal::generateNewIndex(internal.entitiesIndexes);
 
@@ -1402,14 +1404,40 @@ namespace gl3d
 		entity.model = m;
 		entity.transform = transform;
 		entity.setStatic(staticGeometry);
-
+		entity.setVisible(visible);
+		entity.setCastShadows(castShadows);
 
 		internal.entitiesIndexes.push_back(id);
 		internal.cpuEntities.push_back(entity);
 
+		if (staticGeometry && visible && castShadows)
+		{
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
+
+
 		Entity e;
 		e.id_ = id;
 		return e;
+	}
+
+	void Renderer3D::setEntityModel(Entity& e, Model m)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn
+
+		//clear if needed
+
+		internal.cpuEntities[i].model = m;
+	}
+
+	void Renderer3D::clearEntityModel(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return ; } //warn
+
+		internal.cpuEntities[i].model = {};
+
 	}
 
 	CpuEntity* Renderer3D::getEntityData(Entity &e)
@@ -1449,7 +1477,6 @@ namespace gl3d
 
 	bool Renderer3D::isEntityStatic(Entity &e)
 	{
-
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return 0; } //warn or sthing
 
@@ -1458,17 +1485,18 @@ namespace gl3d
 
 	void Renderer3D::setEntityStatic(Entity &e, bool s)
 	{
-
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
 
-		if (internal.cpuEntities[i].isStatic() != s)
+		if ((internal.cpuEntities[i].isStatic() != s)
+			&& internal.cpuEntities[i].isVisible()
+			&& internal.cpuEntities[i].castShadows()
+			)
 		{
-			internal.cpuEntities[i].setStatic(s);
 			internal.perFrameFlags.staticGeometryChanged = true;
 		}
 
-
+		internal.cpuEntities[i].setStatic(s);
 	}
 
 	void Renderer3D::deleteEntity(Entity &e)
@@ -1513,6 +1541,74 @@ namespace gl3d
 		{
 			return true;
 		}
+	}
+
+	bool Renderer3D::isEntityVisible(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+		return internal.cpuEntities[i].isVisible();
+	}
+
+	void Renderer3D::setEntityVisible(Entity& e, bool v)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		if (internal.cpuEntities[i].isVisible() != v)
+		{
+			internal.cpuEntities[i].setVisible(v);
+			if (internal.cpuEntities[i].isStatic()
+				&& internal.cpuEntities[i].castShadows()
+				)
+			{
+				internal.perFrameFlags.staticGeometryChanged = true;
+			}
+		}
+	}
+
+	void Renderer3D::setEntityCastShadows(Entity& e, bool s)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		if(
+			internal.cpuEntities[i].isVisible()
+			&& internal.cpuEntities[i].isStatic()
+			&& (s != internal.cpuEntities[i].castShadows())
+			)
+		{
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
+
+		internal.cpuEntities[i].setCastShadows(s);
+	}
+
+	bool Renderer3D::getEntityCastShadows(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+		return internal.cpuEntities[i].castShadows();
+	}
+
+	void Renderer3D::enableNormalMapping(bool normalMapping)
+	{
+		lightShader.normalMap = normalMapping;
+	}
+
+	bool Renderer3D::isNormalMappingEnabeled()
+	{
+		return lightShader.normalMap;
+	}
+
+	void Renderer3D::enableLightSubScattering(bool lightSubScatter)
+	{
+		lightShader.lightPassUniformBlockCpuData.lightSubScater = lightSubScatter;
+	}
+
+	bool Renderer3D::isLightSubScatteringEnabeled()
+	{
+		return lightShader.lightPassUniformBlockCpuData.lightSubScater;
 	}
 
 	//todo look into  glProgramUniform
@@ -1843,6 +1939,11 @@ namespace gl3d
 			//render shadow of the models
 			for (auto& i : internal.cpuEntities)
 			{
+
+				if (!i.isVisible() || !i.castShadows())
+				{
+					continue;
+				}
 
 				if (filter)
 				{
@@ -2188,10 +2289,17 @@ namespace gl3d
 						float fov = internal.spotLights[lightIndex].cosHalfAngle;
 						fov = std::acos(fov);
 						fov *= 2;
-						auto projection = glm::perspective(fov, 1.f, 0.01f, internal.spotLights[lightIndex].dist);
+
+						float nearPlane = 0.01f;
+						float farPlane = internal.spotLights[lightIndex].dist;
+
+						auto projection = glm::perspective(fov, 1.f, nearPlane, farPlane);
 						internal.spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
 						internal.spotLights[lightIndex].shadowIndex = shadowCastCount;
-					
+						
+						internal.spotLights[lightIndex].nearPlane = nearPlane;
+						internal.spotLights[lightIndex].farPlane = farPlane;
+
 						internal.spotLights[lightIndex].changedThisFrame = false;
 
 						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
@@ -2256,6 +2364,11 @@ namespace gl3d
 		#pragma region z pre pass
 		for (auto& i : internal.cpuEntities)
 		{
+			if (!i.isVisible())
+			{
+				continue;
+			}
+
 			auto id = internal.getModelIndex(i.model.id_);
 			if (id < 0)
 			{
@@ -2359,6 +2472,10 @@ namespace gl3d
 		//first we render the entities in the gbuffer
 		for (auto& i : internal.cpuEntities)
 		{
+			if (!i.isVisible())
+			{
+				continue;
+			}
 
 			auto id = internal.getModelIndex(i.model.id_);
 			if (id < 0) 

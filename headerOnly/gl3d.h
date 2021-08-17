@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-16
+//built on 2021-08-17
 ////////////////////////////////////////////////
 
 
@@ -102,7 +102,11 @@ namespace gl3d
 			float hardness = 1;
 			int shadowIndex = 0;
 			int castShadows = 1;	//todo implement
-			int	changedThisFrame = true; //this is sent to the gpu but not used there
+			int	changedThisFrame = 1; //this is sent to the gpu but not used there
+			float nearPlane = 0.1;
+			float farPlane = 10;
+			float notUsed1 = 0;
+			float notUsed2 = 0;
 			glm::mat4 lightSpaceMatrix;
 		};
 
@@ -560,6 +564,32 @@ namespace gl3d
 
 		unsigned char flags = {}; // lsb -> 1 static
 
+		bool castShadows() {return (flags & 0b0000'0100); }
+		void setCastShadows(bool v)
+		{
+			if (v)
+			{
+				flags = flags | 0b0000'0100;
+			}
+			else
+			{
+				flags = flags & ~(0b0000'0100);
+			}
+		}
+
+		bool isVisible() { return (flags & 0b0000'0010); }
+		void setVisible(bool v)
+		{
+			if (v)
+			{
+				flags = flags | 0b0000'0010;
+			}
+			else
+			{
+				flags = flags & ~(0b0000'0010);
+			}
+		}
+
 		bool isStatic() { return (flags & 0b0000'0001); }
 		void setStatic(bool s)
 		{
@@ -888,7 +918,10 @@ namespace gl3d
 
 	#pragma region Entity
 	
-		Entity createEntity(Model m, Transform transform = {}, bool staticGeometry = 0);
+		Entity createEntity(Model m, Transform transform = {}, 
+			bool staticGeometry = 1, bool visible = 1, bool castShadows = 1);
+		void setEntityModel(Entity& e, Model m);
+		void clearEntityModel(Entity& e);
 		CpuEntity* getEntityData(Entity &e); //todo this will probably dissapear
 		Transform getEntityTransform(Entity &e);
 		void setEntityTransform(Entity &e, Transform transform);
@@ -897,8 +930,26 @@ namespace gl3d
 		void deleteEntity(Entity& e);
 		int getEntitySubModelCount(Entity& e);
 		bool isEntity(Entity& e);
+		bool isEntityVisible(Entity& e);
+		void setEntityVisible(Entity& e, bool v = true);
+		void setEntityCastShadows(Entity& e, bool s = true);
+		bool getEntityCastShadows(Entity& e);
 
 	#pragma endregion
+
+	#pragma region settings
+
+		void enableNormalMapping(bool normalMapping = 1);
+		bool isNormalMappingEnabeled();
+
+		void enableLightSubScattering(bool lightSubScatter = 1);
+		bool isLightSubScatteringEnabeled();
+
+		void enableSSAO(bool ssao = 1);
+		bool isSSAOenabeled();
+
+	#pragma endregion
+
 
 		struct VAO
 		{

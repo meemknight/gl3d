@@ -678,12 +678,11 @@ int main()
 			}
 
 			ImGui::Checkbox("Normal map", &normalMap);
-			
-			renderer.lightShader.normalMap = normalMap;
+			renderer.enableNormalMapping(normalMap);
 			
 			static bool lightSubScater = 1;
 			ImGui::Checkbox("Light sub scater", &lightSubScater);
-			renderer.lightShader.lightPassUniformBlockCpuData.lightSubScater = lightSubScater;
+			renderer.enableLightSubScattering(lightSubScater);
 
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
@@ -1040,13 +1039,21 @@ int main()
 					ImGui::DragFloat3("scale", &transform.scale[0], 0.1);
 					float s = 0;
 					ImGui::InputFloat("sameScale", &s);
-					bool staticEntity = renderer.isEntityStatic(models[itemCurrent]);
 					ImGui::NewLine();
 
 					ImGui::Text("Object flags");
+					bool staticEntity = renderer.isEntityStatic(models[itemCurrent]);
 					ImGui::Checkbox("static geometry", &staticEntity);
 					renderer.setEntityStatic(models[itemCurrent], staticEntity);
-			
+					
+					bool visible = renderer.isEntityVisible(models[itemCurrent]);
+					ImGui::Checkbox("visible", &visible);
+					renderer.setEntityVisible(models[itemCurrent], visible);
+
+					bool castShadows = renderer.getEntityCastShadows(models[itemCurrent]);
+					ImGui::Checkbox("cast shadows", &castShadows);
+					renderer.setEntityCastShadows(models[itemCurrent], castShadows);
+
 					ImGui::NewLine();
 
 					if (s > 0)

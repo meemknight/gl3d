@@ -73,6 +73,10 @@ struct SpotLight
 	int shadowIndex;
 	int castShadows;		
 	int changedThisFrame; //not used in the gpu
+	float near;
+	float far;
+	float notUsed1;
+	float notUsed2;
 	mat4 lightSpaceMatrix;
 };
 readonly restrict layout(std140) buffer u_spotLights
@@ -335,10 +339,34 @@ float shadowCalculationLinear(vec3 projCoords, vec3 normal, vec3 lightDir, sampl
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
-//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
-float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
+float linearizeDepth(float depth, float near, float far)
 {
-	float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
+	float z = depth * 2.0 - 1.0; // Back to NDC 
+	return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
+float nonLinearDepth(float depth, float near, float far)
+{
+	return ((1.f/depth) - (1.f/near)) / ((1.f/far) - (1.f/near));
+
+}
+
+//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
+float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir,
+sampler2DArrayShadow shadowMap, int index, float near, float far)
+{
+	//float bias = max((0.00005) * (1.0 - dot(normal, -lightDir)), 0.00001);
+	float bias = max((0.01f) * (1.0 - dot(normal, -lightDir)), 0.001f);
+	
+	//bias = nonLinearDepth(bias, near, far);
+	float currentDepth = projCoords.z;
+	float liniarizedDepth = linearizeDepth(currentDepth, near, far);
+	liniarizedDepth += bias;
+	float biasedLogDepth = nonLinearDepth(liniarizedDepth, near, far);
+
+	bias = biasedLogDepth - currentDepth;
+	bias += 0.00002f;
+
 	return shadowCalculation(projCoords, bias, shadowMap, index);
 }
 
@@ -533,13 +561,14 @@ void main()
 	{
 		vec3 lightPosition = spotLights[i].position.xyz;
 		vec3 lightColor = spotLights[i].color.rgb;
-		vec3 lightDirection = spotLights[i].direction.xyz;
+		vec3 spotLightDirection = spotLights[i].direction.xyz;
+		vec3 lightDirection = -normalize(lightPosition - pos);
 
 		float angle = spotLights[i].position.w;
 		float dist = spotLights[i].direction.w;
 		float at = spotLights[i].color.w;
 
-		float dotAngle = dot(normalize(vec3(pos - lightPosition)), lightDirection);
+		float dotAngle = dot(normalize(vec3(pos - lightPosition)), spotLightDirection);
 
 		float currentDist = distance(lightPosition, pos);
 
@@ -567,7 +596,8 @@ void main()
 			if(spotLights[i].castShadows != 0)
 			{
 				shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
-					u_spotShadows, spotLights[i].shadowIndex);
+					u_spotShadows, spotLights[i].shadowIndex, spotLights[i].near, spotLights[i].far);
+
 				shadow = pow(shadow, spotLights[i].hardness);
 			}
 

@@ -121,6 +121,32 @@ namespace gl3d
 
 		unsigned char flags = {}; // lsb -> 1 static
 
+		bool castShadows() {return (flags & 0b0000'0100); }
+		void setCastShadows(bool v)
+		{
+			if (v)
+			{
+				flags = flags | 0b0000'0100;
+			}
+			else
+			{
+				flags = flags & ~(0b0000'0100);
+			}
+		}
+
+		bool isVisible() { return (flags & 0b0000'0010); }
+		void setVisible(bool v)
+		{
+			if (v)
+			{
+				flags = flags | 0b0000'0010;
+			}
+			else
+			{
+				flags = flags & ~(0b0000'0010);
+			}
+		}
+
 		bool isStatic() { return (flags & 0b0000'0001); }
 		void setStatic(bool s)
 		{
