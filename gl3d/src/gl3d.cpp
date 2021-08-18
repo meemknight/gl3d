@@ -19,6 +19,9 @@ namespace gl3d
 		w = x; h = y;
 
 		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		lightShader.create();
 		vao.createVAOs();
@@ -2911,10 +2914,13 @@ namespace gl3d
 
 
 		//material buffer
+		if (internal.materials.size())
+		{
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
 			, &internal.materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
+		}
 
 		GLsizei n;
 		glGetProgramStageiv(lightShader.geometryPassShader.id,

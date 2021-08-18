@@ -81,7 +81,7 @@ namespace gl3d
 
 		}
 
-		auto rez = createShaderFromData(source, shaderType);
+		auto rez = createShaderFromData(headerOnlyShaders[newFileName], shaderType);
 		return rez;
 	
 	}

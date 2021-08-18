@@ -1,8 +1,12 @@
 import os
 from datetime import date
 
-files = ["Core", "Texture", "Shader", "Camera", "GraphicModel",\
+cppFiles = ["Core", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
+
+headerFiles = ["Core", "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
+     "gl3d"]
+
 
 initialtext = \
 """////////////////////////////////////////////////
@@ -62,10 +66,16 @@ finalHFile = open("headerOnly/gl3d.h", "w")
 finalHFile.write(initialtext.format(date = date.today()))
 finalHFile.write("\n\n")
 
-for i in files:
+for i in headerFiles:
     f = open(os.path.join("gl3d", "src", i + ".h"))
 
     content = f.read()
+
+    for j in headerFiles:
+        content = content.replace(f"#include <{j}.h>","")
+        content = content.replace(f"#include<{j}.h>","")
+        content = content.replace(f"#include \"{j}.h\"","")
+        content = content.replace(f"#include\"{j}.h\"","")
 
     finalHFile.write(perFileText.format(file = i+".h"))
     finalHFile.write("#pragma region " + i + '\n')
@@ -88,13 +98,13 @@ finalCppFile.write("""#include \"gl3d.h\"""")
 finalCppFile.write("\n\n")
 
 
-for i in files:
+for i in cppFiles:
     f = open(os.path.join("gl3d", "src", i + ".cpp"))
 
     content = f.read()
 
 #todo regex
-    for j in files:
+    for j in headerFiles:
         content = content.replace(f"#include <{j}.h>","")
         content = content.replace(f"#include<{j}.h>","")
         content = content.replace(f"#include \"{j}.h\"","")
@@ -119,13 +129,26 @@ for i in files:
             noOptimizedName = shader.replace("_optimized", "")
             shaderFile = open("devutils/shaders/" + shader)
             shaderSource = shaderFile.read()
-            newContent.insert(foundLineNr, "      std::pair<std::string, const char*>{\""+noOptimizedName+"\", R\"(" + shaderSource +  ")\"}\n")
+
+            shaderSource = shaderSource.split('\n')
+            
+            for index in range(len(shaderSource)):
+                shaderSource[index] = shaderSource[index].lstrip()
+                if(shaderSource[index].startswith("//")):
+                    shaderSource[index] = ""    
+                shaderSource[index].replace("#pragma debug(on)", "")
+
+            shaderSource = list(filter(None, shaderSource))
+
+            shaderSource = '\n'.join(shaderSource)
+
+            newContent.insert(foundLineNr, "      std::pair<std::string, const char*>{\""+noOptimizedName+"\", R\"(" + shaderSource +  ")\"},\n")
             shaderFile.close()
 
         newContent.insert(0, "#define GL3D_LOAD_SHADERS_FROM_HEADER_ONLY")
         content = '\n'.join(newContent)
 
-
+    
     finalCppFile.write(perFileText.format(file = i+".cpp"))
     finalCppFile.write("#pragma region " + i + '\n')
     finalCppFile.write(content)

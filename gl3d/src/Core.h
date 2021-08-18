@@ -4,6 +4,10 @@
 #include <glm\mat4x4.hpp>
 #include <gl\glew.h>
 
+#undef min
+#undef max
+#define GLM_ENABLE_EXPERIMENTAL
+
 namespace gl3d
 {
 	//todo optimization also hold the last found position

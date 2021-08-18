@@ -21,14 +21,13 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{fe6299e7-7f06-48f6-8456-69f2adf2c5f9}</ProjectGuid>
-    <RootNamespace>gl3d</RootNamespace>
+    <ProjectGuid>{26064842-84c2-422d-b44b-d4278c750fee}</ProjectGuid>
+    <RootNamespace>simpleDemo</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
@@ -72,13 +71,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)bin\$(Configuration)-$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)binInt\$(Configuration)-$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)binInt\$(Configuration)-$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)bin\$(Configuration)-$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)binInt\$(Configuration)-$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)binInt\$(Configuration)-$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -94,21 +93,19 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x64\debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x32\debug</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ManifestFile>$(IntDir)$(TargetName)$(TargetExt).intermediate.manifest</ManifestFile>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -116,46 +113,42 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>false</ExceptionHandling>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FloatingPointModel>Precise</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x64\release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x32\release</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ManifestFile>$(IntDir)$(TargetName)$(TargetExt).intermediate.manifest</ManifestFile>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
     </Link>
-    <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;%(AdditionalIncludeDirectories);$(SolutionDir)headerOnly</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x64\debug</AdditionalLibraryDirectories>
+      <OutputFile>$(ProjectDir)bin\$(TargetName)$(TargetExt)</OutputFile>
+      <ManifestFile>$(ProjectDir)binInt\$(TargetName)$(TargetExt).intermediate.manifest</ManifestFile>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -163,13 +156,13 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GLFW_INCLUDE_NONE;GLEW_STATIC;;GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;$(ProjectDir)src\;$(SolutionDir)headerOnly;$(SolutionDir)submodules\imgui;$(SolutionDir)submodules\objloader\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependences\include;%(AdditionalIncludeDirectories);$(SolutionDir)headerOnly</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>false</ExceptionHandling>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -177,62 +170,15 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(solutiondir)dependences\x64\shared;$(solutiondir)dependences\x64\release</AdditionalLibraryDirectories>
+      <OutputFile>$(ProjectDir)bin\$(TargetName)$(TargetExt)</OutputFile>
+      <ManifestFile>$(ProjectDir)binInt\$(TargetName)$(TargetExt).intermediate.manifest</ManifestFile>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
     </Link>
-    <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\gl3d.cpp" />
-    <ClCompile Include="src\Core.cpp" />
-    <ClCompile Include="src\GraphicModel.cpp" />
-    <ClCompile Include="imgui\imguiImpl.cpp" />
-    <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="..\headerOnly\gl3d.cpp" />
+    <ClCompile Include="headerOnly.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\Shader.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\OBJ_Loader.h" />
-    <ClInclude Include="profiler.h" />
-    <ClInclude Include="src\gl3d.h" />
-    <ClInclude Include="src\Core.h" />
-    <ClInclude Include="src\GraphicModel.h" />
-    <ClInclude Include="src\Camera.h" />
-    <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\Texture.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\drawDepth.frag" />
-    <None Include="shaders\color.frag" />
-    <None Include="shaders\color.vert" />
-    <None Include="shaders\deferred\zPrePass.frag" />
-    <None Include="shaders\drawQuads.vert" />
-    <None Include="shaders\modelLoader\mergePBRmat.frag" />
-    <None Include="shaders\shadows\varienceShadowMap.frag" />
-    <None Include="shaders\skyBox\convolute.frag" />
-    <None Include="shaders\deferred\geometryPass.frag" />
-    <None Include="shaders\deferred\geometryPass.vert" />
-    <None Include="shaders\deferred\lightingPass.frag" />
-    <None Include="shaders\normals.frag" />
-    <None Include="shaders\postProcess\gausianBlur.frag" />
-    <None Include="shaders\postProcess\postProcess.frag" />
-    <None Include="shaders\showNormals.geom" />
-    <None Include="shaders\normals.vert" />
-    <None Include="shaders\showNormals.frag" />
-    <None Include="shaders\showNormals.vert" />
-    <None Include="shaders\skyBox\atmosphericScattering.frag" />
-    <None Include="shaders\skyBox\skyBox.frag" />
-    <None Include="shaders\skyBox\skyBox.vert" />
-    <None Include="shaders\skyBox\preFilterSpecular.frag" />
-    <None Include="shaders\ssao\blur.frag" />
-    <None Include="shaders\ssao\ssao.frag" />
-    <None Include="shaders\stencil.frag" />
-    <None Include="shaders\stencil.vert" />
-    <None Include="shaders\skyBox\hdrToCubeMap.frag" />
-    <None Include="shaders\skyBox\hdrToCubeMap.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

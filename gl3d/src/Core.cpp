@@ -4,6 +4,9 @@
 #include <signal.h>
 #include <iostream>
 
+#undef min
+#undef max
+
 namespace gl3d 
 {
 
