@@ -22,7 +22,6 @@
 int w = 840;
 int h = 640;
 
-gl3d::GpuMaterial material = gl3d::GpuMaterial().setDefaultMaterial();
 
 #define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
@@ -34,15 +33,6 @@ extern "C"
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = USE_GPU_ENGINE;
 }
 #pragma endregion
-
-struct ObjectAndTransform
-{
-	gl3d::Model obj = {};
-	glm::vec3 position = {};
-	glm::vec3 rotation = {};
-	glm::vec3 scale = {1,1,1};
-};
-
 
 int main()
 {
@@ -949,8 +939,7 @@ int main()
 
 			ImGui::NewLine();
 			ImGui::NewLine();
-			ImGui::ColorEdit3("Global Ambient color", &renderer.lightShader.lightPassUniformBlockCpuData.ambientLight[0]);
-
+			ImGui::ColorEdit3("Global Ambient color", &renderer.skyBox.color[0]);
 		
 			ImGui::End();
 			ImGui::PopID();
@@ -1023,7 +1012,6 @@ int main()
 
 			ImGui::NewLine();
 
-
 			if(!models.empty() && itemCurrent < items.size())
 			{
 				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
@@ -1066,13 +1054,11 @@ int main()
 
 					if (subItemCurent < renderer.getEntityMeshesCount(models[itemCurrent]))
 					{
-						auto& material = *renderer.getMaterialData(
-							currentEntity->models[subItemCurent].material);
-
+						
 						std::string name = renderer.getEntityMeshMaterialName(
 							models[itemCurrent], subItemCurent);
 
-						auto materialData = renderer.getEntityMeshMaterialData(
+						auto materialData = renderer.getEntityMeshMaterialValues(
 							models[itemCurrent], subItemCurent);
 
 						name = "Material name: " + name;
@@ -1085,7 +1071,7 @@ int main()
 						ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);
 						ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
 
-						renderer.setEntityMeshMaterialData(
+						renderer.setEntityMeshMaterialValues(
 							models[itemCurrent], subItemCurent, materialData);
 
 						auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
@@ -1148,7 +1134,7 @@ int main()
 						{
 							drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData->albedoTexture), 20, 20, __COUNTER__);
 							drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData->normalMapTexture), 20, 20, __COUNTER__);
-							drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->RMA_Texture), 20, 20, __COUNTER__);
+							drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->pbrTexture.texture), 20, 20, __COUNTER__);
 
 						}
 

@@ -313,7 +313,8 @@ namespace gl3d
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
 		normalSkyBox.u_exposure = getUniform(normalSkyBox.shader.id, "u_exposure");
 		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient");
-
+		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent");
+		
 		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag");
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
 		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection");
@@ -868,10 +869,19 @@ namespace gl3d
 
 		normalSkyBox.shader.bind();
 
+		bool skyBoxPresent = 1;
+
+		if (skyBox.texture == 0 || skyBox.convolutedTexture == 0 || skyBox.preFilteredMap == 0)
+		{
+			skyBoxPresent = 0;
+		}
+
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
+		glUniform1i(normalSkyBox.u_skyBoxPresent, skyBoxPresent);
 		glUniform1f(normalSkyBox.u_exposure, exposure);
 		glUniform3f(normalSkyBox.u_ambient, ambient.r, ambient.g, ambient.b);
+
 
 		glDisable(GL_DEPTH_TEST);
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 6);
@@ -880,10 +890,12 @@ namespace gl3d
 		glBindVertexArray(0);
 	}
 
-	void SkyBox::clearData()
+	void SkyBox::clearTextures()
 	{
 		glDeleteTextures(3, (GLuint*)this);
-		*this = {};
+		texture = 0;
+		convolutedTexture = 0;
+		preFilteredMap = 0;
 	}
 
 };

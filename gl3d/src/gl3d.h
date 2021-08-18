@@ -64,23 +64,26 @@ namespace gl3d
 
 		Material loadMaterial(std::string file);
 
-		void deleteMaterial(Material m);  
-		void copyMaterialData(Material dest, Material source);
+		bool deleteMaterial(Material m);  
+		bool copyMaterialData(Material dest, Material source);
 
 		//returns 0 if not found
-		GpuMaterial *getMaterialData(Material m);
+		MaterialValues getMaterialValues(Material m);
+		void setMaterialValues(Material m, MaterialValues values);
+
+		//todo change stuff here
 		std::string *getMaterialName(Material m);
+		TextureDataForMaterial* getMaterialTextures(Material m);
 
-		//probably move this to internal
-		TextureDataForModel *getMaterialTextures(Material m);
-		bool getMaterialData(Material m, GpuMaterial *gpuMaterial,
-			std::string *name, TextureDataForModel *textureData);
+		//move to internal
+		bool getMaterialData(Material m, MaterialValues *gpuMaterial,
+			std::string *name, TextureDataForMaterial*textureData);
 
+		bool isMaterial(Material& m);
 
 		//returns true if succeded
-		bool setMaterialData(Material m, const GpuMaterial &data, std::string *s = nullptr);
-
-		MultipleGraphicModel *getModelData(Model o);
+		//bool setMaterialData(Material m, const MaterialValues &data, std::string *s = nullptr);
+		
 
 	#pragma endregion
 
@@ -90,15 +93,20 @@ namespace gl3d
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
 		Texture loadTexture(std::string path);
-		GLuint getTextureOpenglId(Texture t);
+		GLuint getTextureOpenglId(Texture& t);
+		bool isTexture(Texture& t);
 
-		void deleteTexture(Texture t);
+		void deleteTexture(Texture& t);
 
-		GpuTexture* getTextureData(Texture t);
+		GpuTexture* getTextureData(Texture& t);
 
 		//internal
 		Texture createIntenralTexture(GpuTexture t, int alphaData);
 		Texture createIntenralTexture(GLuint id_, int alphaData);
+
+		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
+			Texture& ambientOcclusion);
+		void deletePBRTexture(PBRTexture &t);
 
 	#pragma endregion
 
@@ -109,6 +117,7 @@ namespace gl3d
 		SkyBox loadSkyBox(const char* names[6]);
 		SkyBox loadSkyBox(const char* name, int format = 0);
 		SkyBox loadHDRSkyBox(const char* name);
+		void deleteSkyBoxTextures(SkyBox& skyBox);
 
 		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
 
@@ -116,8 +125,13 @@ namespace gl3d
 
 	#pragma region model
 
+		//todo implement stuff here
+
 		Model loadModel(std::string path, float scale = 1);
 		void deleteModel(Model o);
+
+		//todo move to internal probably
+		MultipleGraphicModel* getModelData(Model o);
 
 	#pragma endregion
 	
@@ -213,12 +227,14 @@ namespace gl3d
 		bool getEntityCastShadows(Entity& e);
 		
 		int getEntityMeshesCount(Entity& e);
-		GpuMaterial getEntityMeshMaterialData(Entity& e, int meshIndex);
-		void setEntityMeshMaterialData(Entity& e, int meshIndex, GpuMaterial mat);
+		MaterialValues getEntityMeshMaterialValues(Entity& e, int meshIndex);
+		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat);
 
 		std::string getEntityMeshMaterialName(Entity& e, int meshIndex);
 		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name);
-
+		
+		void setEntityMeshMaterial(Entity& e, int meshIndex, Material mat);
+		
 
 	#pragma endregion
 
@@ -283,10 +299,10 @@ namespace gl3d
 			int getDirectionalLightIndex(DirectionalLight l);
 
 			//material
-			std::vector<GpuMaterial> materials;
+			std::vector<MaterialValues> materials;
 			std::vector<int> materialIndexes;
 			std::vector<std::string> materialNames;
-			std::vector<TextureDataForModel> materialTexturesData;
+			std::vector<TextureDataForMaterial> materialTexturesData;
 
 			//texture
 			std::vector <internal::GpuTextureWithFlags> loadedTextures;

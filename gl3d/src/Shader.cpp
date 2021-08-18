@@ -418,7 +418,7 @@ namespace gl3d
 
 	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
-		const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
+		const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 		geometryPassShader.bind();
 		
@@ -429,7 +429,7 @@ namespace gl3d
 
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
 		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
-		float gama, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights)
+		float gama, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
 	{
 		glUniformMatrix4fv(u_transform, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniformMatrix4fv(u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
@@ -458,7 +458,7 @@ namespace gl3d
 		setMaterial(material);
 	}
 
-	void LightShader::setMaterial(const GpuMaterial &material)
+	void LightShader::setMaterial(const MaterialValues &material)
 	{
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)

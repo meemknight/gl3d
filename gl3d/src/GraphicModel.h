@@ -15,7 +15,6 @@ namespace gl3d
 {
 
 
-
 	struct Transform
 	{
 		glm::vec3 position = {};
@@ -178,8 +177,8 @@ namespace gl3d
 		GLuint texture = 0;				//environment cubemap
 		GLuint convolutedTexture = 0;	//convoluted environment (used for difuse iradiance)
 		GLuint preFilteredMap = 0;		//multiple mipmaps used for speclar 
-
-		void clearData();
+		glm::vec3 color = { 1,1,1 };
+		void clearTextures();
 	};
 
 	struct SkyBoxLoaderAndDrawer
@@ -196,6 +195,7 @@ namespace gl3d
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
 			GLuint u_exposure;
+			GLuint u_skyBoxPresent;
 			GLuint u_ambient;
 
 		}normalSkyBox;

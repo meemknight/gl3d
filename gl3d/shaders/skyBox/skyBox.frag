@@ -9,13 +9,20 @@ in vec3 v_texCoords;
 uniform samplerCube u_skybox;
 uniform float u_exposure;
 uniform vec3 u_ambient;
-
+uniform int u_skyBoxPresent;
 
 void main()
 {    
+	
+	if(u_skyBoxPresent != 0)
+	{
+		a_outColor = textureLod(u_skybox, v_texCoords, 2);
+		a_outColor.rgb *= u_ambient;
+	}else
+	{
+		a_outColor.rgb = u_ambient;
+	}
 
-	a_outColor = textureLod(u_skybox, v_texCoords, 2);
-	a_outColor.rgb *= u_ambient;
 	//hdr
 	float exposure = u_exposure;
 	a_outColor.rgb = vec3(1.0) - exp(-a_outColor.rgb  * exposure);

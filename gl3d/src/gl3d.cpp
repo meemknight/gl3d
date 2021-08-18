@@ -152,7 +152,7 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.materialIndexes);
 
-		GpuMaterial gpuMaterial;
+		MaterialValues gpuMaterial;
 		gpuMaterial.kd = glm::vec4(kd, 0);
 		gpuMaterial.roughness = roughness;
 		gpuMaterial.metallic = metallic;
@@ -188,14 +188,14 @@ namespace gl3d
 		return Material();
 	}
 
-	void Renderer3D::deleteMaterial(Material m)
+	bool Renderer3D::deleteMaterial(Material m)
 	{
 		auto pos = std::find(internal.materialIndexes.begin(), internal.materialIndexes.end(), m.id_);
 
 		if (pos == internal.materialIndexes.end())
 		{
 			gl3dAssertComment(pos != internal.materialIndexes.end(), "invalid delete material");
-			return;
+			return 0;
 		}
 
 		int index = pos - internal.materialIndexes.begin();
@@ -205,9 +205,10 @@ namespace gl3d
 		internal.materialNames.erase(internal.materialNames.begin() + index);
 		internal.materialTexturesData.erase(internal.materialTexturesData.begin() + index);
 		m.id_ = 0;
+		return 1;
 	}
 
-	void Renderer3D::copyMaterialData(Material dest, Material source)
+	bool Renderer3D::copyMaterialData(Material dest, Material source)
 	{
 		int destId = internal.getMaterialIndex(dest);
 		int sourceId = internal.getMaterialIndex(source);
@@ -217,30 +218,42 @@ namespace gl3d
 			gl3dAssertComment(destId != -1, "invaled dest material index");
 			gl3dAssertComment(sourceId != -1, "invaled source material index");
 
-			return;
+			return 0;
 		}
 
 		internal.materials[destId] = internal.materials[sourceId];
 		internal.materialNames[destId] = internal.materialNames[sourceId];
 		internal.materialTexturesData[destId] = internal.materialTexturesData[destId];
 
+		return 1;
 	}
 
-	GpuMaterial *Renderer3D::getMaterialData(Material m)
+	MaterialValues Renderer3D::getMaterialValues(Material m)
 	{
 		int id = internal.getMaterialIndex(m);
 
 		if(id == -1)
 		{
-			return nullptr;
+			return {};
 		}
 		
-		auto data = &internal.materials[id];
-
-		return data;
+		return internal.materials[id];
 	}
 
-	TextureDataForModel *Renderer3D::getMaterialTextures(Material m)
+	void Renderer3D::setMaterialValues(Material m, MaterialValues values)
+	{
+		int id = internal.getMaterialIndex(m);
+
+		if (id == -1)
+		{
+			return;
+		}
+
+		internal.materials[id] = values;
+
+	}
+
+	TextureDataForMaterial *Renderer3D::getMaterialTextures(Material m)
 	{
 		int id = internal.getMaterialIndex(m);
 
@@ -268,7 +281,8 @@ namespace gl3d
 		return data;
 	}
 
-	bool Renderer3D::getMaterialData(Material m, GpuMaterial *gpuMaterial, std::string *name, TextureDataForModel *textureData)
+	bool Renderer3D::getMaterialData(Material m, MaterialValues *gpuMaterial, std::string *name, 
+		TextureDataForMaterial *textureData)
 	{
 		int id = internal.getMaterialIndex(m);
 
@@ -295,24 +309,38 @@ namespace gl3d
 		return true;
 	}
 
-	bool Renderer3D::setMaterialData(Material m, const GpuMaterial &data, std::string *s)
+	bool Renderer3D::isMaterial(Material& m)
 	{
 		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
-			return 0;
+			return false;
 		}
-
-		internal.materials[id] = data;
-		
-		if (s)
+		else
 		{
-			internal.materialNames[id] = *s;
+			return true;
 		}
-
-		return 1;
 	}
+
+	//bool Renderer3D::setMaterialData(Material m, const MaterialValues &data, std::string *s)
+	//{
+	//	int id = internal.getMaterialIndex(m);
+	//
+	//	if (id == -1)
+	//	{
+	//		return 0;
+	//	}
+	//
+	//	internal.materials[id] = data;
+	//	
+	//	if (s)
+	//	{
+	//		internal.materialNames[id] = *s;
+	//	}
+	//
+	//	return 1;
+	//}
 
 	MultipleGraphicModel *Renderer3D::getModelData(Model o)
 	{
@@ -371,7 +399,7 @@ namespace gl3d
 		return Texture{ id };
 	}
 
-	GLuint Renderer3D::getTextureOpenglId(Texture t)
+	GLuint Renderer3D::getTextureOpenglId(Texture& t)
 	{
 		auto p = getTextureData(t);
 
@@ -384,7 +412,21 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::deleteTexture(Texture t)
+	bool Renderer3D::isTexture(Texture& t)
+	{
+		int i = internal.getTextureIndex(t);
+
+		if (i > -1)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	void Renderer3D::deleteTexture(Texture& t)
 	{
 		int index = internal.getTextureIndex(t);
 
@@ -403,7 +445,7 @@ namespace gl3d
 
 	}
 
-	GpuTexture *Renderer3D::getTextureData(Texture t)
+	GpuTexture *Renderer3D::getTextureData(Texture& t)
 	{
 		int id = internal.getTextureIndex(t);
 
@@ -446,6 +488,46 @@ namespace gl3d
 
 	}
 
+	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
+		Texture& ambientOcclusion)
+	{
+		bool roughnessLoaded = 0;
+		bool metallicLoaded = 0;
+		bool ambientLoaded = 0;
+
+		PBRTexture ret = {};
+
+		if (roughnessLoaded && metallicLoaded && ambientLoaded) { ret.RMA_loadedTextures = 7; }
+		else
+		if (metallicLoaded && ambientLoaded) { ret.RMA_loadedTextures = 6; }
+		else
+		if (roughnessLoaded && ambientLoaded) { ret.RMA_loadedTextures = 5; }
+		else
+		if (roughnessLoaded && metallicLoaded) { ret.RMA_loadedTextures = 4; }
+		else
+		if (ambientLoaded) { ret.RMA_loadedTextures = 3; }
+		else
+		if (metallicLoaded) { ret.RMA_loadedTextures = 2; }
+		else
+		if (roughnessLoaded) { ret.RMA_loadedTextures = 1; }
+		else { ret.RMA_loadedTextures = 0; }
+
+		auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+			{getTextureOpenglId(roughness)},
+			{ getTextureOpenglId(metallic) },
+			{ getTextureOpenglId(ambientOcclusion) }, lightShader.quadDrawer.quadVAO);
+
+		ret.texture = this->createIntenralTexture(t, 0);
+
+		return ret;
+	}
+
+	void Renderer3D::deletePBRTexture(PBRTexture& t)
+	{
+		deleteTexture(t.texture);
+		t.RMA_loadedTextures = 0;
+	}
+
 	static int max(int x, int y, int z)
 	{
 		return std::max(std::max(x, y), z);
@@ -477,12 +559,12 @@ namespace gl3d
 			{
 				auto &mat = model.loader.LoadedMaterials[i];
 				auto m = this->createMaterial(mat.Kd, mat.roughness,
-				mat.metallic, mat.ao);
+				mat.metallic, mat.ao, mat.name);
 				
 
 				{
 					//load textures for materials
-					TextureDataForModel *textureData = this->getMaterialTextures(m);
+					TextureDataForMaterial* textureData = this->getMaterialTextures(m);
 
 					
 					//auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
@@ -508,7 +590,7 @@ namespace gl3d
 						textureData->emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
 					}
 
-					textureData->RMA_loadedTextures = 0;
+					textureData->pbrTexture.RMA_loadedTextures = 0;
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
 
@@ -517,11 +599,11 @@ namespace gl3d
 						//todo not tested
 						//rmaQuality);
 
-						textureData->RMA_Texture = this->loadTexture(mat.map_RMA.c_str());
+						textureData->pbrTexture.texture = this->loadTexture(mat.map_RMA.c_str());
 
-						if (textureData->RMA_Texture.id_ != 0)
+						if (textureData->pbrTexture.texture.id_ != 0)
 						{
-							textureData->RMA_loadedTextures = 7; //all textures loaded
+							textureData->pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 						}
 
 						//if (gm.RMA_Texture.id)
@@ -531,7 +613,7 @@ namespace gl3d
 
 					}
 
-					if (!mat.map_ORM.empty() && textureData->RMA_loadedTextures == 0)
+					if (!mat.map_ORM.empty() && textureData->pbrTexture.RMA_loadedTextures == 0)
 					{
 						stbi_set_flip_vertically_on_load(true);
 
@@ -565,9 +647,9 @@ namespace gl3d
 								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 								GpuTexture t;
 								t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
-								textureData->RMA_Texture = this->createIntenralTexture(t, 0);
+								textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
 
-								textureData->RMA_loadedTextures = 7; //all textures loaded
+								textureData->pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 
 								stbi_image_free(data);
 							}
@@ -577,7 +659,7 @@ namespace gl3d
 					}
 
 					//RMA trexture
-					if (textureData->RMA_loadedTextures == 0)
+					if (textureData->pbrTexture.RMA_loadedTextures == 0)
 					{
 						constexpr int MERGE_TEXTURES_ON_GPU = 1;
 
@@ -639,25 +721,25 @@ namespace gl3d
 							}
 
 							//calculate which function to use
-							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 7; }
+							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 7; }
 							else
-							if (metallicLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 6; }
+							if (metallicLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 6; }
 							else
-							if (roughnessLoaded && ambientLoaded) { textureData->RMA_loadedTextures = 5; }
+							if (roughnessLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 5; }
 							else
-							if (roughnessLoaded && metallicLoaded) { textureData->RMA_loadedTextures = 4; }
+							if (roughnessLoaded && metallicLoaded) { textureData->pbrTexture.RMA_loadedTextures = 4; }
 							else
-							if (ambientLoaded) { textureData->RMA_loadedTextures = 3; }
+							if (ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 3; }
 							else
-							if (metallicLoaded) { textureData->RMA_loadedTextures = 2; }
+							if (metallicLoaded) { textureData->pbrTexture.RMA_loadedTextures = 2; }
 							else
-							if (roughnessLoaded) { textureData->RMA_loadedTextures = 1; }
-							else { textureData->RMA_loadedTextures = 0; }
+							if (roughnessLoaded) { textureData->pbrTexture.RMA_loadedTextures = 1; }
+							else { textureData->pbrTexture.RMA_loadedTextures = 0; }
 
 							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
 								roughness, metallic, ambientOcclusion, lightShader.quadDrawer.quadVAO);
 
-							textureData->RMA_Texture = this->createIntenralTexture(t, 0);
+							textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
 
 							roughness.clear();
 							metallic.clear();
@@ -700,22 +782,22 @@ namespace gl3d
 							int h = max(h1, h2, h3);
 
 							//calculate which function to use
-							if (data1 && data2 && data3) { textureData->RMA_loadedTextures = 7; }
+							if (data1 && data2 && data3) { textureData->pbrTexture.RMA_loadedTextures = 7; }
 							else
-							if (data2 && data3) { textureData->RMA_loadedTextures = 6; }
+							if (data2 && data3) { textureData->pbrTexture.RMA_loadedTextures = 6; }
 							else
-							if (data1 && data3) { textureData->RMA_loadedTextures = 5; }
+							if (data1 && data3) { textureData->pbrTexture.RMA_loadedTextures = 5; }
 							else
-							if (data1 && data2) { textureData->RMA_loadedTextures = 4; }
+							if (data1 && data2) { textureData->pbrTexture.RMA_loadedTextures = 4; }
 							else
-							if (data3) { textureData->RMA_loadedTextures = 3; }
+							if (data3) { textureData->pbrTexture.RMA_loadedTextures = 3; }
 							else
-							if (data2) { textureData->RMA_loadedTextures = 2; }
+							if (data2) { textureData->pbrTexture.RMA_loadedTextures = 2; }
 							else
-							if (data1) { textureData->RMA_loadedTextures = 1; }
-							else { textureData->RMA_loadedTextures = 0; }
+							if (data1) { textureData->pbrTexture.RMA_loadedTextures = 1; }
+							else { textureData->pbrTexture.RMA_loadedTextures = 0; }
 
-							if (textureData->RMA_loadedTextures)
+							if (textureData->pbrTexture.RMA_loadedTextures)
 							{
 
 								unsigned char* finalData = new unsigned char[w * h * 4];
@@ -777,7 +859,7 @@ namespace gl3d
 
 								GpuTexture t;
 								t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-								textureData->RMA_Texture = this->createIntenralTexture(t, 0);
+								textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
 
 								stbi_image_free(data1);
 								stbi_image_free(data2);
@@ -824,7 +906,7 @@ namespace gl3d
 				}else
 				{
 					//if no material loaded for this object create a new default one
-					gm.material = createMaterial(glm::vec3{ 0.8 }, 0.5, 0);
+					gm.material = createMaterial(glm::vec3{ 0.8 }, 0.5, 0, 1.f, "default material");
 				}
 				
 				gm.ownMaterial = true;
@@ -1567,7 +1649,7 @@ namespace gl3d
 
 	}
 
-	GpuMaterial Renderer3D::getEntityMeshMaterialData(Entity& e, int meshIndex)
+	MaterialValues Renderer3D::getEntityMeshMaterialValues(Entity& e, int meshIndex)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return {}; } //warn or sthing
@@ -1575,7 +1657,7 @@ namespace gl3d
 		if (meshIndex < internal.cpuEntities[i].models.size())
 		{
 			auto mat = internal.cpuEntities[i].models[meshIndex].material;
-			GpuMaterial data = {};
+			MaterialValues data = {};
 			bool succeeded = getMaterialData(mat, &data, nullptr, nullptr);
 
 			if (succeeded)
@@ -1594,7 +1676,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::setEntityMeshMaterialData(Entity& e, int meshIndex, GpuMaterial mat)
+	void Renderer3D::setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return ; } //warn or sthing
@@ -1602,16 +1684,16 @@ namespace gl3d
 		if (meshIndex < internal.cpuEntities[i].models.size())
 		{
 			auto currentMat = internal.cpuEntities[i].models[meshIndex].material;
-			GpuMaterial data = {};
+			MaterialValues data = {};
 			std::string name = {};
-			TextureDataForModel textures;
+			TextureDataForMaterial textures;
 			bool succeeded = getMaterialData(currentMat, &data, &name, &textures);
 
 			if (succeeded)
 			{
 				if (internal.cpuEntities[i].models[meshIndex].ownMaterial == 1)
 				{
-					setMaterialData(currentMat, mat);
+					setMaterialValues(currentMat, mat);
 				}else
 				if (mat != data)
 				{
@@ -1625,8 +1707,6 @@ namespace gl3d
 					{
 						internal.materialTexturesData[newMatIndex] = *textures;
 					}
-
-					internal.materialNames[newMatIndex] = "new mat";
 
 					internal.cpuEntities[i].models[meshIndex].material = newMat;
 					internal.cpuEntities[i].models[meshIndex].ownMaterial = 1;
@@ -1696,6 +1776,33 @@ namespace gl3d
 			return; //invalid index
 		}
 
+	}
+
+	void Renderer3D::setEntityMeshMaterial(Entity& e, int meshIndex, Material mat)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //invalid entity;
+
+		if (meshIndex < internal.cpuEntities[i].models.size())
+		{
+			if (internal.cpuEntities[i].models[meshIndex].ownMaterial)
+			{
+				deleteMaterial(internal.cpuEntities[i].models[meshIndex].material);
+			}
+
+			internal.cpuEntities[i].models[meshIndex].material = mat;
+			internal.cpuEntities[i].models[meshIndex].ownMaterial = 0;
+
+			//todo look into textures and see if they have alpha data
+			if (
+				internal.cpuEntities[i].isStatic()
+				&& internal.cpuEntities[i].castShadows()
+				&&internal.cpuEntities[i].isVisible()
+				)
+			{
+				internal.perFrameFlags.staticGeometryChanged = true;
+			}
+		}
 	}
 
 	bool Renderer3D::isEntity(Entity& e)
@@ -2604,7 +2711,7 @@ namespace gl3d
 
 		//material buffer
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuMaterial) * internal.materials.size()
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
 			, &internal.materials[0], GL_STREAM_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
 
@@ -2662,7 +2769,7 @@ namespace gl3d
 				glUniform1i(lightShader.materialIndexLocation, materialId);
 
 
-				TextureDataForModel textureData = internal.materialTexturesData[materialId];
+				TextureDataForMaterial textureData = internal.materialTexturesData[materialId];
 
 				int rmaLoaded = 0;
 				int albedoLoaded = 0;
@@ -2684,7 +2791,7 @@ namespace gl3d
 					glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
 				}
 
-				GpuTexture* rmaTextureData = this->getTextureData(textureData.RMA_Texture);
+				GpuTexture* rmaTextureData = this->getTextureData(textureData.pbrTexture.texture);
 				if (rmaTextureData != nullptr && rmaTextureData->id != 0)
 				{
 					rmaLoaded = 1;
@@ -2739,9 +2846,9 @@ namespace gl3d
 				if (rmaLoaded)
 				{
 
-					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures])
+					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures])
 					{
-						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.RMA_loadedTextures];
+						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures];
 						changed = 1;
 					}
 
@@ -2954,6 +3061,20 @@ namespace gl3d
 
 
 		//update the uniform block with data for the light shader
+		lightShader.lightPassUniformBlockCpuData.ambientLight = glm::vec4(skyBox.color, 0.f);
+
+		if (skyBox.texture != 0
+			&& skyBox.convolutedTexture != 0
+			&& skyBox.preFilteredMap != 0
+			)
+		{
+			lightShader.lightPassUniformBlockCpuData.skyBoxPresent = true;
+		}
+		else
+		{
+			lightShader.lightPassUniformBlockCpuData.skyBoxPresent = false;
+		}
+
 		glBindBuffer(GL_UNIFORM_BUFFER, lightShader.lightPassShaderData.lightPassDataBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
 			&lightShader.lightPassUniformBlockCpuData);
@@ -3236,6 +3357,11 @@ namespace gl3d
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, skyBox);
 		return skyBox;
+	}
+
+	void Renderer3D::deleteSkyBoxTextures(SkyBox& skyBox)
+	{
+		skyBox.clearTextures();
 	}
 
 	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, float g, float g2)

@@ -25,19 +25,22 @@ namespace gl3d
 
 #undef CREATE_RENDERER_OBJECT_HANDLE(x)
 
-
-
-	struct TextureDataForModel
+	struct PBRTexture
 	{
-		Texture albedoTexture = {};
-		Texture normalMapTexture = {};
-
-		Texture RMA_Texture = {}; //rough metalness ambient oclusion
-		Texture emissiveTexture= {};
+		Texture texture = {};  //rough metalness ambient oclusion
 		int RMA_loadedTextures = {};
 	};
 
-	struct GpuMaterial
+	struct TextureDataForMaterial
+	{
+		Texture albedoTexture = {};
+		Texture normalMapTexture = {};
+		Texture emissiveTexture= {};
+		PBRTexture pbrTexture = {};
+	};
+	
+	//note this is the gpu material
+	struct MaterialValues
 	{
 		glm::vec4 kd = glm::vec4(1); //w component not used //rename to albedo or color
 		
@@ -48,14 +51,14 @@ namespace gl3d
 		float emmisive = 0;
 		//rma
 
-		GpuMaterial setDefaultMaterial()
+		MaterialValues setDefaultMaterial()
 		{
-			*this = GpuMaterial();
+			*this = MaterialValues();
 
 			return *this;
 		}
 
-		bool operator==(const GpuMaterial& other)
+		bool operator==(const MaterialValues& other)
 		{
 			return
 				(kd == other.kd)
@@ -66,7 +69,7 @@ namespace gl3d
 				;
 		};
 
-		bool operator!=(const GpuMaterial& other)
+		bool operator!=(const MaterialValues& other)
 		{
 			return !(*this == other);
 		};

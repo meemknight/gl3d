@@ -30,7 +30,7 @@ layout (std140) uniform u_lightPassData
 	float bloomTresshold;
 	int lightSubScater;
 	float exposure;
-
+	int skyBoxPresent;
 }lightPassData;
 
 struct PointLight
@@ -495,7 +495,6 @@ void main()
 	//vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
 	vec3 R = reflect(-viewDir, normal);	//reflected vector
 	//vec3 skyBoxSpecular = texture(u_skybox, R).rgb;		//this is the reflected color
-	vec3 skyBoxDiffuse = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly to the object
 
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
@@ -613,6 +612,7 @@ void main()
 
 	//compute ambient
 	vec3 ambient;
+	if(lightPassData.skyBoxPresent != 0)
 	{
 
 		vec3 N = normal;
@@ -623,7 +623,8 @@ void main()
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
-		vec3 irradiance = skyBoxDiffuse;
+		vec3 irradiance = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly at the object
+		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;
 		vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
@@ -664,10 +665,12 @@ void main()
 		vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
 		ambient *= occlusionData;
 
+	}else
+	{
+		ambient = ambientOcclution * lightPassData.ambientColor.rgb;
 	}
 
 	vec3 color = Lo + ambient; 
-
 	
 
 	vec3 hdrCorrectedColor = color;

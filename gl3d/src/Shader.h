@@ -31,13 +31,13 @@ namespace gl3d
 		void create();
 		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
+		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
 
 		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
 		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const GpuMaterial &material, std::vector<internal::GpuPointLight> &pointLights);
+		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
 
-		void setMaterial(const GpuMaterial &material);
+		void setMaterial(const MaterialValues &material);
 
 		void getSubroutines();
 
@@ -131,6 +131,7 @@ namespace gl3d
 			float bloomTresshold = 1.f;
 			int lightSubScater = 1;
 			float exposure = 1;
+			int skyBoxPresent = 0;
 
 		}lightPassUniformBlockCpuData;
 
