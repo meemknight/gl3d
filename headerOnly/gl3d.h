@@ -47,6 +47,22 @@ namespace gl3d
 		Texture normalMapTexture = {};
 		Texture emissiveTexture= {};
 		PBRTexture pbrTexture = {};
+
+		bool operator==(const TextureDataForMaterial& other)
+		{
+			return
+				(albedoTexture.id_ == other.albedoTexture.id_)
+				&& (normalMapTexture.id_ == other.normalMapTexture.id_)
+				&& (emissiveTexture.id_ == other.emissiveTexture.id_)
+				&& (pbrTexture.texture.id_ == other.pbrTexture.texture.id_)
+				&& (pbrTexture.RMA_loadedTextures == other.pbrTexture.RMA_loadedTextures)
+				;
+		};
+
+		bool operator!=(const TextureDataForMaterial& other)
+		{
+			return !(*this == other);
+		};
 	};
 	
 	//note this is the gpu material
@@ -564,17 +580,20 @@ namespace gl3d
 
 	};
 
+	struct Renderer3D;
 
-	struct MultipleGraphicModel
+	struct ModelData
 	{
 
 		std::vector < GraphicModel >models;
 		std::vector < char* > subModelsNames; //for imgui
-		void clear();
+		std::vector <Material> createdMaterials;
+		void clear(Renderer3D &renderer);
 	
 	};
 
 	//the data for an entity
+	//todo move to internal
 	struct CpuEntity
 	{
 		Transform transform;
@@ -800,7 +819,7 @@ namespace gl3d
 	#pragma region material
 		
 
-		//todo add texture data function
+		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
 		
@@ -811,28 +830,23 @@ namespace gl3d
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
 
-		//returns 0 if not found
 		MaterialValues getMaterialValues(Material m);
 		void setMaterialValues(Material m, MaterialValues values);
 
-		//todo change stuff here
-		std::string *getMaterialName(Material m);
-		TextureDataForMaterial* getMaterialTextures(Material m);
-
-		//move to internal
-		bool getMaterialData(Material m, MaterialValues *gpuMaterial,
-			std::string *name, TextureDataForMaterial*textureData);
+		std::string getMaterialName(Material m);
+		void setMaterialName(Material m, const std::string& name);
+		
+		TextureDataForMaterial getMaterialTextures(Material m);
+		void setMaterialTextures(Material m, TextureDataForMaterial textures);
 
 		bool isMaterial(Material& m);
 
 		//returns true if succeded
 		//bool setMaterialData(Material m, const MaterialValues &data, std::string *s = nullptr);
-		
 
 	#pragma endregion
 
 	#pragma region Texture
-
 
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
@@ -872,10 +886,15 @@ namespace gl3d
 		//todo implement stuff here
 
 		Model loadModel(std::string path, float scale = 1);
-		void deleteModel(Model o);
+		bool isModel(Model& m);
+		void deleteModel(Model &m);
 
-		//todo move to internal probably
-		MultipleGraphicModel* getModelData(Model o);
+		void clearModelData(Model& m);
+		int getModelMeshesCount(Model& m);
+		std::string getModelMeshesName(Model& m, int index);
+
+		//for apis like imgui
+		std::vector<char*>* getModelMeshesNames(Model& m);
 
 	#pragma endregion
 	
@@ -956,6 +975,9 @@ namespace gl3d
 	
 		Entity createEntity(Model m, Transform transform = {}, 
 			bool staticGeometry = 1, bool visible = 1, bool castShadows = 1);
+
+		Entity duplicateEntity(Entity &e);
+
 		void setEntityModel(Entity& e, Model m);
 		void clearEntityModel(Entity& e);
 		CpuEntity* getEntityData(Entity &e); //todo this will probably dissapear
@@ -970,6 +992,9 @@ namespace gl3d
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
 		
+		//this is used for apis like imgui.
+		std::vector<char*> *getEntityMeshesNames(Entity& e);
+
 		int getEntityMeshesCount(Entity& e);
 		MaterialValues getEntityMeshMaterialValues(Entity& e, int meshIndex);
 		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat);
@@ -979,6 +1004,8 @@ namespace gl3d
 		
 		void setEntityMeshMaterial(Entity& e, int meshIndex, Material mat);
 		
+		TextureDataForMaterial getEntityMeshMaterialTextures(Entity& e, int meshIndex);
+		void setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture);
 
 	#pragma endregion
 
@@ -994,7 +1021,6 @@ namespace gl3d
 		bool isSSAOenabeled();
 
 	#pragma endregion
-
 
 		struct VAO
 		{
@@ -1048,14 +1074,19 @@ namespace gl3d
 			std::vector<std::string> materialNames;
 			std::vector<TextureDataForMaterial> materialTexturesData;
 
+			bool getMaterialData(Material m, MaterialValues* gpuMaterial,
+				std::string* name, TextureDataForMaterial* textureData);
+
 			//texture
 			std::vector <internal::GpuTextureWithFlags> loadedTextures;
 			std::vector<int> loadedTexturesIndexes;
 			std::vector<std::string> loadedTexturesNames;
 		
 			//models
-			std::vector< MultipleGraphicModel > graphicModels;
+			std::vector< ModelData > graphicModels;
 			std::vector<int> graphicModelsIndexes;
+
+			ModelData* getModelData(Model o);
 
 			//entities
 			std::vector<CpuEntity> cpuEntities;

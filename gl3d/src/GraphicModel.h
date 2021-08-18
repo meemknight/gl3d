@@ -101,17 +101,20 @@ namespace gl3d
 
 	};
 
+	struct Renderer3D;
 
-	struct MultipleGraphicModel
+	struct ModelData
 	{
 
 		std::vector < GraphicModel >models;
 		std::vector < char* > subModelsNames; //for imgui
-		void clear();
+		std::vector <Material> createdMaterials;
+		void clear(Renderer3D &renderer);
 	
 	};
 
 	//the data for an entity
+	//todo move to internal
 	struct CpuEntity
 	{
 		Transform transform;

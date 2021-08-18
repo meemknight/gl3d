@@ -667,7 +667,53 @@ void main()
 
 	}else
 	{
-		ambient = ambientOcclution * lightPassData.ambientColor.rgb;
+		vec3 N = normal;
+		vec3 V = viewDir;
+		
+		float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
+
+		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
+		vec3 kS = F;
+		
+		vec3 irradiance = lightPassData.ambientColor.rgb; //this color is coming directly at the object
+		
+		vec3 radiance = lightPassData.ambientColor.rgb;
+
+		vec2 brdfVec = vec2(dotNVClamped, roughness);
+		//brdfVec.y = 1 - brdfVec.y; 
+		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
+
+
+		if(lightPassData.lightSubScater == 0)
+		{
+			vec3 kD = 1.0 - kS;
+			kD *= 1.0 - metallic;
+			
+			vec3 diffuse = irradiance * albedo;
+			
+			vec3 specular = radiance * (F * brdf.x + brdf.y);
+
+			//no multiple scattering
+			ambient = (kD * diffuse + specular);
+		}else
+		{
+			//http://jcgt.org/published/0008/01/03/
+			// Multiple scattering version
+			vec3 FssEss = kS * brdf.x + brdf.y;
+			float Ess = brdf.x + brdf.y;
+			float Ems = 1-Ess;
+			vec3 Favg = F0 + (1-F0)/21;
+			vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
+			// Dielectrics
+			vec3 Edss = 1 - (FssEss + Fms * Ems);
+			vec3 kD = albedo * Edss;
+
+			// Multiple scattering version
+			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
+		}
+		
+		vec3 occlusionData = vec3(ambientOcclution);
+		ambient *= occlusionData;
 	}
 
 	vec3 color = Lo + ambient; 

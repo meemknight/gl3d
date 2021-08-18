@@ -4,6 +4,7 @@
 #include <stb_image.h>
 #include "Texture.h"
 #include <algorithm>
+#include "gl3d.h"
 
 namespace gl3d 
 {
@@ -218,7 +219,7 @@ namespace gl3d
 	}
 
 
-	void MultipleGraphicModel::clear()
+	void ModelData::clear(Renderer3D& renderer)
 	{
 		for (auto &i : models)
 		{
@@ -231,6 +232,12 @@ namespace gl3d
 		}
 		subModelsNames.clear();
 		
+		for (auto& i : createdMaterials)
+		{
+			renderer.deleteMaterial(i);
+		}
+		createdMaterials.clear();
+
 		models.clear();
 
 	}

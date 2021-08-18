@@ -994,13 +994,13 @@ int main()
 			
 			if (itemCurrent < models.size())
 			{
-				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
-				if (currentEntity)
+				auto entityNames = renderer.getEntityMeshesNames(models[itemCurrent]);
+				if (entityNames)
 				{
 					int subitemsCount = renderer.getEntityMeshesCount(models[itemCurrent]);
 
 					ImGui::ListBox("Object components", &subItemCurent,
-						currentEntity->subModelsNames.data(), subitemsCount);
+						entityNames->data(), subitemsCount);
 				}
 			
 
@@ -1014,67 +1014,63 @@ int main()
 
 			if(!models.empty() && itemCurrent < items.size())
 			{
-				auto currentEntity = renderer.getEntityData(models[itemCurrent]);
 				auto transform = renderer.getEntityTransform(models[itemCurrent]);
 
-				if (currentEntity)
+				ImGui::NewLine();
+
+				ImGui::Text("Object transform");
+				ImGui::DragFloat3("position", &transform.position[0], 0.1);
+				ImGui::DragFloat3("rotation", &transform.rotation[0], 0.1);
+				ImGui::DragFloat3("scale", &transform.scale[0], 0.1);
+				float s = 0;
+				ImGui::InputFloat("sameScale", &s);
+				ImGui::NewLine();
+
+				ImGui::Text("Object flags");
+				bool staticEntity = renderer.isEntityStatic(models[itemCurrent]);
+				ImGui::Checkbox("static geometry", &staticEntity);
+				renderer.setEntityStatic(models[itemCurrent], staticEntity);
+				
+				bool visible = renderer.isEntityVisible(models[itemCurrent]);
+				ImGui::Checkbox("visible", &visible);
+				renderer.setEntityVisible(models[itemCurrent], visible);
+
+				bool castShadows = renderer.getEntityCastShadows(models[itemCurrent]);
+				ImGui::Checkbox("cast shadows", &castShadows);
+				renderer.setEntityCastShadows(models[itemCurrent], castShadows);
+
+				ImGui::NewLine();
+
+				if (s > 0)
 				{
+					transform.scale = glm::vec3(s);
+				}
 
-					ImGui::NewLine();
+				renderer.setEntityTransform(models[itemCurrent], transform);
 
-					ImGui::Text("Object transform");
-					ImGui::DragFloat3("position", &transform.position[0], 0.1);
-					ImGui::DragFloat3("rotation", &transform.rotation[0], 0.1);
-					ImGui::DragFloat3("scale", &transform.scale[0], 0.1);
-					float s = 0;
-					ImGui::InputFloat("sameScale", &s);
-					ImGui::NewLine();
-
-					ImGui::Text("Object flags");
-					bool staticEntity = renderer.isEntityStatic(models[itemCurrent]);
-					ImGui::Checkbox("static geometry", &staticEntity);
-					renderer.setEntityStatic(models[itemCurrent], staticEntity);
+				if (subItemCurent < renderer.getEntityMeshesCount(models[itemCurrent]))
+				{
 					
-					bool visible = renderer.isEntityVisible(models[itemCurrent]);
-					ImGui::Checkbox("visible", &visible);
-					renderer.setEntityVisible(models[itemCurrent], visible);
+					std::string name = renderer.getEntityMeshMaterialName(
+						models[itemCurrent], subItemCurent);
 
-					bool castShadows = renderer.getEntityCastShadows(models[itemCurrent]);
-					ImGui::Checkbox("cast shadows", &castShadows);
-					renderer.setEntityCastShadows(models[itemCurrent], castShadows);
+					auto materialData = renderer.getEntityMeshMaterialValues(
+						models[itemCurrent], subItemCurent);
 
-					ImGui::NewLine();
+					name = "Material name: " + name;
 
-					if (s > 0)
-					{
-						transform.scale = glm::vec3(s);
-					}
+					ImGui::Text("Object material");
+					ImGui::Text(name.c_str());
+					ImGui::ColorEdit3("difuse", &materialData.kd[0]);
+					ImGui::SliderFloat("emmisive", &materialData.emmisive, 0, 1);
+					ImGui::SliderFloat("roughness", &materialData.roughness, 0, 1);
+					ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);
+					ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
 
-					renderer.setEntityTransform(models[itemCurrent], transform);
+					renderer.setEntityMeshMaterialValues(
+						models[itemCurrent], subItemCurent, materialData);
 
-					if (subItemCurent < renderer.getEntityMeshesCount(models[itemCurrent]))
-					{
-						
-						std::string name = renderer.getEntityMeshMaterialName(
-							models[itemCurrent], subItemCurent);
-
-						auto materialData = renderer.getEntityMeshMaterialValues(
-							models[itemCurrent], subItemCurent);
-
-						name = "Material name: " + name;
-
-						ImGui::Text("Object material");
-						ImGui::Text(name.c_str());
-						ImGui::ColorEdit3("difuse", &materialData.kd[0]);
-						ImGui::SliderFloat("emmisive", &materialData.emmisive, 0, 1);
-						ImGui::SliderFloat("roughness", &materialData.roughness, 0, 1);
-						ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);
-						ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
-
-						renderer.setEntityMeshMaterialValues(
-							models[itemCurrent], subItemCurent, materialData);
-
-						auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
+					auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
 						{
 							ImGui::PushID(imguiId);
 							ImGui::Text(c, id);
@@ -1123,22 +1119,21 @@ int main()
 
 							ImGui::Combo("Texture Quality", &quality, items, 4);
 
-							t.setTextureQuality(quality);
+							//t.setTextureQuality(quality);
 							ImGui::PopID();
 						};
 
-						auto currentMateiral = currentEntity->models[subItemCurent].material;
-						auto materialTextureData = renderer.getMaterialTextures(currentMateiral);
+					
+					auto materialTextureData = renderer.getEntityMeshMaterialTextures(
+					models[itemCurrent], subItemCurent);
 
-						if (materialTextureData != nullptr)
-						{
-							drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData->albedoTexture), 20, 20, __COUNTER__);
-							drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData->normalMapTexture), 20, 20, __COUNTER__);
-							drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData->pbrTexture.texture), 20, 20, __COUNTER__);
-
-						}
+					{
+						drawImage("Object albedo, id: %d", renderer.getTextureOpenglId(materialTextureData.albedoTexture), 20, 20, __COUNTER__);
+						drawImage("Object normal map, id: %d", renderer.getTextureOpenglId(materialTextureData.normalMapTexture), 20, 20, __COUNTER__);
+						drawImage("Object RMA map, id: %d", renderer.getTextureOpenglId(materialTextureData.pbrTexture.texture), 20, 20, __COUNTER__);
 
 					}
+
 				}
 
 

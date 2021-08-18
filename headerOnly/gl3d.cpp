@@ -1860,7 +1860,53 @@ void main()
 
 	}else
 	{
-		ambient = ambientOcclution * lightPassData.ambientColor.rgb;
+		vec3 N = normal;
+		vec3 V = viewDir;
+		
+		float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
+
+		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
+		vec3 kS = F;
+		
+		vec3 irradiance = lightPassData.ambientColor.rgb; //this color is coming directly at the object
+		
+		vec3 radiance = lightPassData.ambientColor.rgb;
+
+		vec2 brdfVec = vec2(dotNVClamped, roughness);
+		//brdfVec.y = 1 - brdfVec.y; 
+		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
+
+
+		if(lightPassData.lightSubScater == 0)
+		{
+			vec3 kD = 1.0 - kS;
+			kD *= 1.0 - metallic;
+			
+			vec3 diffuse = irradiance * albedo;
+			
+			vec3 specular = radiance * (F * brdf.x + brdf.y);
+
+			//no multiple scattering
+			ambient = (kD * diffuse + specular);
+		}else
+		{
+			//http://jcgt.org/published/0008/01/03/
+			// Multiple scattering version
+			vec3 FssEss = kS * brdf.x + brdf.y;
+			float Ess = brdf.x + brdf.y;
+			float Ems = 1-Ess;
+			vec3 Favg = F0 + (1-F0)/21;
+			vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
+			// Dielectrics
+			vec3 Edss = 1 - (FssEss + Fms * Ems);
+			vec3 kD = albedo * Edss;
+
+			// Multiple scattering version
+			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
+		}
+		
+		vec3 occlusionData = vec3(ambientOcclution);
+		ambient *= occlusionData;
 	}
 
 	vec3 color = Lo + ambient; 
@@ -3357,6 +3403,7 @@ namespace gl3d
 
 #include <algorithm>
 
+
 namespace gl3d 
 {
 
@@ -3570,7 +3617,7 @@ namespace gl3d
 	}
 
 
-	void MultipleGraphicModel::clear()
+	void ModelData::clear(Renderer3D& renderer)
 	{
 		for (auto &i : models)
 		{
@@ -3583,6 +3630,12 @@ namespace gl3d
 		}
 		subModelsNames.clear();
 		
+		for (auto& i : createdMaterials)
+		{
+			renderer.deleteMaterial(i);
+		}
+		createdMaterials.clear();
+
 		models.clear();
 
 	}
@@ -4514,60 +4567,45 @@ namespace gl3d
 
 	}
 
-	TextureDataForMaterial *Renderer3D::getMaterialTextures(Material m)
+	TextureDataForMaterial Renderer3D::getMaterialTextures(Material m)
 	{
 		int id = internal.getMaterialIndex(m);
-
 		if (id == -1)
-		{
-			return nullptr;
-		}
+		{return {};}
 
-		auto data = &internal.materialTexturesData[id];
-
-		return data;
+		return internal.materialTexturesData[id];
 	}
 
-	std::string *Renderer3D::getMaterialName(Material m)
+	void Renderer3D::setMaterialTextures(Material m, TextureDataForMaterial textures)
 	{
 		int id = internal.getMaterialIndex(m);
-
 		if (id == -1)
-		{
-			return nullptr;
-		}
-
-		auto data = &internal.materialNames[id];
-
-		return data;
+		{return;}
+		
+		internal.materialTexturesData[id] = textures;
 	}
 
-	bool Renderer3D::getMaterialData(Material m, MaterialValues *gpuMaterial, std::string *name, 
-		TextureDataForMaterial *textureData)
+	std::string Renderer3D::getMaterialName(Material m)
 	{
 		int id = internal.getMaterialIndex(m);
 
 		if (id == -1)
 		{
-			return false;
+			return "";
 		}
 
-		if(gpuMaterial)
-		{
-			*gpuMaterial = internal.materials[id];
-		}
+		return internal.materialNames[id];
 
-		if(name)
-		{
-			*name = internal.materialNames[id];
-		}
+	}
 
-		if(textureData)
-		{
-			*textureData = internal.materialTexturesData[id];
-		}
+	void Renderer3D::setMaterialName(Material m, const std::string& name)
+	{
+		int id = internal.getMaterialIndex(m);
 
-		return true;
+		if (id == -1)
+		{return;}
+
+		internal.materialNames[id] = name;
 	}
 
 	bool Renderer3D::isMaterial(Material& m)
@@ -4602,20 +4640,6 @@ namespace gl3d
 	//
 	//	return 1;
 	//}
-
-	MultipleGraphicModel *Renderer3D::getModelData(Model o)
-	{
-		int id = internal.getModelIndex(o);
-	
-		if (id == -1)
-		{
-			return nullptr;
-		}
-	
-		auto data = &internal.graphicModels[id];
-	
-		return data;
-	}
 
 	Texture Renderer3D::loadTexture(std::string path)
 	{
@@ -4807,15 +4831,14 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
 	
-		MultipleGraphicModel returnModel;
+		ModelData returnModel;
 		{
 
 			int s = model.loader.LoadedMeshes.size();
 			returnModel.models.reserve(s);
 
 
-			std::vector<gl3d::Material> loadedMaterials;
-			loadedMaterials.reserve(model.loader.LoadedMaterials.size());
+			returnModel.createdMaterials.reserve(model.loader.LoadedMaterials.size());
 			for(int i=0;i<model.loader.LoadedMaterials.size(); i++)
 			{
 				auto &mat = model.loader.LoadedMaterials[i];
@@ -4825,9 +4848,8 @@ namespace gl3d
 
 				{
 					//load textures for materials
-					TextureDataForMaterial* textureData = this->getMaterialTextures(m);
+					TextureDataForMaterial textureData;
 
-					
 					//auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
 					//gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
 
@@ -4837,21 +4859,21 @@ namespace gl3d
 
 					if (!mat.map_Kd.empty())
 					{
-						textureData->albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
+						textureData.albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
 					}
 
 					if (!mat.map_Kn.empty())
 					{
-						textureData->normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
+						textureData.normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
 						//	TextureLoadQuality::linearMipmap);
 					}
 
 					if (!mat.map_emissive.empty())
 					{
-						textureData->emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
+						textureData.emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
 					}
 
-					textureData->pbrTexture.RMA_loadedTextures = 0;
+					textureData.pbrTexture.RMA_loadedTextures = 0;
 
 					auto rmaQuality = TextureLoadQuality::linearMipmap;
 
@@ -4860,11 +4882,11 @@ namespace gl3d
 						//todo not tested
 						//rmaQuality);
 
-						textureData->pbrTexture.texture = this->loadTexture(mat.map_RMA.c_str());
+						textureData.pbrTexture.texture = this->loadTexture(mat.map_RMA.c_str());
 
-						if (textureData->pbrTexture.texture.id_ != 0)
+						if (textureData.pbrTexture.texture.id_ != 0)
 						{
-							textureData->pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+							textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 						}
 
 						//if (gm.RMA_Texture.id)
@@ -4874,7 +4896,7 @@ namespace gl3d
 
 					}
 
-					if (!mat.map_ORM.empty() && textureData->pbrTexture.RMA_loadedTextures == 0)
+					if (!mat.map_ORM.empty() && textureData.pbrTexture.RMA_loadedTextures == 0)
 					{
 						stbi_set_flip_vertically_on_load(true);
 
@@ -4908,9 +4930,9 @@ namespace gl3d
 								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 								GpuTexture t;
 								t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
-								textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
+								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
 
-								textureData->pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+								textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 
 								stbi_image_free(data);
 							}
@@ -4920,7 +4942,7 @@ namespace gl3d
 					}
 
 					//RMA trexture
-					if (textureData->pbrTexture.RMA_loadedTextures == 0)
+					if (textureData.pbrTexture.RMA_loadedTextures == 0)
 					{
 						constexpr int MERGE_TEXTURES_ON_GPU = 1;
 
@@ -4982,25 +5004,25 @@ namespace gl3d
 							}
 
 							//calculate which function to use
-							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 7; }
+							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 7; }
 							else
-							if (metallicLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 6; }
+							if (metallicLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 6; }
 							else
-							if (roughnessLoaded && ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 5; }
+							if (roughnessLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 5; }
 							else
-							if (roughnessLoaded && metallicLoaded) { textureData->pbrTexture.RMA_loadedTextures = 4; }
+							if (roughnessLoaded && metallicLoaded) { textureData.pbrTexture.RMA_loadedTextures = 4; }
 							else
-							if (ambientLoaded) { textureData->pbrTexture.RMA_loadedTextures = 3; }
+							if (ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 3; }
 							else
-							if (metallicLoaded) { textureData->pbrTexture.RMA_loadedTextures = 2; }
+							if (metallicLoaded) { textureData.pbrTexture.RMA_loadedTextures = 2; }
 							else
-							if (roughnessLoaded) { textureData->pbrTexture.RMA_loadedTextures = 1; }
-							else { textureData->pbrTexture.RMA_loadedTextures = 0; }
+							if (roughnessLoaded) { textureData.pbrTexture.RMA_loadedTextures = 1; }
+							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
 
 							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
 								roughness, metallic, ambientOcclusion, lightShader.quadDrawer.quadVAO);
 
-							textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
+							textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
 
 							roughness.clear();
 							metallic.clear();
@@ -5043,22 +5065,22 @@ namespace gl3d
 							int h = max(h1, h2, h3);
 
 							//calculate which function to use
-							if (data1 && data2 && data3) { textureData->pbrTexture.RMA_loadedTextures = 7; }
+							if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
 							else
-							if (data2 && data3) { textureData->pbrTexture.RMA_loadedTextures = 6; }
+							if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
 							else
-							if (data1 && data3) { textureData->pbrTexture.RMA_loadedTextures = 5; }
+							if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
 							else
-							if (data1 && data2) { textureData->pbrTexture.RMA_loadedTextures = 4; }
+							if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
 							else
-							if (data3) { textureData->pbrTexture.RMA_loadedTextures = 3; }
+							if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
 							else
-							if (data2) { textureData->pbrTexture.RMA_loadedTextures = 2; }
+							if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
 							else
-							if (data1) { textureData->pbrTexture.RMA_loadedTextures = 1; }
-							else { textureData->pbrTexture.RMA_loadedTextures = 0; }
+							if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
+							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
 
-							if (textureData->pbrTexture.RMA_loadedTextures)
+							if (textureData.pbrTexture.RMA_loadedTextures)
 							{
 
 								unsigned char* finalData = new unsigned char[w * h * 4];
@@ -5120,7 +5142,7 @@ namespace gl3d
 
 								GpuTexture t;
 								t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-								textureData->pbrTexture.texture = this->createIntenralTexture(t, 0);
+								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
 
 								stbi_image_free(data1);
 								stbi_image_free(data2);
@@ -5137,14 +5159,11 @@ namespace gl3d
 
 					}
 
-
-
-
-
+					this->setMaterialTextures(m, textureData);
 					
 				}
 
-				loadedMaterials.push_back(m);
+				returnModel.createdMaterials.push_back(m);
 			}
 
 
@@ -5163,7 +5182,7 @@ namespace gl3d
 
 				if(model.loader.LoadedMeshes[index].materialIndex > -1)
 				{
-					gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
+					gm.material = returnModel.createdMaterials[model.loader.LoadedMeshes[index].materialIndex];
 				}else
 				{
 					//if no material loaded for this object create a new default one
@@ -5195,9 +5214,22 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::deleteModel(Model o)
+	bool Renderer3D::isModel(Model& m)
 	{
-		auto pos = internal.getModelIndex(o);
+		auto pos = internal.getModelIndex(m);
+		if (pos < 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
+	void Renderer3D::deleteModel(Model &m)
+	{
+		auto pos = internal.getModelIndex(m);
 		if (pos < 0)
 		{
 			gl3dAssertComment(pos >= 0, "invalid delete model");
@@ -5205,10 +5237,60 @@ namespace gl3d
 		}
 
 		internal.graphicModelsIndexes.erase(internal.graphicModelsIndexes.begin() + pos);
-		internal.graphicModels[pos].clear();
+		internal.graphicModels[pos].clear(*this);
 		internal.graphicModels.erase(internal.graphicModels.begin() + pos);
 
+		m.id_ = 0;
 	}
+
+	void Renderer3D::clearModelData(Model& m)
+	{
+		auto pos = internal.getModelIndex(m);
+		if (pos < 0)
+		{
+			return;
+		}
+
+		internal.graphicModels[pos].clear(*this);
+	}
+
+	int Renderer3D::getModelMeshesCount(Model& m)
+	{
+		auto pos = internal.getModelIndex(m);
+		if (pos < 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return internal.graphicModels[pos].models.size();
+		}
+	}
+
+	std::string Renderer3D::getModelMeshesName(Model& m, int index)
+	{
+		auto pos = internal.getModelIndex(m);
+		if (pos >= 0)
+		{
+			if(index < internal.graphicModels[pos].models.size())
+			{
+				return internal.graphicModels[pos].models[pos].name;
+			}
+		}
+		else
+		{
+			return "";
+		}
+	}
+
+	std::vector<char*>* Renderer3D::getModelMeshesNames(Model& m)
+	{
+		auto i = internal.getModelIndex(m);
+		if (i < 0) { return nullptr; } //warn or sthing
+
+		return &internal.graphicModels[i].subModelsNames;
+	}
+
 
 #pragma region point light
 
@@ -5752,7 +5834,7 @@ namespace gl3d
 		entity.setCastShadows(castShadows);
 
 		internal.entitiesIndexes.push_back(id);
-		internal.cpuEntities.push_back(entity);
+		internal.cpuEntities.push_back(std::move(entity));
 
 		if (staticGeometry && visible && castShadows)
 		{
@@ -5765,6 +5847,53 @@ namespace gl3d
 		setEntityModel(e, m);
 		
 		return e;
+	}
+
+	Entity Renderer3D::duplicateEntity(Entity& e)
+	{
+		int oldIndex = internal.getEntityIndex(e);
+
+		if (oldIndex < 0)
+		{
+			return {};
+		}
+		
+		int id = internal::generateNewIndex(internal.entitiesIndexes);
+
+		CpuEntity entity;
+
+		entity.transform = internal.cpuEntities[oldIndex].transform;
+		entity.flags = internal.cpuEntities[oldIndex].flags;
+		entity.subModelsNames.reserve(internal.cpuEntities[oldIndex].subModelsNames.size());
+
+		for (auto i : internal.cpuEntities[oldIndex].subModelsNames)
+		{
+			int size = strlen(i);
+			char* c = new char[size] {};
+			strcpy(c, i);
+			entity.subModelsNames.push_back(c);
+		}
+
+		entity.models.reserve(internal.cpuEntities[oldIndex].models.size());
+		for (auto i : internal.cpuEntities[oldIndex].models)
+		{
+			GraphicModel model = i;
+
+			if (model.ownMaterial)
+			{
+				model.material = createMaterial();
+				this->copyMaterialData(model.material, i.material);
+			}
+
+			entity.models.push_back(std::move(model));
+		}
+
+		internal.entitiesIndexes.push_back(id);
+		internal.cpuEntities.push_back(std::move(entity));
+
+		Entity ret;
+		ret.id_ = id;
+		return ret;
 	}
 
 	void Renderer3D::setEntityModel(Entity& e, Model m)
@@ -5919,7 +6048,7 @@ namespace gl3d
 		{
 			auto mat = internal.cpuEntities[i].models[meshIndex].material;
 			MaterialValues data = {};
-			bool succeeded = getMaterialData(mat, &data, nullptr, nullptr);
+			bool succeeded = internal.getMaterialData(mat, &data, nullptr, nullptr);
 
 			if (succeeded)
 			{
@@ -5948,7 +6077,7 @@ namespace gl3d
 			MaterialValues data = {};
 			std::string name = {};
 			TextureDataForMaterial textures;
-			bool succeeded = getMaterialData(currentMat, &data, &name, &textures);
+			bool succeeded = internal.getMaterialData(currentMat, &data, &name, &textures);
 
 			if (succeeded)
 			{
@@ -5962,12 +6091,7 @@ namespace gl3d
 						mat.metallic, mat.ao, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 
-					auto textures = this->getMaterialTextures(currentMat);
-
-					if (textures)
-					{
-						internal.materialTexturesData[newMatIndex] = *textures;
-					}
+					internal.materialTexturesData[newMatIndex] = textures;
 
 					internal.cpuEntities[i].models[meshIndex].material = newMat;
 					internal.cpuEntities[i].models[meshIndex].ownMaterial = 1;
@@ -5994,7 +6118,7 @@ namespace gl3d
 		{
 			auto currentMat = internal.cpuEntities[i].models[meshIndex].material;
 			std::string name = {};
-			bool succeeded = getMaterialData(currentMat, nullptr, &name, nullptr);
+			bool succeeded = internal.getMaterialData(currentMat, nullptr, &name, nullptr);
 			if (succeeded)
 			{
 				return name;
@@ -6014,29 +6138,43 @@ namespace gl3d
 	void Renderer3D::setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string& name)
 	{
 		auto i = internal.getEntityIndex(e);
-		if (i < 0) { return; } //invalid entity;
-
+		if (i < 0) { return; } //warn or sthing
 
 		if (meshIndex < internal.cpuEntities[i].models.size())
 		{
 			auto currentMat = internal.cpuEntities[i].models[meshIndex].material;
-			int currentMatIndex = internal.getMaterialIndex(currentMat);
+			MaterialValues data = {};
+			std::string oldName = {};
+			TextureDataForMaterial textures;
+			bool succeeded = internal.getMaterialData(currentMat, &data, &oldName, &textures);
 
-			if (currentMatIndex < 0)
+			if (succeeded)
 			{
-				return;//no material
+				if (internal.cpuEntities[i].models[meshIndex].ownMaterial == 1)
+				{
+					setMaterialName(currentMat, name);
+				}
+				else
+				if (name != oldName) //copy to new material
+				{
+					Material newMat = this->createMaterial(data.kd, data.roughness,
+						data.metallic, data.ao, name);
+					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
+					internal.materialTexturesData[newMatIndex] = textures;
+
+					internal.cpuEntities[i].models[meshIndex].material = newMat;
+					internal.cpuEntities[i].models[meshIndex].ownMaterial = 1;
+				}
 			}
 			else
 			{
-				internal.materialNames[currentMatIndex] = name;
+				return; //warn
 			}
-
 		}
 		else
 		{
-			return; //invalid index
+			return; //warn
 		}
-
 	}
 
 	void Renderer3D::setEntityMeshMaterial(Entity& e, int meshIndex, Material mat)
@@ -6063,6 +6201,74 @@ namespace gl3d
 			{
 				internal.perFrameFlags.staticGeometryChanged = true;
 			}
+		}
+	}
+
+	TextureDataForMaterial Renderer3D::getEntityMeshMaterialTextures(Entity& e, int meshIndex)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return {}; } //no valid entity
+
+		if (meshIndex < internal.cpuEntities[i].models.size())
+		{
+			auto currentMat = internal.cpuEntities[i].models[meshIndex].material;
+			TextureDataForMaterial t= {};
+			bool succeeded = internal.getMaterialData(currentMat, nullptr, nullptr, &t);
+			if (succeeded)
+			{
+				return t;
+			}
+			else
+			{
+				return{};//invalid material
+			}
+
+		}
+		else
+		{
+			return {};//invalid index
+		}
+	}
+
+	void Renderer3D::setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		if (meshIndex < internal.cpuEntities[i].models.size())
+		{
+			auto currentMat = internal.cpuEntities[i].models[meshIndex].material;
+			MaterialValues data = {};
+			std::string oldName = {};
+			TextureDataForMaterial oldTextures;
+			bool succeeded = internal.getMaterialData(currentMat, &data, &oldName, &oldTextures);
+
+			if (succeeded)
+			{
+				if (internal.cpuEntities[i].models[meshIndex].ownMaterial == 1)
+				{
+					setMaterialTextures(currentMat, texture);
+				}
+				else
+				if (texture != oldTextures) //copy to new material
+				{
+					Material newMat = this->createMaterial(data.kd, data.roughness,
+						data.metallic, data.ao, oldName);
+					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
+					internal.materialTexturesData[newMatIndex] = texture; //new textures
+
+					internal.cpuEntities[i].models[meshIndex].material = newMat;
+					internal.cpuEntities[i].models[meshIndex].ownMaterial = 1;
+				}
+			}
+			else
+			{
+				return; //warn
+			}
+		}
+		else
+		{
+			return; //warn
 		}
 	}
 
@@ -6127,6 +6333,14 @@ namespace gl3d
 		return internal.cpuEntities[i].castShadows();
 	}
 
+	std::vector<char*> *Renderer3D::getEntityMeshesNames(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return nullptr; } //warn or sthing
+		
+		return &internal.cpuEntities[i].subModelsNames;
+	}
+
 	void Renderer3D::enableNormalMapping(bool normalMapping)
 	{
 		lightShader.normalMap = normalMapping;
@@ -6159,7 +6373,7 @@ namespace gl3d
 	void Renderer3D::renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation,
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
-		auto obj = getModelData(o);
+		auto obj = internal.getModelData(o);
 
 		if(!obj)
 		{
@@ -6197,7 +6411,7 @@ namespace gl3d
 
 		auto modelIndex = this->internal.getModelIndex(o);
 
-		auto obj = getModelData(o);
+		auto obj = internal.getModelData(o);
 		if(obj == nullptr)
 		{
 			return;
@@ -6417,6 +6631,46 @@ namespace gl3d
 		id = found - directionalLightIndexes.begin();
 
 		return id;
+	}
+
+	bool Renderer3D::InternalStruct::getMaterialData(Material m, MaterialValues* gpuMaterial, std::string* name, TextureDataForMaterial* textureData)
+	{
+		int id = getMaterialIndex(m);
+
+		if (id == -1)
+		{
+			return false;
+		}
+
+		if (gpuMaterial)
+		{
+			*gpuMaterial = materials[id];
+		}
+
+		if (name)
+		{
+			*name = materialNames[id];
+		}
+
+		if (textureData)
+		{
+			*textureData = materialTexturesData[id];
+		}
+
+		return true;
+	}
+
+	ModelData* Renderer3D::InternalStruct::getModelData(Model o)
+	{
+		int id = getModelIndex(o);
+
+		if (id == -1)
+		{
+			return nullptr;
+		}
+
+		auto data = &graphicModels[id];
+		return data;
 	}
 
 
@@ -7814,8 +8068,8 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		//todo set the quality of this texture in a function parameter.
 		//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);
@@ -7836,6 +8090,8 @@ namespace gl3d
 		glViewport(0, 0, w, h);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindVertexArray(0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -1,7 +1,7 @@
 # gl3d
 - Still in working progress (the proper api for the users is not ready)
 
-![](https://github.com/meemknight/photos/blob/master/gl3d1.png)
+![](https://github.com/meemknight/photos/blob/master/gl3d2.png)
 
 
 <h3>How to integrate the library in your project:</h3>
@@ -34,9 +34,9 @@ Features and todos:
 - [x] Phisically based materials
 - [x] Sky box (can load many formats)
 - [x] Image based lighting
-- [x] Multi light scattering for IBL as described here http://jcgt.org/published/0008/01/03/
+- [x] Light sub scattering for IBL as described here http://jcgt.org/published/0008/01/03/
 - [ ] Screen space reflections
-- [ ] Light probes
+- [ ] Environment probes
 ---
 - [x] Deferred rendering
 - [ ] Optimize lights 

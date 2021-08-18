@@ -37,6 +37,22 @@ namespace gl3d
 		Texture normalMapTexture = {};
 		Texture emissiveTexture= {};
 		PBRTexture pbrTexture = {};
+
+		bool operator==(const TextureDataForMaterial& other)
+		{
+			return
+				(albedoTexture.id_ == other.albedoTexture.id_)
+				&& (normalMapTexture.id_ == other.normalMapTexture.id_)
+				&& (emissiveTexture.id_ == other.emissiveTexture.id_)
+				&& (pbrTexture.texture.id_ == other.pbrTexture.texture.id_)
+				&& (pbrTexture.RMA_loadedTextures == other.pbrTexture.RMA_loadedTextures)
+				;
+		};
+
+		bool operator!=(const TextureDataForMaterial& other)
+		{
+			return !(*this == other);
+		};
 	};
 	
 	//note this is the gpu material
