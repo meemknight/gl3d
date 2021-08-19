@@ -128,7 +128,7 @@ namespace gl3d
 		directionalShadows.create();
 		spotShadows.create();
 		renderDepthMap.create();
-		
+		fxaa.create(x, y);
 
 		internal.pBRtextureMaker.init();
 	}
@@ -2403,12 +2403,21 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
 
+		if (fxaa.usingFXAA) 
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fxaa.fbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
 
 		renderSkyBoxBefore();
+
+
 
 		#pragma region render shadow maps
 		
@@ -3119,7 +3128,6 @@ namespace gl3d
 
 		glBindVertexArray(0);
 		glDepthFunc(GL_LESS);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 		//we draw a rect several times so we keep this vao binded
@@ -3178,7 +3186,7 @@ namespace gl3d
 			glViewport(0, 0, w, h);
 		#pragma endregion
 		}
-	#pragma endregion
+		#pragma endregion
 
 
 		#pragma region do the lighting pass
@@ -3325,7 +3333,16 @@ namespace gl3d
 
 		#pragma region do the post process stuff and draw to the screen
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		if (fxaa.usingFXAA)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fxaa.fbo);
+		}
+		else
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
 		glUseProgram(postProcess.postProcessShader.id);
 
 		//color data
@@ -3396,7 +3413,23 @@ namespace gl3d
 
 	#pragma endregion
 
-		#pragma region copy depth buffer for later forward rendering
+	#pragma region draw to screen and fxaa
+
+		if (fxaa.usingFXAA)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			fxaa.shader.bind();
+			glUniform1i(fxaa.u_texture, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, fxaa.texture);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+
+	#pragma endregion
+
+
+
+	#pragma region copy depth buffer for later forward rendering
 		glBindVertexArray(0);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
@@ -3483,9 +3516,12 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		//fxaa
+		glBindTexture(GL_TEXTURE_2D, fxaa.texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		
 
 	}
 
@@ -3692,8 +3728,8 @@ namespace gl3d
 		{
 			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
@@ -3830,6 +3866,29 @@ namespace gl3d
 		glReadBuffer(GL_NONE);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	}
+
+	void Renderer3D::FXAA::create(int w, int h)
+	{
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
+			"shaders/aa/fxaa.frag");
+
+		u_texture = getUniform(shader.id, "u_texture");
+
 
 	}
 

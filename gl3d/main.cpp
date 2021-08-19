@@ -674,6 +674,8 @@ int main()
 			ImGui::Checkbox("Light sub scater", &lightSubScater);
 			renderer.enableLightSubScattering(lightSubScater);
 
+			ImGui::Checkbox("FXAA", &renderer.fxaa.usingFXAA);
+
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);
@@ -720,6 +722,9 @@ int main()
 			
 			//drawImageNoQuality("shadow map texture: %d", renderer.directionalShadows.varianceShadowTexture,
 			//	40, 40, 400, 400, __COUNTER__);
+
+			//drawImageNoQuality("fxaa texture: %d", renderer.fxaa.texture,
+			//		40, 40, 400, 400, __COUNTER__);
 
 
 			ImGui::PopID();

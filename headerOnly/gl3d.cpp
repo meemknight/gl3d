@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-18
+//built on 2021-08-19
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -556,7 +556,7 @@ namespace gl3d
 
 		//std::pair< std::string, const char*>{"name", "value"}
 		//#pragma shaderSources
-	  std::pair<std::string, const char*>{"ssao.frag", R"(#version 330 core
+      std::pair<std::string, const char*>{"ssao.frag", R"(#version 330 core
 out float fragCoord;
 in vec2 v_texCoords;
 uniform sampler2D u_gPosition;
@@ -602,7 +602,7 @@ occlusion = 1.0 - (occlusion / kernelSize);
 fragCoord = occlusion;
 })"},
 
-	  std::pair<std::string, const char*>{"blur.frag", R"(#version 150
+      std::pair<std::string, const char*>{"blur.frag", R"(#version 150
 in vec2 v_texCoords;
 uniform sampler2D u_ssaoInput;
 out float fragColor;
@@ -630,7 +630,7 @@ result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + texelSize_2)).x);
 fragColor = (result_1 / 16.0);
 })"},
 
-	  std::pair<std::string, const char*>{"skyBox.vert", R"(#version 330
+      std::pair<std::string, const char*>{"skyBox.vert", R"(#version 330
 #pragma debug(on)
 layout (location = 0) in vec3 aPos;
 out vec3 v_texCoords;
@@ -642,7 +642,7 @@ vec4 pos = u_viewProjection * vec4(aPos, 1.0);
 gl_Position = pos.xyww;
 }  )"},
 
-	  std::pair<std::string, const char*>{"skyBox.frag", R"(#version 150
+      std::pair<std::string, const char*>{"skyBox.frag", R"(#version 150
 out vec4 a_outColor;
 in vec3 v_texCoords;
 uniform samplerCube u_skybox;
@@ -665,7 +665,7 @@ a_outColor.xyz = (vec3(1.0, 1.0, 1.0) - exp((
 a_outColor.xyz = pow (a_outColor.xyz, vec3(0.4545454, 0.4545454, 0.4545454));
 })"},
 
-	  std::pair<std::string, const char*>{"preFilterSpecular.frag", R"(#version 150
+      std::pair<std::string, const char*>{"preFilterSpecular.frag", R"(#version 150
 out vec4 FragColor;
 in vec3 v_localPos;
 uniform samplerCube u_environmentMap;
@@ -766,7 +766,7 @@ tmpvar_27.xyz = prefilteredColor_3;
 FragColor = tmpvar_27;
 })"},
 
-	  std::pair<std::string, const char*>{"hdrToCubeMap.vert", R"(#version 330
+      std::pair<std::string, const char*>{"hdrToCubeMap.vert", R"(#version 330
 #pragma debug(on)
 layout (location = 0) in vec3 aPos;
 out vec3 v_localPos;
@@ -777,7 +777,7 @@ v_localPos = aPos;
 gl_Position = u_viewProjection * vec4(aPos, 1.0);
 }  )"},
 
-	  std::pair<std::string, const char*>{"hdrToCubeMap.frag", R"(#version 150
+      std::pair<std::string, const char*>{"hdrToCubeMap.frag", R"(#version 150
 out vec4 FragColor;
 in vec3 v_localPos;
 uniform sampler2D u_equirectangularMap;
@@ -836,7 +836,7 @@ tmpvar_7.xyz = texture (u_equirectangularMap, uv_2).xyz;
 FragColor = tmpvar_7;
 })"},
 
-	  std::pair<std::string, const char*>{"convolute.frag", R"(#version 150
+      std::pair<std::string, const char*>{"convolute.frag", R"(#version 150
 out vec4 fragColor;
 in vec3 v_localPos;
 uniform samplerCube u_environmentMap;
@@ -879,7 +879,7 @@ tmpvar_12.xyz = irradiance_5;
 fragColor = tmpvar_12;
 })"},
 
-	  std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 330 core
+      std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 330 core
 uniform vec3 u_lightPos;
 in vec3 v_localPos;
 out vec3 fragColor;
@@ -911,7 +911,7 @@ float fMiePhase = 1.5 * ((1.0 - u_g2) / (2.0 + u_g2)) * (1.0 + fCos*fCos) / pow(
 fragColor.rgb =  firstColor + fMiePhase * secondColor;
 })"},
 
-	  std::pair<std::string, const char*>{"varienceShadowMap.frag", R"(#version 150
+      std::pair<std::string, const char*>{"varienceShadowMap.frag", R"(#version 150
 uniform sampler2D u_albedoSampler;
 uniform int u_hasTexture;
 in vec2 v_texCoord;
@@ -931,7 +931,7 @@ tmpvar_2.y = (gl_FragCoord.z * gl_FragCoord.z);
 outColor = tmpvar_2;
 })"},
 
-	  std::pair<std::string, const char*>{"postProcess.frag", R"(#version 150
+      std::pair<std::string, const char*>{"postProcess.frag", R"(#version 150
 out vec4 a_color;
 in vec2 v_texCoords;
 uniform sampler2D u_colorTexture;
@@ -961,7 +961,7 @@ a_color.xyz = pow (a_color.xyz, vec3(0.4545454, 0.4545454, 0.4545454));
 a_color.w = tmpvar_2.w;
 })"},
 
-	  std::pair<std::string, const char*>{"gausianBlur.frag", R"(#version 150
+      std::pair<std::string, const char*>{"gausianBlur.frag", R"(#version 150
 in vec2 v_texCoords;
 uniform sampler2D u_toBlurcolorInput;
 out vec3 fragColor;
@@ -1042,7 +1042,7 @@ result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_18)).
 fragColor = result_1;
 })"},
 
-	  std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
+      std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
 in vec2 v_texCoords;
 out vec4 fragColor;
 layout(binding = 0) uniform sampler2D u_roughness;
@@ -1056,7 +1056,7 @@ float ambient = texture(u_ambient, v_texCoords).r;
 fragColor = vec4(roughness, metallic, ambient, 1);
 })"},
 
-	  std::pair<std::string, const char*>{"zPrePass.frag", R"(#version 150
+      std::pair<std::string, const char*>{"zPrePass.frag", R"(#version 150
 uniform sampler2D u_albedoSampler;
 uniform int u_hasTexture;
 in vec2 v_texCoord;
@@ -1071,7 +1071,7 @@ discard;
 };
 })"},
 
-	  std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430
+      std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430
 #pragma debug(on)
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
@@ -1528,7 +1528,7 @@ a_outColor = vec4(color.rgb, albedoAlpha.a);
 a_outBloom = clamp(a_outBloom, 0, 1000);
 })"},
 
-	  std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 330
+      std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 330
 #pragma debug(on)
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals;
@@ -1550,7 +1550,7 @@ v_normals = normalize(v_normals);
 v_texCoord = a_texCoord;
 })"},
 
-	  std::pair<std::string, const char*>{"geometryPass.frag", R"(#version 430
+      std::pair<std::string, const char*>{"geometryPass.frag", R"(#version 430
 #pragma debug(on)
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
@@ -1684,7 +1684,19 @@ a_posViewSpace = v_positionViewSpace;
 a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
 })"},
 
-	  std::pair<std::string, const char*>{"stencil.vert", R"(#version 330
+      std::pair<std::string, const char*>{"fxaa.frag", R"(#version 150
+out vec4 a_color;
+in vec2 v_texCoords;
+uniform sampler2D u_texture;
+void main ()
+{
+vec4 tmpvar_1;
+tmpvar_1.w = 1.0;
+tmpvar_1.xyz = texture (u_texture, v_texCoords).xyz;
+a_color = tmpvar_1;
+})"},
+
+      std::pair<std::string, const char*>{"stencil.vert", R"(#version 330
 #pragma debug(on)
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
@@ -1700,9 +1712,9 @@ v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non
 v_normals = normalize(v_normals);
 })"},
 
-	  std::pair<std::string, const char*>{"stencil.frag", R"(#pragma once)"},
+      std::pair<std::string, const char*>{"stencil.frag", R"(#pragma once)"},
 
-	  std::pair<std::string, const char*>{"showNormals.vert", R"(#version 330
+      std::pair<std::string, const char*>{"showNormals.vert", R"(#version 330
 #pragma debug(on)
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
@@ -1715,7 +1727,7 @@ v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non
 v_normals = normalize(v_normals);
 })"},
 
-	  std::pair<std::string, const char*>{"showNormals.geom", R"(#version 330 core
+      std::pair<std::string, const char*>{"showNormals.geom", R"(#version 330 core
 layout (triangles) in;
 layout (line_strip, max_vertices = 6) out;
 in vec3 v_normals[];
@@ -1736,7 +1748,7 @@ emitNormal(1);
 emitNormal(2);
 })"},
 
-	  std::pair<std::string, const char*>{"showNormals.frag", R"(#version 150
+      std::pair<std::string, const char*>{"showNormals.frag", R"(#version 150
 out vec4 a_outColor;
 uniform vec3 u_color = vec3(0.7, 0.7, 0.1);
 void main ()
@@ -1747,7 +1759,7 @@ tmpvar_1.xyz = u_color;
 a_outColor = tmpvar_1;
 })"},
 
-	  std::pair<std::string, const char*>{"normals.vert", R"(#version 330
+      std::pair<std::string, const char*>{"normals.vert", R"(#version 330
 #pragma debug(on)
 in layout(location = 0) vec3 a_positions;
 in layout(location = 1) vec3 a_normals;
@@ -1766,7 +1778,7 @@ v_normals = normalize(v_normals);
 v_texCoord = a_texCoord;
 })"},
 
-	  std::pair<std::string, const char*>{"normals.frag", R"(#version 430
+      std::pair<std::string, const char*>{"normals.frag", R"(#version 430
 #pragma debug(on)
 #extension GL_NV_shadow_samplers_cube : enable
 out layout(location = 0) vec4 a_outColor;
@@ -1972,7 +1984,7 @@ color = pow(color, vec3(1.0/2.2));
 a_outColor = clamp(vec4(color.rgb,1), 0, 1);
 })"},
 
-	  std::pair<std::string, const char*>{"drawQuads.vert", R"(#version 330 core
+      std::pair<std::string, const char*>{"drawQuads.vert", R"(#version 330 core
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec2 a_TexCoords;
 out vec2 v_texCoords;
@@ -1982,7 +1994,7 @@ v_texCoords = a_TexCoords;
 gl_Position = vec4(a_Pos, 1.0);
 })"},
 
-	  std::pair<std::string, const char*>{"drawDepth.frag", R"(#version 150
+      std::pair<std::string, const char*>{"drawDepth.frag", R"(#version 150
 out vec4 outColor;
 in vec2 v_texCoords;
 uniform sampler2D u_depth;
@@ -1998,7 +2010,7 @@ tmpvar_2.z = tmpvar_1;
 outColor = tmpvar_2;
 })"},
 
-	  std::pair<std::string, const char*>{"color.vert", R"(#version 330
+      std::pair<std::string, const char*>{"color.vert", R"(#version 330
 #pragma debug(on)
 in layout(location = 0) vec3 positions;
 in layout(location = 1) vec3 colors;
@@ -2010,7 +2022,7 @@ gl_Position = u_transform * vec4(positions,1.f);
 v_colors = colors;
 } )"},
 
-	  std::pair<std::string, const char*>{"color.frag", R"(#version 150
+      std::pair<std::string, const char*>{"color.frag", R"(#version 150
 out vec4 outColor;
 in vec3 v_colors;
 void main ()
@@ -2021,7 +2033,7 @@ tmpvar_1.xyz = v_colors;
 outColor = tmpvar_1;
 })"},
 
-		//std::pair test stuff...
+        //std::pair test stuff...
 	
 
 
@@ -3731,7 +3743,7 @@ namespace gl3d
 		directionalShadows.create();
 		spotShadows.create();
 		renderDepthMap.create();
-		
+		fxaa.create(x, y);
 
 		internal.pBRtextureMaker.init();
 	}
@@ -6006,12 +6018,21 @@ namespace gl3d
 
 	void Renderer3D::render()
 	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
 
+		if (fxaa.usingFXAA) 
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fxaa.fbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
 
 		renderSkyBoxBefore();
+
+
 
 		#pragma region render shadow maps
 		
@@ -6722,7 +6743,6 @@ namespace gl3d
 
 		glBindVertexArray(0);
 		glDepthFunc(GL_LESS);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 		//we draw a rect several times so we keep this vao binded
@@ -6781,7 +6801,7 @@ namespace gl3d
 			glViewport(0, 0, w, h);
 		#pragma endregion
 		}
-	#pragma endregion
+		#pragma endregion
 
 
 		#pragma region do the lighting pass
@@ -6928,7 +6948,16 @@ namespace gl3d
 
 		#pragma region do the post process stuff and draw to the screen
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		if (fxaa.usingFXAA)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fxaa.fbo);
+		}
+		else
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
 		glUseProgram(postProcess.postProcessShader.id);
 
 		//color data
@@ -6999,7 +7028,23 @@ namespace gl3d
 
 	#pragma endregion
 
-		#pragma region copy depth buffer for later forward rendering
+	#pragma region draw to screen and fxaa
+
+		if (fxaa.usingFXAA)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			fxaa.shader.bind();
+			glUniform1i(fxaa.u_texture, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, fxaa.texture);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+
+	#pragma endregion
+
+
+
+	#pragma region copy depth buffer for later forward rendering
 		glBindVertexArray(0);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
@@ -7086,9 +7131,12 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		//fxaa
+		glBindTexture(GL_TEXTURE_2D, fxaa.texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		
 
 	}
 
@@ -7295,8 +7343,8 @@ namespace gl3d
 		{
 			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
@@ -7433,6 +7481,29 @@ namespace gl3d
 		glReadBuffer(GL_NONE);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	}
+
+	void Renderer3D::FXAA::create(int w, int h)
+	{
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
+			"shaders/aa/fxaa.frag");
+
+		u_texture = getUniform(shader.id, "u_texture");
+
 
 	}
 

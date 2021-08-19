@@ -206,6 +206,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\drawDepth.frag" />
+    <None Include="shaders\aa\fxaa.frag" />
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
     <None Include="shaders\deferred\zPrePass.frag" />

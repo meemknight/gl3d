@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-18
+//built on 2021-08-19
 ////////////////////////////////////////////////
 
 
@@ -2498,6 +2498,18 @@ namespace gl3d
 			float bloomIntensty = 1;
 
 		}postProcess;
+
+
+		struct FXAA
+		{
+			Shader shader;
+			void create(int w, int h);
+
+			GLuint texture;
+			GLuint fbo;
+			GLuint u_texture;
+			bool usingFXAA = true;
+		}fxaa;
 
 		struct SSAO
 		{

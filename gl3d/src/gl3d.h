@@ -411,6 +411,18 @@ namespace gl3d
 
 		}postProcess;
 
+
+		struct FXAA
+		{
+			Shader shader;
+			void create(int w, int h);
+
+			GLuint texture;
+			GLuint fbo;
+			GLuint u_texture;
+			bool usingFXAA = true;
+		}fxaa;
+
 		struct SSAO
 		{
 			//https://learnopengl.com/Advanced-Lighting/SSAO

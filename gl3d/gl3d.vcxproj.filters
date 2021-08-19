@@ -95,5 +95,6 @@
     <None Include="shaders\skyBox\atmosphericScattering.frag" />
     <None Include="resources\drawDepth.frag" />
     <None Include="shaders\shadows\varienceShadowMap.frag" />
+    <None Include="shaders\aa\fxaa.frag" />
   </ItemGroup>
 </Project>

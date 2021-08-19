@@ -119,7 +119,6 @@ int main()
 	#pragma endregion
 
 
-
 	#pragma region camera
 
 		float speed = 4;
