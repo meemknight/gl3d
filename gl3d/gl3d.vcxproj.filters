@@ -96,5 +96,6 @@
     <None Include="resources\drawDepth.frag" />
     <None Include="shaders\shadows\varienceShadowMap.frag" />
     <None Include="shaders\aa\fxaa.frag" />
+    <None Include="shaders\aa\noaa.frag" />
   </ItemGroup>
 </Project>

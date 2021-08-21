@@ -674,7 +674,7 @@ int main()
 			ImGui::Checkbox("Light sub scater", &lightSubScater);
 			renderer.enableLightSubScattering(lightSubScater);
 
-			ImGui::Checkbox("FXAA", &renderer.fxaa.usingFXAA);
+			ImGui::Checkbox("FXAA", &renderer.antiAlias.usingFXAA);
 
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
@@ -1275,19 +1275,19 @@ int main()
 		renderDurationProfilerFine.end();
 
 	#pragma region light cube
-		for (auto &i : renderer.internal.spotLights)
-		{
-			lightCubeModel.position = i.position;
-
-			auto projMat = renderer.camera.getProjectionMatrix();
-			auto viewMat = renderer.camera.getWorldToViewMatrix();
-			auto transformMat = lightCubeModel.getTransformMatrix();
-
-			auto viewProjMat = projMat * viewMat * transformMat;
-			shader.bind();
-			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-			lightCubeModel.draw();
-		}
+		//for (auto &i : renderer.internal.spotLights)
+		//{
+		//	lightCubeModel.position = i.position;
+		//
+		//	auto projMat = renderer.camera.getProjectionMatrix();
+		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
+		//	auto transformMat = lightCubeModel.getTransformMatrix();
+		//
+		//	auto viewProjMat = projMat * viewMat * transformMat;
+		//	shader.bind();
+		//	glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+		//	lightCubeModel.draw();
+		//}
 	#pragma endregion
 
 

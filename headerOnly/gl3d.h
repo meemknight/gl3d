@@ -2342,8 +2342,13 @@ namespace gl3d
 		void enableLightSubScattering(bool lightSubScatter = 1);
 		bool isLightSubScatteringEnabeled();
 
+		//rather expensive
 		void enableSSAO(bool ssao = 1);
 		bool isSSAOenabeled();
+
+		//very little performance penalty
+		void enableFXAA(bool fxaa = 1);
+		bool isFXAAenabeled();
 
 	#pragma endregion
 
@@ -2450,8 +2455,11 @@ namespace gl3d
 			GLint colorLocation;
 		}showNormalsProgram;
 	
-		struct
+		struct GBuffer
 		{
+			void create(int w, int h);
+			void resize(int w, int h);
+
 			enum bufferTargers
 			{
 				position = 0,
@@ -2466,6 +2474,8 @@ namespace gl3d
 			unsigned int gBuffer;
 			unsigned int buffers[bufferCount];
 			unsigned int depthBuffer;
+
+			glm::ivec2 currentDimensions = {};
 
 		}gBuffer;
 
@@ -2493,30 +2503,49 @@ namespace gl3d
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
 			void create(int w, int h);
+			void resize(int w, int h);
+			glm::ivec2 currentDimensions = {};
 
 			//for post process shader
 			float bloomIntensty = 1;
 
 		}postProcess;
 
-
-		struct FXAA
+		//used for adaptive resolution or fxaa or both
+		struct AdaptiveResolution
 		{
-			Shader shader;
 			void create(int w, int h);
+			void resize(int w, int h);
+
+			glm::ivec2 currentDimensions = {};
+			float rezRatio = 0.8;
+			bool useAdaptiveResolution = true;
 
 			GLuint texture;
 			GLuint fbo;
+
+		}adaptiveResolution;
+
+		struct AntiAlias
+		{
+			Shader shader;
+			Shader noAAshader;
+			void create(int w, int h);
+
 			GLuint u_texture;
+			GLuint noAAu_texture;
 			bool usingFXAA = true;
-		}fxaa;
+		}antiAlias;
 
 		struct SSAO
 		{
 			//https://learnopengl.com/Advanced-Lighting/SSAO
 
 			void create(int w, int h);
-		
+			void resize(int w, int h);
+			
+			glm::ivec2 currentDimensions = {};
+
 			GLuint noiseTexture;
 			GLuint ssaoFBO;
 			GLuint ssaoColorBuffer;
@@ -2605,6 +2634,7 @@ namespace gl3d
 		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;
+		int adaptiveW; int adaptiveH;
 
 	};
 

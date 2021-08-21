@@ -23,7 +23,7 @@ vec3 getTexture(in vec2 offset)
 
 float quality(int i)
 {
-	float r[] = {1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0};
+	const float r[7] = float[7](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0);
 
 	if(i < 5)
 	{
@@ -38,8 +38,8 @@ float quality(int i)
 void main()
 {
 
-	float EDGE_THRESHOLD_MIN = 0.0312;
-	float EDGE_THRESHOLD_MAX = 0.125;
+	float edgeMinTreshold = 0.0312;
+	float edgeDarkTreshold = 0.125;
 	int ITERATIONS = 12;
 	float SUBPIXEL_QUALITY = 0.75;
 
@@ -62,7 +62,7 @@ void main()
 	float lumaRange = lumaMax - lumaMin;
 	
 	// If the luma variation is lower that a threshold (or if we are in a really dark area), we are not on an edge, don't perform any AA.
-	if(lumaRange < max(EDGE_THRESHOLD_MIN,lumaMax*EDGE_THRESHOLD_MAX))
+	if(lumaRange < max(edgeMinTreshold,lumaMax*edgeDarkTreshold))
 	{
 		a_color = vec4(colorCenter, 1);
 		return;
@@ -105,7 +105,7 @@ void main()
 	// Gradient in the corresponding direction, normalized.
 	float gradientScaled = 0.25*max(abs(gradient1),abs(gradient2));
 
-	vec2 inverseScreenSize = textureSize(u_texture, 0);
+	vec2 inverseScreenSize = 1.f/textureSize(u_texture, 0);
 
 	// Choose the step size (one pixel) according to the edge direction.
 	float stepLength = isHorizontal ? inverseScreenSize.y : inverseScreenSize.x;

@@ -38,8 +38,8 @@ float quality(int i)
 void main()
 {
 
-	float EDGE_THRESHOLD_MIN = 0.0312;
-	float EDGE_THRESHOLD_MAX = 0.125;
+	float edgeMinTreshold = 0.0312;
+	float edgeDarkTreshold = 0.125;
 	int ITERATIONS = 12;
 	float SUBPIXEL_QUALITY = 0.75;
 
@@ -62,7 +62,7 @@ void main()
 	float lumaRange = lumaMax - lumaMin;
 	
 	// If the luma variation is lower that a threshold (or if we are in a really dark area), we are not on an edge, don't perform any AA.
-	if(lumaRange < max(EDGE_THRESHOLD_MIN,lumaMax*EDGE_THRESHOLD_MAX))
+	if(lumaRange < max(edgeMinTreshold,lumaMax*edgeDarkTreshold))
 	{
 		a_color = vec4(colorCenter, 1);
 		return;
