@@ -2517,9 +2517,18 @@ namespace gl3d
 			void create(int w, int h);
 			void resize(int w, int h);
 
+			static constexpr int timeSamplesCount = 15;
+			float msSampled[timeSamplesCount] = {};
+			int timeSample = 0;
+
+			float stepDownSecTarget = 17.f;
+			float stepUpSecTarget = 12.f;
+
 			glm::ivec2 currentDimensions = {};
-			float rezRatio = 0.8;
+			float rezRatio = 1.f;
+			float maxScaleDown = 0.6;
 			bool useAdaptiveResolution = true;
+			bool shouldUseAdaptiveResolution = false;
 
 			GLuint texture;
 			GLuint fbo;
@@ -2628,7 +2637,7 @@ namespace gl3d
 
 		void renderADepthMap(GLuint texture);
 
-		void render();
+		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
 		float ssao_finalColor_exponent = 5.f;

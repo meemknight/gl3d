@@ -2349,8 +2349,46 @@ namespace gl3d
 		return Result;
 	}
 
-	void Renderer3D::render()
+	void Renderer3D::render(float deltaTime)
 	{
+		if (adaptiveResolution.timeSample >= adaptiveResolution.timeSamplesCount)
+		{
+			float ms = 0;
+			for (int i = 0; i < adaptiveResolution.timeSamplesCount; i++)
+			{
+				ms += adaptiveResolution.msSampled[i];
+			}
+			ms /= adaptiveResolution.timeSamplesCount;
+			float seconds = ms * 1000;
+
+			if (seconds < adaptiveResolution.stepUpSecTarget)
+			{
+				adaptiveResolution.rezRatio += 0.1f;
+
+				if (adaptiveResolution.rezRatio >= 1.f)
+				{
+					adaptiveResolution.rezRatio = 1.f;
+					adaptiveResolution.shouldUseAdaptiveResolution = false;
+				}
+			}
+			else if(seconds > adaptiveResolution.stepDownSecTarget)
+			{
+				adaptiveResolution.rezRatio -= 0.1f;
+				if (adaptiveResolution.rezRatio <= adaptiveResolution.maxScaleDown)
+				{
+					adaptiveResolution.rezRatio = adaptiveResolution.maxScaleDown;
+				}
+
+				adaptiveResolution.shouldUseAdaptiveResolution = true;
+			}
+			adaptiveResolution.timeSample = 0;
+		}
+		else
+		{
+			adaptiveResolution.msSampled[adaptiveResolution.timeSample] = deltaTime;
+			adaptiveResolution.timeSample++;
+		}
+
 		updateWindowMetrics(w, h);
 		
 		glViewport(0, 0, adaptiveW, adaptiveH);
@@ -3420,7 +3458,8 @@ namespace gl3d
 
 		w = x; h = y;
 
-		if (adaptiveResolution.useAdaptiveResolution)
+		if (adaptiveResolution.useAdaptiveResolution && 
+			adaptiveResolution.shouldUseAdaptiveResolution)
 		{
 			adaptiveW = w * adaptiveResolution.rezRatio;
 			adaptiveH = h * adaptiveResolution.rezRatio;

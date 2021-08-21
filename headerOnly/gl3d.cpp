@@ -1233,7 +1233,7 @@ int kernelSize = 5;
 int kernelSize2 = kernelSize*kernelSize;
 int kernelHalf = kernelSize/2;
 float shadowValueAtCentre = 0;
-if(false)
+if(true)
 {
 float offsetSize = kernelSize/2;
 const int OFFSETS = 4;
@@ -1250,7 +1250,7 @@ currentDepth, bias, index);
 shadowValueAtCentre = s1;
 for(int i=0;i<OFFSETS; i++)
 {
-float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize, 
+float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, 
 currentDepth, bias, index); 
 if(s1 != s2)
 {
@@ -6165,8 +6165,46 @@ namespace gl3d
 		return Result;
 	}
 
-	void Renderer3D::render()
+	void Renderer3D::render(float deltaTime)
 	{
+		if (adaptiveResolution.timeSample >= adaptiveResolution.timeSamplesCount)
+		{
+			float ms = 0;
+			for (int i = 0; i < adaptiveResolution.timeSamplesCount; i++)
+			{
+				ms += adaptiveResolution.msSampled[i];
+			}
+			ms /= adaptiveResolution.timeSamplesCount;
+			float seconds = ms * 1000;
+
+			if (seconds < adaptiveResolution.stepUpSecTarget)
+			{
+				adaptiveResolution.rezRatio += 0.1f;
+
+				if (adaptiveResolution.rezRatio >= 1.f)
+				{
+					adaptiveResolution.rezRatio = 1.f;
+					adaptiveResolution.shouldUseAdaptiveResolution = false;
+				}
+			}
+			else if(seconds > adaptiveResolution.stepDownSecTarget)
+			{
+				adaptiveResolution.rezRatio -= 0.1f;
+				if (adaptiveResolution.rezRatio <= adaptiveResolution.maxScaleDown)
+				{
+					adaptiveResolution.rezRatio = adaptiveResolution.maxScaleDown;
+				}
+
+				adaptiveResolution.shouldUseAdaptiveResolution = true;
+			}
+			adaptiveResolution.timeSample = 0;
+		}
+		else
+		{
+			adaptiveResolution.msSampled[adaptiveResolution.timeSample] = deltaTime;
+			adaptiveResolution.timeSample++;
+		}
+
 		updateWindowMetrics(w, h);
 		
 		glViewport(0, 0, adaptiveW, adaptiveH);
@@ -7236,7 +7274,8 @@ namespace gl3d
 
 		w = x; h = y;
 
-		if (adaptiveResolution.useAdaptiveResolution)
+		if (adaptiveResolution.useAdaptiveResolution && 
+			adaptiveResolution.shouldUseAdaptiveResolution)
 		{
 			adaptiveW = w * adaptiveResolution.rezRatio;
 			adaptiveH = h * adaptiveResolution.rezRatio;

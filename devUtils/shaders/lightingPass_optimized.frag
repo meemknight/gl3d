@@ -254,7 +254,8 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 
 	float shadowValueAtCentre = 0;
 
-	if(false)
+	//optimization
+	if(true)
 	{
 		float offsetSize = kernelSize/2;
 		const int OFFSETS = 4;
@@ -274,7 +275,7 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 
 		for(int i=0;i<OFFSETS; i++)
 		{
-			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize, 
+			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, 
 					currentDepth, bias, index); 
 			if(s1 != s2)
 			{

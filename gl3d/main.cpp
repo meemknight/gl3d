@@ -23,7 +23,7 @@ int w = 840;
 int h = 640;
 
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -675,6 +675,8 @@ int main()
 			renderer.enableLightSubScattering(lightSubScater);
 
 			ImGui::Checkbox("FXAA", &renderer.antiAlias.usingFXAA);
+			ImGui::Checkbox("Adaptive resolution", &renderer.adaptiveResolution.useAdaptiveResolution);
+			ImGui::Text("Adaptive rez ratio: %.1f", renderer.adaptiveResolution.rezRatio);
 
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
@@ -1264,7 +1266,7 @@ int main()
 		//
 		//}
 
-		renderer.render();
+		renderer.render(deltaTime);
 
 		//renderer.renderObject(objectTest, { 0,0,0 });
 		//renderer.renderObject(objectTest2, { 3,0,0 });

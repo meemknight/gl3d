@@ -85,6 +85,8 @@ int main()
 	transform.rotation.x = glm::radians(90.f);
 	gl3d::Entity helmetEntity = renderer.createEntity(helmetModel, transform);
 	
+	renderer.enableFXAA(true);
+
 #pragma region deltaTime
 	int fpsCount = 0;
 	float timeFpsCount = 0;
@@ -185,7 +187,7 @@ int main()
 		renderer.setEntityTransform(helmetEntity, transform);
 
 	#pragma region render and events
-		renderer.render();
+		renderer.render(deltaTime);
 
 		glfwSwapBuffers(wind);
 		glfwPollEvents();
