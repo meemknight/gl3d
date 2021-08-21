@@ -686,7 +686,7 @@ int main()
 				ImGui::SliderFloat("SSAO bias", &renderer.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
 				ImGui::SliderFloat("SSAO radius", &renderer.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
 				ImGui::SliderInt("SSAO sample count", &renderer.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
-				ImGui::SliderFloat("SSAO exponent", &renderer.ssao_finalColor_exponent, 0, 16);
+				ImGui::SliderFloat("SSAO exponent", &renderer.ssao.ssao_finalColor_exponent, 0, 16);
 
 				ImGui::PopID();
 			}

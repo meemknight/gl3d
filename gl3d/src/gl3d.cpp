@@ -1988,6 +1988,47 @@ namespace gl3d
 		return lightShader.useSSAO;
 	}
 
+	float Renderer3D::getSSAOBias()
+	{
+		return ssao.ssaoShaderUniformBlockData.bias;
+	}
+
+	void Renderer3D::setSSAOBias(float bias)
+	{
+		ssao.ssaoShaderUniformBlockData.bias = std::max(bias, 0.f);
+	}
+
+	float Renderer3D::getSSAORadius()
+	{
+		return ssao.ssaoShaderUniformBlockData.radius;
+	}
+
+	void Renderer3D::setSSAORadius(float radius)
+	{
+		ssao.ssaoShaderUniformBlockData.radius = std::max(radius, 0.01f);
+	}
+
+	int Renderer3D::getSSAOSampleCount()
+	{
+		return ssao.ssaoShaderUniformBlockData.samplesTestSize;
+
+	}
+
+	void Renderer3D::setSSAOSampleCount(int samples)
+	{
+		ssao.ssaoShaderUniformBlockData.samplesTestSize = std::min(std::max(samples, 5), 64);
+	}
+
+	float Renderer3D::getSSAOExponent()
+	{
+		return ssao.ssao_finalColor_exponent;
+	}
+
+	void Renderer3D::setSSAOExponent(float exponent)
+	{
+		ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 32.f);
+	}
+
 	void Renderer3D::enableFXAA(bool fxaa)
 	{
 		this->antiAlias.usingFXAA = fxaa;
@@ -3370,7 +3411,7 @@ namespace gl3d
 		{
 			glUniform1i(postProcess.u_useSSAO, 1);
 			//todo change ssao_finalColor_exponent
-			glUniform1f(postProcess.u_ssaoExponent, ssao_finalColor_exponent);
+			glUniform1f(postProcess.u_ssaoExponent, ssao.ssao_finalColor_exponent);
 			
 			
 			glUniform1i(postProcess.u_ssao, 3);

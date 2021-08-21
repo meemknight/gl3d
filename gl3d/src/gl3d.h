@@ -248,19 +248,30 @@ namespace gl3d
 
 	#pragma region settings
 
+		//cheap
 		void enableNormalMapping(bool normalMapping = 1);
 		bool isNormalMappingEnabeled();
 
+		//cheap
 		void enableLightSubScattering(bool lightSubScatter = 1);
 		bool isLightSubScatteringEnabeled();
 
 		//rather expensive
 		void enableSSAO(bool ssao = 1);
 		bool isSSAOenabeled();
+		float getSSAOBias();
+		void setSSAOBias(float bias);
+		float getSSAORadius();
+		void setSSAORadius(float radius);
+		int getSSAOSampleCount();
+		void setSSAOSampleCount(int samples);
+		float getSSAOExponent();
+		void setSSAOExponent(float exponent);
 
 		//very little performance penalty
 		void enableFXAA(bool fxaa = 1);
 		bool isFXAAenabeled();
+
 
 	#pragma endregion
 
@@ -497,6 +508,8 @@ namespace gl3d
 			GLint u_ssaoInput;
 			Shader blurShader;
 
+			float ssao_finalColor_exponent = 5.f;
+
 		}ssao;
 
 		struct DirectionalShadows
@@ -551,8 +564,6 @@ namespace gl3d
 
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
-
-		float ssao_finalColor_exponent = 5.f;
 
 		int w; int h;
 		int adaptiveW; int adaptiveH;

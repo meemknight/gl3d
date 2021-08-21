@@ -45,8 +45,9 @@ Features and todos:
 - [x] HDR (16 bit color channels) 
 - [ ] Automatic exposure ajustment for HDR tonemapping
 ---
-- [ ] FXAA or TAA
-- [ ] Adaptive resolution
+- [x] FXAA
+- [x] Adaptive resolution
+- [ ] TAA
 ---
 - [ ] Store all the render data before rendering (used for depth pre pass)
 - [ ] Improve the deferred rendering by adding bindless things
