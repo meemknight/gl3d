@@ -19,7 +19,7 @@ uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
-
+uniform samplerCube u_pointShadows;
 
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
@@ -379,6 +379,42 @@ vec3 getProjCoords(in mat4 matrix, in vec3 pos)
 	return r;
 }
 
+float pointShadowCalculation(vec3 pos, vec3 normal, int index)
+{	
+	vec3 fragToLight = pos - light[index].positions; 
+	vec3 lightDir = normalize(fragToLight);
+
+	//float closestDepth = texture(u_pointShadows, lightDir).r;
+	//closestDepth *= light[index].dist; //multiply by far plane
+	float currentDepth = length(fragToLight);  
+
+	
+	float bias = max((10.f/512.f) * (1.0 - dot(normal, -lightDir)), 3.f/512.f);
+
+	//float shadow = currentDepth -  bias < closestDepth ? 1.0 : 0.0; 
+	float shadow  = 0.0;
+	float samples = 4.0;
+	float offset  = textureSize(u_pointShadows, 0).r;
+	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+	{
+		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+		{
+			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+			{
+				float closestDepth = texture(u_pointShadows, fragToLight + vec3(x, y, z)).r; 
+				closestDepth *= light[index].dist;   //multiply by far plane
+				if(currentDepth - bias < closestDepth)
+					shadow += 1.0;
+			}
+		}
+	}
+
+	shadow /= (samples * samples * samples);
+
+
+	return shadow;
+}
+
 float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 {
 	
@@ -522,8 +558,10 @@ void main()
 
 		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
+		float shadow = pointShadowCalculation(pos, normal, i);
+
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
-			pos, viewDir, albedo, normal, F0) * attenuation;
+			pos, viewDir, albedo, normal, F0) * attenuation * shadow;
 
 	}
 
@@ -723,9 +761,8 @@ void main()
 	vec3 hdrCorrectedColor = color;
 	hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 	hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
-
-	//todo change ??
 	float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
+	//float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
 	//gama correction and hdr is done in the post process step
 

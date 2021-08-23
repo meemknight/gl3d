@@ -16,16 +16,16 @@ namespace gl3d
 
 	void Renderer3D::init(int x, int y)
 	{
-		w = x; h = y;
-		adaptiveW = w;
-		adaptiveH = h;
+		internal.w = x; internal.h = y;
+		internal.adaptiveW = x;
+		internal.adaptiveH = y;
 
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-		lightShader.create();
+		internal.lightShader.create();
 		vao.createVAOs();
 		internal.skyBoxLoaderAndDrawer.createGpuData();
 
@@ -49,11 +49,12 @@ namespace gl3d
 		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
 
-		gBuffer.create(w, h);	
+		gBuffer.create(x, y);	
 		ssao.create(x, y);
 		postProcess.create(x, y);
 		directionalShadows.create();
 		spotShadows.create();
+		pointShadows.create();
 		renderDepthMap.create();
 		antiAlias.create(x, y);
 		adaptiveResolution.create(x, y);
@@ -417,7 +418,7 @@ namespace gl3d
 		auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
 			{getTextureOpenglId(roughness)},
 			{ getTextureOpenglId(metallic) },
-			{ getTextureOpenglId(ambientOcclusion) }, lightShader.quadDrawer.quadVAO);
+			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO);
 
 		ret.texture = this->createIntenralTexture(t, 0);
 
@@ -637,7 +638,7 @@ namespace gl3d
 							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
 
 							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
-								roughness, metallic, ambientOcclusion, lightShader.quadDrawer.quadVAO);
+								roughness, metallic, ambientOcclusion, internal.lightShader.quadDrawer.quadVAO);
 
 							textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
 
@@ -1958,34 +1959,45 @@ namespace gl3d
 		return &internal.cpuEntities[i].subModelsNames;
 	}
 
+	void Renderer3D::setExposure(float exposure)
+	{
+		internal.lightShader.lightPassUniformBlockCpuData.exposure =
+			std::max(exposure, 0.001f);
+	}
+
+	float Renderer3D::getExposure()
+	{
+		return internal.lightShader.lightPassUniformBlockCpuData.exposure;
+	}
+
 	void Renderer3D::enableNormalMapping(bool normalMapping)
 	{
-		lightShader.normalMap = normalMapping;
+		internal.lightShader.normalMap = normalMapping;
 	}
 
 	bool Renderer3D::isNormalMappingEnabeled()
 	{
-		return lightShader.normalMap;
+		return internal.lightShader.normalMap;
 	}
 
 	void Renderer3D::enableLightSubScattering(bool lightSubScatter)
 	{
-		lightShader.lightPassUniformBlockCpuData.lightSubScater = lightSubScatter;
+		internal.lightShader.lightPassUniformBlockCpuData.lightSubScater = lightSubScatter;
 	}
 
 	bool Renderer3D::isLightSubScatteringEnabeled()
 	{
-		return lightShader.lightPassUniformBlockCpuData.lightSubScater;
+		return internal.lightShader.lightPassUniformBlockCpuData.lightSubScater;
 	}
 
 	void Renderer3D::enableSSAO(bool ssao)
 	{
-		lightShader.useSSAO = ssao;
+		internal.lightShader.useSSAO = ssao;
 	}
 
 	bool Renderer3D::isSSAOenabeled()
 	{
-		return lightShader.useSSAO;
+		return internal.lightShader.useSSAO;
 	}
 
 	float Renderer3D::getSSAOBias()
@@ -2430,11 +2442,11 @@ namespace gl3d
 			adaptiveResolution.timeSample++;
 		}
 
-		updateWindowMetrics(w, h);
+		updateWindowMetrics(internal.w, internal.h);
 		
-		glViewport(0, 0, adaptiveW, adaptiveH);
+		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);//todo check remove
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);//todo check remove
 
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -2475,7 +2487,8 @@ namespace gl3d
 				auto transformMat = i.transform.getTransformMatrix();
 				auto modelViewProjMat = lightSpaceMatrix * transformMat;
 
-				glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
+					&modelViewProjMat[0][0]);
 
 				for (auto& i : i.models)
 				{
@@ -2484,7 +2497,7 @@ namespace gl3d
 
 					if (m < 0)
 					{
-						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 					}
 					else
 					{
@@ -2494,14 +2507,14 @@ namespace gl3d
 
 						if (tId < 0)
 						{
-							glUniform1i(lightShader.prePass.u_hasTexture, 0);
+							glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 						}
 						else
 						{
 							auto texture = internal.loadedTextures[tId];
 
-							glUniform1i(lightShader.prePass.u_hasTexture, 1);
-							glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+							glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
+							glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
 
 							glActiveTexture(GL_TEXTURE0);
 							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
@@ -2523,7 +2536,117 @@ namespace gl3d
 			}
 		};
 		
-		lightShader.prePass.shader.bind();
+
+		if (internal.pointLights.size())
+		{
+			internal.lightShader.pointShadowShader.shader.bind();
+			glViewport(0, 0, pointShadows.shadowSize, pointShadows.shadowSize);
+			glBindFramebuffer(GL_FRAMEBUFFER, pointShadows.fbo);
+			glClear(GL_DEPTH_BUFFER_BIT);
+
+			for (int lightIndex = 0; lightIndex < internal.pointLights.size(); lightIndex++)
+			{
+				glm::mat4 shadowProj = glm::perspective(glm::radians(90.f), 1.f, 0.1f,
+					internal.pointLights[lightIndex].dist);
+				glm::vec3 lightPos = internal.pointLights[lightIndex].position;
+
+				std::vector<glm::mat4> shadowTransforms;
+				shadowTransforms.reserve(6);
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+
+				glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_shadowMatrices, 6, GL_FALSE,
+					&(*shadowTransforms.data())[0][0]);
+
+				glUniform3fv(internal.lightShader.pointShadowShader.u_lightPos, 1,
+					&lightPos[0]);
+				
+				glUniform1f(internal.lightShader.pointShadowShader.u_farPlane, 
+					internal.pointLights[lightIndex].dist);
+
+				//render shadow of the models
+				for (auto& i : internal.cpuEntities)
+				{
+
+					if (!i.isVisible() || !i.castShadows())
+					{
+						continue;
+					}
+
+					//if (filter)
+					//{
+					//	if (onlyStatic != i.isStatic())
+					//	{
+					//		continue;
+					//	}
+					//}
+
+					auto transformMat = i.transform.getTransformMatrix();
+					//auto modelViewProjMat = lightSpaceMatrix * transformMat;
+
+					glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_transform, 1, GL_FALSE,
+						&transformMat[0][0]);
+
+					for (auto& i : i.models)
+					{
+
+						auto m = internal.getMaterialIndex(i.material);
+
+						if (m < 0)
+						{
+							glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 0);
+						}
+						else
+						{
+
+							auto t = internal.materialTexturesData[m];
+							auto tId = internal.getTextureIndex(t.albedoTexture);
+
+							if (tId < 0)
+							{
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 0);
+							}
+							else
+							{
+								auto texture = internal.loadedTextures[tId];
+
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 1);
+								glUniform1i(internal.lightShader.pointShadowShader.u_albedoSampler, 0);
+
+								glActiveTexture(GL_TEXTURE0);
+								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							}
+						}
+
+						glBindVertexArray(i.vertexArray);
+
+						if (i.indexBuffer)
+						{
+							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						}
+						else
+						{
+							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						}
+					}
+
+				}
+
+			}
+
+		}
+
+		internal.lightShader.prePass.shader.bind();
 
 		if (internal.directionalLights.size())
 		{
@@ -2852,16 +2975,15 @@ namespace gl3d
 
 
 		}
-
-
+	
 		#pragma endregion
 
 
 		#pragma region stuff to be bound for rendering the pre pass geometry
 
-		glViewport(0, 0, adaptiveW, adaptiveH);
+		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
-		lightShader.prePass.shader.bind();
+		internal.lightShader.prePass.shader.bind();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
 
@@ -2885,7 +3007,7 @@ namespace gl3d
 			auto viewMat = camera.getWorldToViewMatrix();
 			auto transformMat = i.transform.getTransformMatrix();
 			auto modelViewProjMat = projMat * viewMat * transformMat;
-			glUniformMatrix4fv(lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+			glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 
 			for (auto &i : i.models)
 			{
@@ -2893,7 +3015,7 @@ namespace gl3d
 
 				if (m < 0)
 				{
-					glUniform1i(lightShader.prePass.u_hasTexture, 0);
+					glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 				}
 				else
 				{
@@ -2903,15 +3025,15 @@ namespace gl3d
 
 					if (tId < 0)
 					{
-						glUniform1i(lightShader.prePass.u_hasTexture, 0);
+						glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 
 					}
 					else
 					{
 						auto texture = internal.loadedTextures[tId];
 
-						glUniform1i(lightShader.prePass.u_hasTexture, 1);
-						glUniform1i(lightShader.prePass.u_albedoSampler, 0);
+						glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
+						glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
 						glActiveTexture(GL_TEXTURE0);
 						glBindTexture(GL_TEXTURE_2D, texture.texture.id);
 					}
@@ -2940,29 +3062,29 @@ namespace gl3d
 		#pragma region stuff to be bound for rendering the geometry
 
 
-		lightShader.geometryPassShader.bind();
-		lightShader.getSubroutines();
+		internal.lightShader.geometryPassShader.bind();
+		internal.lightShader.getSubroutines();
 
 		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
 		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(lightShader.textureSamplerLocation, 0);
-		glUniform1i(lightShader.normalMapSamplerLocation, 1);
+		glUniform1i(internal.lightShader.textureSamplerLocation, 0);
+		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
-		glUniform1i(lightShader.RMASamplerLocation, 3);
-		glUniform1i(lightShader.u_emissiveTexture, 4);
+		glUniform1i(internal.lightShader.RMASamplerLocation, 3);
+		glUniform1i(internal.lightShader.u_emissiveTexture, 4);
 
 
 		//material buffer
 		if (internal.materials.size())
 		{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.materialBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
 			, &internal.materials[0], GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightShader.materialBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
 		}
 
 		GLsizei n;
-		glGetProgramStageiv(lightShader.geometryPassShader.id,
+		glGetProgramStageiv(internal.lightShader.geometryPassShader.id,
 			GL_FRAGMENT_SHADER,
 			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
 			&n);
@@ -2995,9 +3117,9 @@ namespace gl3d
 			auto transformMat = entity.transform.getTransformMatrix();
 			auto modelViewProjMat = projMat * viewMat * transformMat;
 
-			glUniformMatrix4fv(lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
-			glUniformMatrix4fv(lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
-			glUniformMatrix4fv(lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
+			glUniformMatrix4fv(internal.lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
+			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
 			
 			
 			bool changed = 1;
@@ -3012,7 +3134,7 @@ namespace gl3d
 					continue;
 				}
 
-				glUniform1i(lightShader.materialIndexLocation, materialId);
+				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 
 				TextureDataForMaterial textureData = internal.materialTexturesData[materialId];
@@ -3057,34 +3179,42 @@ namespace gl3d
 
 				if (emissiveTextureLoaded)
 				{
-					if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_sampled)
+					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] !=
+						internal.lightShader.emissiveSubroutine_sampled)
 					{
-						indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_sampled;
+						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
+							internal.lightShader.emissiveSubroutine_sampled;
 						changed = 1;
 					}
 				}
 				else
 				{
-					if (indices[lightShader.getEmmisiveSubroutineLocation] != lightShader.emissiveSubroutine_notSampled)
+					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] != 
+						internal.lightShader.emissiveSubroutine_notSampled)
 					{
-						indices[lightShader.getEmmisiveSubroutineLocation] = lightShader.emissiveSubroutine_notSampled;
+						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
+							internal.lightShader.emissiveSubroutine_notSampled;
 						changed = 1;
 					}
 				}
 
-				if (normalLoaded && lightShader.normalMap)
+				if (normalLoaded && internal.lightShader.normalMap)
 				{
-					if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_normalMap)
+					if (indices[internal.lightShader.normalSubroutineLocation] !=
+						internal.lightShader.normalSubroutine_normalMap)
 					{
-						indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_normalMap;
+						indices[internal.lightShader.normalSubroutineLocation] = 
+							internal.lightShader.normalSubroutine_normalMap;
 						changed = 1;
 					}
 				}
 				else
 				{
-					if (indices[lightShader.normalSubroutineLocation] != lightShader.normalSubroutine_noMap)
+					if (indices[internal.lightShader.normalSubroutineLocation] != 
+						internal.lightShader.normalSubroutine_noMap)
 					{
-						indices[lightShader.normalSubroutineLocation] = lightShader.normalSubroutine_noMap;
+						indices[internal.lightShader.normalSubroutineLocation] = 
+							internal.lightShader.normalSubroutine_noMap;
 						changed = 1;
 					}
 				}
@@ -3092,18 +3222,22 @@ namespace gl3d
 				if (rmaLoaded)
 				{
 
-					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures])
+					if (indices[internal.lightShader.materialSubroutineLocation] != 
+						internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures])
 					{
-						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures];
+						indices[internal.lightShader.materialSubroutineLocation] = 
+							internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures];
 						changed = 1;
 					}
 
 				}
 				else
 				{
-					if (indices[lightShader.materialSubroutineLocation] != lightShader.materialSubroutine_functions[0])
+					if (indices[internal.lightShader.materialSubroutineLocation] != 
+						internal.lightShader.materialSubroutine_functions[0])
 					{
-						indices[lightShader.materialSubroutineLocation] = lightShader.materialSubroutine_functions[0];
+						indices[internal.lightShader.materialSubroutineLocation] = 
+							internal.lightShader.materialSubroutine_functions[0];
 						changed = 1;
 					}
 
@@ -3112,16 +3246,20 @@ namespace gl3d
 
 				if (albedoLoaded != 0)
 				{
-					if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_sampled)
+					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
+						internal.lightShader.albedoSubroutine_sampled)
 					{
-						indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_sampled;
+						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
+							internal.lightShader.albedoSubroutine_sampled;
 						changed = 1;
 					}
 				}
 				else
-					if (indices[lightShader.getAlbedoSubroutineLocation] != lightShader.albedoSubroutine_notSampled)
+					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
+						internal.lightShader.albedoSubroutine_notSampled)
 					{
-						indices[lightShader.getAlbedoSubroutineLocation] = lightShader.albedoSubroutine_notSampled;
+						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
+							internal.lightShader.albedoSubroutine_notSampled;
 						changed = 1;
 					}
 
@@ -3161,13 +3299,13 @@ namespace gl3d
 
 
 		//we draw a rect several times so we keep this vao binded
-		glBindVertexArray(lightShader.quadDrawer.quadVAO);
+		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
 		
 		#pragma region ssao
 
-		if(lightShader.useSSAO)
+		if(internal.lightShader.useSSAO)
 		{
-			glViewport(0, 0, adaptiveW / 2, adaptiveH / 2);
+			glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
 			glUseProgram(ssao.shader.id);
 
@@ -3200,10 +3338,10 @@ namespace gl3d
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			glViewport(0, 0, adaptiveW, adaptiveH);
+			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		#pragma region ssao "blur" (more like average blur)
-			glViewport(0, 0, adaptiveW / 4, adaptiveH / 4);
+			glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
 			ssao.blurShader.bind();
@@ -3213,7 +3351,7 @@ namespace gl3d
 			glUniform1i(ssao.u_ssaoInput, 0);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			glViewport(0, 0, adaptiveW, adaptiveH);
+			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		#pragma endregion
 		}
 		#pragma endregion
@@ -3224,105 +3362,110 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(lightShader.lightingPassShader.id);
+		glUseProgram(internal.lightShader.lightingPassShader.id);
 
-		glUniform1i(lightShader.light_u_positions, 0);
+		glUniform1i(internal.lightShader.light_u_positions, 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
 
-		glUniform1i(lightShader.light_u_normals, 1);
+		glUniform1i(internal.lightShader.light_u_normals, 1);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
 
-		glUniform1i(lightShader.light_u_albedo, 2);
+		glUniform1i(internal.lightShader.light_u_albedo, 2);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
 
-		glUniform1i(lightShader.light_u_materials, 3);
+		glUniform1i(internal.lightShader.light_u_materials, 3);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
 
 
-		glUniform1i(lightShader.light_u_skyboxFiltered, 4);
+		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 4);
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.preFilteredMap);
 
-		glUniform1i(lightShader.light_u_skyboxIradiance, 5);
+		glUniform1i(internal.lightShader.light_u_skyboxIradiance, 5);
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
 
-		glUniform1i(lightShader.light_u_brdfTexture, 6);
+		glUniform1i(internal.lightShader.light_u_brdfTexture, 6);
 		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, lightShader.brdfTexture.id);
+		glBindTexture(GL_TEXTURE_2D, internal.lightShader.brdfTexture.id);
 
-		glUniform1i(lightShader.light_u_emmisive, 7);
+		glUniform1i(internal.lightShader.light_u_emmisive, 7);
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
 
-		glUniform1i(lightShader.light_u_cascades, 8);
+		glUniform1i(internal.lightShader.light_u_cascades, 8);
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, directionalShadows.cascadesTexture);
 
-		glUniform1i(lightShader.light_u_spotShadows, 9);
+		glUniform1i(internal.lightShader.light_u_spotShadows, 9);
 		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, spotShadows.shadowTextures);
 
-		glUniform3f(lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
+		glUniform1i(internal.lightShader.light_u_pointShadows, 10);
+		glActiveTexture(GL_TEXTURE10);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, pointShadows.shadowTextures);
 
-		glUniformMatrix4fv(lightShader.light_u_view, 1, GL_FALSE, &(camera.getWorldToViewMatrix()[0][0]) );
+
+		glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
+
+		glUniformMatrix4fv(internal.lightShader.light_u_view, 1, GL_FALSE, &(camera.getWorldToViewMatrix()[0][0]) );
 
 		if (internal.pointLights.size())
 		{//todo laziness if lights don't change and stuff
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.pointLightsBlockBuffer);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.pointLightsBlockBuffer);
 		
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.pointLights.size() * sizeof(internal::GpuPointLight)
 				, &internal.pointLights[0], GL_STREAM_DRAW);
 		
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lightShader.pointLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, internal.lightShader.pointLightsBlockBuffer);
 		
 		}
-		glUniform1i(lightShader.light_u_pointLightCount, internal.pointLights.size());
+		glUniform1i(internal.lightShader.light_u_pointLightCount, internal.pointLights.size());
 
 		if (internal.directionalLights.size())
 		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.directionalLightsBlockBuffer);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.directionalLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.directionalLights.size() * sizeof(internal::GpuDirectionalLight)
 				, &internal.directionalLights[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightShader.directionalLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, internal.lightShader.directionalLightsBlockBuffer);
 
 		}
-		glUniform1i(lightShader.light_u_directionalLightCount, internal.directionalLights.size());
+		glUniform1i(internal.lightShader.light_u_directionalLightCount, internal.directionalLights.size());
 
 		if (internal.spotLights.size())
 		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightShader.spotLightsBlockBuffer);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.spotLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.spotLights.size() * sizeof(internal::GpuSpotLight),
 				internal.spotLights.data(), GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, lightShader.spotLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, internal.lightShader.spotLightsBlockBuffer);
 		}
-		glUniform1i(lightShader.light_u_spotLightCount, internal.spotLights.size());
+		glUniform1i(internal.lightShader.light_u_spotLightCount, internal.spotLights.size());
 
 
 		//update the uniform block with data for the light shader
-		lightShader.lightPassUniformBlockCpuData.ambientLight = glm::vec4(skyBox.color, 0.f);
+		internal.lightShader.lightPassUniformBlockCpuData.ambientLight = glm::vec4(skyBox.color, 0.f);
 
 		if (skyBox.texture != 0
 			&& skyBox.convolutedTexture != 0
 			&& skyBox.preFilteredMap != 0
 			)
 		{
-			lightShader.lightPassUniformBlockCpuData.skyBoxPresent = true;
+			internal.lightShader.lightPassUniformBlockCpuData.skyBoxPresent = true;
 		}
 		else
 		{
-			lightShader.lightPassUniformBlockCpuData.skyBoxPresent = false;
+			internal.lightShader.lightPassUniformBlockCpuData.skyBoxPresent = false;
 		}
 
-		glBindBuffer(GL_UNIFORM_BUFFER, lightShader.lightPassShaderData.lightPassDataBlockBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, internal.lightShader.lightPassShaderData.lightPassDataBlockBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
-			&lightShader.lightPassUniformBlockCpuData);
+			&internal.lightShader.lightPassUniformBlockCpuData);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -3330,17 +3473,17 @@ namespace gl3d
 
 		#pragma region bloom blur
 		
-		if(lightShader.bloom)
+		if(internal.lightShader.bloom)
 		{
 			
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
 			glActiveTexture(GL_TEXTURE0);
 			glUniform1i(postProcess.u_toBlurcolorInput, 0);
-			glViewport(0, 0, adaptiveW/2, adaptiveH/2);
+			glViewport(0, 0, internal.adaptiveW/2, internal.adaptiveH/2);
 
 
-			for (int i = 0; i < lightShader.bloomBlurPasses*2; i++)
+			for (int i = 0; i < internal.lightShader.bloomBlurPasses*2; i++)
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
 				glClear(GL_COLOR_BUFFER_BIT);
@@ -3355,7 +3498,7 @@ namespace gl3d
 				firstTime = false;
 
 			}
-			glViewport(0, 0, adaptiveW, adaptiveH);
+			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		}
 
@@ -3384,10 +3527,10 @@ namespace gl3d
 		glUniform1i(postProcess.u_bloomTexture, 1);
 		glActiveTexture(GL_TEXTURE1);
 
-		if(lightShader.bloom)
+		if(internal.lightShader.bloom)
 		{
 
-			if (lightShader.bloomBlurPasses <= 0)
+			if (internal.lightShader.bloomBlurPasses <= 0)
 			{
 				glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
 			}
@@ -3407,7 +3550,7 @@ namespace gl3d
 
 		}
 
-		if (lightShader.useSSAO)
+		if (internal.lightShader.useSSAO)
 		{
 			glUniform1i(postProcess.u_useSSAO, 1);
 			//todo change ssao_finalColor_exponent
@@ -3430,7 +3573,7 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
 
 		
-		glUniform1f(postProcess.u_exposure, lightShader.lightPassUniformBlockCpuData.exposure);
+		glUniform1f(postProcess.u_exposure, internal.lightShader.lightPassUniformBlockCpuData.exposure);
 
 		//blend with skybox
 		glEnable(GL_BLEND);
@@ -3445,7 +3588,7 @@ namespace gl3d
 
 	#pragma region draw to screen and fxaa
 
-		glViewport(0, 0, w, h);
+		glViewport(0, 0, internal.w, internal.h);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
@@ -3497,31 +3640,31 @@ namespace gl3d
 	void Renderer3D::updateWindowMetrics(int x, int y)
 	{
 
-		w = x; h = y;
+		internal.w = x; internal.h = y;
 
 		if (adaptiveResolution.useAdaptiveResolution && 
 			adaptiveResolution.shouldUseAdaptiveResolution)
 		{
-			adaptiveW = w * adaptiveResolution.rezRatio;
-			adaptiveH = h * adaptiveResolution.rezRatio;
+			internal.adaptiveW = internal.w * adaptiveResolution.rezRatio;
+			internal.adaptiveH = internal.h * adaptiveResolution.rezRatio;
 		}
 		else
 		{
-			adaptiveW = w;
-			adaptiveH = h;
+			internal.adaptiveW = internal.w;
+			internal.adaptiveH = internal.h;
 		}
 		
 
 		//gbuffer
-		gBuffer.resize(adaptiveW, adaptiveH);
+		gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
 
 		//ssao
-		ssao.resize(adaptiveW, adaptiveH);
+		ssao.resize(internal.adaptiveW, internal.adaptiveH);
 	
 		//bloom buffer and color buffer
-		postProcess.resize(adaptiveW, adaptiveH);
+		postProcess.resize(internal.adaptiveW, internal.adaptiveH);
 
-		adaptiveResolution.resize(adaptiveW, adaptiveH);
+		adaptiveResolution.resize(internal.adaptiveW, internal.adaptiveH);
 
 	}
 
@@ -3538,7 +3681,7 @@ namespace gl3d
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(0, 0, 1024, 1024);
 
-		glBindVertexArray(lightShader.quadDrawer.quadVAO);
+		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
 		
 
 		glActiveTexture(GL_TEXTURE0);
@@ -3547,7 +3690,7 @@ namespace gl3d
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-		glViewport(0, 0, adaptiveW, adaptiveH);
+		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		glBindVertexArray(0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -3565,8 +3708,9 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, 
+			internal.lightShader.lightPassUniformBlockCpuData.exposure,
+			internal.lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	void Renderer3D::renderSkyBoxBefore()
@@ -3577,8 +3721,9 @@ namespace gl3d
 
 		auto viewProjMat = projMat * viewMat;
 
-		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox, lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox,
+			internal.lightShader.lightPassUniformBlockCpuData.exposure,
+			internal.lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -3992,6 +4137,34 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	}
+
+	void Renderer3D::PointShadows::create()
+	{
+
+		glGenTextures(1, &shadowTextures);
+		glGenFramebuffers(1, &fbo);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTextures);
+
+		for (unsigned int i = 0; i < 6; ++i)
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+				shadowSize, shadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTextures, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 
 	void Renderer3D::SpotShadows::create()
 	{

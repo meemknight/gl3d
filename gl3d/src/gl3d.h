@@ -248,6 +248,9 @@ namespace gl3d
 
 	#pragma region settings
 
+		void setExposure(float exposure);
+		float getExposure();
+
 		//cheap
 		void enableNormalMapping(bool normalMapping = 1);
 		bool isNormalMappingEnabeled();
@@ -283,7 +286,6 @@ namespace gl3d
 		}vao;
 
 
-		LightShader lightShader;
 		Camera camera;
 		SkyBox skyBox;
 
@@ -298,6 +300,11 @@ namespace gl3d
 
 		struct InternalStruct
 		{
+			LightShader lightShader;
+
+			int w; int h;
+			int adaptiveW; int adaptiveH;
+
 			struct PBRtextureMaker
 			{
 				Shader shader;
@@ -547,6 +554,16 @@ namespace gl3d
 
 		}spotShadows;
 
+		struct PointShadows
+		{
+			void create();
+
+			static constexpr int shadowSize = 512;
+
+			GLuint shadowTextures;
+			GLuint fbo;
+
+		}pointShadows;
 
 		struct RenderDepthMap
 		{
@@ -565,8 +582,6 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
-		int w; int h;
-		int adaptiveW; int adaptiveH;
 
 	};
 

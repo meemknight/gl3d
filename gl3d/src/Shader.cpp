@@ -307,8 +307,18 @@ namespace gl3d
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler");
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
 
+		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
+			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag");
+		pointShadowShader.u_albedoSampler = getUniform(pointShadowShader.shader.id, "u_albedoSampler");
+		pointShadowShader.u_farPlane = getUniform(pointShadowShader.shader.id, "u_farPlane");
+		pointShadowShader.u_hasTexture = getUniform(pointShadowShader.shader.id, "u_hasTexture");
+		pointShadowShader.u_lightPos = getUniform(pointShadowShader.shader.id, "u_lightPos");
+		pointShadowShader.u_shadowMatrices = getUniform(pointShadowShader.shader.id, "u_shadowMatrices");
+		pointShadowShader.u_transform = getUniform(pointShadowShader.shader.id, "u_transform");
+
+
 		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
-		geometryPassShader.bind();
+		//geometryPassShader.bind();
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform");
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
@@ -351,7 +361,8 @@ namespace gl3d
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
 		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
-		
+		light_u_pointShadows = getUniform(lightingPassShader.id, "u_pointShadows");
+
 	#pragma region uniform buffer
 
 		lightPassShaderData.u_lightPassData = glGetUniformBlockIndex(lightingPassShader.id, "u_lightPassData");

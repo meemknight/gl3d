@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-21
+//built on 2021-08-23
 ////////////////////////////////////////////////
 
 
@@ -117,7 +117,6 @@ namespace gl3d
 			float dist = 20;
 			glm::vec3 color = { 1,1,1 };
 			float attenuation = 2;
-
 		};
 
 		struct GpuDirectionalLight
@@ -1641,6 +1640,7 @@ namespace gl3d
 		GLint light_u_emmisive = -1;
 		GLint light_u_cascades = -1;
 		GLint light_u_spotShadows = -1;
+		GLint light_u_pointShadows = -1;
 		
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -1697,6 +1697,17 @@ namespace gl3d
 			int skyBoxPresent = 0;
 
 		}lightPassUniformBlockCpuData;
+
+		struct
+		{
+			Shader shader;
+			GLint u_transform;
+			GLint u_hasTexture;
+			GLint u_albedoSampler;
+			GLint u_shadowMatrices;
+			GLint u_lightPos;
+			GLint u_farPlane;
+		}pointShadowShader;
 
 		struct
 		{
@@ -2336,19 +2347,33 @@ namespace gl3d
 
 	#pragma region settings
 
+		void setExposure(float exposure);
+		float getExposure();
+
+		//cheap
 		void enableNormalMapping(bool normalMapping = 1);
 		bool isNormalMappingEnabeled();
 
+		//cheap
 		void enableLightSubScattering(bool lightSubScatter = 1);
 		bool isLightSubScatteringEnabeled();
 
 		//rather expensive
 		void enableSSAO(bool ssao = 1);
 		bool isSSAOenabeled();
+		float getSSAOBias();
+		void setSSAOBias(float bias);
+		float getSSAORadius();
+		void setSSAORadius(float radius);
+		int getSSAOSampleCount();
+		void setSSAOSampleCount(int samples);
+		float getSSAOExponent();
+		void setSSAOExponent(float exponent);
 
 		//very little performance penalty
 		void enableFXAA(bool fxaa = 1);
 		bool isFXAAenabeled();
+
 
 	#pragma endregion
 
@@ -2360,7 +2385,6 @@ namespace gl3d
 		}vao;
 
 
-		LightShader lightShader;
 		Camera camera;
 		SkyBox skyBox;
 
@@ -2375,6 +2399,11 @@ namespace gl3d
 
 		struct InternalStruct
 		{
+			LightShader lightShader;
+
+			int w; int h;
+			int adaptiveW; int adaptiveH;
+
 			struct PBRtextureMaker
 			{
 				Shader shader;
@@ -2585,6 +2614,8 @@ namespace gl3d
 			GLint u_ssaoInput;
 			Shader blurShader;
 
+			float ssao_finalColor_exponent = 5.f;
+
 		}ssao;
 
 		struct DirectionalShadows
@@ -2622,6 +2653,16 @@ namespace gl3d
 
 		}spotShadows;
 
+		struct PointShadows
+		{
+			void create();
+
+			static constexpr int shadowSize = 512;
+
+			GLuint shadowTextures;
+			GLuint fbo;
+
+		}pointShadows;
 
 		struct RenderDepthMap
 		{
@@ -2640,10 +2681,6 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
-		float ssao_finalColor_exponent = 5.f;
-
-		int w; int h;
-		int adaptiveW; int adaptiveH;
 
 	};
 

@@ -78,6 +78,7 @@ namespace gl3d
 		GLint light_u_emmisive = -1;
 		GLint light_u_cascades = -1;
 		GLint light_u_spotShadows = -1;
+		GLint light_u_pointShadows = -1;
 		
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
@@ -134,6 +135,17 @@ namespace gl3d
 			int skyBoxPresent = 0;
 
 		}lightPassUniformBlockCpuData;
+
+		struct
+		{
+			Shader shader;
+			GLint u_transform;
+			GLint u_hasTexture;
+			GLint u_albedoSampler;
+			GLint u_shadowMatrices;
+			GLint u_lightPos;
+			GLint u_farPlane;
+		}pointShadowShader;
 
 		struct
 		{

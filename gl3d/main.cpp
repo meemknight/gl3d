@@ -23,7 +23,7 @@ int w = 840;
 int h = 640;
 
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -629,7 +629,7 @@ int main()
 			ImGui::NewLine();
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
-			ImGui::SliderFloat("Exposure", &renderer.lightShader.lightPassUniformBlockCpuData.exposure , 0.1, 10);
+			ImGui::SliderFloat("Exposure", &renderer.internal.lightShader.lightPassUniformBlockCpuData.exposure , 0.1, 10);
 
 
 			static bool antiAliasing = 0;
@@ -682,7 +682,7 @@ int main()
 			{
 				ImGui::PushID(__COUNTER__);
 
-				ImGui::Checkbox("SSAO", &renderer.lightShader.useSSAO);
+				ImGui::Checkbox("SSAO", &renderer.internal.lightShader.useSSAO);
 				ImGui::SliderFloat("SSAO bias", &renderer.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
 				ImGui::SliderFloat("SSAO radius", &renderer.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
 				ImGui::SliderInt("SSAO sample count", &renderer.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
@@ -697,11 +697,11 @@ int main()
 			{
 				ImGui::PushID(__COUNTER__);
 
-				ImGui::Checkbox("Bloom", &renderer.lightShader.bloom);
-				ImGui::SliderFloat("Bloom tresshold", &renderer.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
+				ImGui::Checkbox("Bloom", &renderer.internal.lightShader.bloom);
+				ImGui::SliderFloat("Bloom tresshold", &renderer.internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
 					0, 10);
 				ImGui::SliderFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0, 10);
-				ImGui::SliderInt("Bloom blur passes", &renderer.lightShader.bloomBlurPasses, 0, 16);
+				ImGui::SliderInt("Bloom blur passes", &renderer.internal.lightShader.bloomBlurPasses, 0, 16);
 
 				ImGui::PopID();
 			}
@@ -744,7 +744,7 @@ int main()
 			ImGui::Begin("Light Editor", &lightEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 		
-			static int pointLightSelector = -1;
+			static int pointLightSelector = 0;
 			ImGui::Text("Point lightd Count %d", pointLights.size());
 			ImGui::InputInt("Current Point light:", &pointLightSelector);
 			int n = ImGui::Button("New Light"); ImGui::SameLine();
@@ -784,7 +784,7 @@ int main()
 				renderer.setPointLightColor(pointLights[pointLightSelector], color);
 
 				glm::vec3 position = renderer.getPointLightPosition(pointLights[pointLightSelector]);
-				ImGui::DragFloat3("Position", &position[0]);
+				ImGui::DragFloat3("Position", &position[0], 0.1);
 				renderer.setPointLightPosition(pointLights[pointLightSelector], position);
 
 				float distance = renderer.getPointLightDistance(pointLights[pointLightSelector]);
@@ -865,7 +865,7 @@ int main()
 			{
 				ImGui::NewLine();
 
-				static int spotLightSelector = 0;
+				static int spotLightSelector = -1;
 				ImGui::Text("Spot lightd Count %d", spotLights.size());
 				ImGui::InputInt("Current spot light:", &spotLightSelector);
 				int n = ImGui::Button("New Spot Light"); ImGui::SameLine();
@@ -1277,19 +1277,21 @@ int main()
 		renderDurationProfilerFine.end();
 
 	#pragma region light cube
-		//for (auto &i : renderer.internal.spotLights)
-		//{
-		//	lightCubeModel.position = i.position;
-		//
-		//	auto projMat = renderer.camera.getProjectionMatrix();
-		//	auto viewMat = renderer.camera.getWorldToViewMatrix();
-		//	auto transformMat = lightCubeModel.getTransformMatrix();
-		//
-		//	auto viewProjMat = projMat * viewMat * transformMat;
-		//	shader.bind();
-		//	glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
-		//	lightCubeModel.draw();
-		//}
+		glDisable(GL_DEPTH_TEST);
+		for (auto &i : renderer.internal.pointLights)
+		{
+			lightCubeModel.position = i.position;
+		
+			auto projMat = renderer.camera.getProjectionMatrix();
+			auto viewMat = renderer.camera.getWorldToViewMatrix();
+			auto transformMat = lightCubeModel.getTransformMatrix();
+		
+			auto viewProjMat = projMat * viewMat * transformMat;
+			shader.bind();
+			glUniformMatrix4fv(location, 1, GL_FALSE, &viewProjMat[0][0]);
+			lightCubeModel.draw();
+		}
+		glEnable(GL_DEPTH_TEST);
 	#pragma endregion
 
 

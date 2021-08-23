@@ -210,9 +210,12 @@
     <None Include="shaders\aa\noaa.frag" />
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
+    <None Include="shaders\shadows\pointShadow.vert" />
     <None Include="shaders\deferred\zPrePass.frag" />
     <None Include="shaders\drawQuads.vert" />
     <None Include="shaders\modelLoader\mergePBRmat.frag" />
+    <None Include="shaders\shadows\pointShadow.geom" />
+    <None Include="shaders\shadows\pointShadow.frag" />
     <None Include="shaders\shadows\varienceShadowMap.frag" />
     <None Include="shaders\skyBox\convolute.frag" />
     <None Include="shaders\deferred\geometryPass.frag" />

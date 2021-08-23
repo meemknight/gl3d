@@ -34,6 +34,8 @@ float quality(int i)
 	}else return r[i-5];
 }
 
+//todo optimize
+
 //http://blog.simonrodriguez.fr/articles/2016/07/implementing_fxaa.html
 void main()
 {
