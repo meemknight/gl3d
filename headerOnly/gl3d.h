@@ -2668,7 +2668,7 @@ namespace gl3d
 			void allocateTextures(int count);
 			int textureCount = 0;
 
-			static constexpr int shadowSize = 512;
+			static constexpr int shadowSize = 1024;
 
 			GLuint shadowTextures;
 			GLuint fbo;

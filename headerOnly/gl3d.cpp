@@ -1388,29 +1388,46 @@ vec3 r = p .xyz / p .w;
 r = r * 0.5 + 0.5;
 return r;
 }
+void generateTangentSpace(in vec3 v, out vec3 outUp, out vec3 outRight)
+{
+vec3 up = vec3(0.f, 1.f, 0.f);
+if (v == up)
+{
+outRight = vec3(1, 0, 0);
+}
+else
+{
+outRight = normalize(cross(v, up));
+}
+outUp = normalize(cross(outRight, v));
+}
 float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 {	
 vec3 fragToLight = pos - light[index].positions; 
 vec3 lightDir = normalize(fragToLight);
-float currentDepth = length(fragToLight);  
-float bias = max((10.f/512.f) * (1.0 - dot(normal, -lightDir)), 3.f/512.f);
+float bias = max((45.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);
 float shadow  = 0.0;
-float samples = 5.0;
-float offset  = 0.1;
-for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+vec3 tangent;
+vec3 coTangent;
+generateTangentSpace(lightDir, tangent, coTangent);
+float texel = 1.f / textureSize(u_pointShadows, 0).x;
+int kernel = 7;
+int kernelHalf = kernel/2;
+for(int x = -kernelHalf; x<=kernelHalf; x++)
 {
-for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+for(int y = -kernelHalf; y<=kernelHalf; y++)
 {
-for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-{
+vec3 fragToLight = pos - light[index].positions; 			
+fragToLight += 2*x * texel * tangent;
+fragToLight += 2*y * texel * coTangent;
+float currentDepth = length(fragToLight);  
 float value = texture(u_pointShadows, 
-vec4(fragToLight + vec3(x, y, z), light[index].castShadowsIndex),
+vec4(fragToLight, light[index].castShadowsIndex),
 (currentDepth-bias)/light[index].dist ).r; 
 shadow += value;
 }
 }
-}
-shadow /= (samples * samples * samples);
+shadow /= (kernel * kernel);
 shadow = clamp(shadow, 0, 1);
 return shadow;
 }
@@ -8183,7 +8200,7 @@ namespace gl3d
 		//		textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 		
 		glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0,
-			GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+			GL_DEPTH_COMPONENT32, shadowSize, shadowSize,
 			textureCount*6, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
 	}

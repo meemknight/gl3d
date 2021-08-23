@@ -383,6 +383,23 @@ vec3 getProjCoords(in mat4 matrix, in vec3 pos)
 	return r;
 }
 
+void generateTangentSpace(in vec3 v, out vec3 outUp, out vec3 outRight)
+{
+	vec3 up = vec3(0.f, 1.f, 0.f);
+
+	if (v == up)
+	{
+		outRight = vec3(1, 0, 0);
+	}
+	else
+	{
+		outRight = normalize(cross(v, up));
+	}
+
+	outUp = normalize(cross(outRight, v));
+
+}
+
 float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 {	
 	vec3 fragToLight = pos - light[index].positions; 
@@ -390,34 +407,71 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 
 	//float closestDepth = texture(u_pointShadows, lightDir).r;
 	//closestDepth *= light[index].dist; //multiply by far plane
-	float currentDepth = length(fragToLight);  
 
 	
-	float bias = max((10.f/512.f) * (1.0 - dot(normal, -lightDir)), 3.f/512.f);
+	float bias = max((45.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);
 
 	//float shadow = currentDepth -  bias < closestDepth ? 1.0 : 0.0; 
 	float shadow  = 0.0;
-	float samples = 5.0;
-	float offset  = 0.1;
-	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+
+	vec3 tangent;
+	vec3 coTangent;
+
+	generateTangentSpace(lightDir, tangent, coTangent);
+	float texel = 1.f / textureSize(u_pointShadows, 0).x;
+
+	//todo fix for even numbers
+	int kernel = 7;
+	int kernelHalf = kernel/2;
+
+	for(int x = -kernelHalf; x<=kernelHalf; x++)
 	{
-		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+		for(int y = -kernelHalf; y<=kernelHalf; y++)
 		{
-			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-			{
-				float value = texture(u_pointShadows, 
-					vec4(fragToLight + vec3(x, y, z), light[index].castShadowsIndex),
-					(currentDepth-bias)/light[index].dist ).r; 
-				//closestDepth *= light[index].dist;   //multiply by far plane
-				shadow += value;
+			vec3 fragToLight = pos - light[index].positions; 			
+			fragToLight += 2*x * texel * tangent;
+			fragToLight += 2*y * texel * coTangent;
+			float currentDepth = length(fragToLight);  
 
-			}
+	
+			float value = texture(u_pointShadows, 
+				vec4(fragToLight, light[index].castShadowsIndex),
+				(currentDepth-bias)/light[index].dist ).r; 
+			shadow += value;
 		}
+		
 	}
+	shadow /= (kernel * kernel);
 
-	shadow /= (samples * samples * samples);
+
+	//float samples = 5.0;
+	//float offset  = 0.1;
+	//for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+	//{
+	//	for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+	//	{
+	//		for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+	//		{
+	//			vec3 fragToLight = pos - light[index].positions; 
+	//			float currentDepth = length(fragToLight + vec3(x,y,z));  
+	//
+	//
+	//			float value = texture(u_pointShadows, 
+	//				vec4(fragToLight + vec3(x, y, z), light[index].castShadowsIndex),
+	//				(currentDepth-bias)/light[index].dist ).r; 
+	//			shadow += value;
+	//
+	//		}
+	//	}
+	//}
+	//shadow /= (samples * samples * samples);
 
 	shadow = clamp(shadow, 0, 1);
+
+	//if(shadow < 0.1)
+	//{
+	//	shadow = 0;
+	//}
 
 	return shadow;
 }

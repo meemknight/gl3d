@@ -4261,7 +4261,7 @@ namespace gl3d
 		//		textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 		
 		glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0,
-			GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+			GL_DEPTH_COMPONENT32, shadowSize, shadowSize,
 			textureCount*6, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
 	}
