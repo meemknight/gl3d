@@ -39,6 +39,10 @@ struct PointLight
 	float dist;
 	vec3 color;
 	float attenuation;
+	int castShadowsIndex;
+	float hardness;
+	float notUsed1;
+	float notUsed2;
 };
 readonly restrict layout(std140) buffer u_pointLights
 {
@@ -402,7 +406,8 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
 			{
 				float value = texture(u_pointShadows, 
-					vec4(fragToLight + vec3(x, y, z), index), (currentDepth-bias)/light[index].dist ).r; 
+					vec4(fragToLight + vec3(x, y, z), light[index].castShadowsIndex),
+					(currentDepth-bias)/light[index].dist ).r; 
 				//closestDepth *= light[index].dist;   //multiply by far plane
 				shadow += value;
 
@@ -412,6 +417,7 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 
 	shadow /= (samples * samples * samples);
 
+	shadow = clamp(shadow, 0, 1);
 
 	return shadow;
 }
@@ -559,7 +565,12 @@ void main()
 
 		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
-		float shadow = pointShadowCalculation(pos, normal, i);
+		float shadow = 1.f;
+		if(light[i].castShadowsIndex >= 0)
+		{
+			shadow = pointShadowCalculation(pos, normal, i);
+			shadow = pow(shadow, light[i].hardness);
+		}
 
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * attenuation * shadow;

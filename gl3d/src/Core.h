@@ -107,6 +107,10 @@ namespace gl3d
 			float dist = 20;
 			glm::vec3 color = { 1,1,1 };
 			float attenuation = 2;
+			int castShadowsIndex = 1;
+			float hardness = 1;
+			float notUdes1= 1;
+			float notUdes2= 1;
 		};
 
 		struct GpuDirectionalLight

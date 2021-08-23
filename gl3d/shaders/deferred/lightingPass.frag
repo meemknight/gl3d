@@ -39,6 +39,10 @@ struct PointLight
 	float dist;
 	vec3 color;
 	float attenuation;
+	int castShadowsIndex;
+	float hardness;
+	float notUsed1;
+	float notUsed2;
 };
 readonly restrict layout(std140) buffer u_pointLights
 {
@@ -386,10 +390,9 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 
 	//float closestDepth = texture(u_pointShadows, lightDir).r;
 	//closestDepth *= light[index].dist; //multiply by far plane
-	float currentDepth = length(fragToLight);  
 
 	
-	float bias = max((10.f/512.f) * (1.0 - dot(normal, -lightDir)), 3.f/512.f);
+	float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
 
 	//float shadow = currentDepth -  bias < closestDepth ? 1.0 : 0.0; 
 	float shadow  = 0.0;
@@ -401,9 +404,13 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 		{
 			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
 			{
+				vec3 fragToLight = pos - light[index].positions; 
+				float currentDepth = length(fragToLight + vec3(x,y,z));  
+
+
 				float value = texture(u_pointShadows, 
-					vec4(fragToLight + vec3(x, y, z), index), (currentDepth-bias)/light[index].dist ).r; 
-				//closestDepth *= light[index].dist;   //multiply by far plane
+					vec4(fragToLight + vec3(x, y, z), light[index].castShadowsIndex),
+					(currentDepth-bias)/light[index].dist ).r; 
 				shadow += value;
 
 			}
@@ -412,6 +419,12 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 
 	shadow /= (samples * samples * samples);
 
+	shadow = clamp(shadow, 0, 1);
+
+	//if(shadow < 0.1)
+	//{
+	//	shadow = 0;
+	//}
 
 	return shadow;
 }
@@ -559,7 +572,12 @@ void main()
 
 		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
-		float shadow = pointShadowCalculation(pos, normal, i);
+		float shadow = 1.f;
+		if(light[i].castShadowsIndex >= 0)
+		{
+			shadow = pointShadowCalculation(pos, normal, i);
+			shadow = pow(shadow, light[i].hardness);
+		}
 
 		Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
 			pos, viewDir, albedo, normal, F0) * attenuation * shadow;

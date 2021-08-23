@@ -149,6 +149,10 @@ namespace gl3d
 		void setPointLightDistance(PointLight& l, float distance); //light distance
 		float getPointLightAttenuation(PointLight& l); //light distance
 		void setPointLightAttenuation(PointLight& l, float attenuation); //light distance
+		bool getPointLightShadows(PointLight& l);
+		void setPointLightShadows(PointLight& l, bool castShadows = true);
+		float getPointLightHardness(PointLight& l);
+		void setPointLightHardness(PointLight& l, float hardness);
 
 	#pragma endregion
 

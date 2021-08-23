@@ -117,6 +117,10 @@ namespace gl3d
 			float dist = 20;
 			glm::vec3 color = { 1,1,1 };
 			float attenuation = 2;
+			int castShadowsIndex = 1;
+			float hardness = 1;
+			float notUdes1= 1;
+			float notUdes2= 1;
 		};
 
 		struct GpuDirectionalLight
@@ -2249,6 +2253,10 @@ namespace gl3d
 		void setPointLightDistance(PointLight& l, float distance); //light distance
 		float getPointLightAttenuation(PointLight& l); //light distance
 		void setPointLightAttenuation(PointLight& l, float attenuation); //light distance
+		bool getPointLightShadows(PointLight& l);
+		void setPointLightShadows(PointLight& l, bool castShadows = true);
+		float getPointLightHardness(PointLight& l);
+		void setPointLightHardness(PointLight& l, float hardness);
 
 	#pragma endregion
 

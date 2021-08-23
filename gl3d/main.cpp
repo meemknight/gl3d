@@ -795,6 +795,14 @@ int main()
 				ImGui::DragFloat("Attenuation##point", &attenuation, 0.05, 0);
 				renderer.setPointLightAttenuation(pointLights[pointLightSelector], attenuation);
 				
+				float hardness = renderer.getPointLightHardness(pointLights[pointLightSelector]);
+				ImGui::DragFloat("Hardness##point", &hardness, 0.05, 0.001);
+				renderer.setPointLightHardness(pointLights[pointLightSelector], hardness);
+
+				bool shadows = renderer.getPointLightShadows(pointLights[pointLightSelector]);
+				ImGui::Checkbox("Cast shadows##point", &shadows);
+				renderer.setPointLightShadows(pointLights[pointLightSelector], shadows);
+
 				ImGui::PopID();
 			}
 

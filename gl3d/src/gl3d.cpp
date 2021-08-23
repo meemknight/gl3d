@@ -1031,6 +1031,56 @@ namespace gl3d
 		internal.pointLights[i].attenuation = glm::max(attenuation, 0.f);
 	}
 
+	bool Renderer3D::getPointLightShadows(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		if (internal.pointLights[i].castShadowsIndex < 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
+	void Renderer3D::setPointLightShadows(PointLight& l, bool castShadows)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+
+		bool oldShadows = internal.pointLights[i].castShadowsIndex >= 0 ? 1 : 0;
+		
+		if (oldShadows != castShadows)
+		{
+			if (castShadows)
+			{
+				internal.pointLights[i].castShadowsIndex = 0;
+			}
+			else
+			{
+				internal.pointLights[i].castShadowsIndex = -1;
+			}
+			//internal.pointLights[i].changedThisFrame = true;
+		
+		}
+	}
+
+	float Renderer3D::getPointLightHardness(PointLight& l)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return {}; } //warn or sthing
+		return internal.pointLights[i].hardness;
+	}
+
+	void Renderer3D::setPointLightHardness(PointLight& l, float hardness)
+	{
+		auto i = internal.getPointLightIndex(l);
+		if (i < 0) { return; } //warn or sthing
+		internal.pointLights[i].hardness = glm::max(hardness, 0.001f);
+	}
+
 #pragma endregion
 
 
@@ -2461,7 +2511,6 @@ namespace gl3d
 		renderSkyBoxBefore();
 
 
-
 		#pragma region render shadow maps
 		
 		//filter true and onlyStatic true renders only static geometry
@@ -2539,9 +2588,19 @@ namespace gl3d
 
 		if (internal.pointLights.size())
 		{
-			if (internal.pointLights.size() != pointShadows.textureCount)
+			int pointLightsShadowsCount = 0;
+			for (auto& i :internal.pointLights)
 			{
-				pointShadows.allocateTextures(internal.pointLights.size());
+				if (i.castShadowsIndex >= 0)
+				{
+					pointLightsShadowsCount++;
+				}
+			}
+		
+
+			if (pointLightsShadowsCount != pointShadows.textureCount)
+			{
+				pointShadows.allocateTextures(pointLightsShadowsCount);
 			}
 
 			internal.lightShader.pointShadowShader.shader.bind();
@@ -2552,11 +2611,17 @@ namespace gl3d
 			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, pointShadows.shadowTextures, 0);
 			glClear(GL_DEPTH_BUFFER_BIT);
 
+			int shadowCastCount = 0;
 			for (int lightIndex = 0; lightIndex < internal.pointLights.size(); lightIndex++)
 			{
+				if (internal.pointLights[lightIndex].castShadowsIndex < 0)
+				{
+					continue;
+				}
 
-				glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, lightIndex);
-				
+				glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, shadowCastCount);
+				internal.pointLights[lightIndex].castShadowsIndex = shadowCastCount;
+
 				//glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				//	pointShadows.shadowTextures, 0, lightIndex); //last is layer
 				//glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
@@ -2658,6 +2723,8 @@ namespace gl3d
 					}
 
 				}
+
+				shadowCastCount++;
 
 			}
 
