@@ -142,6 +142,7 @@ namespace gl3d
 			GLint u_transform;
 			GLint u_hasTexture;
 			GLint u_albedoSampler;
+			GLint u_lightIndex;
 			GLint u_shadowMatrices;
 			GLint u_lightPos;
 			GLint u_farPlane;

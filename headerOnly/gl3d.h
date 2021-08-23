@@ -1704,6 +1704,7 @@ namespace gl3d
 			GLint u_transform;
 			GLint u_hasTexture;
 			GLint u_albedoSampler;
+			GLint u_lightIndex;
 			GLint u_shadowMatrices;
 			GLint u_lightPos;
 			GLint u_farPlane;
@@ -2656,6 +2657,8 @@ namespace gl3d
 		struct PointShadows
 		{
 			void create();
+			void allocateTextures(int count);
+			int textureCount = 0;
 
 			static constexpr int shadowSize = 512;
 

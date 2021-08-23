@@ -315,7 +315,7 @@ namespace gl3d
 		pointShadowShader.u_lightPos = getUniform(pointShadowShader.shader.id, "u_lightPos");
 		pointShadowShader.u_shadowMatrices = getUniform(pointShadowShader.shader.id, "u_shadowMatrices");
 		pointShadowShader.u_transform = getUniform(pointShadowShader.shader.id, "u_transform");
-
+		pointShadowShader.u_lightIndex = getUniform(pointShadowShader.shader.id, "u_lightIndex");
 
 		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
 		//geometryPassShader.bind();

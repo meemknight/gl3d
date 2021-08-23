@@ -557,6 +557,8 @@ namespace gl3d
 		struct PointShadows
 		{
 			void create();
+			void allocateTextures(int count);
+			int textureCount = 0;
 
 			static constexpr int shadowSize = 512;
 

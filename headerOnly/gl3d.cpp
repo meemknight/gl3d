@@ -948,6 +948,7 @@ v_texCoord = a_texCoord;
 layout (triangles) in;
 layout (triangle_strip, max_vertices=18) out;
 uniform mat4 u_shadowMatrices[6];
+uniform int u_lightIndex;
 out vec4 v_fragPos; // FragPos from GS (output per emitvertex)
 out vec2 v_finalTexCoord;
 in vec2 v_texCoord[3];
@@ -955,7 +956,7 @@ void main()
 {
 for(int face = 0; face < 6; ++face)
 {
-gl_Layer = face; // built-in variable that specifies to which face we render.
+gl_Layer = face + u_lightIndex * 6; // built-in variable that specifies to which face we render.
 for(int i = 0; i < 3; ++i) // for each triangle vertex
 {
 v_fragPos = gl_in[i].gl_Position;
@@ -1143,7 +1144,7 @@ uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
-uniform samplerCube u_pointShadows;
+uniform samplerCubeArrayShadow u_pointShadows;
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
 layout (std140) uniform u_lightPassData
@@ -1390,18 +1391,17 @@ vec3 lightDir = normalize(fragToLight);
 float currentDepth = length(fragToLight);  
 float bias = max((10.f/512.f) * (1.0 - dot(normal, -lightDir)), 3.f/512.f);
 float shadow  = 0.0;
-float samples = 4.0;
-float offset  = textureSize(u_pointShadows, 0).r;
+float samples = 5.0;
+float offset  = 0.1;
 for(float x = -offset; x < offset; x += offset / (samples * 0.5))
 {
 for(float y = -offset; y < offset; y += offset / (samples * 0.5))
 {
 for(float z = -offset; z < offset; z += offset / (samples * 0.5))
 {
-float closestDepth = texture(u_pointShadows, fragToLight + vec3(x, y, z)).r; 
-closestDepth *= light[index].dist;   //multiply by far plane
-if(currentDepth - bias < closestDepth)
-shadow += 1.0;
+float value = texture(u_pointShadows, 
+vec4(fragToLight + vec3(x, y, z), index), (currentDepth-bias)/light[index].dist ).r; 
+shadow += value;
 }
 }
 }
@@ -2577,7 +2577,7 @@ outColor = tmpvar_1;
 		pointShadowShader.u_lightPos = getUniform(pointShadowShader.shader.id, "u_lightPos");
 		pointShadowShader.u_shadowMatrices = getUniform(pointShadowShader.shader.id, "u_shadowMatrices");
 		pointShadowShader.u_transform = getUniform(pointShadowShader.shader.id, "u_transform");
-
+		pointShadowShader.u_lightIndex = getUniform(pointShadowShader.shader.id, "u_lightIndex");
 
 		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
 		//geometryPassShader.bind();
@@ -6450,13 +6450,30 @@ namespace gl3d
 
 		if (internal.pointLights.size())
 		{
+			if (internal.pointLights.size() != pointShadows.textureCount)
+			{
+				pointShadows.allocateTextures(internal.pointLights.size());
+			}
+
 			internal.lightShader.pointShadowShader.shader.bind();
 			glViewport(0, 0, pointShadows.shadowSize, pointShadows.shadowSize);
+			
 			glBindFramebuffer(GL_FRAMEBUFFER, pointShadows.fbo);
+			//glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, pointShadows.shadowTextures, 0);
 			glClear(GL_DEPTH_BUFFER_BIT);
 
 			for (int lightIndex = 0; lightIndex < internal.pointLights.size(); lightIndex++)
 			{
+
+				glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, lightIndex);
+				
+				//glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+				//	pointShadows.shadowTextures, 0, lightIndex); //last is layer
+				//glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+				//	directionalShadows.cascadesTexture, 0, shadowCastCount); //last is layer
+
+
 				glm::mat4 shadowProj = glm::perspective(glm::radians(90.f), 1.f, 0.1f,
 					internal.pointLights[lightIndex].dist);
 				glm::vec3 lightPos = internal.pointLights[lightIndex].position;
@@ -7318,7 +7335,7 @@ namespace gl3d
 
 		glUniform1i(internal.lightShader.light_u_pointShadows, 10);
 		glActiveTexture(GL_TEXTURE10);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, pointShadows.shadowTextures);
+		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
 
 
 		glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -8055,25 +8072,42 @@ namespace gl3d
 		glGenTextures(1, &shadowTextures);
 		glGenFramebuffers(1, &fbo);
 
-		glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTextures);
+		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowTextures);
 
-		for (unsigned int i = 0; i < 6; ++i)
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
-				shadowSize, shadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		//for (unsigned int i = 0; i < 6; ++i)
+		//	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+		//		shadowSize, shadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTextures, 0);
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void Renderer3D::PointShadows::allocateTextures(int count)
+	{
+		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowTextures);
+		textureCount = count;
+		
+		//for (unsigned int i = 0; i < 6; ++i)
+		//	glTexImage3D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+		//		GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+		//		textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		
+		glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0,
+			GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+			textureCount*6, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
 	}
 
 

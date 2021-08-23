@@ -19,7 +19,7 @@ uniform sampler2D u_brdfTexture;
 uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
-uniform samplerCube u_pointShadows;
+uniform samplerCubeArrayShadow u_pointShadows;
 
 uniform vec3 u_eyePosition;
 uniform mat4 u_view;
@@ -393,18 +393,19 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 
 	//float shadow = currentDepth -  bias < closestDepth ? 1.0 : 0.0; 
 	float shadow  = 0.0;
-	float samples = 4.0;
-	float offset  = textureSize(u_pointShadows, 0).r;
+	float samples = 5.0;
+	float offset  = 0.1;
 	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
 	{
 		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
 		{
 			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
 			{
-				float closestDepth = texture(u_pointShadows, fragToLight + vec3(x, y, z)).r; 
-				closestDepth *= light[index].dist;   //multiply by far plane
-				if(currentDepth - bias < closestDepth)
-					shadow += 1.0;
+				float value = texture(u_pointShadows, 
+					vec4(fragToLight + vec3(x, y, z), index), (currentDepth-bias)/light[index].dist ).r; 
+				//closestDepth *= light[index].dist;   //multiply by far plane
+				shadow += value;
+
 			}
 		}
 	}
