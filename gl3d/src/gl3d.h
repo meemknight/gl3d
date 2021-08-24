@@ -153,6 +153,8 @@ namespace gl3d
 		void setPointLightShadows(PointLight& l, bool castShadows = true);
 		float getPointLightHardness(PointLight& l);
 		void setPointLightHardness(PointLight& l, float hardness);
+		int getPointLightShadowSize();
+		void setPointLightShadowSize(int size);
 
 	#pragma endregion
 
@@ -175,6 +177,8 @@ namespace gl3d
 		bool getDirectionalLightShadows(DirectionalLight& l);
 		void setDirectionalLightShadows(DirectionalLight& l, bool castShadows);
 		
+		int getDirectionalLightShadowSize();
+		void setDirectionalLightShadowSize(int size);
 
 	#pragma endregion
 
@@ -208,6 +212,8 @@ namespace gl3d
 		void setSpotLightHardness(SpotLight& l, float hardness);
 		void setSpotLightShadows(SpotLight& l, bool castShadows);
 		bool getSpotLightShadows(SpotLight& l);
+		int getSpotLightShadowSize();
+		void setSpotLightShadowSize(int size);
 
 	#pragma endregion
 
@@ -535,7 +541,8 @@ namespace gl3d
 
 			GLuint cascadesTexture;
 			GLuint cascadesFbo;
-			static constexpr int shadowSize = 2048;
+			int shadowSize = 2048;
+			int currentShadowSize = 2048;
 
 			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
 
@@ -553,9 +560,8 @@ namespace gl3d
 			GLuint fbo;
 			GLuint staticGeometryfbo;
 
-			static constexpr int shadowSize = 1024;
-
-			
+			int shadowSize = 1024;
+			int currentShadowSize = 1024;
 
 		}spotShadows;
 
@@ -565,7 +571,9 @@ namespace gl3d
 			void allocateTextures(int count);
 			int textureCount = 0;
 
-			static constexpr int shadowSize = 1024;
+			int shadowSize = 1024;
+			int currentShadowSize = 1024;
+
 
 			GLuint shadowTextures;
 			GLuint staticGeometryTextures;

@@ -299,10 +299,9 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 	}else
 	{
 
-
-		for(int x = -kernelHalf; x <= kernelHalf; ++x)
+		for(int y = -kernelHalf; y <= kernelHalf; ++y)
 		{
-			for(int y = -kernelHalf; y <= kernelHalf; ++y)
+			for(int x = -kernelHalf; x <= kernelHalf; ++x)
 			{
 				vec2 offset = vec2(x, y);
 
@@ -424,9 +423,9 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 	int kernel = 5;
 	int kernelHalf = kernel/2;
 
-	for(int x = -kernelHalf; x<=kernelHalf; x++)
+	for(int y = -kernelHalf; y<=kernelHalf; y++)
 	{
-		for(int y = -kernelHalf; y<=kernelHalf; y++)
+		for(int x = -kernelHalf; x<=kernelHalf; x++)
 		{
 			vec3 fragToLight = pos - light[index].positions; 			
 			fragToLight += 4*x * texel * tangent;

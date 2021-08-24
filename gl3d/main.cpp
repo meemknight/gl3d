@@ -750,6 +750,10 @@ int main()
 			int n = ImGui::Button("New Light"); ImGui::SameLine();
 			int remove = ImGui::Button("Remove Light");
 
+			int lightSize = renderer.getPointLightShadowSize();
+			ImGui::DragInt("Point light shadow texture size", &lightSize);
+			renderer.setPointLightShadowSize(lightSize);
+
 			if(pointLightSelector < -1)
 			{
 				pointLightSelector = -1;
@@ -815,6 +819,10 @@ int main()
 				int n = ImGui::Button("New Directional Light"); ImGui::SameLine();
 				int remove = ImGui::Button("Remove Directional Light");
 
+				int lightSize = renderer.getDirectionalLightShadowSize();
+				ImGui::DragInt("Directional light shadow texture size", &lightSize);
+				renderer.setDirectionalLightShadowSize(lightSize);
+
 				if (directionalLightSelector < -1)
 				{
 					directionalLightSelector = -1;
@@ -878,6 +886,10 @@ int main()
 				ImGui::InputInt("Current spot light:", &spotLightSelector);
 				int n = ImGui::Button("New Spot Light"); ImGui::SameLine();
 				int remove = ImGui::Button("Remove Spot Light");
+
+				int lightSize = renderer.getSpotLightShadowSize();
+				ImGui::DragInt("Spot light shadow texture size", &lightSize);
+				renderer.setSpotLightShadowSize(lightSize);
 
 				if (spotLightSelector < -1)
 				{

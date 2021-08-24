@@ -612,20 +612,20 @@ float result_1;
 vec2 texelSize_2;
 texelSize_2 = (1.0/(vec2(textureSize (u_ssaoInput, 0))));
 result_1 = texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, -2.0) * texelSize_2))).x;
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, -1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 0.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 1.0) * texelSize_2))).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, -2.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords - texelSize_2)).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 0.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 1.0) * texelSize_2))).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, -2.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, -1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, v_texCoords).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, 1.0) * texelSize_2))).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, -2.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, -1.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords - texelSize_2)).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, -1.0) * texelSize_2))).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, -1.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 0.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 0.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, v_texCoords).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, 0.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 1.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 1.0) * texelSize_2))).x);
+result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, 1.0) * texelSize_2))).x);
 result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + texelSize_2)).x);
 fragColor = (result_1 / 16.0);
 })"},
@@ -1328,9 +1328,9 @@ if(fewSamples)
 shadow = shadowValueAtCentre;
 }else
 {
-for(int x = -kernelHalf; x <= kernelHalf; ++x)
-{
 for(int y = -kernelHalf; y <= kernelHalf; ++y)
+{
+for(int x = -kernelHalf; x <= kernelHalf; ++x)
 {
 vec2 offset = vec2(x, y);
 if(false)
@@ -1413,9 +1413,9 @@ generateTangentSpace(lightDir, tangent, coTangent);
 float texel = 1.f / textureSize(u_pointShadows, 0).x;
 int kernel = 5;
 int kernelHalf = kernel/2;
-for(int x = -kernelHalf; x<=kernelHalf; x++)
-{
 for(int y = -kernelHalf; y<=kernelHalf; y++)
+{
+for(int x = -kernelHalf; x<=kernelHalf; x++)
 {
 vec3 fragToLight = pos - light[index].positions; 			
 fragToLight += 4*x * texel * tangent;
@@ -5013,6 +5013,22 @@ namespace gl3d
 		internal.pointLights[i].hardness = glm::max(hardness, 0.001f);
 	}
 
+	int Renderer3D::getPointLightShadowSize()
+	{
+		return pointShadows.shadowSize;
+	}
+
+	void Renderer3D::setPointLightShadowSize(int size)
+	{
+		size = std::min(std::max(256, size), 2048);
+
+		if (size != pointShadows.shadowSize)
+		{
+			pointShadows.shadowSize = size;
+			internal.perFrameFlags.shouldUpdatePointShadows = true;
+		}
+	}
+
 #pragma endregion
 
 
@@ -5165,6 +5181,22 @@ namespace gl3d
 		else
 		{
 			internal.directionalLights[i].castShadowsIndex = -1;
+		}
+	}
+
+	int Renderer3D::getDirectionalLightShadowSize()
+	{
+		return directionalShadows.shadowSize;
+	}
+
+	void Renderer3D::setDirectionalLightShadowSize(int size)
+	{
+		size = std::min(std::max(256, size), 2048);
+
+		if (size != directionalShadows.shadowSize)
+		{
+			directionalShadows.shadowSize = size;
+			//internal.perFrameFlags.shouldupdatedi
 		}
 	}
 
@@ -5417,6 +5449,22 @@ namespace gl3d
 		auto i = internal.getSpotLightIndex(l);
 		if (i < 0) { return {}; } //warn or sthing
 		return internal.spotLights[i].castShadows;
+	}
+
+	int Renderer3D::getSpotLightShadowSize()
+	{
+		return spotShadows.shadowSize;
+	}
+
+	void Renderer3D::setSpotLightShadowSize(int size)
+	{
+		size = std::min(std::max(256, size), 2048);
+
+		if (spotShadows.shadowSize != size)
+		{
+			spotShadows.shadowSize = size;
+			internal.perFrameFlags.shouldUpdateSpotShadows = true;
+		}
 	}
 
 #pragma endregion
@@ -6635,7 +6683,9 @@ namespace gl3d
 			
 			if (pointLightsShadowsCount)
 			{
-				if (pointLightsShadowsCount != pointShadows.textureCount)
+				if (pointLightsShadowsCount != pointShadows.textureCount
+					|| pointShadows.currentShadowSize != pointShadows.shadowSize
+					)
 				{
 					pointShadows.allocateTextures(pointLightsShadowsCount);
 					shouldUpdateAllPointShadows = true;
@@ -6721,7 +6771,9 @@ namespace gl3d
 				if (i.castShadowsIndex >= 0) { directionalLightsShadows++; }
 			}
 
-			if (directionalLightsShadows != directionalShadows.textureCount)
+			if (directionalLightsShadows != directionalShadows.textureCount
+				|| directionalShadows.shadowSize != directionalShadows.currentShadowSize
+				)
 			{
 				directionalShadows.allocateTextures(directionalLightsShadows);
 			}
@@ -6965,7 +7017,9 @@ namespace gl3d
 				if (i.castShadows) { spotLightsShadowsCount++; }
 			}
 
-			if (spotLightsShadowsCount != spotShadows.textureCount)
+			if (spotLightsShadowsCount != spotShadows.textureCount
+				|| spotShadows.shadowSize != spotShadows.currentShadowSize
+				)
 			{
 				spotShadows.allocateTextures(spotLightsShadowsCount);
 				shouldRenderStaticGeometryAllLights = true; 
@@ -8083,6 +8137,7 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D_ARRAY, cascadesTexture);
 
 		textureCount = count;
+		currentShadowSize = shadowSize;
 
 		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize * CASCADES,
 			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
@@ -8245,6 +8300,7 @@ namespace gl3d
 	void Renderer3D::PointShadows::allocateTextures(int count)
 	{
 		textureCount = count;
+		currentShadowSize = shadowSize;
 
 		GLuint textures[2] = { shadowTextures , staticGeometryTextures };
 
@@ -8305,6 +8361,8 @@ namespace gl3d
 	{
 		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
 		textureCount = count;
+		currentShadowSize = shadowSize;
+
 		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
 			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	
