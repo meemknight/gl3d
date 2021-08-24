@@ -67,7 +67,7 @@ Features and todos:
 - [x] Cascaded Shadow Maps for directional lights
 - [x] Baked lighting for static geometry
 - [x] Shadows settings per light (hardness)
-- [ ] Set shadow quality globally
+- [x] Set shadow quality globally
 ---
 - [ ] Transparency
 

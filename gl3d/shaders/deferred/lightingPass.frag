@@ -54,7 +54,13 @@ uniform int u_pointLightCount;
 struct DirectionalLight
 {
 	vec3 direction; 
-	int castShadowsIndex; //this is both the index and the toggle
+	int castShadowsIndex;
+
+	int changedThisFrame; //not used here
+	int castShadows;
+	int notUsed1;
+	int notUsed2;
+
 	vec4 color;		//w is a hardness exponent
 	mat4 firstLightSpaceMatrix;
 	mat4 secondLightSpaceMatrix;
@@ -428,8 +434,8 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 		for(int x = -kernelHalf; x<=kernelHalf; x++)
 		{
 			vec3 fragToLight = pos - light[index].positions; 			
-			fragToLight += 4*x * texel * tangent;
-			fragToLight += 4*y * texel * coTangent;
+			fragToLight += 6*x * texel * tangent;
+			fragToLight += 6*y * texel * coTangent;
 			float currentDepth = length(fragToLight);  
 
 	
@@ -643,10 +649,11 @@ void main()
 		vec3 lightColor = dLight[i].color.rgb;
 
 		float shadow = 1;
-
-		if(dLight[i].castShadowsIndex >= 0)
+		
+		if(dLight[i].castShadows != 0)
 		{	
-			shadow = cascadedShadowCalculation(pos, normal, lightDirection, dLight[i].castShadowsIndex);
+			int castShadowInd = dLight[i].castShadowsIndex;
+			shadow = cascadedShadowCalculation(pos, normal, lightDirection, castShadowInd);
 			shadow = pow(shadow, dLight[i].color.w);
 		}
 

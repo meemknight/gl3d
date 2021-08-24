@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-24
+//built on 2021-08-25
 ////////////////////////////////////////////////
 
 
@@ -127,10 +127,16 @@ namespace gl3d
 		{
 			glm::vec3 direction = {0,-1,0};
 			int castShadowsIndex = 1;
+			
+			int changedThisFrame = 1;
+			int castShadows = 1;
+			int notUsed1 = 0;
+			int notUsed2 = 0;
+
 			glm::vec3 color = { 1,1,1 };
 			float hardness = 1;
 			glm::mat4 lightSpaceMatrix[3]; //todo magic number
-		
+
 		};
 
 		struct GpuSpotLight
@@ -1804,8 +1810,25 @@ namespace gl3d
 
 		void rotateCamera(const glm::vec2 delta);
 
-
 		void moveFPS(glm::vec3 direction);
+
+		bool operator==(const Camera& other)
+		{
+			return
+				(up == other.up)
+				&& (aspectRatio == other.aspectRatio)
+				&& (fovRadians == other.fovRadians)
+				&& (closePlane == other.closePlane)
+				&& (farPlane == other.farPlane)
+				&& (position == other.position)
+				&& (viewDirection == other.viewDirection)
+				;
+		};
+
+		bool operator!=(const Camera& other)
+		{
+			return !(*this == other);
+		};
 
 
 	};
@@ -2399,7 +2422,6 @@ namespace gl3d
 			void createVAOs();
 		}vao;
 
-
 		Camera camera;
 		SkyBox skyBox;
 
@@ -2414,6 +2436,7 @@ namespace gl3d
 
 		struct InternalStruct
 		{
+			Camera lastFrameCamera;
 			LightShader lightShader;
 
 			int w; int h;
@@ -2484,6 +2507,7 @@ namespace gl3d
 				bool staticGeometryChanged = 0;
 				bool shouldUpdateSpotShadows = 0;
 				bool shouldUpdatePointShadows = 0;
+				bool shouldUpdateDirectionalShadows = 0;
 
 			}perFrameFlags;
 
@@ -2644,11 +2668,13 @@ namespace gl3d
 			int textureCount = 0;
 
 			GLuint cascadesTexture;
+			GLuint staticGeometryTexture;
 			GLuint cascadesFbo;
+			GLuint staticGeometryFbo;
 			int shadowSize = 2048;
 			int currentShadowSize = 2048;
 
-			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
+			float frustumSplits[CASCADES] = { 0.01,0.03,0.1 };
 
 
 		}directionalShadows;
@@ -2686,6 +2712,7 @@ namespace gl3d
 
 		}pointShadows;
 
+		//todo remove
 		struct RenderDepthMap
 		{
 			void create();

@@ -295,7 +295,6 @@ namespace gl3d
 			void createVAOs();
 		}vao;
 
-
 		Camera camera;
 		SkyBox skyBox;
 
@@ -310,6 +309,7 @@ namespace gl3d
 
 		struct InternalStruct
 		{
+			Camera lastFrameCamera;
 			LightShader lightShader;
 
 			int w; int h;
@@ -380,6 +380,7 @@ namespace gl3d
 				bool staticGeometryChanged = 0;
 				bool shouldUpdateSpotShadows = 0;
 				bool shouldUpdatePointShadows = 0;
+				bool shouldUpdateDirectionalShadows = 0;
 
 			}perFrameFlags;
 
@@ -540,11 +541,13 @@ namespace gl3d
 			int textureCount = 0;
 
 			GLuint cascadesTexture;
+			GLuint staticGeometryTexture;
 			GLuint cascadesFbo;
+			GLuint staticGeometryFbo;
 			int shadowSize = 2048;
 			int currentShadowSize = 2048;
 
-			float frustumSplits[CASCADES] = { 0.01,0.03,0.1};
+			float frustumSplits[CASCADES] = { 0.01,0.03,0.1 };
 
 
 		}directionalShadows;
@@ -582,6 +585,7 @@ namespace gl3d
 
 		}pointShadows;
 
+		//todo remove
 		struct RenderDepthMap
 		{
 			void create();

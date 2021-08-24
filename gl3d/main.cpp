@@ -452,9 +452,11 @@ int main()
 	static bool normalMap = 1;
 
 	static int currnetFps = 0;
+	static float currnetMill = 0;
 	const int FPS_RECORD_ARR_SIZE = 20;
 	int recordPos = 0;
 	static float fpsArr[FPS_RECORD_ARR_SIZE] = { };
+	static float millArr[FPS_RECORD_ARR_SIZE] = { };
 
 	const int DELTA_TIME_ARR_SIZE = 60;
 	int recordPosDeltaTime = 0;
@@ -499,11 +501,13 @@ int main()
 			{
 				fpsCounterFloat -= 1;
 				currnetFps = currentFpsCounter;
+				currnetMill = (1.f / currnetFps) * 1000.f;
 				currentFpsCounter = 0;
 
 				if (recordPos < FPS_RECORD_ARR_SIZE)
 				{
 					fpsArr[recordPos] = currnetFps;
+					millArr[recordPos] = currnetMill;
 					recordPos++;
 				}
 				else
@@ -511,8 +515,11 @@ int main()
 					for (int i = 0; i < FPS_RECORD_ARR_SIZE - 1; i++)
 					{
 						fpsArr[i] = fpsArr[i + 1];
+						millArr[i] = millArr[i + 1];
+
 					}
 					fpsArr[FPS_RECORD_ARR_SIZE - 1] = currnetFps;
+					millArr[FPS_RECORD_ARR_SIZE - 1] = currnetMill;
 				}
 
 				//if (profileAveragePos < ProfilerAverage_ARR_SIZE)
@@ -537,7 +544,7 @@ int main()
 
 			if (recordPosDeltaTime < DELTA_TIME_ARR_SIZE)
 			{
-				deltaTimeArr[recordPosDeltaTime] = deltaTime;
+				deltaTimeArr[recordPosDeltaTime] = deltaTime * 1000;
 				recordPosDeltaTime++;
 			}
 			else
@@ -546,7 +553,7 @@ int main()
 				{
 					deltaTimeArr[i] = deltaTimeArr[i + 1];
 				}
-				deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime;
+				deltaTimeArr[DELTA_TIME_ARR_SIZE - 1] = deltaTime*1000;
 			}
 
 			//if (profilePos < Profiler_ARR_SIZE)
@@ -859,7 +866,7 @@ int main()
 					renderer.setDirectionalLightColor(directionalLights[directionalLightSelector], color);
 
 					glm::vec3 direction = renderer.getDirectionalLightDirection(directionalLights[directionalLightSelector]);
-					ImGui::DragFloat3("Direction##dir", &direction[0], 0.1);
+					ImGui::DragFloat3("Direction##dir", &direction[0], 0.01);
 					renderer.setDirectionalLightDirection(directionalLights[directionalLightSelector], direction);
 
 					float hardness = renderer.getDirectionalLightHardness(directionalLights[directionalLightSelector]);
@@ -879,6 +886,7 @@ int main()
 			}
 
 			{
+				
 				ImGui::NewLine();
 
 				static int spotLightSelector = -1;
@@ -1179,20 +1187,29 @@ int main()
 			0, 60);
 			ImGui::Text("Fps %d", currnetFps);
 
-			ImGui::PlotHistogram("Frame duration graph", deltaTimeArr, DELTA_TIME_ARR_SIZE, 0, 0,
-			0, 0.32);
-			ImGui::Text("Frame duration (ms) %f", deltaTime * 1000);
+			ImGui::PlotHistogram("Mill second avg", millArr, FPS_RECORD_ARR_SIZE, 0, 0,
+				0, 30);
+			ImGui::Text("Milliseconds: %f", currnetMill);
+
+			ImGui::PlotHistogram("Milli seconds graph", deltaTimeArr, DELTA_TIME_ARR_SIZE, 0, 0,
+				0, 30);
+
+			//ImGui::PlotHistogram("Frame duration graph", deltaTimeArr, DELTA_TIME_ARR_SIZE, 0, 0,
+			//0, 0.32);
+			//ImGui::Text("Frame duration (ms) %f", deltaTime * 1000);
+
+
 
 			//ImGui::PlotHistogram("Render duration graph", profileeArr, Profiler_ARR_SIZE, 0, 0,
 			//0, 0.32);
 			//ImGui::Text("Render duration (ms) %f", lastProfilerRezult.timeSeconds * 1000);
-			renderDurationProfilerFine.imguiPlotValues();
+			//renderDurationProfilerFine.imguiPlotValues();
 
-			renderDurationProfiler.imguiPlotValues();
+			//renderDurationProfiler.imguiPlotValues();
 
-			imguiRenderDuration.imguiPlotValues();
+			//imguiRenderDuration.imguiPlotValues();
 
-			swapBuffersDuration.imguiPlotValues();
+			//swapBuffersDuration.imguiPlotValues();
 
 			ImGui::End();
 		}

@@ -55,8 +55,25 @@ namespace gl3d
 
 		void rotateCamera(const glm::vec2 delta);
 
-
 		void moveFPS(glm::vec3 direction);
+
+		bool operator==(const Camera& other)
+		{
+			return
+				(up == other.up)
+				&& (aspectRatio == other.aspectRatio)
+				&& (fovRadians == other.fovRadians)
+				&& (closePlane == other.closePlane)
+				&& (farPlane == other.farPlane)
+				&& (position == other.position)
+				&& (viewDirection == other.viewDirection)
+				;
+		};
+
+		bool operator!=(const Camera& other)
+		{
+			return !(*this == other);
+		};
 
 
 	};

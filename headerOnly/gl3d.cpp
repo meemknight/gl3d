@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-24
+//built on 2021-08-25
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1174,7 +1174,11 @@ uniform int u_pointLightCount;
 struct DirectionalLight
 {
 vec3 direction; 
-int castShadowsIndex; //this is both the index and the toggle
+int castShadowsIndex;
+int changedThisFrame; //not used here
+int castShadows;
+int notUsed1;
+int notUsed2;
 vec4 color;		//w is a hardness exponent
 mat4 firstLightSpaceMatrix;
 mat4 secondLightSpaceMatrix;
@@ -1418,8 +1422,8 @@ for(int y = -kernelHalf; y<=kernelHalf; y++)
 for(int x = -kernelHalf; x<=kernelHalf; x++)
 {
 vec3 fragToLight = pos - light[index].positions; 			
-fragToLight += 4*x * texel * tangent;
-fragToLight += 4*y * texel * coTangent;
+fragToLight += 6*x * texel * tangent;
+fragToLight += 6*y * texel * coTangent;
 float currentDepth = length(fragToLight);  
 float value = texture(u_pointShadows, 
 vec4(fragToLight, light[index].castShadowsIndex),
@@ -1520,9 +1524,10 @@ for(int i=0; i<u_directionalLightCount; i++)
 vec3 lightDirection = dLight[i].direction.xyz;
 vec3 lightColor = dLight[i].color.rgb;
 float shadow = 1;
-if(dLight[i].castShadowsIndex >= 0)
+if(dLight[i].castShadows != 0)
 {	
-shadow = cascadedShadowCalculation(pos, normal, lightDirection, dLight[i].castShadowsIndex);
+int castShadowInd = dLight[i].castShadowsIndex;
+shadow = cascadedShadowCalculation(pos, normal, lightDirection, castShadowInd);
 shadow = pow(shadow, dLight[i].color.w);
 }
 Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
@@ -5063,6 +5068,8 @@ namespace gl3d
 		internal.directionalLightIndexes.push_back(id);
 		internal.directionalLights.push_back(light);
 
+		internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
+
 		return { id };
 	}
 
@@ -5085,6 +5092,8 @@ namespace gl3d
 		internal.directionalLights.erase(internal.directionalLights.begin() + pos);
 
 		l.id_ = 0;
+
+		internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
 	}
 
 	bool Renderer3D::isDirectionalLight(DirectionalLight& l)
@@ -5124,7 +5133,7 @@ namespace gl3d
 		if (glm::vec3(internal.directionalLights[i].direction) != direction)
 		{
 			internal.directionalLights[i].direction = glm::vec4(direction, 0);
-			//internal.directionalLights[i].changedThisFrame = true;
+			internal.directionalLights[i].changedThisFrame = true;
 		}
 	}
 
@@ -5160,27 +5169,20 @@ namespace gl3d
 	{
 		auto i = internal.getDirectionalLightIndex(l);
 		if (i < 0) { return {}; } //warn or sthing
-		if (internal.directionalLights[i].castShadowsIndex >= 0)
-		{
-			return 1;
-		}
-		else
-		{
-			return 0;
-		}
+		
+		return internal.directionalLights[i].castShadows;
+
 	}
 
 	void Renderer3D::setDirectionalLightShadows(DirectionalLight& l, bool castShadows)
 	{
 		auto i = internal.getDirectionalLightIndex(l);
 		if (i < 0) { return; } //warn or sthing
-		if (castShadows)
+		if (castShadows != internal.directionalLights[i].castShadows)
 		{
-			internal.directionalLights[i].castShadowsIndex = 1;
-		}
-		else
-		{
-			internal.directionalLights[i].castShadowsIndex = -1;
+			internal.directionalLights[i].castShadows = castShadows;
+			internal.directionalLights[i].changedThisFrame = true;
+			internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
 		}
 	}
 
@@ -6434,6 +6436,10 @@ namespace gl3d
 
 	void Renderer3D::render(float deltaTime)
 	{
+	
+	#pragma region adaptive rezolution
+
+
 		if (adaptiveResolution.timeSample >= adaptiveResolution.timeSamplesCount)
 		{
 			float ms = 0;
@@ -6474,13 +6480,15 @@ namespace gl3d
 
 		updateWindowMetrics(internal.w, internal.h);
 		
-		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);//todo check remove
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);//todo check remove
+	#pragma endregion
 
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
+
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -6488,6 +6496,7 @@ namespace gl3d
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 
+		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		renderSkyBoxBefore();
 
 
@@ -6762,13 +6771,28 @@ namespace gl3d
 
 		internal.lightShader.prePass.shader.bind();
 
+		bool cameraChanged = false;
+		if (camera != internal.lastFrameCamera)
+		{
+			cameraChanged = true;
+		}
+		internal.lastFrameCamera = camera;
+
 		if (internal.directionalLights.size())
 		{
 
+			bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged
+				|| internal.perFrameFlags.shouldUpdateDirectionalShadows
+				|| cameraChanged;
+
 			int directionalLightsShadows = 0;
-			for (const auto& i : internal.directionalLights)
+			for (int i=0; i< internal.directionalLights.size(); i++)
 			{
-				if (i.castShadowsIndex >= 0) { directionalLightsShadows++; }
+				if (internal.directionalLights[i].castShadows != 0) 
+				{ 
+					internal.directionalLights[i].castShadowsIndex = directionalLightsShadows;
+					directionalLightsShadows++; 
+				}
 			}
 
 			if (directionalLightsShadows != directionalShadows.textureCount
@@ -6776,9 +6800,9 @@ namespace gl3d
 				)
 			{
 				directionalShadows.allocateTextures(directionalLightsShadows);
+				shouldRenderStaticGeometryAllLights = true;
 			}
 			
-
 
 			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, 
 				float nearPlane, float farPlane,
@@ -6954,12 +6978,15 @@ namespace gl3d
 
 			if (directionalLightsShadows)
 			{
-				int shadowCastCount = 0;
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.staticGeometryFbo);
 				for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
 				{
-					if (internal.directionalLights[lightIndex].castShadowsIndex >= 0)
+					if (internal.directionalLights[lightIndex].castShadows != 0
+						&& (internal.directionalLights[lightIndex].changedThisFrame
+						|| shouldRenderStaticGeometryAllLights)
+						)
 					{
-						internal.directionalLights[lightIndex].castShadowsIndex = shadowCastCount;
+						internal.directionalLights[lightIndex].changedThisFrame = false;
 
 						glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
 						//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
@@ -6972,9 +6999,9 @@ namespace gl3d
 
 						float zOffsets[] = { 15 / 200.f,0,0 };
 
-						glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
 						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							directionalShadows.cascadesTexture, 0, shadowCastCount); //last is layer
+							directionalShadows.staticGeometryTexture, 0,
+							internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
 
 						glClear(GL_DEPTH_BUFFER_BIT);
 						float lastNearPlane = 0.0001;
@@ -6985,8 +7012,8 @@ namespace gl3d
 								directionalShadows.shadowSize, directionalShadows.shadowSize);
 
 							auto projection = calculateLightProjectionMatrix(lightDir, lightView,
-								directionalShadows.frustumSplits[i] * camera.farPlane,
 								lastNearPlane,
+								directionalShadows.frustumSplits[i] * camera.farPlane,
 								zOffsets[i] * camera.farPlane);
 
 							//this will add some precision but add artefacts todo?
@@ -6994,13 +7021,48 @@ namespace gl3d
 
 							internal.directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
 
-							renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i]);
+							renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
+								true, true);
 
+						}
+					}
+
+				}
+
+				//copy static geometry
+				glCopyImageSubData(directionalShadows.staticGeometryTexture, GL_TEXTURE_2D_ARRAY, 0,
+					0, 0, 0,
+					directionalShadows.cascadesTexture, GL_TEXTURE_2D_ARRAY, 0,
+					0, 0, 0,
+					directionalShadows.shadowSize, directionalShadows.shadowSize * directionalShadows.CASCADES,
+					directionalLightsShadows
+				);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
+				
+				for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
+				{
+					if (internal.directionalLights[lightIndex].castShadows != 0)
+					{
+
+						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+							directionalShadows.cascadesTexture, 0, 
+							internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
+						//glClear(GL_DEPTH_BUFFER_BIT);
+
+						for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+						{
+							glViewport(0, directionalShadows.shadowSize * i,
+								directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+							renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
+								true, false);
 
 						}
 
-						shadowCastCount++;
 					}
+
+
 				}
 			}
 			
@@ -7038,6 +7100,7 @@ namespace gl3d
 					{
 						if (shouldRenderStaticGeometryAllLights || internal.spotLights[lightIndex].changedThisFrame)
 						{
+
 							glm::vec3 lightDir = internal.spotLights[lightIndex].direction;
 							glm::vec3 lightPos = internal.spotLights[lightIndex].position;
 							glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
@@ -7080,7 +7143,7 @@ namespace gl3d
 
 				//render dynamic geometry on top
 				glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
-				shadowCastCount = 0;
+				shadowCastCount = 0; //todo remove !!! bug here
 				for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
 				{
 					if (internal.spotLights[lightIndex].castShadows)
@@ -8134,14 +8197,17 @@ namespace gl3d
 
 	void Renderer3D::DirectionalShadows::allocateTextures(int count)
 	{
-		glBindTexture(GL_TEXTURE_2D_ARRAY, cascadesTexture);
-
 		textureCount = count;
 		currentShadowSize = shadowSize;
 
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize * CASCADES,
-			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		GLuint textures[2] = { cascadesTexture, staticGeometryTexture };
 
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize * CASCADES,
+				textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		}
 	}
 
 	void Renderer3D::DirectionalShadows::create()
@@ -8149,28 +8215,35 @@ namespace gl3d
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 		glGenTextures(1, &cascadesTexture);
+		glGenTextures(1, &staticGeometryTexture);
+
+		GLuint textures[2] = { cascadesTexture, staticGeometryTexture };
+
+		for(int i=0; i<2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+		}
+
+		
 		glGenFramebuffers(1, &cascadesFbo);
-
-		glBindTexture(GL_TEXTURE_2D_ARRAY, cascadesTexture);
+		glGenFramebuffers(1, &staticGeometryFbo);
 		
+		GLuint fbos[2] = { cascadesFbo, staticGeometryFbo };
 
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+		for (int i = 0; i < 2; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fbos[i]);
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+		}
 
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, cascadesFbo);
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_ARRAY, cascadesTexture, 0);
-		//glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cascadesTexture, 0, 0); //last is layer
-
-		glDrawBuffer(GL_NONE);
-		glReadBuffer(GL_NONE);
-		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	}
