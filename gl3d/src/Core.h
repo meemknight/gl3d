@@ -109,8 +109,8 @@ namespace gl3d
 			float attenuation = 2;
 			int castShadowsIndex = 1;
 			float hardness = 1;
-			float notUdes1= 1;
-			float notUdes2= 1;
+			int castShadows = 1;
+			int changedThisFrame = 1;
 		};
 
 		struct GpuDirectionalLight

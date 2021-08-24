@@ -41,8 +41,8 @@ struct PointLight
 	float attenuation;
 	int castShadowsIndex;
 	float hardness;
-	float notUsed1;
-	float notUsed2;
+	int castShadows;
+	int changedThisFrame;
 };
 readonly restrict layout(std140) buffer u_pointLights
 {
@@ -409,7 +409,7 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 	//closestDepth *= light[index].dist; //multiply by far plane
 
 	
-	float bias = max((45.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);
+	float bias = max((60.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);
 
 	//float shadow = currentDepth -  bias < closestDepth ? 1.0 : 0.0; 
 	float shadow  = 0.0;
@@ -421,7 +421,7 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 	float texel = 1.f / textureSize(u_pointShadows, 0).x;
 
 	//todo fix for even numbers
-	int kernel = 7;
+	int kernel = 5;
 	int kernelHalf = kernel/2;
 
 	for(int x = -kernelHalf; x<=kernelHalf; x++)
@@ -429,8 +429,8 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 		for(int y = -kernelHalf; y<=kernelHalf; y++)
 		{
 			vec3 fragToLight = pos - light[index].positions; 			
-			fragToLight += 2*x * texel * tangent;
-			fragToLight += 2*y * texel * coTangent;
+			fragToLight += 4*x * texel * tangent;
+			fragToLight += 4*y * texel * coTangent;
 			float currentDepth = length(fragToLight);  
 
 	
@@ -441,6 +441,12 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 		}
 		
 	}
+
+	if(shadow <3)
+	{
+		shadow = 0;
+	}
+
 	shadow /= (kernel * kernel);
 
 
@@ -620,7 +626,7 @@ void main()
 		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
 		float shadow = 1.f;
-		if(light[i].castShadowsIndex >= 0)
+		if(light[i].castShadows != 0)
 		{
 			shadow = pointShadowCalculation(pos, normal, i);
 			shadow = pow(shadow, light[i].hardness);

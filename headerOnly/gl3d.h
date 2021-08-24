@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-23
+//built on 2021-08-24
 ////////////////////////////////////////////////
 
 
@@ -119,8 +119,8 @@ namespace gl3d
 			float attenuation = 2;
 			int castShadowsIndex = 1;
 			float hardness = 1;
-			float notUdes1= 1;
-			float notUdes2= 1;
+			int castShadows = 1;
+			int changedThisFrame = 1;
 		};
 
 		struct GpuDirectionalLight
@@ -2477,6 +2477,7 @@ namespace gl3d
 			{
 				bool staticGeometryChanged = 0;
 				bool shouldUpdateSpotShadows = 0;
+				bool shouldUpdatePointShadows = 0;
 
 			}perFrameFlags;
 
@@ -2671,7 +2672,9 @@ namespace gl3d
 			static constexpr int shadowSize = 1024;
 
 			GLuint shadowTextures;
+			GLuint staticGeometryTextures;
 			GLuint fbo;
+			GLuint staticGeometryFbo;
 
 		}pointShadows;
 

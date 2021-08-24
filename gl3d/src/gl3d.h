@@ -373,6 +373,7 @@ namespace gl3d
 			{
 				bool staticGeometryChanged = 0;
 				bool shouldUpdateSpotShadows = 0;
+				bool shouldUpdatePointShadows = 0;
 
 			}perFrameFlags;
 
@@ -567,7 +568,9 @@ namespace gl3d
 			static constexpr int shadowSize = 1024;
 
 			GLuint shadowTextures;
+			GLuint staticGeometryTextures;
 			GLuint fbo;
+			GLuint staticGeometryFbo;
 
 		}pointShadows;
 

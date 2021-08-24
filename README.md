@@ -62,16 +62,12 @@ Features and todos:
 ---
 - [ ] Volumetric light (God rays)
 ---
-- [x] Directional Lights
-- [x] Shadows for directional lights
-- [x] Cascaded Shadow Maps
-- [x] Spot Lights
-- [x] Baked spot lights shadows for static geometry
-- [x] Shadows for spot lights
-- [x] Point lights
-- [ ] Shadows for point lights
-- [x] Hardness / softness for shadows
-- [x] Shadows settings per light
+- [x] Directional, Spot and Point Lights 
+- [x] Shadows for all types of lights
+- [x] Cascaded Shadow Maps for directional lights
+- [x] Baked lighting for static geometry
+- [x] Shadows settings per light (hardness)
+- [ ] Set shadow quality globally
 ---
 - [ ] Transparency
 

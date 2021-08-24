@@ -41,8 +41,8 @@ struct PointLight
 	float attenuation;
 	int castShadowsIndex;
 	float hardness;
-	float notUsed1;
-	float notUsed2;
+	int castShadows;
+	int changedThisFrame;
 };
 readonly restrict layout(std140) buffer u_pointLights
 {
@@ -429,8 +429,8 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 		for(int y = -kernelHalf; y<=kernelHalf; y++)
 		{
 			vec3 fragToLight = pos - light[index].positions; 			
-			fragToLight += 2*x * texel * tangent;
-			fragToLight += 2*y * texel * coTangent;
+			fragToLight += 4*x * texel * tangent;
+			fragToLight += 4*y * texel * coTangent;
 			float currentDepth = length(fragToLight);  
 
 	
@@ -626,7 +626,7 @@ void main()
 		float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
 
 		float shadow = 1.f;
-		if(light[i].castShadowsIndex >= 0)
+		if(light[i].castShadows != 0)
 		{
 			shadow = pointShadowCalculation(pos, normal, i);
 			shadow = pow(shadow, light[i].hardness);
