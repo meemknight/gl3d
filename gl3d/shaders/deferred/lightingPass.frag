@@ -4,7 +4,7 @@
 //#extension GL_NV_shadow_samplers_cube : enable
 
 layout(location = 0) out vec4 a_outColor;
-layout(location = 1) out vec4 a_outBloom;
+//layout(location = 1) out vec4 a_outBloom;
 
 in vec2 v_texCoords;
 
@@ -848,25 +848,28 @@ void main()
 
 	//if(albedoAlpha.a == 0) discard;
 
-	if(lightIntensity > lightPassData.bloomTresshold)
-	{
-		//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
-		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+	//if(lightIntensity > lightPassData.bloomTresshold)
+	//{
+	//	//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
+	//	//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
+	//
+	//	///a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
+	//	//a_outColor = vec4(color.rgb, albedoAlpha.a);	
+	//	a_outColor = vec4(0,0,0, albedoAlpha.a);	
+	//
+	//}else
+	//{
+	//	//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
+	//	//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
+	//
+	//	///a_outBloom = vec4(emissive.rgb, 1);
+	//	a_outColor = vec4(color.rgb, albedoAlpha.a);
+	//}
 
-		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
-		//a_outColor = vec4(color.rgb, albedoAlpha.a);	
-		a_outColor = vec4(0,0,0, albedoAlpha.a);	
+	a_outColor = vec4(color.rgb, albedoAlpha.a);
 
-	}else
-	{
-		//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
-		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
 
-		a_outBloom = vec4(emissive.rgb, 1);
-		a_outColor = vec4(color.rgb, albedoAlpha.a);
-	}
-
-	a_outBloom = clamp(a_outBloom, 0, 1000);
+	//a_outBloom = clamp(a_outBloom, 0, 1000);
 	
 	//a_outColor.rgb =  material.bbb;
 	//a_outColor.rgba =  vec4(albedoAlpha.aaa, 1);

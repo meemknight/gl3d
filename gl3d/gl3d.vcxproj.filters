@@ -100,5 +100,6 @@
     <None Include="shaders\shadows\pointShadow.frag" />
     <None Include="shaders\shadows\pointShadow.geom" />
     <None Include="shaders\shadows\pointShadow.vert" />
+    <None Include="shaders\postProcess\filter.frag" />
   </ItemGroup>
 </Project>

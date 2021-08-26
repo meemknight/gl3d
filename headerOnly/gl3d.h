@@ -2550,6 +2550,14 @@ namespace gl3d
 
 		struct PostProcess
 		{
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_exposure;
+				GLint u_tresshold;
+			}filterShader;
+
 			Shader postProcessShader;
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader
@@ -2567,6 +2575,7 @@ namespace gl3d
 
 
 			GLuint fbo;
+			GLuint filterFbo;
 			GLuint blurFbo[2];
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom

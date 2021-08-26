@@ -1097,6 +1097,34 @@ result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_18)).
 fragColor = result_1;
 })"},
 
+      std::pair<std::string, const char*>{"filter.frag", R"(#version 150
+out vec4 a_outBloom;
+in vec2 v_texCoords;
+uniform sampler2D u_texture;
+uniform float u_exposure;
+uniform float u_tresshold;
+void main ()
+{
+vec3 hdrCorrectedColor_1;
+vec3 tmpvar_2;
+tmpvar_2 = texture (u_texture, v_texCoords).xyz;
+hdrCorrectedColor_1 = (vec3(1.0, 1.0, 1.0) - exp((
+-(tmpvar_2)
+* u_exposure)));
+hdrCorrectedColor_1 = pow (hdrCorrectedColor_1, vec3(0.4545454, 0.4545454, 0.4545454));
+float tmpvar_3;
+tmpvar_3 = dot (hdrCorrectedColor_1, vec3(0.2126, 0.7152, 0.0722));
+if ((tmpvar_3 > u_tresshold)) {
+vec4 tmpvar_4;
+tmpvar_4.w = 1.0;
+tmpvar_4.xyz = tmpvar_2;
+a_outBloom = tmpvar_4;
+} else {
+a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);
+};
+a_outBloom = clamp (a_outBloom, 0.0, 1000.0);
+})"},
+
       std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
 in vec2 v_texCoords;
 out vec4 fragColor;
@@ -1129,7 +1157,6 @@ discard;
       std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430
 #pragma debug(on)
 layout(location = 0) out vec4 a_outColor;
-layout(location = 1) out vec4 a_outBloom;
 in vec2 v_texCoords;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
@@ -1635,16 +1662,7 @@ vec3 hdrCorrectedColor = color;
 hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-if(lightIntensity > lightPassData.bloomTresshold)
-{
-a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
-a_outColor = vec4(0,0,0, albedoAlpha.a);	
-}else
-{
-a_outBloom = vec4(emissive.rgb, 1);
 a_outColor = vec4(color.rgb, albedoAlpha.a);
-}
-a_outBloom = clamp(a_outBloom, 0, 1000);
 })"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 330
@@ -7665,6 +7683,20 @@ namespace gl3d
 		
 		if(internal.lightShader.bloom)
 		{
+			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.filterFbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			postProcess.filterShader.shader.bind();
+			glUniform1f(postProcess.filterShader.u_exposure,
+				internal.lightShader.lightPassUniformBlockCpuData.exposure);
+			glUniform1f(postProcess.filterShader.u_tresshold,
+				internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold);
+			glUniform1i(postProcess.filterShader.u_texture, 0);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[0]);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 			
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
@@ -8086,11 +8118,18 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
 		}
 
-		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		glDrawBuffers(2, attachments);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
+
+		glGenFramebuffers(1, &filterFbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, filterFbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[1], 0);
+
+
+		//unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		//glDrawBuffers(2, attachments);
 
 		
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");
@@ -8108,6 +8147,11 @@ namespace gl3d
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
+
+		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag");
+		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure");
+		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture");
+		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold");
 
 
 		glGenFramebuffers(2, blurFbo);

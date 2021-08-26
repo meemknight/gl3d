@@ -704,9 +704,9 @@ int main()
 				ImGui::PushID(__COUNTER__);
 
 				ImGui::Checkbox("Bloom", &renderer.internal.lightShader.bloom);
-				ImGui::SliderFloat("Bloom tresshold", &renderer.internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
-					0, 10);
-				ImGui::SliderFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0, 10);
+				ImGui::DragFloat("Bloom tresshold", &renderer.internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
+					0.01, 0, 1);
+				ImGui::DragFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0.01, 0, 10);
 				ImGui::SliderInt("Bloom blur passes", &renderer.internal.lightShader.bloomBlurPasses, 0, 16);
 
 				ImGui::PopID();

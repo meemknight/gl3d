@@ -210,6 +210,7 @@
     <None Include="shaders\aa\noaa.frag" />
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
+    <None Include="shaders\postProcess\filter.frag" />
     <None Include="shaders\shadows\pointShadow.vert" />
     <None Include="shaders\deferred\zPrePass.frag" />
     <None Include="shaders\drawQuads.vert" />

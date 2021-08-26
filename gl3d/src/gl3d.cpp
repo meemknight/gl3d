@@ -3719,6 +3719,20 @@ namespace gl3d
 		
 		if(internal.lightShader.bloom)
 		{
+			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.filterFbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			postProcess.filterShader.shader.bind();
+			glUniform1f(postProcess.filterShader.u_exposure,
+				internal.lightShader.lightPassUniformBlockCpuData.exposure);
+			glUniform1f(postProcess.filterShader.u_tresshold,
+				internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold);
+			glUniform1i(postProcess.filterShader.u_texture, 0);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[0]);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 			
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
@@ -4140,11 +4154,18 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
 		}
 
-		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		glDrawBuffers(2, attachments);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
+
+		glGenFramebuffers(1, &filterFbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, filterFbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[1], 0);
+
+
+		//unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		//glDrawBuffers(2, attachments);
 
 		
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");
@@ -4162,6 +4183,11 @@ namespace gl3d
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
+
+		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag");
+		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure");
+		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture");
+		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold");
 
 
 		glGenFramebuffers(2, blurFbo);
