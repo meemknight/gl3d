@@ -853,7 +853,7 @@ void main()
 		//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
 
-		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 0);
+		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
 		//a_outColor = vec4(color.rgb, albedoAlpha.a);	
 		a_outColor = vec4(0,0,0, albedoAlpha.a);	
 
@@ -862,7 +862,7 @@ void main()
 		//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
 
-		a_outBloom = vec4(emissive.rgb, 0);
+		a_outBloom = vec4(emissive.rgb, 1);
 		a_outColor = vec4(color.rgb, albedoAlpha.a);
 	}
 

@@ -646,7 +646,6 @@ gl_Position = pos.xyww;
 out vec4 a_outColor;
 in vec3 v_texCoords;
 uniform samplerCube u_skybox;
-uniform float u_exposure;
 uniform vec3 u_ambient;
 uniform int u_skyBoxPresent;
 void main ()
@@ -661,10 +660,6 @@ a_outColor.xyz = (tmpvar_2.xyz * tmpvar_1);
 } else {
 a_outColor.xyz = tmpvar_1;
 };
-a_outColor.xyz = (vec3(1.0, 1.0, 1.0) - exp((
--(a_outColor.xyz)
-* u_exposure)));
-a_outColor.xyz = pow (a_outColor.xyz, vec3(0.4545454, 0.4545454, 0.4545454));
 })"},
 
       std::pair<std::string, const char*>{"preFilterSpecular.frag", R"(#version 150
@@ -1570,6 +1565,7 @@ pos, viewDir, albedo, normal, F0) * smoothing * attenuation * shadow;
 }
 }
 vec3 ambient;
+vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));
 if(lightPassData.skyBoxPresent != 0)
 {
 vec3 N = normal;
@@ -1600,8 +1596,7 @@ vec3 Edss = 1 - (FssEss + Fms * Ems);
 vec3 kD = albedo * Edss;
 ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 }
-lightPassData.ambientColor.rgb = 
-vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
+vec3 occlusionData = ambientOcclution * gammaAmbient;
 ambient *= occlusionData;
 }else
 {
@@ -1610,8 +1605,8 @@ vec3 V = viewDir;
 float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
 vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 vec3 kS = F;
-vec3 irradiance = lightPassData.ambientColor.rgb; //this color is coming directly at the object
-vec3 radiance = lightPassData.ambientColor.rgb;
+vec3 irradiance = gammaAmbient ; //this color is coming directly at the object
+vec3 radiance = gammaAmbient ;
 vec2 brdfVec = vec2(dotNVClamped, roughness);
 vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
 if(lightPassData.lightSubScater == 0)
@@ -1642,11 +1637,11 @@ hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
 if(lightIntensity > lightPassData.bloomTresshold)
 {
-a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 0);
+a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
 a_outColor = vec4(0,0,0, albedoAlpha.a);	
 }else
 {
-a_outBloom = vec4(emissive.rgb, 0);
+a_outBloom = vec4(emissive.rgb, 1);
 a_outColor = vec4(color.rgb, albedoAlpha.a);
 }
 a_outBloom = clamp(a_outBloom, 0, 1000);
@@ -6497,6 +6492,9 @@ namespace gl3d
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		renderSkyBoxBefore();
 
@@ -7546,7 +7544,7 @@ namespace gl3d
 		#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(internal.lightShader.lightingPassShader.id);
 
@@ -7613,7 +7611,7 @@ namespace gl3d
 		glUniform1i(internal.lightShader.light_u_pointLightCount, internal.pointLights.size());
 
 		if (internal.directionalLights.size())
-		{
+		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.directionalLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.directionalLights.size() * sizeof(internal::GpuDirectionalLight)
@@ -7624,7 +7622,7 @@ namespace gl3d
 		glUniform1i(internal.lightShader.light_u_directionalLightCount, internal.directionalLights.size());
 
 		if (internal.spotLights.size())
-		{
+		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.spotLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.spotLights.size() * sizeof(internal::GpuSpotLight),
@@ -7653,7 +7651,13 @@ namespace gl3d
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
 			&internal.lightShader.lightPassUniformBlockCpuData);
 
+		//blend with skybox
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glDisable(GL_BLEND);
 
 	#pragma endregion
 
@@ -7762,12 +7766,12 @@ namespace gl3d
 		glUniform1f(postProcess.u_exposure, internal.lightShader.lightPassUniformBlockCpuData.exposure);
 
 		//blend with skybox
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		//glEnable(GL_BLEND);
+		//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-		glDisable(GL_BLEND);
+		//glDisable(GL_BLEND);
 
 
 	#pragma endregion

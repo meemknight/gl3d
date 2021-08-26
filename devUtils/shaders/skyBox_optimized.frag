@@ -2,7 +2,6 @@
 out vec4 a_outColor;
 in vec3 v_texCoords;
 uniform samplerCube u_skybox;
-uniform float u_exposure;
 uniform vec3 u_ambient;
 uniform int u_skyBoxPresent;
 void main ()
@@ -17,9 +16,5 @@ void main ()
   } else {
     a_outColor.xyz = tmpvar_1;
   };
-  a_outColor.xyz = (vec3(1.0, 1.0, 1.0) - exp((
-    -(a_outColor.xyz)
-   * u_exposure)));
-  a_outColor.xyz = pow (a_outColor.xyz, vec3(0.4545454, 0.4545454, 0.4545454));
 }
 

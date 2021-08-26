@@ -146,9 +146,8 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	//renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.loadSkyBox(names);
 
-	//renderer.skyBox.loadTexture(names, w, h);
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");

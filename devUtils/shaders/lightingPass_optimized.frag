@@ -729,6 +729,8 @@ void main()
 
 	//compute ambient
 	vec3 ambient;
+	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));
+
 	if(lightPassData.skyBoxPresent != 0)
 	{
 
@@ -778,8 +780,8 @@ void main()
 			// Multiple scattering version
 			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 		}
-		lightPassData.ambientColor.rgb = 
-		vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
+
+		vec3 occlusionData = ambientOcclution * gammaAmbient;
 		ambient *= occlusionData;
 
 	}else
@@ -792,9 +794,9 @@ void main()
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
-		vec3 irradiance = lightPassData.ambientColor.rgb; //this color is coming directly at the object
+		vec3 irradiance = gammaAmbient ; //this color is coming directly at the object
 		
-		vec3 radiance = lightPassData.ambientColor.rgb;
+		vec3 radiance = gammaAmbient ;
 
 		vec2 brdfVec = vec2(dotNVClamped, roughness);
 		//brdfVec.y = 1 - brdfVec.y; 
@@ -851,7 +853,7 @@ void main()
 		//a_outBloom = clamp(vec4(color.rgb, 1), 0, 1) + vec4(emissive.rgb, 0);
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);	
 
-		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 0);
+		a_outBloom = vec4(color.rgb, 0) + vec4(emissive.rgb, 1);
 		//a_outColor = vec4(color.rgb, albedoAlpha.a);	
 		a_outColor = vec4(0,0,0, albedoAlpha.a);	
 
@@ -860,7 +862,7 @@ void main()
 		//a_outBloom = vec4(0, 0, 0, 0) + vec4(emissive.rgb, 0); //note (vlod) keep this here
 		//a_outColor = clamp(vec4(color.rgb, 1), 0, 1);
 
-		a_outBloom = vec4(emissive.rgb, 0);
+		a_outBloom = vec4(emissive.rgb, 1);
 		a_outColor = vec4(color.rgb, albedoAlpha.a);
 	}
 

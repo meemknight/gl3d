@@ -2546,6 +2546,9 @@ namespace gl3d
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		renderSkyBoxBefore();
 
@@ -3595,7 +3598,7 @@ namespace gl3d
 		#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(internal.lightShader.lightingPassShader.id);
 
@@ -3662,7 +3665,7 @@ namespace gl3d
 		glUniform1i(internal.lightShader.light_u_pointLightCount, internal.pointLights.size());
 
 		if (internal.directionalLights.size())
-		{
+		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.directionalLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.directionalLights.size() * sizeof(internal::GpuDirectionalLight)
@@ -3673,7 +3676,7 @@ namespace gl3d
 		glUniform1i(internal.lightShader.light_u_directionalLightCount, internal.directionalLights.size());
 
 		if (internal.spotLights.size())
-		{
+		{//todo laziness if lights don't change and stuff
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.spotLightsBlockBuffer);
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.spotLights.size() * sizeof(internal::GpuSpotLight),
@@ -3702,7 +3705,13 @@ namespace gl3d
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
 			&internal.lightShader.lightPassUniformBlockCpuData);
 
+		//blend with skybox
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glDisable(GL_BLEND);
 
 	#pragma endregion
 
@@ -3811,12 +3820,12 @@ namespace gl3d
 		glUniform1f(postProcess.u_exposure, internal.lightShader.lightPassUniformBlockCpuData.exposure);
 
 		//blend with skybox
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		//glEnable(GL_BLEND);
+		//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-		glDisable(GL_BLEND);
+		//glDisable(GL_BLEND);
 
 
 	#pragma endregion
