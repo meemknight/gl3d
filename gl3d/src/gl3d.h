@@ -431,6 +431,13 @@ namespace gl3d
 				GLint u_tresshold;
 			}filterShader;
 
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_mip;
+			}addMips;
+
 			Shader postProcessShader;
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader
@@ -445,7 +452,8 @@ namespace gl3d
 
 			GLint u_toBlurcolorInput;
 			GLint u_horizontal;
-
+			GLint u_mip;
+			GLint u_texel;
 
 			GLuint fbo;
 			GLuint filterFbo;
@@ -456,6 +464,7 @@ namespace gl3d
 			void create(int w, int h);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
+			int currentMips = 1;
 
 			//for post process shader
 			float bloomIntensty = 1;

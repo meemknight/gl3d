@@ -413,9 +413,13 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto levelModel = renderer.loadModel("resources/other/crate.obj", 0.01);
+	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
 	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
 

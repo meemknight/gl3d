@@ -101,5 +101,6 @@
     <None Include="shaders\shadows\pointShadow.geom" />
     <None Include="shaders\shadows\pointShadow.vert" />
     <None Include="shaders\postProcess\filter.frag" />
+    <None Include="shaders\postProcess\addMips.frag" />
   </ItemGroup>
 </Project>

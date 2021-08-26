@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-26
+//built on 2021-08-27
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -1049,78 +1049,98 @@ in vec2 v_texCoords;
 uniform sampler2D u_toBlurcolorInput;
 out vec3 fragColor;
 uniform bool u_horizontal;
+uniform int u_mip;
+uniform vec2 u_texel;
 void main ()
 {
 vec3 result_1;
-vec2 texOffset_2;
-texOffset_2 = (1.0/(vec2(textureSize (u_toBlurcolorInput, 0))));
-result_1 = (texture (u_toBlurcolorInput, v_texCoords).xyz * 0.227027);
+result_1 = (textureLod (u_toBlurcolorInput, v_texCoords, float(u_mip)).xyz * 0.227027);
 if (u_horizontal) {
-vec2 tmpvar_3;
-tmpvar_3.y = 0.0;
-tmpvar_3.x = texOffset_2.x;
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_3)).xyz * 0.1945946));
-vec2 tmpvar_4;
-tmpvar_4.y = 0.0;
-tmpvar_4.x = texOffset_2.x;
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_4)).xyz * 0.1945946));
+vec2 tmpvar_2;
+tmpvar_2.y = 0.0;
+float tmpvar_3;
+tmpvar_3 = u_texel.x;
+tmpvar_2.x = tmpvar_3;
+float tmpvar_4;
+tmpvar_4 = float(u_mip);
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_2), tmpvar_4).xyz * 0.1945946));
 vec2 tmpvar_5;
 tmpvar_5.y = 0.0;
-tmpvar_5.x = (texOffset_2.x * 2.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_5)).xyz * 0.1216216));
+tmpvar_5.x = tmpvar_3;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_5), tmpvar_4).xyz * 0.1945946));
 vec2 tmpvar_6;
 tmpvar_6.y = 0.0;
-tmpvar_6.x = (texOffset_2.x * 2.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_6)).xyz * 0.1216216));
-vec2 tmpvar_7;
-tmpvar_7.y = 0.0;
-tmpvar_7.x = (texOffset_2.x * 3.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_7)).xyz * 0.054054));
+float tmpvar_7;
+tmpvar_7 = (u_texel.x * 2.0);
+tmpvar_6.x = tmpvar_7;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_6), tmpvar_4).xyz * 0.1216216));
 vec2 tmpvar_8;
 tmpvar_8.y = 0.0;
-tmpvar_8.x = (texOffset_2.x * 3.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_8)).xyz * 0.054054));
+tmpvar_8.x = tmpvar_7;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_8), tmpvar_4).xyz * 0.1216216));
 vec2 tmpvar_9;
 tmpvar_9.y = 0.0;
-tmpvar_9.x = (texOffset_2.x * 4.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_9)).xyz * 0.016216));
-vec2 tmpvar_10;
-tmpvar_10.y = 0.0;
-tmpvar_10.x = (texOffset_2.x * 4.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_10)).xyz * 0.016216));
-} else {
+float tmpvar_10;
+tmpvar_10 = (u_texel.x * 3.0);
+tmpvar_9.x = tmpvar_10;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_9), tmpvar_4).xyz * 0.054054));
 vec2 tmpvar_11;
-tmpvar_11.x = 0.0;
-tmpvar_11.y = texOffset_2.y;
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_11)).xyz * 0.1945946));
+tmpvar_11.y = 0.0;
+tmpvar_11.x = tmpvar_10;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_11), tmpvar_4).xyz * 0.054054));
 vec2 tmpvar_12;
-tmpvar_12.x = 0.0;
-tmpvar_12.y = texOffset_2.y;
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_12)).xyz * 0.1945946));
-vec2 tmpvar_13;
-tmpvar_13.x = 0.0;
-tmpvar_13.y = (texOffset_2.y * 2.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_13)).xyz * 0.1216216));
+tmpvar_12.y = 0.0;
+float tmpvar_13;
+tmpvar_13 = (u_texel.x * 4.0);
+tmpvar_12.x = tmpvar_13;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_12), tmpvar_4).xyz * 0.016216));
 vec2 tmpvar_14;
-tmpvar_14.x = 0.0;
-tmpvar_14.y = (texOffset_2.y * 2.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_14)).xyz * 0.1216216));
+tmpvar_14.y = 0.0;
+tmpvar_14.x = tmpvar_13;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_14), tmpvar_4).xyz * 0.016216));
+} else {
 vec2 tmpvar_15;
 tmpvar_15.x = 0.0;
-tmpvar_15.y = (texOffset_2.y * 3.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_15)).xyz * 0.054054));
-vec2 tmpvar_16;
-tmpvar_16.x = 0.0;
-tmpvar_16.y = (texOffset_2.y * 3.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_16)).xyz * 0.054054));
-vec2 tmpvar_17;
-tmpvar_17.x = 0.0;
-tmpvar_17.y = (texOffset_2.y * 4.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords + tmpvar_17)).xyz * 0.016216));
+float tmpvar_16;
+tmpvar_16 = u_texel.y;
+tmpvar_15.y = tmpvar_16;
+float tmpvar_17;
+tmpvar_17 = float(u_mip);
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_15), tmpvar_17).xyz * 0.1945946));
 vec2 tmpvar_18;
 tmpvar_18.x = 0.0;
-tmpvar_18.y = (texOffset_2.y * 4.0);
-result_1 = (result_1 + (texture (u_toBlurcolorInput, (v_texCoords - tmpvar_18)).xyz * 0.016216));
+tmpvar_18.y = tmpvar_16;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_18), tmpvar_17).xyz * 0.1945946));
+vec2 tmpvar_19;
+tmpvar_19.x = 0.0;
+float tmpvar_20;
+tmpvar_20 = (u_texel.y * 2.0);
+tmpvar_19.y = tmpvar_20;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_19), tmpvar_17).xyz * 0.1216216));
+vec2 tmpvar_21;
+tmpvar_21.x = 0.0;
+tmpvar_21.y = tmpvar_20;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_21), tmpvar_17).xyz * 0.1216216));
+vec2 tmpvar_22;
+tmpvar_22.x = 0.0;
+float tmpvar_23;
+tmpvar_23 = (u_texel.y * 3.0);
+tmpvar_22.y = tmpvar_23;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_22), tmpvar_17).xyz * 0.054054));
+vec2 tmpvar_24;
+tmpvar_24.x = 0.0;
+tmpvar_24.y = tmpvar_23;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_24), tmpvar_17).xyz * 0.054054));
+vec2 tmpvar_25;
+tmpvar_25.x = 0.0;
+float tmpvar_26;
+tmpvar_26 = (u_texel.y * 4.0);
+tmpvar_25.y = tmpvar_26;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_25), tmpvar_17).xyz * 0.016216));
+vec2 tmpvar_27;
+tmpvar_27.x = 0.0;
+tmpvar_27.y = tmpvar_26;
+result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_27), tmpvar_17).xyz * 0.016216));
 };
 fragColor = result_1;
 })"},
@@ -1129,12 +1149,14 @@ fragColor = result_1;
 out vec4 a_outBloom;
 in vec2 v_texCoords;
 uniform sampler2D u_texture;
+uniform float u_exposure;
 uniform float u_tresshold;
 void main ()
 {
 vec3 tmpvar_1;
 tmpvar_1 = texture (u_texture, v_texCoords).xyz;
 vec3 color_2;
+color_2 = (tmpvar_1 * u_exposure);
 mat3 tmpvar_3;
 tmpvar_3[0].x = 0.59719;
 tmpvar_3[1].x = 0.35458;
@@ -1145,7 +1167,7 @@ tmpvar_3[2].y = 0.01566;
 tmpvar_3[0].z = 0.0284;
 tmpvar_3[1].z = 0.13383;
 tmpvar_3[2].z = 0.83777;
-color_2 = (tmpvar_3 * tmpvar_1);
+color_2 = (tmpvar_3 * color_2);
 mat3 tmpvar_4;
 tmpvar_4[0].x = 1.60475;
 tmpvar_4[1].x = -0.53108;
@@ -1175,6 +1197,16 @@ a_outBloom = tmpvar_7;
 a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);
 };
 a_outBloom = clamp (a_outBloom, 0.0, 1000.0);
+})"},
+
+      std::pair<std::string, const char*>{"addMips.frag", R"(#version 150
+out vec3 a_color;
+in vec2 v_texCoords;
+uniform sampler2D u_texture;
+uniform int u_mip;
+void main ()
+{
+a_color = textureLod (u_texture, v_texCoords, float(u_mip)).xyz;
 })"},
 
       std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
@@ -7740,6 +7772,7 @@ namespace gl3d
 			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.filterFbo);
 			//glClear(GL_COLOR_BUFFER_BIT);
 
+			//blend with emmisive data
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_ONE, GL_ONE);
 
@@ -7757,11 +7790,11 @@ namespace gl3d
 			glDisable(GL_BLEND);
 
 			//fxaa on bloom data
-			//antiAlias.shader.bind();
-			//glUniform1i(antiAlias.u_texture, 0);
-			//glActiveTexture(GL_TEXTURE0);
-			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
-			//glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			antiAlias.shader.bind();
+			glUniform1i(antiAlias.u_texture, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
 		#pragma endregion
 
@@ -7770,20 +7803,30 @@ namespace gl3d
 		if(internal.lightShader.bloom)
 		{
 			
-
-
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
 			glActiveTexture(GL_TEXTURE0);
 			glUniform1i(postProcess.u_toBlurcolorInput, 0);
-			glViewport(0, 0, internal.adaptiveW/2, internal.adaptiveH/2);
+			int mipW = internal.adaptiveW;
+			int mipH = internal.adaptiveH;
+			int finalMip = postProcess.currentMips;
 
-
-			for (int i = 0; i < internal.lightShader.bloomBlurPasses*2; i++)
+			for (int i = 0; i < (postProcess.currentMips+1) *2; i++)
 			{
+				if (i % 2 == 0)
+				{
+					mipW /= 2;
+					mipH /= 2;
+					glViewport(0, 0, mipW, mipH);
+					glUniform2f(postProcess.u_texel, 1.f/mipW, 1.f/mipH);
+				}
+
 				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
-				glClear(GL_COLOR_BUFFER_BIT);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+					postProcess.bluredColorBuffer[horizontal], i/2);
+				//glClear(GL_COLOR_BUFFER_BIT);
 				glUniform1i(postProcess.u_horizontal, horizontal);
+				glUniform1i(postProcess.u_mip, (i-1)/2);
 
 				glBindTexture(GL_TEXTURE_2D,
 					firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
@@ -7794,6 +7837,39 @@ namespace gl3d
 				firstTime = false;
 
 			}
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE);
+			postProcess.addMips.shader.bind();
+		
+
+			for (; finalMip > 0; finalMip--)
+			{
+				int mipW = internal.adaptiveW;
+				int mipH = internal.adaptiveH;
+
+				for (int i = 0; i < finalMip; i++)
+				{
+					mipW /= 2;
+					mipH /= 2;
+				}
+				glViewport(0, 0, mipW, mipH);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[0]);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+					postProcess.bluredColorBuffer[0], finalMip-1);
+				
+				glActiveTexture(GL_TEXTURE0);
+				glUniform1i(postProcess.addMips.u_texture, 0);
+				glUniform1i(postProcess.addMips.u_mip, finalMip);
+				glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[0]);
+
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			}
+			
+			glDisable(GL_BLEND);
+
 			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		}
@@ -7801,7 +7877,6 @@ namespace gl3d
 		#pragma endregion
 
 		#pragma region do the post process stuff and draw to the screen
-
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -7826,13 +7901,13 @@ namespace gl3d
 		if(internal.lightShader.bloom)
 		{
 
-			if (internal.lightShader.bloomBlurPasses <= 0)
+			if (postProcess.currentMips <= 0)//remove?
 			{
 				glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
 			}
 			else
 			{
-				glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[1]);
+				glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[0]);
 			}
 
 			glUniform1f(postProcess.u_bloomIntensity, postProcess.bloomIntensty);
@@ -8221,12 +8296,17 @@ namespace gl3d
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag");
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput");
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal");
+		u_mip = getUniform(gausianBLurShader.id, "u_mip");
+		u_texel = getUniform(gausianBLurShader.id, "u_texel");
 
 		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag");
 		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure");
 		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture");
 		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold");
 
+		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag");
+		addMips.u_mip = getUniform(addMips.shader.id, "u_mip");
+		addMips.u_texture= getUniform(addMips.shader.id, "u_texture");
 
 		glGenFramebuffers(2, blurFbo);
 		glGenTextures(2, bluredColorBuffer);
@@ -8234,13 +8314,15 @@ namespace gl3d
 		for(int i=0;i <2; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, blurFbo[i]);
+			float borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 			glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer[i], 0);
 		}
 
@@ -8251,6 +8333,51 @@ namespace gl3d
 
 	void Renderer3D::PostProcess::resize(int w, int h)
 	{
+		//16 = max mips
+		int mips = 0;
+		{
+			int mipW = w / 2;
+			int mipH = h / 2;
+			for (int i = 0; i < 16; i++)
+			{
+				if (mipW <= 4 || mipH <= 4 || 
+					(mipW < 12 && mipH < 12)
+					)
+				{
+					break;
+				}
+
+				mipW /= 2;
+				mipH /= 2;
+				mips = i;
+			}
+		}
+
+		if (currentDimensions.x != w || currentDimensions.y != h
+			|| currentMips != mips) 
+		{
+			currentMips = mips;
+
+			for (int i = 0; i < 2; i++)
+			{
+				glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
+
+				int mipW = w / 2;
+				int mipH = h / 2;
+				
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mips);
+
+
+				for (int m = 0; m <= mips; m++)
+				{
+					glTexImage2D(GL_TEXTURE_2D, m, GL_RGBA16F, mipW, mipH, 0, GL_RGBA, GL_FLOAT, NULL);
+					
+					mipW = mipW /= 2;
+					mipH = mipH /= 2;
+				}
+			}
+		}
+
 		if (currentDimensions.x != w || currentDimensions.y != h)
 		{
 			currentDimensions = glm::ivec2(w, h);
@@ -8260,13 +8387,10 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 			}
-			
-			for (int i = 0; i < 2; i++)
-			{
-				glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w / 2, h / 2, 0, GL_RGBA, GL_FLOAT, NULL);
-			}
+		
 		}
+
+
 	}
 
 	void Renderer3D::InternalStruct::PBRtextureMaker::init()

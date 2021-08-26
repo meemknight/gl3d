@@ -42,7 +42,7 @@ Features and todos:
 - [ ] Optimize lights 
 ---
 - [x] Gama correction
-- [x] HDR (16 bit color channels) 
+- [x] HDR, ACES tonemapping
 - [ ] Automatic exposure ajustment for HDR tonemapping
 ---
 - [x] FXAA

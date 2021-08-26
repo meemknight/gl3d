@@ -2,12 +2,14 @@
 out vec4 a_outBloom;
 in vec2 v_texCoords;
 uniform sampler2D u_texture;
+uniform float u_exposure;
 uniform float u_tresshold;
 void main ()
 {
   vec3 tmpvar_1;
   tmpvar_1 = texture (u_texture, v_texCoords).xyz;
   vec3 color_2;
+  color_2 = (tmpvar_1 * u_exposure);
   mat3 tmpvar_3;
   tmpvar_3[0].x = 0.59719;
   tmpvar_3[1].x = 0.35458;
@@ -18,7 +20,7 @@ void main ()
   tmpvar_3[0].z = 0.0284;
   tmpvar_3[1].z = 0.13383;
   tmpvar_3[2].z = 0.83777;
-  color_2 = (tmpvar_3 * tmpvar_1);
+  color_2 = (tmpvar_3 * color_2);
   mat3 tmpvar_4;
   tmpvar_4[0].x = 1.60475;
   tmpvar_4[1].x = -0.53108;

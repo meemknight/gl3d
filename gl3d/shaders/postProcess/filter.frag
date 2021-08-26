@@ -59,7 +59,7 @@ void main()
 	vec3 color = texture2D(u_texture, v_texCoords).rgb;
 
 	vec3 hdrCorrectedColor = color.rgb;
-	hdrCorrectedColor = ACESFitted(hdrCorrectedColor);
+	hdrCorrectedColor = ACESFitted(hdrCorrectedColor * u_exposure);
 	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * u_exposure);
 	//hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 	float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
