@@ -3598,7 +3598,7 @@ namespace gl3d
 		#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		//glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT); cleared before
 
 		glUseProgram(internal.lightShader.lightingPassShader.id);
 
@@ -3715,12 +3715,15 @@ namespace gl3d
 
 	#pragma endregion
 
-		#pragma region bloom blur
-		
-		if(internal.lightShader.bloom)
+		#pragma region filter bloom data
+
+		if (internal.lightShader.bloom)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.filterFbo);
-			glClear(GL_COLOR_BUFFER_BIT);
+			//glClear(GL_COLOR_BUFFER_BIT);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE);
 
 			postProcess.filterShader.shader.bind();
 			glUniform1f(postProcess.filterShader.u_exposure,
@@ -3733,7 +3736,24 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[0]);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+			glDisable(GL_BLEND);
+
+			//fxaa on bloom data
+			//antiAlias.shader.bind();
+			//glUniform1i(antiAlias.u_texture, 0);
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			//glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+		#pragma endregion
+
+		#pragma region bloom blur
+		
+		if(internal.lightShader.bloom)
+		{
 			
+
+
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
 			glActiveTexture(GL_TEXTURE0);
@@ -3760,7 +3780,7 @@ namespace gl3d
 
 		}
 
-	#pragma endregion
+		#pragma endregion
 
 		#pragma region do the post process stuff and draw to the screen
 
@@ -4154,18 +4174,18 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
-			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
 		}
+		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
+
+		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
 
 		glGenFramebuffers(1, &filterFbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, filterFbo);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[1], 0);
 
-
-		//unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		//glDrawBuffers(2, attachments);
 
 		
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");

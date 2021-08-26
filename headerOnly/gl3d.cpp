@@ -1009,10 +1009,38 @@ ssaof_1 = pow (texture (u_ssao, v_texCoords).x, u_ssaoExponent);
 ssaof_1 = 1.0;
 };
 a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));
-a_color.xyz = (vec3(1.0, 1.0, 1.0) - exp((
--(a_color.xyz)
-* u_exposure)));
-a_color.xyz = pow (a_color.xyz, vec3(0.4545454, 0.4545454, 0.4545454));
+vec3 color_3;
+color_3 = (a_color.xyz * u_exposure);
+mat3 tmpvar_4;
+tmpvar_4[0].x = 0.59719;
+tmpvar_4[1].x = 0.35458;
+tmpvar_4[2].x = 0.04823;
+tmpvar_4[0].y = 0.076;
+tmpvar_4[1].y = 0.90834;
+tmpvar_4[2].y = 0.01566;
+tmpvar_4[0].z = 0.0284;
+tmpvar_4[1].z = 0.13383;
+tmpvar_4[2].z = 0.83777;
+color_3 = (tmpvar_4 * color_3);
+mat3 tmpvar_5;
+tmpvar_5[0].x = 1.60475;
+tmpvar_5[1].x = -0.53108;
+tmpvar_5[2].x = -0.07367;
+tmpvar_5[0].y = -0.10208;
+tmpvar_5[1].y = 1.10813;
+tmpvar_5[2].y = -0.00605;
+tmpvar_5[0].z = -0.00327;
+tmpvar_5[1].z = -0.07276;
+tmpvar_5[2].z = 1.07602;
+color_3 = (tmpvar_5 * ((
+(color_3 * (color_3 + 0.0245786))
+- 9.0537e-5) / (
+(color_3 * ((0.983729 * color_3) + 0.432951))
++ 0.238081)));
+vec3 tmpvar_6;
+tmpvar_6 = clamp (color_3, 0.0, 1.0);
+color_3 = tmpvar_6;
+a_color.xyz = pow (tmpvar_6, vec3(0.4545454, 0.4545454, 0.4545454));
 a_color.w = tmpvar_2.w;
 })"},
 
@@ -1101,24 +1129,48 @@ fragColor = result_1;
 out vec4 a_outBloom;
 in vec2 v_texCoords;
 uniform sampler2D u_texture;
-uniform float u_exposure;
 uniform float u_tresshold;
 void main ()
 {
-vec3 hdrCorrectedColor_1;
-vec3 tmpvar_2;
-tmpvar_2 = texture (u_texture, v_texCoords).xyz;
-hdrCorrectedColor_1 = (vec3(1.0, 1.0, 1.0) - exp((
--(tmpvar_2)
-* u_exposure)));
-hdrCorrectedColor_1 = pow (hdrCorrectedColor_1, vec3(0.4545454, 0.4545454, 0.4545454));
-float tmpvar_3;
-tmpvar_3 = dot (hdrCorrectedColor_1, vec3(0.2126, 0.7152, 0.0722));
-if ((tmpvar_3 > u_tresshold)) {
-vec4 tmpvar_4;
-tmpvar_4.w = 1.0;
-tmpvar_4.xyz = tmpvar_2;
-a_outBloom = tmpvar_4;
+vec3 tmpvar_1;
+tmpvar_1 = texture (u_texture, v_texCoords).xyz;
+vec3 color_2;
+mat3 tmpvar_3;
+tmpvar_3[0].x = 0.59719;
+tmpvar_3[1].x = 0.35458;
+tmpvar_3[2].x = 0.04823;
+tmpvar_3[0].y = 0.076;
+tmpvar_3[1].y = 0.90834;
+tmpvar_3[2].y = 0.01566;
+tmpvar_3[0].z = 0.0284;
+tmpvar_3[1].z = 0.13383;
+tmpvar_3[2].z = 0.83777;
+color_2 = (tmpvar_3 * tmpvar_1);
+mat3 tmpvar_4;
+tmpvar_4[0].x = 1.60475;
+tmpvar_4[1].x = -0.53108;
+tmpvar_4[2].x = -0.07367;
+tmpvar_4[0].y = -0.10208;
+tmpvar_4[1].y = 1.10813;
+tmpvar_4[2].y = -0.00605;
+tmpvar_4[0].z = -0.00327;
+tmpvar_4[1].z = -0.07276;
+tmpvar_4[2].z = 1.07602;
+color_2 = (tmpvar_4 * ((
+(color_2 * (color_2 + 0.0245786))
+- 9.0537e-5) / (
+(color_2 * ((0.983729 * color_2) + 0.432951))
++ 0.238081)));
+vec3 tmpvar_5;
+tmpvar_5 = clamp (color_2, 0.0, 1.0);
+color_2 = tmpvar_5;
+float tmpvar_6;
+tmpvar_6 = dot (tmpvar_5, vec3(0.2126, 0.7152, 0.0722));
+if ((tmpvar_6 > u_tresshold)) {
+vec4 tmpvar_7;
+tmpvar_7.w = 1.0;
+tmpvar_7.xyz = tmpvar_1;
+a_outBloom = tmpvar_7;
 } else {
 a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);
 };
@@ -1157,6 +1209,7 @@ discard;
       std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430
 #pragma debug(on)
 layout(location = 0) out vec4 a_outColor;
+layout(location = 1) out vec4 a_outBloom;
 in vec2 v_texCoords;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
@@ -1662,7 +1715,8 @@ vec3 hdrCorrectedColor = color;
 hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-a_outColor = vec4(color.rgb, albedoAlpha.a);
+a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
+a_outBloom = vec4(emissive.rgb, 1);
 })"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 330
@@ -7562,7 +7616,7 @@ namespace gl3d
 		#pragma region do the lighting pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		//glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT); cleared before
 
 		glUseProgram(internal.lightShader.lightingPassShader.id);
 
@@ -7679,12 +7733,15 @@ namespace gl3d
 
 	#pragma endregion
 
-		#pragma region bloom blur
-		
-		if(internal.lightShader.bloom)
+		#pragma region filter bloom data
+
+		if (internal.lightShader.bloom)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.filterFbo);
-			glClear(GL_COLOR_BUFFER_BIT);
+			//glClear(GL_COLOR_BUFFER_BIT);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE);
 
 			postProcess.filterShader.shader.bind();
 			glUniform1f(postProcess.filterShader.u_exposure,
@@ -7697,7 +7754,24 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[0]);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+			glDisable(GL_BLEND);
+
+			//fxaa on bloom data
+			//antiAlias.shader.bind();
+			//glUniform1i(antiAlias.u_texture, 0);
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			//glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+		#pragma endregion
+
+		#pragma region bloom blur
+		
+		if(internal.lightShader.bloom)
+		{
 			
+
+
 			bool horizontal = 1; bool firstTime = 1;
 			postProcess.gausianBLurShader.bind();
 			glActiveTexture(GL_TEXTURE0);
@@ -7724,7 +7798,7 @@ namespace gl3d
 
 		}
 
-	#pragma endregion
+		#pragma endregion
 
 		#pragma region do the post process stuff and draw to the screen
 
@@ -8118,18 +8192,18 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			// attach texture to framebuffer
-			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
 		}
+		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
+
+		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[0], 0);
 
 		glGenFramebuffers(1, &filterFbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, filterFbo);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[1], 0);
 
-
-		//unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		//glDrawBuffers(2, attachments);
 
 		
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag");
