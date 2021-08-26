@@ -125,7 +125,7 @@ namespace gl3d
 
 			glm::vec3 color = { 1,1,1 };
 			float hardness = 1;
-			glm::mat4 lightSpaceMatrix[3]; //todo magic number
+			glm::mat4 lightSpaceMatrix[3]; //magic number (cascades)
 
 		};
 

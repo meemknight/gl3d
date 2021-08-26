@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-25
+//built on 2021-08-26
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -651,13 +651,15 @@ uniform vec3 u_ambient;
 uniform int u_skyBoxPresent;
 void main ()
 {
+vec3 tmpvar_1;
+tmpvar_1 = pow (u_ambient, vec3(2.2, 2.2, 2.2));
 if ((u_skyBoxPresent != 0)) {
-vec4 tmpvar_1;
-tmpvar_1 = textureLod (u_skybox, v_texCoords, 2.0);
-a_outColor.w = tmpvar_1.w;
-a_outColor.xyz = (tmpvar_1.xyz * u_ambient);
+vec4 tmpvar_2;
+tmpvar_2 = textureLod (u_skybox, v_texCoords, 2.0);
+a_outColor.w = tmpvar_2.w;
+a_outColor.xyz = (tmpvar_2.xyz * tmpvar_1);
 } else {
-a_outColor.xyz = u_ambient;
+a_outColor.xyz = tmpvar_1;
 };
 a_outColor.xyz = (vec3(1.0, 1.0, 1.0) - exp((
 -(a_outColor.xyz)
@@ -1488,8 +1490,8 @@ vec3 normal = texture(u_normals, v_texCoords).xyz;
 vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
 vec3 albedo = albedoAlpha.rgb;
-albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
-emissive  = pow(emissive , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
+emissive  = pow(emissive , vec3(2.2)).rgb; //gamma corection
 vec3 material = texture(u_materials, v_texCoords).xyz;
 vec3 viewDir = normalize(u_eyePosition - pos);
 vec3 R = reflect(-viewDir, normal);	//reflected vector
@@ -1598,6 +1600,7 @@ vec3 Edss = 1 - (FssEss + Fms * Ems);
 vec3 kD = albedo * Edss;
 ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 }
+lightPassData.ambientColor.rgb = 
 vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
 ambient *= occlusionData;
 }else
@@ -4651,8 +4654,6 @@ namespace gl3d
 
 								unsigned char* finalData = new unsigned char[w * h * 4];
 
-								//todo mabe add bilinear filtering
-								//todo load less chanels if necessary
 								for (int j = 0; j < h; j++)
 								{
 									for (int i = 0; i < w; i++)

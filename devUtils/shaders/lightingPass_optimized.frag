@@ -591,8 +591,8 @@ void main()
 
 	vec3 albedo = albedoAlpha.rgb;
 
-	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
-	emissive  = pow(emissive , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+	albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
+	emissive  = pow(emissive , vec3(2.2)).rgb; //gamma corection
 
 
 	vec3 material = texture(u_materials, v_texCoords).xyz;
@@ -778,7 +778,7 @@ void main()
 			// Multiple scattering version
 			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 		}
-		
+		lightPassData.ambientColor.rgb = 
 		vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
 		ambient *= occlusionData;
 

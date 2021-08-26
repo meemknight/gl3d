@@ -591,8 +591,8 @@ void main()
 
 	vec3 albedo = albedoAlpha.rgb;
 
-	albedo  = pow(albedo , vec3(2.2,2.2,2.2)).rgb; //gamma corection
-	emissive  = pow(emissive , vec3(2.2,2.2,2.2)).rgb; //gamma corection
+	albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
+	emissive  = pow(emissive , vec3(2.2)).rgb; //gamma corection
 
 
 	vec3 material = texture(u_materials, v_texCoords).xyz;
@@ -729,6 +729,8 @@ void main()
 
 	//compute ambient
 	vec3 ambient;
+	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));
+
 	if(lightPassData.skyBoxPresent != 0)
 	{
 
@@ -778,8 +780,8 @@ void main()
 			// Multiple scattering version
 			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
 		}
-		
-		vec3 occlusionData = ambientOcclution * lightPassData.ambientColor.rgb;
+
+		vec3 occlusionData = ambientOcclution * gammaAmbient;
 		ambient *= occlusionData;
 
 	}else
@@ -792,9 +794,9 @@ void main()
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
-		vec3 irradiance = lightPassData.ambientColor.rgb; //this color is coming directly at the object
+		vec3 irradiance = gammaAmbient ; //this color is coming directly at the object
 		
-		vec3 radiance = lightPassData.ambientColor.rgb;
+		vec3 radiance = gammaAmbient ;
 
 		vec2 brdfVec = vec2(dotNVClamped, roughness);
 		//brdfVec.y = 1 - brdfVec.y; 

@@ -703,8 +703,6 @@ namespace gl3d
 
 								unsigned char* finalData = new unsigned char[w * h * 4];
 
-								//todo mabe add bilinear filtering
-								//todo load less chanels if necessary
 								for (int j = 0; j < h; j++)
 								{
 									for (int i = 0; i < w; i++)
