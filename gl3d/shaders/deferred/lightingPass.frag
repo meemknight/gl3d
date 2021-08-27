@@ -22,7 +22,6 @@ uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
 
 uniform vec3 u_eyePosition;
-uniform mat4 u_view;
 
 layout (std140) uniform u_lightPassData
 {
@@ -490,8 +489,6 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 {
 	
-	vec4 viewSpacePos = u_view * vec4(pos, 1);
-	float depth = -viewSpacePos.z; //zfar
 
 	vec3 firstProjCoords = getProjCoords(dLight[index].firstLightSpaceMatrix, pos);
 	vec3 secondProjCoords = getProjCoords(dLight[index].secondLightSpaceMatrix, pos);

@@ -1643,8 +1643,6 @@ namespace gl3d
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
 		GLint light_u_spotLightCount = -1;
-		GLint light_u_ssao = -1;
-		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;
@@ -2040,7 +2038,6 @@ namespace gl3d
 			Shader shader;
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
-			GLuint u_exposure;
 			GLuint u_skyBoxPresent;
 			GLuint u_ambient;
 
@@ -2564,6 +2561,13 @@ namespace gl3d
 				GLint u_texture;
 				GLint u_mip;
 			}addMips;
+
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_mip;
+			}filterDown;
 
 			Shader postProcessShader;
 			Shader gausianBLurShader;

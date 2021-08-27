@@ -318,7 +318,6 @@ namespace gl3d
 		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag");
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
-		normalSkyBox.u_exposure = getUniform(normalSkyBox.shader.id, "u_exposure");
 		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient");
 		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent");
 		
@@ -844,6 +843,7 @@ namespace gl3d
 
 	}
 
+	//deprecated
 	void SkyBoxLoaderAndDrawer::draw(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure,
 		glm::vec3 ambient)
 	{
@@ -856,7 +856,6 @@ namespace gl3d
 
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
-		glUniform1f(normalSkyBox.u_exposure, exposure);
 		glUniform3f(normalSkyBox.u_ambient, ambient.r, ambient.g, ambient.b);
 
 		glDepthFunc(GL_LEQUAL);
@@ -886,7 +885,6 @@ namespace gl3d
 		glUniformMatrix4fv(normalSkyBox.modelViewUniformLocation, 1, GL_FALSE, &viewProjMat[0][0]);
 		glUniform1i(normalSkyBox.samplerUniformLocation, 0);
 		glUniform1i(normalSkyBox.u_skyBoxPresent, skyBoxPresent);
-		glUniform1f(normalSkyBox.u_exposure, exposure);
 		glUniform3f(normalSkyBox.u_ambient, ambient.r, ambient.g, ambient.b);
 
 

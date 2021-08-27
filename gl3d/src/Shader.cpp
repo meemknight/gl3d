@@ -354,8 +354,6 @@ namespace gl3d
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_directionalLightCount = getUniform(lightingPassShader.id, "u_directionalLightCount");
 		light_u_spotLightCount = getUniform(lightingPassShader.id, "u_spotLightCount");
-		light_u_ssao = getUniform(lightingPassShader.id, "u_ssao");
-		light_u_view = getUniform(lightingPassShader.id, "u_view");
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
 		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");

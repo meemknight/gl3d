@@ -438,6 +438,13 @@ namespace gl3d
 				GLint u_mip;
 			}addMips;
 
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_mip;
+			}filterDown;
+
 			Shader postProcessShader;
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader

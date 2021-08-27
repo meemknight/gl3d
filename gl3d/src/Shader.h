@@ -71,8 +71,6 @@ namespace gl3d
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
 		GLint light_u_spotLightCount = -1;
-		GLint light_u_ssao = -1;
-		GLint light_u_view = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
 		GLint light_u_emmisive = -1;

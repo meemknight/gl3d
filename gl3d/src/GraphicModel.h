@@ -197,7 +197,6 @@ namespace gl3d
 			Shader shader;
 			GLuint samplerUniformLocation;
 			GLuint modelViewUniformLocation;
-			GLuint u_exposure;
 			GLuint u_skyBoxPresent;
 			GLuint u_ambient;
 
