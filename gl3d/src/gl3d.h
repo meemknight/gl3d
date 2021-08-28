@@ -443,6 +443,13 @@ namespace gl3d
 				Shader shader;
 				GLint u_texture;
 				GLint u_mip;
+			}addMipsBlur;
+
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_mip;
 			}filterDown;
 
 			Shader postProcessShader;
@@ -475,6 +482,9 @@ namespace gl3d
 
 			//for post process shader
 			float bloomIntensty = 1;
+
+			bool highQualityDownSample = 0;
+			bool highQualityUpSample = 0;
 
 		}postProcess;
 
@@ -628,6 +638,8 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
+		bool frustumCulling = 1;
+		bool zPrePass = 1;
 
 	};
 

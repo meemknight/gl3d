@@ -1723,9 +1723,15 @@ namespace gl3d
 
 		clearEntityModel(e);
 
+		if (internal.cpuEntities[pos].isStatic())
+		{
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
+
 		internal.entitiesIndexes.erase(internal.entitiesIndexes.begin() + pos);
 		internal.cpuEntities.erase(internal.cpuEntities.begin() + pos);
 		
+
 		e.id_ = 0;
 
 	}
@@ -2552,6 +2558,9 @@ namespace gl3d
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		renderSkyBoxBefore();
 
+		auto worldToViewMatrix		= camera.getWorldToViewMatrix();
+		auto projectionMatrix		= camera.getProjectionMatrix();
+		auto worldProjectionMatrix	= projectionMatrix * worldToViewMatrix;
 
 		#pragma region render shadow maps
 		
@@ -3239,16 +3248,89 @@ namespace gl3d
 			{
 				continue;
 			}
-
 			
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
 			auto transformMat = i.transform.getTransformMatrix();
-			auto modelViewProjMat = projMat * viewMat * transformMat;
+			auto modelViewProjMat = worldProjectionMatrix * transformMat;
+			
+			
 			glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 
 			for (auto &i : i.models)
 			{
+				//frustum culling
+				if (frustumCulling)
+				{
+					auto projectPoint = [&](glm::vec3 point)
+					{
+						glm::vec4 augmentedPoint = glm::vec4(point, 1.f);
+
+						augmentedPoint = modelViewProjMat * augmentedPoint;
+
+						augmentedPoint.x /= augmentedPoint.w;
+						augmentedPoint.y /= augmentedPoint.w;
+						augmentedPoint.z /= augmentedPoint.w;
+						return glm::vec3(augmentedPoint);
+					};
+
+					glm::vec3 cubePoints[8] = {};
+
+					int c = 0;
+					for (int x = 0; x < 2; x++)
+						for (int y = 0; y < 2; y++)
+							for (int z = 0; z < 2; z++)
+							{
+								float xVal = x ? i.minBoundary.x : i.maxBoundary.x;
+								float yVal = y ? i.minBoundary.y : i.maxBoundary.y;
+								float zVal = z ? i.minBoundary.z : i.maxBoundary.z;
+
+								cubePoints[c] = { xVal, yVal, zVal };
+								cubePoints[c] = projectPoint(cubePoints[c]);
+								c++;
+							}
+
+					unsigned char up[8] = {}; //on top of frustum
+					unsigned char down[8] = {}; //bellow 
+					unsigned char left[8] = {}; //to the left of the frustum 
+					unsigned char right[8] = {}; //to the right ....
+					unsigned char after[8] = {}; //too far
+					unsigned char before[8] = {}; //too close 
+					
+					for (int p = 0; p < 8; p++)
+					{
+						if (cubePoints[p].y > 1.f) { up[p] = true; }
+						else if (cubePoints[p].y < -1.f) { down[p] = true; }
+
+						if (cubePoints[p].x > 1.f) { right[p] = true; }
+						else if (cubePoints[p].x < -1.f) { left[p] = true; }
+
+						if (cubePoints[p].z > 1.f) { before[p] = true; }
+						else if (cubePoints[p].z < 0.f) { after[p] = true; }
+					}
+					
+					auto allTrue = [](unsigned char v[], int size)
+					{
+						for (int i = 0; i < size; i++)
+						{
+							if (v[i] == false) { return false; }
+						}
+						return true;
+					};
+
+					//cull things that are fully in one part outside of the frustum
+					if (allTrue(up, 8))		{ i.culledThisFrame = true;continue; }
+					if (allTrue(down, 8))	{ i.culledThisFrame = true;continue; }
+					if (allTrue(left, 8))	{ i.culledThisFrame = true;continue; }
+					if (allTrue(right, 8))	{ i.culledThisFrame = true;continue; }
+					if (allTrue(after, 8))	{ i.culledThisFrame = true;continue; }
+					if (allTrue(before, 8)) { i.culledThisFrame = true;continue; }
+
+				
+				}
+
+				i.culledThisFrame = false;
+
+				//std::cout << "Not Culled\n";
+
 				auto m = internal.getMaterialIndex(i.material);
 
 				if (m < 0)
@@ -3350,20 +3432,23 @@ namespace gl3d
 				continue;
 			}
 
-			auto projMat = camera.getProjectionMatrix();
-			auto viewMat = camera.getWorldToViewMatrix();
 			auto transformMat = entity.transform.getTransformMatrix();
-			auto modelViewProjMat = projMat * viewMat * transformMat;
+			auto modelViewProjMat = worldProjectionMatrix * transformMat;
 
 			glUniformMatrix4fv(internal.lightShader.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
-			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(viewMat * transformMat)[0][0]);
+			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(worldToViewMatrix * transformMat)[0][0]);
 			
 			
 			bool changed = 1;
 
 			for (auto& i : entity.models)
 			{
+
+				if (i.culledThisFrame)
+				{
+					continue;
+				}
 
 				int materialId = internal.getMaterialIndex(i.material);
 
@@ -3576,7 +3661,6 @@ namespace gl3d
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		#pragma region ssao "blur" (more like average blur)
 			glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
@@ -3737,11 +3821,11 @@ namespace gl3d
 			glDisable(GL_BLEND);
 
 			//fxaa on bloom data
-			antiAlias.shader.bind();
-			glUniform1i(antiAlias.u_texture, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			//antiAlias.shader.bind();
+			//glUniform1i(antiAlias.u_texture, 0);
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[1]);
+			//glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
 		#pragma endregion
 
@@ -3749,23 +3833,23 @@ namespace gl3d
 		bool lastBloomChannel = 0;
 		if(internal.lightShader.bloom)
 		{
-			constexpr int highQuality = 1;
+			
+			int finalMip = postProcess.currentMips;
 
-			if (highQuality)
+			if (postProcess.highQualityDownSample)
 			{
 				bool horizontal = 0; bool firstTime = 1;
-				
+
 				int mipW = internal.adaptiveW;
 				int mipH = internal.adaptiveH;
-				int finalMip = postProcess.currentMips;
 
 				for (int i = 0; i < postProcess.currentMips + 1; i++)
 				{
-					#pragma region scale down
+				#pragma region scale down
 					mipW /= 2;
 					mipH /= 2;
 					glViewport(0, 0, mipW, mipH);
-					
+
 					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 						postProcess.bluredColorBuffer[horizontal], i);
@@ -3773,14 +3857,14 @@ namespace gl3d
 					postProcess.filterDown.shader.bind();
 					glActiveTexture(GL_TEXTURE0);
 					glUniform1i(postProcess.filterDown.u_texture, 0);
-					glUniform1i(postProcess.filterDown.u_mip, firstTime ? 0 : i-1);
+					glUniform1i(postProcess.filterDown.u_mip, firstTime ? 0 : i - 1);
 					glBindTexture(GL_TEXTURE_2D,
 						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-					#pragma endregion
+				#pragma endregion
 
-					#pragma region blur
+				#pragma region blur
 					postProcess.gausianBLurShader.bind();
 					glActiveTexture(GL_TEXTURE0);
 					glUniform1i(postProcess.u_toBlurcolorInput, 0);
@@ -3806,42 +3890,9 @@ namespace gl3d
 					}
 					horizontal = !horizontal;
 
-					#pragma endregion
+				#pragma endregion
 
 				}
-
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_ONE, GL_ONE);
-				postProcess.addMips.shader.bind();
-
-				glActiveTexture(GL_TEXTURE0);
-				glUniform1i(postProcess.addMips.u_texture, 0);
-				for (; finalMip > 0; finalMip--)
-				{
-					int mipW = internal.adaptiveW;
-					int mipH = internal.adaptiveH;
-
-					for (int i = 0; i < finalMip; i++)
-					{
-						mipW /= 2;
-						mipH /= 2;
-					}
-					glViewport(0, 0, mipW, mipH);
-
-					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
-
-					glUniform1i(postProcess.addMips.u_mip, finalMip);
-					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
-
-					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-				}
-
-				glDisable(GL_BLEND);
-
-				glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 			}
 			else
 			{
@@ -3851,7 +3902,6 @@ namespace gl3d
 				glUniform1i(postProcess.u_toBlurcolorInput, 0);
 				int mipW = internal.adaptiveW;
 				int mipH = internal.adaptiveH;
-				int finalMip = postProcess.currentMips;
 
 				for (int i = 0; i < (postProcess.currentMips + 1) * 2; i++)
 				{
@@ -3881,6 +3931,45 @@ namespace gl3d
 
 				}
 
+			}
+
+			if (postProcess.highQualityUpSample)
+			{
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_ONE, GL_ONE);
+				postProcess.addMipsBlur.shader.bind();
+
+				glActiveTexture(GL_TEXTURE0);
+				glUniform1i(postProcess.addMipsBlur.u_texture, 0);
+				for (; finalMip > 0; finalMip--)
+				{
+					int mipW = internal.adaptiveW;
+					int mipH = internal.adaptiveH;
+
+					for (int i = 0; i < finalMip; i++)
+					{
+						mipW /= 2;
+						mipH /= 2;
+					}
+					glViewport(0, 0, mipW, mipH);
+
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
+
+					glUniform1i(postProcess.addMipsBlur.u_mip, finalMip);
+					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
+
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+				}
+
+				glDisable(GL_BLEND);
+				glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
+
+			}
+			else
+			{
 				glEnable(GL_BLEND);
 				glBlendFunc(GL_ONE, GL_ONE);
 				postProcess.addMips.shader.bind();
@@ -3914,8 +4003,8 @@ namespace gl3d
 
 				glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 			}
-			
 
+				
 		}
 
 		#pragma endregion
@@ -4232,7 +4321,7 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -4268,7 +4357,7 @@ namespace gl3d
 		glBindTexture(GL_TEXTURE_2D, blurColorBuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColorBuffer, 0);
@@ -4352,6 +4441,10 @@ namespace gl3d
 		addMips.u_mip = getUniform(addMips.shader.id, "u_mip");
 		addMips.u_texture= getUniform(addMips.shader.id, "u_texture");
 
+		addMipsBlur.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMipsBlur.frag");
+		addMipsBlur.u_mip = getUniform(addMipsBlur.shader.id, "u_mip");
+		addMipsBlur.u_texture = getUniform(addMipsBlur.shader.id, "u_texture");
+
 		filterDown.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filterDown.frag");
 		filterDown.u_mip = getUniform(filterDown.shader.id, "u_mip");
 		filterDown.u_texture = getUniform(filterDown.shader.id, "u_texture");
@@ -4365,7 +4458,7 @@ namespace gl3d
 			float borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 			glBindTexture(GL_TEXTURE_2D, bluredColorBuffer[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R11F_G11F_B10F, 1, 1, 0, GL_RGB, GL_FLOAT, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -4418,7 +4511,7 @@ namespace gl3d
 
 				for (int m = 0; m <= mips; m++)
 				{
-					glTexImage2D(GL_TEXTURE_2D, m, GL_RGBA16F, mipW, mipH, 0, GL_RGBA, GL_FLOAT, NULL);
+					glTexImage2D(GL_TEXTURE_2D, m, GL_R11F_G11F_B10F, mipW, mipH, 0, GL_RGB, GL_FLOAT, NULL);
 					
 					mipW = mipW /= 2;
 					mipH = mipH /= 2;

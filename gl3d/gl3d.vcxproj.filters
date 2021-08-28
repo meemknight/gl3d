@@ -103,5 +103,6 @@
     <None Include="shaders\postProcess\filter.frag" />
     <None Include="shaders\postProcess\addMips.frag" />
     <None Include="shaders\postProcess\filterDown.frag" />
+    <None Include="shaders\postProcess\addMipsBlur.frag" />
   </ItemGroup>
 </Project>

@@ -686,6 +686,9 @@ int main()
 			ImGui::Checkbox("FXAA", &renderer.antiAlias.usingFXAA);
 			ImGui::Checkbox("Adaptive resolution", &renderer.adaptiveResolution.useAdaptiveResolution);
 			ImGui::Text("Adaptive rez ratio: %.1f", renderer.adaptiveResolution.rezRatio);
+			ImGui::Checkbox("Z pre pass", &renderer.zPrePass);
+			ImGui::Checkbox("Frustum culling", &renderer.frustumCulling);
+
 
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
 			{
@@ -710,7 +713,8 @@ int main()
 				ImGui::DragFloat("Bloom tresshold", &renderer.internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
 					0.01, 0, 1);
 				ImGui::DragFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0.01, 0, 10);
-				ImGui::SliderInt("Bloom blur passes", &renderer.internal.lightShader.bloomBlurPasses, 0, 16);
+				ImGui::Checkbox("High quality down sample", &renderer.postProcess.highQualityDownSample);
+				ImGui::Checkbox("High quality up sample", &renderer.postProcess.highQualityUpSample);
 
 				ImGui::PopID();
 			}
@@ -1094,8 +1098,15 @@ int main()
 					auto materialData = renderer.getEntityMeshMaterialValues(
 						models[itemCurrent], subItemCurent);
 
+					auto entityIndex = renderer.internal.getEntityIndex(models[itemCurrent]);
+					auto entity = renderer.internal.cpuEntities[entityIndex];
+
+					auto modelData = entity.models[subItemCurent];
+
 					name = "Material name: " + name;
 
+					//ImGui::Text("Min boundary %f, %f, %f", modelData.minBoundary.x, modelData.minBoundary.y, modelData.minBoundary.z);
+					//ImGui::Text("Max boundary %f, %f, %f", modelData.maxBoundary.x, modelData.maxBoundary.y, modelData.maxBoundary.z);
 					ImGui::Text("Object material");
 					ImGui::Text(name.c_str());
 					ImGui::ColorEdit3("difuse", &materialData.kd[0]);

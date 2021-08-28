@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-27
+//built on 2021-08-28
 ////////////////////////////////////////////////
 
 
@@ -1699,9 +1699,9 @@ namespace gl3d
 		struct LightPassData
 		{
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
-			float bloomTresshold = 1.f;
+			float bloomTresshold = 0.91f;
 			int lightSubScater = 1;
-			float exposure = 1;
+			float exposure = 1.7;
 			int skyBoxPresent = 0;
 
 		}lightPassUniformBlockCpuData;
@@ -1734,7 +1734,6 @@ namespace gl3d
 		
 		//todo split stuff into separate things
 		bool bloom = 1;
-		int bloomBlurPasses = 4;
 
 		GpuTexture brdfTexture;
 
@@ -1923,7 +1922,7 @@ namespace gl3d
 
 	struct GraphicModel
 	{
-		std::string name;
+		std::string name = "";
 
 		GLuint vertexArray = 0;
 
@@ -1932,14 +1931,18 @@ namespace gl3d
 
 		GLsizei primitiveCount = 0;
 
-		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
+		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false);
 
 		void clear();
 
-		Material material;
-		int ownMaterial = 0;
+		glm::vec3 minBoundary = {};
+		glm::vec3 maxBoundary = {};
 
+		Material material = 0;
+		unsigned char ownMaterial = 0;
+		unsigned char culledThisFrame= 0;
+		
 	};
 
 	struct Renderer3D;
@@ -1964,12 +1967,13 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		void clear();
 
-		unsigned char flags = {}; // lsb -> 1 static
+		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
+		
 
 		bool castShadows() {return (flags & 0b0000'0100); }
-		void setCastShadows(bool v)
+		void setCastShadows(bool s)
 		{
-			if (v)
+			if (s)
 			{
 				flags = flags | 0b0000'0100;
 			}
@@ -2567,6 +2571,13 @@ namespace gl3d
 				Shader shader;
 				GLint u_texture;
 				GLint u_mip;
+			}addMipsBlur;
+
+			struct
+			{
+				Shader shader;
+				GLint u_texture;
+				GLint u_mip;
 			}filterDown;
 
 			Shader postProcessShader;
@@ -2599,6 +2610,9 @@ namespace gl3d
 
 			//for post process shader
 			float bloomIntensty = 1;
+
+			bool highQualityDownSample = 0;
+			bool highQualityUpSample = 0;
 
 		}postProcess;
 
@@ -2752,6 +2766,8 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
+		bool frustumCulling = 1;
+		bool zPrePass = 1;
 
 	};
 

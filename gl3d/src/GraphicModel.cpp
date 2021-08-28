@@ -244,18 +244,96 @@ namespace gl3d
 
 	
 
-	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize, const unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, const unsigned int *indexes, bool noTexture)
 	{
+		/*
+			position				vec3
+			normals					vec3
+			texcoords if necessary	vec2
+		*/
 
+		#pragma region validate
 		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
 		if (indexSize % 3 != 0)return;
+
+		if (noTexture)
+		{
+			gl3dAssertComment(vertexSize % (sizeof(float)*6) == 0,
+				"VertexSize count must be multiple of 6 * sizeof(float)\nwhen not using texture data");
+			if (vertexSize % (sizeof(float) * 6) != 0)return;
+		}
+		else
+		{
+			gl3dAssertComment(vertexSize % (sizeof(float) * 8) == 0,
+				"VertexSize count must be multiple of 8 * sizeof(float)\nwhen using texture data");
+			if (vertexSize % (sizeof(float) * 8) != 0)return;
+		}
+
+		if (!vertexSize) { return; }
+
+		#pragma endregion
+
+		#pragma region determine object boundaries
+		
+		if (noTexture)
+		{
+			float x = vertices[0];
+			float y = vertices[1];
+			float z = vertices[2];
+
+			minBoundary = glm::vec3(x, y, z);
+			maxBoundary = glm::vec3(x, y, z);
+
+			for (int i = 0; i < vertexSize / (sizeof(float)*6); i++)
+			{
+				float x = vertices[i*6+0];
+				float y = vertices[i*6+1];
+				float z = vertices[i*6+2];
+			
+				if (x < minBoundary.x) { minBoundary.x = x; }
+				if (y < minBoundary.y) { minBoundary.y = y; }
+				if (z < minBoundary.z) { minBoundary.z = z; }
+			
+				if (x > maxBoundary.x) { maxBoundary.x = x; }
+				if (y > maxBoundary.y) { maxBoundary.y = y; }
+				if (z > maxBoundary.z) { maxBoundary.z = z; }
+			}
+		}
+		else
+		{
+			float x = vertices[0];
+			float y = vertices[1];
+			float z = vertices[2];
+
+			minBoundary = glm::vec3(x, y, z);
+			maxBoundary = glm::vec3(x, y, z);
+
+			for (int i = 0; i < vertexSize / (sizeof(float) * 8); i++)
+			{
+				float x = vertices[i * 8 + 0];
+				float y = vertices[i * 8 + 1];
+				float z = vertices[i * 8 + 2];
+
+				if (x < minBoundary.x) { minBoundary.x = x; }
+				if (y < minBoundary.y) { minBoundary.y = y; }
+				if (z < minBoundary.z) { minBoundary.z = z; }
+
+				if (x > maxBoundary.x) { maxBoundary.x = x; }
+				if (y > maxBoundary.y) { maxBoundary.y = y; }
+				if (z > maxBoundary.z) { maxBoundary.z = z; }
+			}
+		}
+
+		#pragma endregion
+
+
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
 
 		glGenBuffers(1, &vertexBuffer);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-		glBufferData(GL_ARRAY_BUFFER, vertexSize, vercies, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
 
 		//todo this is only for rendering gizmos stuff
 		if (noTexture)
@@ -303,14 +381,7 @@ namespace gl3d
 
 		glDeleteVertexArrays(1, &vertexArray);
 
-		//albedoTexture.clear();
-		//normalMapTexture.clear();
-		//RMA_Texture.clear();
-
-		vertexBuffer = 0;
-		indexBuffer = 0;
-		primitiveCount = 0;
-		vertexArray = 0;
+		*this = GraphicModel{};
 	}
 
 	void SkyBoxLoaderAndDrawer::createGpuData()

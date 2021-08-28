@@ -1,5 +1,4 @@
 #version 150 core
-//https://www.youtube.com/watch?v=Z9bYzpwVINA&t=1661s
 out vec4 a_color;
 
 in vec2 v_texCoords;
@@ -34,16 +33,18 @@ float quality(int i)
 	}else return r[i-5];
 }
 
-//todo optimize
 
 //http://blog.simonrodriguez.fr/articles/2016/07/implementing_fxaa.html
 void main()
 {
 
-	float edgeMinTreshold = 0.0312;
+	//float edgeMinTreshold = 0.0312;
+	float edgeMinTreshold = 0.028;
 	float edgeDarkTreshold = 0.125;
 	int ITERATIONS = 12;
-	float SUBPIXEL_QUALITY = 0.75;
+	float quaityMultiplier = 0.8;
+	//float SUBPIXEL_QUALITY = 0.75;
+	float SUBPIXEL_QUALITY = 0.95;
 
 	vec3 colorCenter = getTexture(vec2(0,0)).rgb;
 	
@@ -185,11 +186,11 @@ void main()
 			// If the side is not reached, we continue to explore in this direction, with a variable quality.
 			if(!reached1)
 			{
-				uv1 -= offset * quality(i);
+				uv1 -= offset * quality(i) * quaityMultiplier;
 			}
 			if(!reached2)
 			{
-				uv2 += offset * quality(i);
+				uv2 += offset * quality(i) * quaityMultiplier;
 			}
 
 			// If both sides have been reached, stop the exploration.

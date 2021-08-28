@@ -127,9 +127,9 @@ namespace gl3d
 		struct LightPassData
 		{
 			glm::vec4 ambientLight = glm::vec4(1, 1, 1, 0); //last value is not used
-			float bloomTresshold = 1.f;
+			float bloomTresshold = 0.91f;
 			int lightSubScater = 1;
-			float exposure = 1;
+			float exposure = 1.7;
 			int skyBoxPresent = 0;
 
 		}lightPassUniformBlockCpuData;
@@ -162,7 +162,6 @@ namespace gl3d
 		
 		//todo split stuff into separate things
 		bool bloom = 1;
-		int bloomBlurPasses = 4;
 
 		GpuTexture brdfTexture;
 

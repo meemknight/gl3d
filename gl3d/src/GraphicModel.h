@@ -82,7 +82,7 @@ namespace gl3d
 
 	struct GraphicModel
 	{
-		std::string name;
+		std::string name = "";
 
 		GLuint vertexArray = 0;
 
@@ -91,14 +91,18 @@ namespace gl3d
 
 		GLsizei primitiveCount = 0;
 
-		void loadFromComputedData(size_t vertexSize, const float *vercies, size_t indexSize = 0,
+		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false);
 
 		void clear();
 
-		Material material;
-		int ownMaterial = 0;
+		glm::vec3 minBoundary = {};
+		glm::vec3 maxBoundary = {};
 
+		Material material = 0;
+		unsigned char ownMaterial = 0;
+		unsigned char culledThisFrame= 0;
+		
 	};
 
 	struct Renderer3D;
@@ -123,12 +127,13 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		void clear();
 
-		unsigned char flags = {}; // lsb -> 1 static
+		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
+		
 
 		bool castShadows() {return (flags & 0b0000'0100); }
-		void setCastShadows(bool v)
+		void setCastShadows(bool s)
 		{
-			if (v)
+			if (s)
 			{
 				flags = flags | 0b0000'0100;
 			}
