@@ -970,13 +970,13 @@ uniform sampler2D u_albedoSampler;
 uniform int u_hasTexture;
 uniform vec3 u_lightPos;
 uniform float u_farPlane;
-in vec2 v_texCoord;
 in vec4 v_fragPos;
+in vec2 v_finalTexCoord;
 void main ()
 {
 if ((u_hasTexture != 0)) {
 vec4 tmpvar_1;
-tmpvar_1 = texture (u_albedoSampler, v_texCoord);
+tmpvar_1 = texture (u_albedoSampler, v_finalTexCoord);
 if ((tmpvar_1.w <= 0.1)) {
 discard;
 };
@@ -1296,6 +1296,18 @@ float metallic = texture(u_metallic, v_texCoords).r;
 float roughness = texture(u_roughness, v_texCoords).r;
 float ambient = texture(u_ambient, v_texCoords).r;
 fragColor = vec4(roughness, metallic, ambient, 1);
+})"},
+
+      std::pair<std::string, const char*>{"zPrePass.vert", R"(#version 330
+#pragma debug(on)
+layout(location = 0) in vec3 a_positions;
+layout(location = 2) in vec2 a_texCoord;
+uniform mat4 u_transform; //full model view projection
+out vec2 v_texCoord;
+void main()
+{
+gl_Position = u_transform * vec4(a_positions, 1.f);
+v_texCoord = a_texCoord;
 })"},
 
       std::pair<std::string, const char*>{"zPrePass.frag", R"(#version 150
@@ -2776,7 +2788,7 @@ outColor = tmpvar_1;
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	#pragma endregion
 
-		prePass.shader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/zPrePass.frag");
+		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag");
 		prePass.u_transform = getUniform(prePass.shader.id, "u_transform");
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler");
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
@@ -8145,7 +8157,7 @@ namespace gl3d
 					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 						postProcess.bluredColorBuffer[horizontal], i / 2);
-					glClear(GL_COLOR_BUFFER_BIT);
+					//glClear(GL_COLOR_BUFFER_BIT);
 					glUniform1i(postProcess.u_horizontal, horizontal);
 					glUniform1i(postProcess.u_mip, (i - 1) / 2);
 

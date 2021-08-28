@@ -210,6 +210,7 @@
     <None Include="shaders\aa\noaa.frag" />
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
+    <None Include="shaders\deferred\zPrePass.vert" />
     <None Include="shaders\postProcess\addMips.frag" />
     <None Include="shaders\postProcess\addMipsBlur.frag" />
     <None Include="shaders\postProcess\filter.frag" />

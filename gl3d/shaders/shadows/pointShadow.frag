@@ -6,15 +6,15 @@ uniform int u_hasTexture;
 uniform vec3 u_lightPos;
 uniform float u_farPlane;
 
-in vec2 v_texCoord;
 in vec4 v_fragPos;
+in vec2 v_finalTexCoord;
 
 void main()
 {
 
 	if(u_hasTexture != 0)
 		{
-			vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
+			vec4 color = texture2D(u_albedoSampler, v_finalTexCoord).xyzw;
 				if(color.w <= 0.1)
 					discard;
 		}

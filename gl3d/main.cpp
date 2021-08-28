@@ -22,7 +22,6 @@
 int w = 840;
 int h = 640;
 
-
 #define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
@@ -146,12 +145,12 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	//renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBox.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");

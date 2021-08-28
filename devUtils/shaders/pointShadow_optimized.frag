@@ -3,13 +3,13 @@ uniform sampler2D u_albedoSampler;
 uniform int u_hasTexture;
 uniform vec3 u_lightPos;
 uniform float u_farPlane;
-in vec2 v_texCoord;
 in vec4 v_fragPos;
+in vec2 v_finalTexCoord;
 void main ()
 {
   if ((u_hasTexture != 0)) {
     vec4 tmpvar_1;
-    tmpvar_1 = texture (u_albedoSampler, v_texCoord);
+    tmpvar_1 = texture (u_albedoSampler, v_finalTexCoord);
     if ((tmpvar_1.w <= 0.1)) {
       discard;
     };

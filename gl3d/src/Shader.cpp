@@ -302,7 +302,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	#pragma endregion
 
-		prePass.shader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/zPrePass.frag");
+		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag");
 		prePass.u_transform = getUniform(prePass.shader.id, "u_transform");
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler");
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
