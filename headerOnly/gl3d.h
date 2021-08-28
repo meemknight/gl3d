@@ -2627,7 +2627,7 @@ namespace gl3d
 			int timeSample = 0;
 
 			float stepDownSecTarget = 17.f;
-			float stepUpSecTarget = 12.f;
+			float stepUpSecTarget = 12.5f;
 
 			glm::ivec2 currentDimensions = {};
 			float rezRatio = 1.f;

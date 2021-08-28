@@ -6680,6 +6680,86 @@ namespace gl3d
 		return Result;
 	}
 
+	bool shouldCullObject(glm::vec3 minBoundary, glm::vec3 maxBoundary, glm::mat4& modelViewProjMat)
+	{
+		glm::vec3 cubePoints[8] = {};
+
+		int c = 0;
+		for (int x = 0; x < 2; x++)
+			for (int y = 0; y < 2; y++)
+				for (int z = 0; z < 2; z++)
+				{
+					float xVal = x ? minBoundary.x : maxBoundary.x;
+					float yVal = y ? minBoundary.y : maxBoundary.y;
+					float zVal = z ? minBoundary.z : maxBoundary.z;
+
+					cubePoints[c] = { xVal, yVal, zVal };
+
+					glm::vec4 augmentedPoint = glm::vec4(cubePoints[c], 1.f);
+
+					augmentedPoint = modelViewProjMat * augmentedPoint;
+
+					augmentedPoint.x /= augmentedPoint.w;
+					augmentedPoint.y /= augmentedPoint.w;
+					augmentedPoint.z /= augmentedPoint.w;
+					
+					if (augmentedPoint.z > 1.f)
+					{
+						augmentedPoint.y = -augmentedPoint.y;
+					}
+					
+					cubePoints[c] = glm::vec3(augmentedPoint);
+
+					c++;
+				}
+
+		int cull = 1;
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].z <= 1.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].y <= 1.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].y >= -1.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].x <= 1.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].x >= -1.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		cull = 1;
+		for (int p = 0; p < 8; p++)
+		{
+			if (cubePoints[p].z >= 0.f) { cull = 0; break; }
+		}
+		if (cull) { return true; }
+
+		return false;
+	}
+
 	void Renderer3D::render(float deltaTime)
 	{
 	
@@ -6782,6 +6862,10 @@ namespace gl3d
 
 				for (auto& i : i.models)
 				{
+					if(shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+					{
+						continue;
+					}
 
 					auto m = internal.getMaterialIndex(i.material);
 
@@ -7415,157 +7499,103 @@ namespace gl3d
 	
 		#pragma endregion
 
-
-		#pragma region stuff to be bound for rendering the pre pass geometry
-
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
-		internal.lightShader.prePass.shader.bind();
-
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-
-		#pragma endregion
-
-
-		#pragma region z pre pass
-		for (auto& i : internal.cpuEntities)
+		#pragma region z pre pass and frustum culling
+		if (zPrePass || frustumCulling)
 		{
-			if (!i.isVisible())
+			if (zPrePass)
 			{
-				continue;
+				internal.lightShader.prePass.shader.bind();
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			}
-			
-			auto transformMat = i.transform.getTransformMatrix();
-			auto modelViewProjMat = worldProjectionMatrix * transformMat;
-			
-			
-			glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 
-			for (auto &i : i.models)
+			for (auto& i : internal.cpuEntities)
 			{
-				//frustum culling
-				if (frustumCulling)
+				if (!i.isVisible())
 				{
-					auto projectPoint = [&](glm::vec3 point)
+					continue;
+				}
+
+				auto transformMat = i.transform.getTransformMatrix();
+				auto modelViewProjMat = worldProjectionMatrix * transformMat;
+
+				if (zPrePass)
+				{
+					glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				}
+
+				for (auto& i : i.models)
+				{
+					//frustum culling
+					if (frustumCulling)
 					{
-						glm::vec4 augmentedPoint = glm::vec4(point, 1.f);
 
-						augmentedPoint = modelViewProjMat * augmentedPoint;
+						if (shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+						{
+							i.culledThisFrame = true;
+							continue;
+						}
 
-						augmentedPoint.x /= augmentedPoint.w;
-						augmentedPoint.y /= augmentedPoint.w;
-						augmentedPoint.z /= augmentedPoint.w;
-						return glm::vec3(augmentedPoint);
-					};
+					}
 
-					glm::vec3 cubePoints[8] = {};
+					i.culledThisFrame = false;
 
-					int c = 0;
-					for (int x = 0; x < 2; x++)
-						for (int y = 0; y < 2; y++)
-							for (int z = 0; z < 2; z++)
+					if (zPrePass)
+					{
+						auto m = internal.getMaterialIndex(i.material);
+
+						if (m < 0)
+						{
+							glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
+						}
+						else
+						{
+
+							auto t = internal.materialTexturesData[m];
+							auto tId = internal.getTextureIndex(t.albedoTexture);
+
+							if (tId < 0)
 							{
-								float xVal = x ? i.minBoundary.x : i.maxBoundary.x;
-								float yVal = y ? i.minBoundary.y : i.maxBoundary.y;
-								float zVal = z ? i.minBoundary.z : i.maxBoundary.z;
+								glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 
-								cubePoints[c] = { xVal, yVal, zVal };
-								cubePoints[c] = projectPoint(cubePoints[c]);
-								c++;
+							}
+							else
+							{
+								auto texture = internal.loadedTextures[tId];
+
+								glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
+								glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
+								glActiveTexture(GL_TEXTURE0);
+								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
 							}
 
-					unsigned char up[8] = {}; //on top of frustum
-					unsigned char down[8] = {}; //bellow 
-					unsigned char left[8] = {}; //to the left of the frustum 
-					unsigned char right[8] = {}; //to the right ....
-					unsigned char after[8] = {}; //too far
-					unsigned char before[8] = {}; //too close 
-					
-					for (int p = 0; p < 8; p++)
-					{
-						if (cubePoints[p].y > 1.f) { up[p] = true; }
-						else if (cubePoints[p].y < -1.f) { down[p] = true; }
-
-						if (cubePoints[p].x > 1.f) { right[p] = true; }
-						else if (cubePoints[p].x < -1.f) { left[p] = true; }
-
-						if (cubePoints[p].z > 1.f) { before[p] = true; }
-						else if (cubePoints[p].z < 0.f) { after[p] = true; }
-					}
-					
-					auto allTrue = [](unsigned char v[], int size)
-					{
-						for (int i = 0; i < size; i++)
-						{
-							if (v[i] == false) { return false; }
 						}
-						return true;
-					};
 
-					//cull things that are fully in one part outside of the frustum
-					if (allTrue(up, 8))		{ i.culledThisFrame = true;continue; }
-					if (allTrue(down, 8))	{ i.culledThisFrame = true;continue; }
-					if (allTrue(left, 8))	{ i.culledThisFrame = true;continue; }
-					if (allTrue(right, 8))	{ i.culledThisFrame = true;continue; }
-					if (allTrue(after, 8))	{ i.culledThisFrame = true;continue; }
-					if (allTrue(before, 8)) { i.culledThisFrame = true;continue; }
+						glBindVertexArray(i.vertexArray);
 
-				
-				}
-
-				i.culledThisFrame = false;
-
-				//std::cout << "Not Culled\n";
-
-				auto m = internal.getMaterialIndex(i.material);
-
-				if (m < 0)
-				{
-					glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
-				}
-				else
-				{
-
-					auto t = internal.materialTexturesData[m];
-					auto tId = internal.getTextureIndex(t.albedoTexture);
-
-					if (tId < 0)
-					{
-						glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
-
+						if (i.indexBuffer)
+						{
+							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						}
+						else
+						{
+							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						}
 					}
-					else
-					{
-						auto texture = internal.loadedTextures[tId];
-
-						glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
-						glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
-						glActiveTexture(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, texture.texture.id);
-					}
-
+					
 				}
 
-				glBindVertexArray(i.vertexArray);
-			
-				if (i.indexBuffer)
-				{
-					glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
-				}
-				else
-				{
-					glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
-				}
+
 			}
 
-			
-
+			if (zPrePass)
+			{
+				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			}
 		}
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		#pragma endregion 
 
 
@@ -7601,8 +7631,14 @@ namespace gl3d
 
 		GLuint* indices = new GLuint[n]{ 0 };
 
-
-		glDepthFunc(GL_EQUAL);
+		if (zPrePass)
+		{
+			glDepthFunc(GL_EQUAL);
+		}
+		else
+		{
+			glDepthFunc(GL_LESS);
+		}
 
 		#pragma endregion
 
@@ -7635,7 +7671,7 @@ namespace gl3d
 			for (auto& i : entity.models)
 			{
 
-				if (i.culledThisFrame)
+				if (frustumCulling && i.culledThisFrame)
 				{
 					continue;
 				}
@@ -7808,7 +7844,10 @@ namespace gl3d
 
 
 		glBindVertexArray(0);
-		glDepthFunc(GL_LESS);
+		if (zPrePass)
+		{
+			glDepthFunc(GL_LESS);
+		}
 
 
 		//we draw a rect several times so we keep this vao binded
