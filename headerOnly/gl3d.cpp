@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-29
+//built on 2021-08-30
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -577,7 +577,6 @@ void main()
 vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
 vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 vec2 noisePos = v_texCoords * noiseScale;
-noisePos = noisePos - ivec2(noisePos);
 vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
 vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
 normalize(texture(u_gNormal, v_texCoords).xyz));
@@ -603,7 +602,6 @@ occlusion += (sampleDepth >= samplePos.z + ssaoDATA.bias ? 1.0 : 0.0) * rangeChe
 }  
 occlusion = 1.0 - (occlusion / kernelSize);
 fragColor = occlusion;
-fragColor = sqrt(abs(randomVec.y));
 })"},
 
       std::pair<std::string, const char*>{"blur.frag", R"(#version 150
@@ -612,7 +610,84 @@ uniform sampler2D u_ssaoInput;
 out float fragColor;
 void main ()
 {
-fragColor = texture (u_ssaoInput, v_texCoords).x;
+float result_1;
+vec2 texelSize_2;
+texelSize_2 = (1.0/(vec2(textureSize (u_ssaoInput, 0))));
+vec2 tmpvar_3;
+tmpvar_3 = (vec2(-2.0, -2.0) * texelSize_2);
+vec2 P_4;
+P_4 = (v_texCoords + tmpvar_3);
+result_1 = textureLod (u_ssaoInput, P_4, 0.0).x;
+vec2 tmpvar_5;
+tmpvar_5 = (vec2(-1.0, -2.0) * texelSize_2);
+vec2 P_6;
+P_6 = (v_texCoords + tmpvar_5);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_6, 0.0).x);
+vec2 tmpvar_7;
+tmpvar_7 = (vec2(0.0, -2.0) * texelSize_2);
+vec2 P_8;
+P_8 = (v_texCoords + tmpvar_7);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_8, 0.0).x);
+vec2 tmpvar_9;
+tmpvar_9 = (vec2(1.0, -2.0) * texelSize_2);
+vec2 P_10;
+P_10 = (v_texCoords + tmpvar_9);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_10, 0.0).x);
+vec2 tmpvar_11;
+tmpvar_11 = (vec2(-2.0, -1.0) * texelSize_2);
+vec2 P_12;
+P_12 = (v_texCoords + tmpvar_11);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_12, 0.0).x);
+vec2 tmpvar_13;
+tmpvar_13 = -(texelSize_2);
+vec2 P_14;
+P_14 = (v_texCoords + tmpvar_13);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_14, 0.0).x);
+vec2 tmpvar_15;
+tmpvar_15 = (vec2(0.0, -1.0) * texelSize_2);
+vec2 P_16;
+P_16 = (v_texCoords + tmpvar_15);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_16, 0.0).x);
+vec2 tmpvar_17;
+tmpvar_17 = (vec2(1.0, -1.0) * texelSize_2);
+vec2 P_18;
+P_18 = (v_texCoords + tmpvar_17);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_18, 0.0).x);
+vec2 tmpvar_19;
+tmpvar_19 = (vec2(-2.0, 0.0) * texelSize_2);
+vec2 P_20;
+P_20 = (v_texCoords + tmpvar_19);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_20, 0.0).x);
+vec2 tmpvar_21;
+tmpvar_21 = (vec2(-1.0, 0.0) * texelSize_2);
+vec2 P_22;
+P_22 = (v_texCoords + tmpvar_21);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_22, 0.0).x);
+result_1 = (result_1 + textureLod (u_ssaoInput, v_texCoords, 0.0).x);
+vec2 tmpvar_23;
+tmpvar_23 = (vec2(1.0, 0.0) * texelSize_2);
+vec2 P_24;
+P_24 = (v_texCoords + tmpvar_23);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_24, 0.0).x);
+vec2 tmpvar_25;
+tmpvar_25 = (vec2(-2.0, 1.0) * texelSize_2);
+vec2 P_26;
+P_26 = (v_texCoords + tmpvar_25);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_26, 0.0).x);
+vec2 tmpvar_27;
+tmpvar_27 = (vec2(-1.0, 1.0) * texelSize_2);
+vec2 P_28;
+P_28 = (v_texCoords + tmpvar_27);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_28, 0.0).x);
+vec2 tmpvar_29;
+tmpvar_29 = (vec2(0.0, 1.0) * texelSize_2);
+vec2 P_30;
+P_30 = (v_texCoords + tmpvar_29);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_30, 0.0).x);
+vec2 P_31;
+P_31 = (v_texCoords + texelSize_2);
+result_1 = (result_1 + textureLod (u_ssaoInput, P_31, 0.0).x);
+fragColor = (result_1 / 16.0);
 })"},
 
       std::pair<std::string, const char*>{"skyBox.vert", R"(#version 330
@@ -975,6 +1050,10 @@ gl_FragDepth = (sqrt(dot (x_2, x_2)) / u_farPlane);
 out vec4 a_color;
 noperspective in vec2 v_texCoords;
 uniform sampler2D u_colorTexture;
+uniform sampler2D u_bloomTexture;
+uniform sampler2D u_bloomNotBluredTexture;
+uniform float u_bloomIntensity;
+uniform float u_exposure;
 uniform int u_useSSAO;
 uniform float u_ssaoExponent;
 uniform sampler2D u_ssao;
@@ -989,7 +1068,39 @@ ssaof_1 = pow (texture (u_ssao, v_texCoords).x, u_ssaoExponent);
 } else {
 ssaof_1 = 1.0;
 };
-a_color.xyz = vec3(ssaof_1);
+a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));
+vec3 color_3;
+color_3 = (a_color.xyz * u_exposure);
+mat3 tmpvar_4;
+tmpvar_4[0].x = 0.59719;
+tmpvar_4[1].x = 0.35458;
+tmpvar_4[2].x = 0.04823;
+tmpvar_4[0].y = 0.076;
+tmpvar_4[1].y = 0.90834;
+tmpvar_4[2].y = 0.01566;
+tmpvar_4[0].z = 0.0284;
+tmpvar_4[1].z = 0.13383;
+tmpvar_4[2].z = 0.83777;
+color_3 = (tmpvar_4 * color_3);
+mat3 tmpvar_5;
+tmpvar_5[0].x = 1.60475;
+tmpvar_5[1].x = -0.53108;
+tmpvar_5[2].x = -0.07367;
+tmpvar_5[0].y = -0.10208;
+tmpvar_5[1].y = 1.10813;
+tmpvar_5[2].y = -0.00605;
+tmpvar_5[0].z = -0.00327;
+tmpvar_5[1].z = -0.07276;
+tmpvar_5[2].z = 1.07602;
+color_3 = (tmpvar_5 * ((
+(color_3 * (color_3 + 0.0245786))
+- 9.0537e-5) / (
+(color_3 * ((0.983729 * color_3) + 0.432951))
++ 0.238081)));
+vec3 tmpvar_6;
+tmpvar_6 = clamp (color_3, 0.0, 1.0);
+color_3 = tmpvar_6;
+a_color.xyz = pow (tmpvar_6, vec3(0.4545454, 0.4545454, 0.4545454));
 a_color.w = tmpvar_2.w;
 })"},
 
@@ -1274,7 +1385,7 @@ discard;
 };
 })"},
 
-      std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430
+      std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430 core
 #pragma debug(on)
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
@@ -3964,8 +4075,9 @@ namespace gl3d
 
 
 		GLint viewPort[4] = {};
-		glGetIntegerv(GL_VIEWPORT, viewPort); //todo remove because slow
+		glGetIntegerv(GL_VIEWPORT, viewPort);
 
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	#pragma region convoluted texture
 
@@ -4060,6 +4172,8 @@ namespace gl3d
 
 
 	#pragma endregion
+
+		glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		glBindVertexArray(0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -4174,7 +4288,6 @@ namespace gl3d
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		internal.lightShader.create();
 		vao.createVAOs();
@@ -8029,9 +8142,9 @@ namespace gl3d
 			if (postProcess.highQualityDownSample)
 			{
 				bool horizontal = 0; bool firstTime = 1;
-
 				int mipW = internal.adaptiveW;
 				int mipH = internal.adaptiveH;
+				lastBloomChannel = !horizontal;
 
 				for (int i = 0; i < postProcess.currentMips + 1; i++)
 				{
@@ -8049,10 +8162,30 @@ namespace gl3d
 					glUniform1i(postProcess.filterDown.u_texture, 0);
 					glUniform1i(postProcess.filterDown.u_mip, firstTime ? 0 : i - 1);
 					glBindTexture(GL_TEXTURE_2D,
-						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
+						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = horizontal;
 				#pragma endregion
+
+				#pragma region copy data
+
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!horizontal]);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+						postProcess.bluredColorBuffer[!horizontal], i);
+
+					postProcess.addMips.shader.bind();
+					glActiveTexture(GL_TEXTURE0);
+					glUniform1i(postProcess.addMips.u_texture, 0);
+					glUniform1i(postProcess.addMips.u_mip, i);
+					glBindTexture(GL_TEXTURE_2D,
+						postProcess.bluredColorBuffer[lastBloomChannel]);
+
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = !horizontal;
+
+				#pragma endregion
+
 
 				#pragma region blur
 					postProcess.gausianBLurShader.bind();
@@ -8060,7 +8193,7 @@ namespace gl3d
 					glUniform1i(postProcess.u_toBlurcolorInput, 0);
 					glUniform2f(postProcess.u_texel, 1.f / mipW, 1.f / mipH);
 					glUniform1i(postProcess.u_mip, i);
-					horizontal = !horizontal;
+					//horizontal = !horizontal;
 
 					for (int j = 0; j < 2; j++)
 					{
@@ -8070,7 +8203,7 @@ namespace gl3d
 						glClear(GL_COLOR_BUFFER_BIT);
 						glUniform1i(postProcess.u_horizontal, horizontal);
 
-						glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[!horizontal]);
+						glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 						glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -8086,7 +8219,7 @@ namespace gl3d
 			}
 			else
 			{
-				bool horizontal = 1; bool firstTime = 1;
+				bool horizontal = 0; bool firstTime = 1;
 				postProcess.gausianBLurShader.bind();
 				glActiveTexture(GL_TEXTURE0);
 				glUniform1i(postProcess.u_toBlurcolorInput, 0);
@@ -8101,6 +8234,7 @@ namespace gl3d
 						mipH /= 2;
 						glViewport(0, 0, mipW, mipH);
 						glUniform2f(postProcess.u_texel, 1.f / mipW, 1.f / mipH);
+						horizontal = !horizontal;
 					}
 
 					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
@@ -8111,7 +8245,7 @@ namespace gl3d
 					glUniform1i(postProcess.u_mip, (i - 1) / 2);
 
 					glBindTexture(GL_TEXTURE_2D,
-						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
+						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -8143,14 +8277,15 @@ namespace gl3d
 					}
 					glViewport(0, 0, mipW, mipH);
 
-					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!lastBloomChannel]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
+						postProcess.bluredColorBuffer[!lastBloomChannel], finalMip - 1);
 
 					glUniform1i(postProcess.addMipsBlur.u_mip, finalMip);
 					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = !lastBloomChannel;
 
 				}
 
@@ -8178,15 +8313,15 @@ namespace gl3d
 					}
 					glViewport(0, 0, mipW, mipH);
 
-					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!lastBloomChannel]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
+						postProcess.bluredColorBuffer[!lastBloomChannel], finalMip - 1);
 
 					glUniform1i(postProcess.addMips.u_mip, finalMip);
 					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+					lastBloomChannel = !lastBloomChannel;
 				}
 
 				glDisable(GL_BLEND);
@@ -8684,7 +8819,7 @@ namespace gl3d
 			}
 		}
 
-		//mips = 3;
+		//mips = 1;
 
 		if (currentDimensions.x != w || currentDimensions.y != h
 			|| currentMips != mips) 
@@ -8802,8 +8937,8 @@ namespace gl3d
 		for(int i=0; i<2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
@@ -8927,8 +9062,8 @@ namespace gl3d
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, textures[i]);
 
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -8981,8 +9116,8 @@ namespace gl3d
 		glGenFramebuffers(1, &staticGeometryfbo);
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
@@ -8990,8 +9125,8 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);

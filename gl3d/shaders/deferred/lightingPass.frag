@@ -1,7 +1,8 @@
-#version 430
+#version 430 core
 #pragma debug(on)
 
 //#extension GL_NV_shadow_samplers_cube : enable
+//#extension ARB_program_interface_query : enable
 
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
@@ -582,6 +583,8 @@ float linStep(float v, float low, float high)
 void main()
 {
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
+		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
+
 	vec3 normal = texture(u_normals, v_texCoords).xyz;
 	vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 	vec3 emissive = texture(u_emmisive, v_texCoords).xyz;

@@ -28,7 +28,6 @@ void main()
 	vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 	vec2 noisePos = v_texCoords * noiseScale;
-	noisePos = noisePos - ivec2(noisePos);
 
 	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
 	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
@@ -76,6 +75,6 @@ void main()
 
 	//fragColor = v_texCoords.y;
 	//fragColor = normal.z;
-	fragColor = sqrt(abs(randomVec.y));
+	//fragColor = sqrt(abs(randomVec.x));
 
 }

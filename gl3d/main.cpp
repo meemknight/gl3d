@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -50,7 +50,7 @@ int main()
 #endif
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 
@@ -756,7 +756,7 @@ int main()
 			ImGui::Begin("Light Editor", &lightEditor, flags);
 			ImGui::SetWindowFontScale(1.2f);
 		
-			static int pointLightSelector = 0;
+			static int pointLightSelector = -1;
 			ImGui::Text("Point lightd Count %d", pointLights.size());
 			ImGui::InputInt("Current Point light:", &pointLightSelector);
 			int n = ImGui::Button("New Light"); ImGui::SameLine();

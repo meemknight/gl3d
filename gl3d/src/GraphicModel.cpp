@@ -798,8 +798,9 @@ namespace gl3d
 
 
 		GLint viewPort[4] = {};
-		glGetIntegerv(GL_VIEWPORT, viewPort); //todo remove because slow
+		glGetIntegerv(GL_VIEWPORT, viewPort);
 
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	#pragma region convoluted texture
 
@@ -894,6 +895,8 @@ namespace gl3d
 
 
 	#pragma endregion
+
+		glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		glBindVertexArray(0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -23,7 +23,6 @@ namespace gl3d
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		internal.lightShader.create();
 		vao.createVAOs();
@@ -3878,9 +3877,9 @@ namespace gl3d
 			if (postProcess.highQualityDownSample)
 			{
 				bool horizontal = 0; bool firstTime = 1;
-
 				int mipW = internal.adaptiveW;
 				int mipH = internal.adaptiveH;
+				lastBloomChannel = !horizontal;
 
 				for (int i = 0; i < postProcess.currentMips + 1; i++)
 				{
@@ -3898,10 +3897,30 @@ namespace gl3d
 					glUniform1i(postProcess.filterDown.u_texture, 0);
 					glUniform1i(postProcess.filterDown.u_mip, firstTime ? 0 : i - 1);
 					glBindTexture(GL_TEXTURE_2D,
-						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
+						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = horizontal;
 				#pragma endregion
+
+				#pragma region copy data
+
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!horizontal]);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+						postProcess.bluredColorBuffer[!horizontal], i);
+
+					postProcess.addMips.shader.bind();
+					glActiveTexture(GL_TEXTURE0);
+					glUniform1i(postProcess.addMips.u_texture, 0);
+					glUniform1i(postProcess.addMips.u_mip, i);
+					glBindTexture(GL_TEXTURE_2D,
+						postProcess.bluredColorBuffer[lastBloomChannel]);
+
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = !horizontal;
+
+				#pragma endregion
+
 
 				#pragma region blur
 					postProcess.gausianBLurShader.bind();
@@ -3909,7 +3928,7 @@ namespace gl3d
 					glUniform1i(postProcess.u_toBlurcolorInput, 0);
 					glUniform2f(postProcess.u_texel, 1.f / mipW, 1.f / mipH);
 					glUniform1i(postProcess.u_mip, i);
-					horizontal = !horizontal;
+					//horizontal = !horizontal;
 
 					for (int j = 0; j < 2; j++)
 					{
@@ -3919,7 +3938,7 @@ namespace gl3d
 						glClear(GL_COLOR_BUFFER_BIT);
 						glUniform1i(postProcess.u_horizontal, horizontal);
 
-						glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[!horizontal]);
+						glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 						glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -3935,7 +3954,7 @@ namespace gl3d
 			}
 			else
 			{
-				bool horizontal = 1; bool firstTime = 1;
+				bool horizontal = 0; bool firstTime = 1;
 				postProcess.gausianBLurShader.bind();
 				glActiveTexture(GL_TEXTURE0);
 				glUniform1i(postProcess.u_toBlurcolorInput, 0);
@@ -3950,6 +3969,7 @@ namespace gl3d
 						mipH /= 2;
 						glViewport(0, 0, mipW, mipH);
 						glUniform2f(postProcess.u_texel, 1.f / mipW, 1.f / mipH);
+						horizontal = !horizontal;
 					}
 
 					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[horizontal]);
@@ -3960,7 +3980,7 @@ namespace gl3d
 					glUniform1i(postProcess.u_mip, (i - 1) / 2);
 
 					glBindTexture(GL_TEXTURE_2D,
-						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[!horizontal]);
+						firstTime ? postProcess.colorBuffers[1] : postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -3992,14 +4012,15 @@ namespace gl3d
 					}
 					glViewport(0, 0, mipW, mipH);
 
-					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!lastBloomChannel]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
+						postProcess.bluredColorBuffer[!lastBloomChannel], finalMip - 1);
 
 					glUniform1i(postProcess.addMipsBlur.u_mip, finalMip);
 					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					lastBloomChannel = !lastBloomChannel;
 
 				}
 
@@ -4027,15 +4048,15 @@ namespace gl3d
 					}
 					glViewport(0, 0, mipW, mipH);
 
-					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[lastBloomChannel]);
+					glBindFramebuffer(GL_FRAMEBUFFER, postProcess.blurFbo[!lastBloomChannel]);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-						postProcess.bluredColorBuffer[lastBloomChannel], finalMip - 1);
+						postProcess.bluredColorBuffer[!lastBloomChannel], finalMip - 1);
 
 					glUniform1i(postProcess.addMips.u_mip, finalMip);
 					glBindTexture(GL_TEXTURE_2D, postProcess.bluredColorBuffer[lastBloomChannel]);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+					lastBloomChannel = !lastBloomChannel;
 				}
 
 				glDisable(GL_BLEND);
@@ -4533,7 +4554,7 @@ namespace gl3d
 			}
 		}
 
-		//mips = 3;
+		//mips = 1;
 
 		if (currentDimensions.x != w || currentDimensions.y != h
 			|| currentMips != mips) 
@@ -4651,8 +4672,8 @@ namespace gl3d
 		for(int i=0; i<2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
@@ -4776,8 +4797,8 @@ namespace gl3d
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, textures[i]);
 
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -4830,8 +4851,8 @@ namespace gl3d
 		glGenFramebuffers(1, &staticGeometryfbo);
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
@@ -4839,8 +4860,8 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
