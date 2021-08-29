@@ -1,7 +1,7 @@
 #version 150 core
 
 out vec4 a_outBloom;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 uniform float u_exposure;
 uniform float u_tresshold;

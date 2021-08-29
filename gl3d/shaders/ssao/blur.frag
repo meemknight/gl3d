@@ -1,6 +1,6 @@
 #version 150 core
 
-in vec2 v_texCoords;
+noperspective in highp vec2 v_texCoords;
 uniform sampler2D u_ssaoInput;
 
 out float fragColor;
@@ -15,7 +15,7 @@ void main()
 		for (int x = -2; x < 2; ++x) 
 		{
 			vec2 offset = vec2(float(x), float(y)) * texelSize;
-			result += texture(u_ssaoInput, v_texCoords + offset).r;
+			result += textureLod(u_ssaoInput, v_texCoords + offset, 0).r;
 		}
 	}
 

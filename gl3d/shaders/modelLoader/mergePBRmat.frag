@@ -1,6 +1,6 @@
 #version 430 core
 
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 out vec4 fragColor;
 
 layout(binding = 0) uniform sampler2D u_roughness;

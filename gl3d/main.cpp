@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -49,9 +49,9 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 #endif
 
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 
 	GLFWwindow *wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
@@ -411,12 +411,12 @@ int main()
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
-	auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
+	//auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadObject("resources/obj/sphere2.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
-	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-28
+//built on 2021-08-29
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -557,8 +557,8 @@ namespace gl3d
 		//std::pair< std::string, const char*>{"name", "value"}
 		//#pragma shaderSources
       std::pair<std::string, const char*>{"ssao.frag", R"(#version 330 core
-out float fragCoord;
-in vec2 v_texCoords;
+out float fragColor;
+noperspective in highp vec2 v_texCoords;
 uniform sampler2D u_gPosition;
 uniform sampler2D u_gNormal;
 uniform sampler2D u_texNoise;
@@ -574,11 +574,14 @@ int samplesTestSize; // should be less than kernelSize
 }ssaoDATA;
 void main()
 {
-vec2 screenSize = textureSize(u_gPosition, 0);
+vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
 vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
+vec2 noisePos = v_texCoords * noiseScale;
+noisePos = noisePos - ivec2(noisePos);
 vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
-vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * texture(u_gNormal, v_texCoords).rgb);
-vec3 randomVec = texture(u_texNoise, v_texCoords * noiseScale).xyz; 
+vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
+normalize(texture(u_gNormal, v_texCoords).xyz));
+vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
 vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));
 vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal); 
@@ -599,35 +602,17 @@ occlusion += (sampleDepth >= samplePos.z + ssaoDATA.bias ? 1.0 : 0.0) * rangeChe
 }
 }  
 occlusion = 1.0 - (occlusion / kernelSize);
-fragCoord = occlusion;
+fragColor = occlusion;
+fragColor = sqrt(abs(randomVec.y));
 })"},
 
       std::pair<std::string, const char*>{"blur.frag", R"(#version 150
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_ssaoInput;
 out float fragColor;
 void main ()
 {
-float result_1;
-vec2 texelSize_2;
-texelSize_2 = (1.0/(vec2(textureSize (u_ssaoInput, 0))));
-result_1 = texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, -2.0) * texelSize_2))).x;
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, -2.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, -2.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, -2.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, -1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords - texelSize_2)).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, -1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, -1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 0.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 0.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, v_texCoords).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(1.0, 0.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-2.0, 1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(-1.0, 1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + (vec2(0.0, 1.0) * texelSize_2))).x);
-result_1 = (result_1 + texture (u_ssaoInput, (v_texCoords + texelSize_2)).x);
-fragColor = (result_1 / 16.0);
+fragColor = texture (u_ssaoInput, v_texCoords).x;
 })"},
 
       std::pair<std::string, const char*>{"skyBox.vert", R"(#version 330
@@ -988,12 +973,8 @@ gl_FragDepth = (sqrt(dot (x_2, x_2)) / u_farPlane);
 
       std::pair<std::string, const char*>{"postProcess.frag", R"(#version 150
 out vec4 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_colorTexture;
-uniform sampler2D u_bloomTexture;
-uniform sampler2D u_bloomNotBluredTexture;
-uniform float u_bloomIntensity;
-uniform float u_exposure;
 uniform int u_useSSAO;
 uniform float u_ssaoExponent;
 uniform sampler2D u_ssao;
@@ -1008,44 +989,12 @@ ssaof_1 = pow (texture (u_ssao, v_texCoords).x, u_ssaoExponent);
 } else {
 ssaof_1 = 1.0;
 };
-a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));
-vec3 color_3;
-color_3 = (a_color.xyz * u_exposure);
-mat3 tmpvar_4;
-tmpvar_4[0].x = 0.59719;
-tmpvar_4[1].x = 0.35458;
-tmpvar_4[2].x = 0.04823;
-tmpvar_4[0].y = 0.076;
-tmpvar_4[1].y = 0.90834;
-tmpvar_4[2].y = 0.01566;
-tmpvar_4[0].z = 0.0284;
-tmpvar_4[1].z = 0.13383;
-tmpvar_4[2].z = 0.83777;
-color_3 = (tmpvar_4 * color_3);
-mat3 tmpvar_5;
-tmpvar_5[0].x = 1.60475;
-tmpvar_5[1].x = -0.53108;
-tmpvar_5[2].x = -0.07367;
-tmpvar_5[0].y = -0.10208;
-tmpvar_5[1].y = 1.10813;
-tmpvar_5[2].y = -0.00605;
-tmpvar_5[0].z = -0.00327;
-tmpvar_5[1].z = -0.07276;
-tmpvar_5[2].z = 1.07602;
-color_3 = (tmpvar_5 * ((
-(color_3 * (color_3 + 0.0245786))
-- 9.0537e-5) / (
-(color_3 * ((0.983729 * color_3) + 0.432951))
-+ 0.238081)));
-vec3 tmpvar_6;
-tmpvar_6 = clamp (color_3, 0.0, 1.0);
-color_3 = tmpvar_6;
-a_color.xyz = pow (tmpvar_6, vec3(0.4545454, 0.4545454, 0.4545454));
+a_color.xyz = vec3(ssaof_1);
 a_color.w = tmpvar_2.w;
 })"},
 
       std::pair<std::string, const char*>{"gausianBlur.frag", R"(#version 150
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_toBlurcolorInput;
 out vec3 fragColor;
 uniform bool u_horizontal;
@@ -1147,7 +1096,7 @@ fragColor = result_1;
 
       std::pair<std::string, const char*>{"filterDown.frag", R"(#version 150
 out vec3 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 uniform int u_mip;
 void main ()
@@ -1193,7 +1142,7 @@ a_color = (((
 
       std::pair<std::string, const char*>{"filter.frag", R"(#version 150
 out vec4 a_outBloom;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 uniform float u_exposure;
 uniform float u_tresshold;
@@ -1245,7 +1194,7 @@ a_outBloom = clamp (a_outBloom, 0.0, 1000.0);
 
       std::pair<std::string, const char*>{"addMipsBlur.frag", R"(#version 150
 out vec3 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 uniform int u_mip;
 void main ()
@@ -1276,7 +1225,7 @@ a_color = (a_color / 16.0);
 
       std::pair<std::string, const char*>{"addMips.frag", R"(#version 150
 out vec3 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 uniform int u_mip;
 void main ()
@@ -1285,7 +1234,7 @@ a_color = textureLod (u_texture, v_texCoords, float(u_mip)).xyz;
 })"},
 
       std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 out vec4 fragColor;
 layout(binding = 0) uniform sampler2D u_roughness;
 layout(binding = 1) uniform sampler2D u_metallic;
@@ -1329,7 +1278,7 @@ discard;
 #pragma debug(on)
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
@@ -1993,7 +1942,7 @@ a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
 
       std::pair<std::string, const char*>{"noaa.frag", R"(#version 150
 out vec4 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 void main ()
 {
@@ -2005,7 +1954,7 @@ a_color = tmpvar_1;
 
       std::pair<std::string, const char*>{"fxaa.frag", R"(#version 150 core
 out vec4 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 float luminance(in vec3 color)
 {
@@ -2496,7 +2445,7 @@ a_outColor = clamp(vec4(color.rgb,1), 0, 1);
       std::pair<std::string, const char*>{"drawQuads.vert", R"(#version 330 core
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec2 a_TexCoords;
-out vec2 v_texCoords;
+noperspective out vec2 v_texCoords;
 void main()
 {
 v_texCoords = a_TexCoords;
@@ -2505,7 +2454,7 @@ gl_Position = vec4(a_Pos, 1.0);
 
       std::pair<std::string, const char*>{"drawDepth.frag", R"(#version 150
 out vec4 outColor;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_depth;
 void main ()
 {
@@ -8548,7 +8497,7 @@ namespace gl3d
 		
 		glGenTextures(1, &noiseTexture);
 		glBindTexture(GL_TEXTURE_2D, noiseTexture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0][0]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -8734,6 +8683,8 @@ namespace gl3d
 				mips = i;
 			}
 		}
+
+		//mips = 3;
 
 		if (currentDimensions.x != w || currentDimensions.y != h
 			|| currentMips != mips) 

@@ -1,6 +1,6 @@
 #version 150
 out vec4 a_color;
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
 void main ()
 {

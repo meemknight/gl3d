@@ -3,7 +3,7 @@
 //layout(location = 0) out vec4 outColor;
 out vec4 outColor;
 
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 
 
 uniform sampler2D u_depth;

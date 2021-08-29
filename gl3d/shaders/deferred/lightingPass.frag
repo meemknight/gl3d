@@ -6,7 +6,7 @@
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
 
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 
 
 uniform sampler2D u_albedo;

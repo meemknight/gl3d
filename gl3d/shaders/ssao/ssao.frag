@@ -1,8 +1,8 @@
 #version 330 core
 
-out float fragCoord;
+out float fragColor;
 
-in vec2 v_texCoords;
+noperspective in highp vec2 v_texCoords;
 
 uniform sampler2D u_gPosition;
 uniform sampler2D u_gNormal;
@@ -25,14 +25,15 @@ layout(std140) uniform u_SSAODATA
 
 void main()
 {
-	vec2 screenSize = textureSize(u_gPosition, 0);
+	vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
-
+	vec2 noisePos = v_texCoords * noiseScale;
 
 	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
 	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
-	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * texture(u_gNormal, v_texCoords).rgb);
-	vec3 randomVec = texture(u_texNoise, v_texCoords * noiseScale).xyz; 
+	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
+		normalize(texture(u_gNormal, v_texCoords).xyz));
+	vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
 
 	vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));
 	vec3 bitangent = cross(normal, tangent);
@@ -70,9 +71,10 @@ void main()
 
 	occlusion = 1.0 - (occlusion / kernelSize);
 
-	fragCoord = occlusion;
+	fragColor = occlusion;
 
-	//fragCoord = normal.z;
-
+	//fragColor = v_texCoords.y;
+	//fragColor = normal.z;
+	//fragColor = sqrt(abs(randomVec.x));
 
 }

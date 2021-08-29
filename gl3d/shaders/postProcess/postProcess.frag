@@ -3,7 +3,7 @@
 //layout (location = 0) out vec4 a_color;
 out vec4 a_color;
 
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
@@ -113,6 +113,7 @@ void main()
 	//gamma correction
 	a_color.rgb = pow(a_color.rgb, vec3(1.0/2.2));
 
+	//a_color.rgb = vec3(ssaof);
 
 	a_color.a = color.a;
 }

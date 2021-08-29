@@ -1,6 +1,6 @@
 #version 150 core
 
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 
 uniform sampler2D u_toBlurcolorInput;
 

@@ -1,5 +1,5 @@
 #version 150
-in vec2 v_texCoords;
+noperspective in vec2 v_texCoords;
 uniform sampler2D u_toBlurcolorInput;
 out vec3 fragColor;
 uniform bool u_horizontal;

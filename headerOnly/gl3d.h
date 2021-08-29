@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-08-28
+//built on 2021-08-29
 ////////////////////////////////////////////////
 
 
@@ -2622,12 +2622,12 @@ namespace gl3d
 			void create(int w, int h);
 			void resize(int w, int h);
 
-			static constexpr int timeSamplesCount = 15;
+			static constexpr int timeSamplesCount = 20;
 			float msSampled[timeSamplesCount] = {};
 			int timeSample = 0;
 
 			float stepDownSecTarget = 17.f;
-			float stepUpSecTarget = 13.f;
+			float stepUpSecTarget = 12.f;
 
 			glm::ivec2 currentDimensions = {};
 			float rezRatio = 1.f;
