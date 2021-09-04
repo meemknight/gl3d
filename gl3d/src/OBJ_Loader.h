@@ -499,15 +499,29 @@ namespace objl
 		bool LoadFile(std::string Path)
 		{
 			// If the file is not an .obj file return false
-			if (Path.substr(Path.size() - 4, 4) != ".obj")
-				return false;
+			if (Path.substr(Path.size() - 4, 4) == ".obj")
+			{
+				return loadObj(Path);
+			}
+			else
+			{
+				std::cout << "3D model format not supported: " << Path << "\n"; //todo proper log
+				return 0;
+			}
+				
 
+
+		}
+
+		bool loadObj(const std::string &Path)
+		{
 
 			std::ifstream file(Path);
 
 			if (!file.is_open())
 				return false;
 
+			//todo delete materials or make sure you can't load over things
 			LoadedMeshes.clear();
 			LoadedVertices.clear();
 			LoadedIndices.clear();
@@ -526,15 +540,15 @@ namespace objl
 
 			Mesh tempMesh;
 
-			#ifdef OBJL_CONSOLE_OUTPUT
+		#ifdef OBJL_CONSOLE_OUTPUT
 			const unsigned int outputEveryNth = 1000;
 			unsigned int outputIndicator = outputEveryNth;
-			#endif
+		#endif
 
 			std::string curline;
 			while (std::getline(file, curline))
 			{
-				#ifdef OBJL_CONSOLE_OUTPUT
+			#ifdef OBJL_CONSOLE_OUTPUT
 				if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
 				{
 					if (!meshname.empty())
@@ -548,7 +562,7 @@ namespace objl
 							<< (!MeshMatNames.empty() ? "\t| material: " + MeshMatNames.back() : "");
 					}
 				}
-				#endif
+			#endif
 
 				// Generate a Mesh Object or Prepare for an object to be created
 				if (algorithm::firstToken(curline) == "o" || algorithm::firstToken(curline) == "g" || curline[0] == 'g')
@@ -598,10 +612,10 @@ namespace objl
 							}
 						}
 					}
-					#ifdef OBJL_CONSOLE_OUTPUT
+				#ifdef OBJL_CONSOLE_OUTPUT
 					std::cout << std::endl;
 					outputIndicator = 0;
-					#endif
+				#endif
 				}
 				// Generate a Vertex Position
 				if (algorithm::firstToken(curline) == "v")
@@ -683,7 +697,8 @@ namespace objl
 						tempMesh = Mesh(Vertices, Indices);
 						tempMesh.MeshName = meshname;
 						int i = 2;
-						while(1) {
+						while (1)
+						{
 							tempMesh.MeshName = meshname + "_" + std::to_string(i);
 
 							for (auto &m : LoadedMeshes)
@@ -700,9 +715,9 @@ namespace objl
 						Indices.clear();
 					}
 
-					#ifdef OBJL_CONSOLE_OUTPUT
+				#ifdef OBJL_CONSOLE_OUTPUT
 					outputIndicator = 0;
-					#endif
+				#endif
 				}
 				// Load Materials
 				if (algorithm::firstToken(curline) == "mtllib")
@@ -726,18 +741,18 @@ namespace objl
 
 					pathtomat += algorithm::tail(curline);
 
-					#ifdef OBJL_CONSOLE_OUTPUT
+				#ifdef OBJL_CONSOLE_OUTPUT
 					std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
-					#endif
+				#endif
 
 					// Load Materials
 					LoadMaterials(pathtomat);
 				}
 			}
 
-			#ifdef OBJL_CONSOLE_OUTPUT
+		#ifdef OBJL_CONSOLE_OUTPUT
 			std::cout << std::endl;
-			#endif
+		#endif
 
 			// Deal with last mesh
 
