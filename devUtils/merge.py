@@ -4,7 +4,7 @@ from datetime import date
 cppFiles = ["Core", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
-headerFiles = ["Core", "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
+headerFiles = ["Core", "json", "stb_image_write", "tiny_gltf", "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
 
@@ -97,18 +97,40 @@ finalCppFile.write("\n")
 finalCppFile.write("""#include \"gl3d.h\"""")
 finalCppFile.write("\n\n")
 
+finalCppFile.write("""
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
+#define TINYGLTF_NO_INCLUDE_JSON
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE  
+""")
+
+headerOnlyFiles = ["json.h", "stb_image_write.h", "tiny_gltf.h"]
+
+for i in headerOnlyFiles:
+    f = open(os.path.join("gl3d", "src", i))
+    content = f.read()
+    for j in headerFiles:
+        content = content.replace(f"#include <{j}.h>","")
+        content = content.replace(f"#include<{j}.h>","")
+        content = content.replace(f"#include \"{j}.h\"","")
+        content = content.replace(f"#include\"{j}.h\"","")
+    finalCppFile.write(content)
+    finalCppFile.write("\n\n")
+    f.close()
 
 for i in cppFiles:
     f = open(os.path.join("gl3d", "src", i + ".cpp"))
 
     content = f.read()
 
-#todo regex
     for j in headerFiles:
         content = content.replace(f"#include <{j}.h>","")
         content = content.replace(f"#include<{j}.h>","")
         content = content.replace(f"#include \"{j}.h\"","")
         content = content.replace(f"#include\"{j}.h\"","")
+
+  
 
     if(i == "Shader"):
         newContent = content.split("\n")

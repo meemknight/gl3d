@@ -123,3 +123,12 @@ namespace gl3d
 
 
 };
+
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
+#define TINYGLTF_NO_INCLUDE_JSON
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE  
+#include "json.h"
+#include "stb_image_write.h"
+#include "tiny_gltf.h"

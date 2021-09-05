@@ -404,10 +404,18 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
+	//for (int i = 0; i < 100; i++)
+	//{
+	//	auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
+	//	renderer.deleteModel(levelModel);
+	//}
+
+	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
+	auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
 	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
-	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");

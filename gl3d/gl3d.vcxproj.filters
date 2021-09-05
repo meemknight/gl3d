@@ -65,6 +65,15 @@
     <ClInclude Include="src\OBJ_Loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\tiny_gltf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\json.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stb_image_write.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\color.frag" />

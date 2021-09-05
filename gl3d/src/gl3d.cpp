@@ -788,11 +788,21 @@ namespace gl3d
 				int index = i;
 				//TextureDataForModel textureData = {};
 
-				
 				auto &mesh = model.loader.LoadedMeshes[index];
-				gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-					 (float *)&mesh.Vertices[0],
-					mesh.Indices.size() * 4, &mesh.Indices[0]);
+				if (mesh.Indices.empty())
+				{
+					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
+						(float *)&mesh.Vertices[0],
+						0, nullptr);
+				}
+				else
+				{
+					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
+						(float *)&mesh.Vertices[0],
+						mesh.Indices.size() * 4, &mesh.Indices[0]);
+				}
+
+				
 
 
 				if(model.loader.LoadedMeshes[index].materialIndex > -1)
@@ -842,7 +852,7 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::deleteModel(Model &m)
+	void Renderer3D::deleteModel(Model &m) //todo delete created materials
 	{
 		auto pos = internal.getModelIndex(m);
 		if (pos < 0)
@@ -890,6 +900,10 @@ namespace gl3d
 			if(index < internal.graphicModels[pos].models.size())
 			{
 				return internal.graphicModels[pos].models[pos].name;
+			}
+			else
+			{
+				return "";
 			}
 		}
 		else

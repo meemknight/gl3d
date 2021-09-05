@@ -107,7 +107,8 @@
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -134,7 +135,8 @@
       <Profile>true</Profile>
     </Link>
     <PreBuildEvent>
-      <Command>py $(SolutionDir)\devUtils\merge.py</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -195,6 +197,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\json.h" />
     <ClInclude Include="src\OBJ_Loader.h" />
     <ClInclude Include="profiler.h" />
     <ClInclude Include="src\gl3d.h" />
@@ -202,7 +205,9 @@
     <ClInclude Include="src\GraphicModel.h" />
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Shader.h" />
+    <ClInclude Include="src\stb_image_write.h" />
     <ClInclude Include="src\Texture.h" />
+    <ClInclude Include="src\tiny_gltf.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\drawDepth.frag" />
