@@ -105,6 +105,8 @@ namespace gl3d
 
 	void LoadedModelData::load(const char *file, float scale)
 	{
+		stbi_set_flip_vertically_on_load(false);
+
 		loader.LoadFile(file);
 
 		//parse path

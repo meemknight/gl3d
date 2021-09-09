@@ -1,0 +1,155 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "antique_katana_01"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "antique_katana_01",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "antique_katana_01_nor_gl",
+      "uri": "textures/antique_katana_01_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "antique_katana_01_diff",
+      "uri": "textures/antique_katana_01_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "antique_katana_01_metal-antique_katana_01_rough",
+      "uri": "textures/antique_katana_01_arm_1k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 5685,
+      "max": [
+        0.04668637365102768,
+        0.6963200569152832,
+        0.04668637365102768
+      ],
+      "min": [
+        -0.04668637365102768,
+        -0.3066237270832062,
+        -0.04668637365102768
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 5685,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 5685,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 20010,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 68220,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "byteLength": 68220,
+      "byteOffset": 68220
+    },
+    {
+      "buffer": 0,
+      "byteLength": 45480,
+      "byteOffset": 136440
+    },
+    {
+      "buffer": 0,
+      "byteLength": 40020,
+      "byteOffset": 181920
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 221940,
+      "uri": "antique_katana_01.bin"
+    }
+  ]
+}

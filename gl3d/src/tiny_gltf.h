@@ -51,6 +51,7 @@
 //
 #ifndef TINY_GLTF_H_
 #define TINY_GLTF_H_
+#define TINYGLTF_USE_CPP14
 
 #include <array>
 #include <cassert>
@@ -853,8 +854,8 @@ namespace tinygltf
 
 		PbrMetallicRoughness()
 			: baseColorFactor(std::vector<double>{1.0, 1.0, 1.0, 1.0}),
-			metallicFactor(1.0),
-			roughnessFactor(1.0)
+			metallicFactor(0),
+			roughnessFactor(0.5)
 		{
 		}
 		DEFAULT_METHODS(PbrMetallicRoughness)

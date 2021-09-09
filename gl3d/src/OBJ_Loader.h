@@ -162,6 +162,15 @@ namespace objl
 		Vector2 TextureCoordinate;
 	};
 
+	struct LoadedTexture
+	{
+		std::vector<unsigned char > data;
+		int w = 0;
+		int h = 0;
+		int components = 0;
+
+	};
+
 	struct Material
 	{
 
@@ -186,11 +195,12 @@ namespace objl
 		// roughness
 		float roughness = 0.5;
 		//ambient factor for pbr
-		float ao = 1;
+		float ao = 1.f;
 		// Ambient Texture Map
 		std::string map_Ka;
 		// Diffuse Texture Map
 		std::string map_Kd;
+		LoadedTexture loadedDiffuse;
 		// Specular Texture Map
 		//std::string map_Ks;
 		// Specularity Map
@@ -201,6 +211,8 @@ namespace objl
 		//std::string map_bump;
 		// Normal Map
 		std::string map_Kn;
+		LoadedTexture loadedNormal;
+
 		//Roughness Map
 		std::string map_Pr;
 		//AO map
@@ -209,10 +221,14 @@ namespace objl
 		std::string map_Pm;
 		//ORM map
 		std::string map_ORM;
+		LoadedTexture loadedORM;
+
 		//RMA map
 		std::string map_RMA;
 		//Emissive map
 		std::string map_emissive;
+		LoadedTexture loadedEmissive;
+
 	};
 
 	// Structure: Mesh
@@ -520,9 +536,9 @@ namespace objl
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
 
-
 			std::string err;
 			std::string warn;
+
 
 			bool ret;
 			if (glb)
@@ -552,6 +568,7 @@ namespace objl
 				return 0;
 			}
 
+			int count = 0;
 			LoadedMaterials.resize(model.materials.size());
 			for (int i = 0; i < model.materials.size(); i++)
 			{
@@ -590,26 +607,68 @@ namespace objl
 					return "";
 				};
 
-
-				auto setTexture = [&](int index)
+				auto setTexture = [&](int index, LoadedTexture *t, bool checkData)->std::string
 				{
 					if (index != -1)
 					{
-						if (model.images[index].uri.empty())
+						if (t) 
 						{
-							std::string ret = model.images[index].name;
-							ret += "." + MimeToExt(model.images[index].mimeType);
-							return ret;
+							if (checkData) 
+							{
+								bool isData = false;
+								t->data.resize(4 * model.images[index].width * model.images[index].height);
+								for (int i = 0; i < model.images[index].width * model.images[index].height; i++)
+								{
+									auto r = model.images[index].image[i * 4 + 0];
+									auto g = model.images[index].image[i * 4 + 1];
+									auto b = model.images[index].image[i * 4 + 2];
+									auto a = model.images[index].image[i * 4 + 3];
+
+									if (r != 0 || g != 0 || b != 0) { isData = true; }
+
+									t->data[i * 4 + 0] = r;
+									t->data[i * 4 + 1] = g;
+									t->data[i * 4 + 2] = b;
+									t->data[i * 4 + 3] = a;
+
+								}
+
+								if (isData)
+								{
+									t->w = model.images[index].width;
+									t->h = model.images[index].height;
+									t->components = model.images[index].component; //todo check component
+								}
+								else
+								{
+									t->data.clear();
+								}
+							}
+							else
+							{
+								t->w = model.images[index].width;
+								t->h = model.images[index].height;
+								t->components = model.images[index].component; //todo check component
+								t->data = model.images[index].image; //
+							}
 
 						}
-						else 
-						{
-							std::string ret = 
-								std::string(model.images[index].uri.begin()+2, model.images[index].uri.end());
-							return ret;
-						}
 
-						
+						//if (model.images[index].uri.empty())
+						//{
+						//	//std::string ret = model.images[index].name;
+						//	//ret += "." + MimeToExt(model.images[index].mimeType);
+						//	//return ret;
+						//	return "";
+						//}
+						//else 
+						//{
+						//	//std::string ret = 
+						//	//	std::string(model.images[index].uri.begin()+2, model.images[index].uri.end());
+						//	//return ret;
+						//	return "";
+						//}
+						return "";
 
 					}
 					else 
@@ -620,31 +679,44 @@ namespace objl
 				};
 
 
-				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index);
-				LoadedMaterials[i].map_Kn = setTexture(mat.normalTexture.index);
-				LoadedMaterials[i].map_emissive = setTexture(mat.emissiveTexture.index);
-				LoadedMaterials[i].map_Ka = setTexture(mat.occlusionTexture.index);
-				LoadedMaterials[i].map_emissive = setTexture(mat.emissiveTexture.index);
-				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness. );
-				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.index);
+				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index, 
+					&LoadedMaterials[i].loadedDiffuse, false);
+				
+				LoadedMaterials[i].map_Kn = setTexture(mat.normalTexture.index,
+					&LoadedMaterials[i].loadedNormal, false);
+
+				LoadedMaterials[i].map_emissive = setTexture(mat.emissiveTexture.index,
+					&LoadedMaterials[i].loadedEmissive, false);
+
+				//LoadedMaterials[i].map_Ka = setTexture(mat.occlusionTexture.index);
+				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
+				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
+				LoadedMaterials[i].map_ORM = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
+					&LoadedMaterials[i].loadedORM, true);
 
 
 			}
 
 			if (!model.meshes.empty()) 
 			{
+				int meshesCount = 0;
+				for (int j = 0; j < model.meshes.size(); j++)
+				{
+					meshesCount += model.meshes[j].primitives.size();
+				}
+
 				LoadedMeshes.reserve(model.meshes.size());
 
 				for (int j = 0; j < model.meshes.size(); j++)
 				{
-					Mesh m;
-					m.MeshName = model.meshes[j].name;
-					m.materialIndex = model.meshes[j].primitives[0].material;
-
+					
 					for (int i = 0; i < model.meshes[j].primitives.size(); i++)
 					{
+						Mesh m;
+						m.MeshName = model.meshes[j].name;
+						m.materialIndex = model.meshes[j].primitives[i].material;
+
 						auto &p = model.meshes[j].primitives[i];
-						//todo check for multiple primitives
 
 						tinygltf::Accessor &accessor = model.accessors[p.attributes["POSITION"]];
 						tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
@@ -664,6 +736,8 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
+						//todo support models without texcoords
+
 						for (size_t i = 0; i < accessor.count; ++i)
 						{
 							// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
@@ -675,8 +749,8 @@ namespace objl
 							float ny = normals[i * 3 + 1];// y
 							float nz = normals[i * 3 + 2];// z
 
-							float s = tex[i * 2 + 0];// x
-							float t = tex[i * 2 + 1];// y
+							float s = tex[i * 2 + 0];// s
+							float t = tex[i * 2 + 1];// t
 
 							Vertex v;
 							v.Position = Vector3(x, y, z);
@@ -689,8 +763,6 @@ namespace objl
 						tinygltf::Accessor &accessorIndices = model.accessors[p.indices];
 						tinygltf::BufferView &bufferViewInd = model.bufferViews[accessorIndices.bufferView];
 						tinygltf::Buffer &bufferInd = model.buffers[bufferViewInd.buffer];	
-
-						//todo check for multiple primitives
 
 						for (int i = 0; i < accessorIndices.count; i++) 
 						{
@@ -733,10 +805,10 @@ namespace objl
 								
 						}
 
+						LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 
 					}
 
-					LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 				}
 
 			}

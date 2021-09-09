@@ -1,0 +1,374 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "wine_barrel_01_Lid"
+    },
+    {
+      "mesh": 1,
+      "name": "wine_barrel_01_bung"
+    },
+    {
+      "mesh": 2,
+      "name": "wine_barrel_01"
+    },
+    {
+      "mesh": 3,
+      "name": "wine_barrel_01_base"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "wine_barrel_01",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "DiameterSmall.012",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "Cylinder.014",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "Plane.006",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 8,
+            "NORMAL": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "DiameterSmall.004",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 12,
+            "NORMAL": 13,
+            "TEXCOORD_0": 14
+          },
+          "indices": 15,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "wine_barrel_01_nor_gl",
+      "uri": "textures/wine_barrel_01_nor_gl_2k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "wine_barrel_01_diff",
+      "uri": "textures/wine_barrel_01_diff_2k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "wine_barrel_01_metal-wine_barrel_01_rough",
+      "uri": "textures/wine_barrel_01_arm_2k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 288,
+      "max": [
+        0.28936314582824707,
+        0.8373162150382996,
+        0.2894185185432434
+      ],
+      "min": [
+        -0.2893601655960083,
+        0.8220306038856506,
+        -0.2894226908683777
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 288,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 288,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 672,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 113,
+      "max": [
+        0.028619397431612015,
+        0.46249890327453613,
+        0.38508278131484985
+      ],
+      "min": [
+        -0.02382810413837433,
+        0.41005033254623413,
+        0.3429100811481476
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 113,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 113,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5123,
+      "count": 504,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5126,
+      "count": 9342,
+      "max": [
+        0.3709522783756256,
+        0.8719475269317627,
+        0.37095266580581665
+      ],
+      "min": [
+        -0.37094923853874207,
+        0.0006841719150543213,
+        -0.37095293402671814
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 9342,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 9342,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5123,
+      "count": 30612,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5126,
+      "count": 288,
+      "max": [
+        0.28936323523521423,
+        0.050518572330474854,
+        0.2894185185432434
+      ],
+      "min": [
+        -0.2893602252006531,
+        0.03523290157318115,
+        -0.28942275047302246
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 13,
+      "componentType": 5126,
+      "count": 288,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 14,
+      "componentType": 5126,
+      "count": 288,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 15,
+      "componentType": 5123,
+      "count": 672,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 3456,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "byteLength": 3456,
+      "byteOffset": 3456
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 6912
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1344,
+      "byteOffset": 9216
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1356,
+      "byteOffset": 10560
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1356,
+      "byteOffset": 11916
+    },
+    {
+      "buffer": 0,
+      "byteLength": 904,
+      "byteOffset": 13272
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1008,
+      "byteOffset": 14176
+    },
+    {
+      "buffer": 0,
+      "byteLength": 112104,
+      "byteOffset": 15184
+    },
+    {
+      "buffer": 0,
+      "byteLength": 112104,
+      "byteOffset": 127288
+    },
+    {
+      "buffer": 0,
+      "byteLength": 74736,
+      "byteOffset": 239392
+    },
+    {
+      "buffer": 0,
+      "byteLength": 61224,
+      "byteOffset": 314128
+    },
+    {
+      "buffer": 0,
+      "byteLength": 3456,
+      "byteOffset": 375352
+    },
+    {
+      "buffer": 0,
+      "byteLength": 3456,
+      "byteOffset": 378808
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 382264
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1344,
+      "byteOffset": 384568
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 385912,
+      "uri": "wine_barrel_01.bin"
+    }
+  ]
+}

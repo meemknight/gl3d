@@ -26,8 +26,9 @@ How to compile the repo (Visual studio 2019, Windows)
 
 Features and todos:
 
-- [x] Loading .obj files with materials and textures
-- [ ] Loading .mtl files separately
+- [x] Loading .obj Models (with materials)
+- [ ] Loading .mtl Materials (just the materials)
+- [x] Loading .gltf / .glb Models (with materials)
 ---
 - [x] Normal mapping (TBN calculated per fragment)
 - [x] Phisically based rendering
@@ -39,7 +40,7 @@ Features and todos:
 - [ ] Environment probes
 ---
 - [x] Deferred rendering
-- [ ] Optimize lights 
+- [ ] Optimize lights (less calculations for many lights)
 ---
 - [x] Gama correction
 - [x] HDR, ACES tonemapping

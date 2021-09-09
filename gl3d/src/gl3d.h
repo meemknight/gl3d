@@ -88,6 +88,7 @@ namespace gl3d
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
 		Texture loadTexture(std::string path);
+		Texture loadTextureFromMemory(objl::LoadedTexture &t);
 		GLuint getTextureOpenglId(Texture& t);
 		bool isTexture(Texture& t);
 
