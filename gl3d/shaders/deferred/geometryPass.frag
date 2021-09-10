@@ -42,7 +42,6 @@ readonly layout(std140) buffer u_material
 };
 
 
-
 float PI = 3.14159265359;
 
 //https://gamedev.stackexchange.com/questions/22204/from-normal-to-rotation-matrix#:~:text=Therefore%2C%20if%20you%20want%20to,the%20first%20and%20second%20columns.

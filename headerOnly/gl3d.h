@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-05
+//built on 2021-09-09
 ////////////////////////////////////////////////
 
 
@@ -22412,6 +22412,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 #ifndef TINY_GLTF_H_
 #define TINY_GLTF_H_
+#define TINYGLTF_USE_CPP14
 
 #include <array>
 #include <cassert>
@@ -23214,8 +23215,8 @@ namespace tinygltf
 
 		PbrMetallicRoughness()
 			: baseColorFactor(std::vector<double>{1.0, 1.0, 1.0, 1.0}),
-			metallicFactor(1.0),
-			roughnessFactor(1.0)
+			metallicFactor(0),
+			roughnessFactor(0.5)
 		{
 		}
 		DEFAULT_METHODS(PbrMetallicRoughness)
@@ -31458,65 +31459,73 @@ namespace objl
 		Vector2 TextureCoordinate;
 	};
 
+	struct LoadedTexture
+	{
+		std::vector<unsigned char > data;
+		int w = 0;
+		int h = 0;
+		int components = 0;
+
+	};
+
 	struct Material
 	{
-		Material()
-		{
-			name;
-			Ns = 0.0f;
-			Ni = 0.0f;
-			d = 0.0f;
-			illum = 0;
-		}
 
 		// Material Name
-		std::string name;
+		std::string name = "";
 		// Ambient Color
 		Vector3 Ka;
 		// Diffuse Color
 		Vector3 Kd = Vector3{ 1,1,1 };
 		// Specular Color
-		Vector3 Ks;
+		//Vector3 Ks;
 		// Specular Exponent
-		float Ns;
+		//float Ns;
 		// Optical Density
-		float Ni;
+		//float Ni;
 		// Dissolve
-		float d;
+		//float d;
 		// Illumination
-		int illum;
+		//int illum;
 		// metallic
 		float metallic = 0;
 		// roughness
 		float roughness = 0.5;
 		//ambient factor for pbr
-		float ao = 0.5;
+		float ao = 1.f;
 		// Ambient Texture Map
 		std::string map_Ka;
 		// Diffuse Texture Map
 		std::string map_Kd;
+		LoadedTexture loadedDiffuse;
 		// Specular Texture Map
-		std::string map_Ks;
+		//std::string map_Ks;
 		// Specularity Map
-		std::string map_Ns;
+		//std::string map_Ns;
 		// Alpha Texture Map
-		std::string map_d;
+		//std::string map_d; //todo implement
 		// Bump Map
-		std::string map_bump;
+		//std::string map_bump;
 		// Normal Map
 		std::string map_Kn;
+		LoadedTexture loadedNormal;
+
 		//Roughness Map
 		std::string map_Pr;
 		//AO map
-		std::string map_Ao;
+		//std::string map_Ao;
 		//matallic map
 		std::string map_Pm;
 		//ORM map
 		std::string map_ORM;
+		LoadedTexture loadedORM;
+
 		//RMA map
 		std::string map_RMA;
 		//Emissive map
 		std::string map_emissive;
+		LoadedTexture loadedEmissive;
+
 	};
 
 	// Structure: Mesh
@@ -31544,7 +31553,7 @@ namespace objl
 		std::vector<unsigned int> Indices;
 
 		// Material
-		Material MeshMaterial;
+		//Material MeshMaterial;
 		int materialIndex = -1;
 	};
 
@@ -31823,8 +31832,10 @@ namespace objl
 
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
+
 			std::string err;
 			std::string warn;
+
 
 			bool ret;
 			if (glb)
@@ -31854,6 +31865,7 @@ namespace objl
 				return 0;
 			}
 
+			int count = 0;
 			LoadedMaterials.resize(model.materials.size());
 			for (int i = 0; i < model.materials.size(); i++)
 			{
@@ -31869,24 +31881,140 @@ namespace objl
 				LoadedMaterials[i].metallic = mat.pbrMetallicRoughness.metallicFactor;
 				LoadedMaterials[i].roughness = mat.pbrMetallicRoughness.roughnessFactor;
 				
-				//LoadedMaterials[i].ao = mat.alphaCutoff;
+
+				auto MimeToExt = [](const std::string &mimeType) -> std::string
+				{
+					if (mimeType == "image/jpeg")
+					{
+						return "jpg";
+					}
+					else if (mimeType == "image/png")
+					{
+						return "png";
+					}
+					else if (mimeType == "image/bmp")
+					{
+						return "bmp";
+					}
+					else if (mimeType == "image/gif")
+					{
+						return "gif";
+					}
+
+					return "";
+				};
+
+				auto setTexture = [&](int index, LoadedTexture *t, bool checkData)->std::string
+				{
+					if (index != -1)
+					{
+						if (t) 
+						{
+							if (checkData) 
+							{
+								bool isData = false;
+								t->data.resize(4 * model.images[index].width * model.images[index].height);
+								for (int i = 0; i < model.images[index].width * model.images[index].height; i++)
+								{
+									auto r = model.images[index].image[i * 4 + 0];
+									auto g = model.images[index].image[i * 4 + 1];
+									auto b = model.images[index].image[i * 4 + 2];
+									auto a = model.images[index].image[i * 4 + 3];
+
+									if (r != 0 || g != 0 || b != 0) { isData = true; }
+
+									t->data[i * 4 + 0] = r;
+									t->data[i * 4 + 1] = g;
+									t->data[i * 4 + 2] = b;
+									t->data[i * 4 + 3] = a;
+
+								}
+
+								if (isData)
+								{
+									t->w = model.images[index].width;
+									t->h = model.images[index].height;
+									t->components = model.images[index].component; //todo check component
+								}
+								else
+								{
+									t->data.clear();
+								}
+							}
+							else
+							{
+								t->w = model.images[index].width;
+								t->h = model.images[index].height;
+								t->components = model.images[index].component; //todo check component
+								t->data = model.images[index].image; //
+							}
+
+						}
+
+						//if (model.images[index].uri.empty())
+						//{
+						//	//std::string ret = model.images[index].name;
+						//	//ret += "." + MimeToExt(model.images[index].mimeType);
+						//	//return ret;
+						//	return "";
+						//}
+						//else 
+						//{
+						//	//std::string ret = 
+						//	//	std::string(model.images[index].uri.begin()+2, model.images[index].uri.end());
+						//	//return ret;
+						//	return "";
+						//}
+						return "";
+
+					}
+					else 
+					{
+						return std::string();
+					}
+
+				};
+
+
+				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index, 
+					&LoadedMaterials[i].loadedDiffuse, false);
+				
+				LoadedMaterials[i].map_Kn = setTexture(mat.normalTexture.index,
+					&LoadedMaterials[i].loadedNormal, false);
+
+				LoadedMaterials[i].map_emissive = setTexture(mat.emissiveTexture.index,
+					&LoadedMaterials[i].loadedEmissive, false);
+
+				//LoadedMaterials[i].map_Ka = setTexture(mat.occlusionTexture.index);
+				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
+				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
+				LoadedMaterials[i].map_ORM = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
+					&LoadedMaterials[i].loadedORM, true);
+
 
 			}
 
 			if (!model.meshes.empty()) 
 			{
+				int meshesCount = 0;
+				for (int j = 0; j < model.meshes.size(); j++)
+				{
+					meshesCount += model.meshes[j].primitives.size();
+				}
+
 				LoadedMeshes.reserve(model.meshes.size());
 
 				for (int j = 0; j < model.meshes.size(); j++)
 				{
-					Mesh m;
-					m.MeshName = model.meshes[j].name;
-					m.materialIndex = model.meshes[j].primitives[0].material;
-
+					
 					for (int i = 0; i < model.meshes[j].primitives.size(); i++)
 					{
+						Mesh m;
+						m.MeshName = model.meshes[j].name;
+						m.materialIndex = model.meshes[j].primitives[i].material;
+
 						auto &p = model.meshes[j].primitives[i];
-							
+
 						tinygltf::Accessor &accessor = model.accessors[p.attributes["POSITION"]];
 						tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
 						tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
@@ -31905,6 +32033,8 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
+						//todo support models without texcoords
+
 						for (size_t i = 0; i < accessor.count; ++i)
 						{
 							// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
@@ -31916,8 +32046,8 @@ namespace objl
 							float ny = normals[i * 3 + 1];// y
 							float nz = normals[i * 3 + 2];// z
 
-							float s = tex[i * 2 + 0];// x
-							float t = tex[i * 2 + 1];// y
+							float s = tex[i * 2 + 0];// s
+							float t = tex[i * 2 + 1];// t
 
 							Vertex v;
 							v.Position = Vector3(x, y, z);
@@ -31930,8 +32060,6 @@ namespace objl
 						tinygltf::Accessor &accessorIndices = model.accessors[p.indices];
 						tinygltf::BufferView &bufferViewInd = model.bufferViews[accessorIndices.bufferView];
 						tinygltf::Buffer &bufferInd = model.buffers[bufferViewInd.buffer];	
-
-						//todo check for multiple primitives
 
 						for (int i = 0; i < accessorIndices.count; i++) 
 						{
@@ -31974,10 +32102,10 @@ namespace objl
 								
 						}
 
+						LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 
 					}
 
-					LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 				}
 
 			}
@@ -32253,7 +32381,7 @@ namespace objl
 				{
 					if (LoadedMaterials[j].name == matname)
 					{
-						LoadedMeshes[i].MeshMaterial = LoadedMaterials[j];
+						//LoadedMeshes[i].MeshMaterial = LoadedMaterials[j];
 						LoadedMeshes[i].materialIndex = j;
 						break;
 					}
@@ -32591,8 +32719,10 @@ namespace objl
 			std::string curline;
 			while (std::getline(file, curline))
 			{
+				auto firstToken = algorithm::firstToken(curline);
+
 				// new material and material name
-				if (algorithm::firstToken(curline) == "newmtl")
+				if (firstToken == "newmtl")
 				{
 					if (!listening)
 					{
@@ -32629,7 +32759,7 @@ namespace objl
 				}
 				else
 				// Ambient Color
-				if (algorithm::firstToken(curline) == "Ka")
+				if (firstToken == "Ka")
 				{
 					std::vector<std::string> temp;
 					algorithm::split2(algorithm::tail(curline), temp, ' ');
@@ -32643,7 +32773,7 @@ namespace objl
 				}
 				else
 				// Diffuse Color
-				if (algorithm::firstToken(curline) == "Kd")
+				if (firstToken == "Kd")
 				{
 					std::vector<std::string> temp;
 					algorithm::split2(algorithm::tail(curline), temp, ' ');
@@ -32657,127 +32787,127 @@ namespace objl
 				}
 				else
 				// Specular Color
-				if (algorithm::firstToken(curline) == "Ks")
-				{
-					std::vector<std::string> temp;
-					algorithm::split2(algorithm::tail(curline), temp, ' ');
-
-					if (temp.size() != 3)
-						continue;
-
-					tempMaterial.Ks.X = std::stof(temp[0]);
-					tempMaterial.Ks.Y = std::stof(temp[1]);
-					tempMaterial.Ks.Z = std::stof(temp[2]);
-				}
-				else
+				//if (algorithm::firstToken(curline) == "Ks")
+				//{
+				//	std::vector<std::string> temp;
+				//	algorithm::split2(algorithm::tail(curline), temp, ' ');
+				//
+				//	if (temp.size() != 3)
+				//		continue;
+				//
+				//	tempMaterial.Ks.X = std::stof(temp[0]);
+				//	tempMaterial.Ks.Y = std::stof(temp[1]);
+				//	tempMaterial.Ks.Z = std::stof(temp[2]);
+				//}
+				//else
 				// Specular Exponent
-				if (algorithm::firstToken(curline) == "Ns")
-				{
-					tempMaterial.Ns = std::stof(algorithm::tail(curline));
-				}
-				else
+				//if (algorithm::firstToken(curline) == "Ns")
+				//{
+				//	tempMaterial.Ns = std::stof(algorithm::tail(curline));
+				//}
+				//else
 				// Optical Density
-				if (algorithm::firstToken(curline) == "Ni")
-				{
-					tempMaterial.Ni = std::stof(algorithm::tail(curline));
-				}
-				else
-				// Dissolve
-				if (algorithm::firstToken(curline) == "d")
-				{
-					tempMaterial.d = std::stof(algorithm::tail(curline));
-				}
-				else
-				// Illumination
-				if (algorithm::firstToken(curline) == "illum")
-				{
-					tempMaterial.illum = std::stoi(algorithm::tail(curline));
-				}
-				else
-				if (algorithm::firstToken(curline) == "Pm")
+				//if (algorithm::firstToken(curline) == "Ni")
+				//{
+				//	tempMaterial.Ni = std::stof(algorithm::tail(curline));
+				//}
+				//else
+				//// Dissolve
+				//if (algorithm::firstToken(curline) == "d")
+				//{
+				//	tempMaterial.d = std::stof(algorithm::tail(curline));
+				//}
+				//else
+				//// Illumination
+				//if (algorithm::firstToken(curline) == "illum")
+				//{
+				//	tempMaterial.illum = std::stoi(algorithm::tail(curline));
+				//}
+				//else
+				if (firstToken == "Pm")
 				{
 					tempMaterial.metallic = std::stoi(algorithm::tail(curline));
 				}
 				else
-				if (algorithm::firstToken(curline) == "Pr")
+				if (firstToken == "Pr")
 				{
 					tempMaterial.roughness = std::stoi(algorithm::tail(curline));
 				}
 				else
-				if (algorithm::firstToken(curline) == "Ao")
+				if (firstToken == "Ao")
 				{
 					tempMaterial.ao = std::stoi(algorithm::tail(curline));
 				}
 				else
 				// Ambient Texture Map
-				if (algorithm::firstToken(curline) == "map_Ka" ||
-					algorithm::firstToken(curline) == "map_Ao")
+				if (firstToken == "map_Ka" ||
+					firstToken == "map_Ao")
 				{
 					tempMaterial.map_Ka = algorithm::tail(curline);
 				}
 				else
 				// Diffuse Texture Map
-				if (algorithm::firstToken(curline) == "map_Kd")
+				if (firstToken == "map_Kd")
 				{
 					tempMaterial.map_Kd = algorithm::tail(curline);
 				}
 				else
 				// Specular Texture Map
-				if (algorithm::firstToken(curline) == "map_Ks")
-				{
-					tempMaterial.map_Ks = algorithm::tail(curline);
-				}
-				else
-				// Specular Hightlight Map
-				if (algorithm::firstToken(curline) == "map_Ns")
-				{
-					tempMaterial.map_Ns = algorithm::tail(curline);
-				}
-				else
+				//if (firstToken == "map_Ks")
+				//{
+				//	tempMaterial.map_Ks = algorithm::tail(curline);
+				//}
+				//else
+				//// Specular Hightlight Map
+				//if (firstToken == "map_Ns")
+				//{
+				//	tempMaterial.map_Ns = algorithm::tail(curline);
+				//}
+				//else
 				// Alpha Texture Map
-				if (algorithm::firstToken(curline) == "map_d")
-				{
-					tempMaterial.map_d = algorithm::tail(curline);
-				}
-				else
+				//if (firstToken == "map_d")
+				//{
+				//	tempMaterial.map_d = algorithm::tail(curline);
+				//}
+				//else
 				// Bump Map
-				if (algorithm::firstToken(curline) == "map_Bump" || algorithm::firstToken(curline) == "map_bump" || algorithm::firstToken(curline) == "bump")
-				{
-					tempMaterial.map_bump = algorithm::tail(curline);
-				}
-				else
+				//if (algorithm::firstToken(curline) == "map_Bump" || algorithm::firstToken(curline) == "map_bump" || algorithm::firstToken(curline) == "bump")
+				//{
+				//	tempMaterial.map_bump = algorithm::tail(curline);
+				//}
+				//else
 				// Normal Map
-				if (algorithm::firstToken(curline) == "map_Kn"
-					|| algorithm::firstToken(curline) == "norm"
-					||algorithm::firstToken(curline) == "Norm"
+				if (	firstToken == "map_Kn"
+					||	firstToken == "norm"
+					||	firstToken == "Norm"
 					)
 				{
 					tempMaterial.map_Kn = algorithm::tail(curline);
 				}
 				else
 				// Roughness Map
-				if (algorithm::firstToken(curline) == "map_Pr")
+				if (firstToken == "map_Pr")
 				{
 					tempMaterial.map_Pr = algorithm::tail(curline);
 				}
 				else
 				// Metallic Map
-				if (algorithm::firstToken(curline) == "map_Pm")
+				if (firstToken == "map_Pm")
 				{
 					tempMaterial.map_Pm = algorithm::tail(curline);
 				}
 				else
-				if (algorithm::firstToken(curline) == "map_ORM")
+				if (firstToken == "map_ORM")
 				{
 					tempMaterial.map_ORM = algorithm::tail(curline);
 				}
 				else
-				if (algorithm::firstToken(curline) == "map_RMA")
+				if (firstToken == "map_RMA")
 				{
 					tempMaterial.map_ORM = algorithm::tail(curline);
 				}
 				else
-				if (algorithm::firstToken(curline) == "map_emissive" || algorithm::firstToken(curline) == "map_Ke")
+				if (firstToken == "map_emissive" || firstToken == "map_Ke")
 				{
 					tempMaterial.map_emissive = algorithm::tail(curline);
 				}
@@ -32947,6 +33077,11 @@ namespace gl3d
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
+
+		GLuint u_jointTransforms = GL_INVALID_INDEX;
+		GLuint jointsBlockBuffer = 0;
+		GLint u_hasAnimations = -1;
+
 
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint pointLightsBlockBuffer = 0;
@@ -33477,7 +33612,6 @@ namespace gl3d
 		
 	#pragma region material
 		
-
 		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
@@ -33510,6 +33644,7 @@ namespace gl3d
 		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
 
 		Texture loadTexture(std::string path);
+		Texture loadTextureFromMemory(objl::LoadedTexture &t);
 		GLuint getTextureOpenglId(Texture& t);
 		bool isTexture(Texture& t);
 
@@ -33638,7 +33773,6 @@ namespace gl3d
 		void setSpotLightShadowSize(int size);
 
 	#pragma endregion
-
 
 	#pragma region Entity
 	

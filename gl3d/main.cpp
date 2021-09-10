@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -392,28 +392,17 @@ int main()
 		sizeof(cubeIndices), cubeIndices, true);
 	lightCubeModel.scale = glm::vec3(0.05);
 
-	//gl3d::GraphicModel cube;
-	//cube.loadFromComputedData(sizeof(cubePositionsNormals), cubePositionsNormals,
-	//	sizeof(cubeIndices), cubeIndices);
-	//cube.loadFromFile("resources/obj/sphere.obj");
-	//cube.loadFromFile("resources/other/barrel.obj");
-
-	
-	//gl3d::LoadedModelData barelModel("resources/other/barrel.obj", 0.1);
 
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	//for (int i = 0; i < 100; i++)
-	//{
-	//	auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
-	//	renderer.deleteModel(levelModel);
-	//}
+	
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
 	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
-	auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
+	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
+	auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);

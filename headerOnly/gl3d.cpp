@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-05
+//built on 2021-09-09
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -22218,6 +22218,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 #ifndef TINY_GLTF_H_
 #define TINY_GLTF_H_
+#define TINYGLTF_USE_CPP14
 
 #include <array>
 #include <cassert>
@@ -23020,8 +23021,8 @@ namespace tinygltf
 
 		PbrMetallicRoughness()
 			: baseColorFactor(std::vector<double>{1.0, 1.0, 1.0, 1.0}),
-			metallicFactor(1.0),
-			roughnessFactor(1.0)
+			metallicFactor(0),
+			roughnessFactor(0.5)
 		{
 		}
 		DEFAULT_METHODS(PbrMetallicRoughness)
@@ -32993,7 +32994,7 @@ a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
 a_outBloom = vec4(emissive.rgb, 1);
 })"},
 
-      std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 330
+      std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 430
 #pragma debug(on)
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals;
@@ -33005,6 +33006,11 @@ out vec3 v_normals;
 out vec3 v_position;
 out vec2 v_texCoord;
 out vec3 v_positionViewSpace;
+readonly restrict layout(std140) buffer u_jointTransforms
+{
+mat4 jointTransforms[];
+};
+uniform int u_hasAnimations;
 void main()
 {
 v_positionViewSpace = vec3(u_motelViewTransform * vec4(a_positions, 1.f));
@@ -33985,6 +33991,13 @@ outColor = tmpvar_1;
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
+		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
+		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);
+		glGenBuffers(1, &jointsBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
+		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
+
+		
 
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
 		lightingPassShader.bind();
@@ -34069,17 +34082,7 @@ outColor = tmpvar_1;
 
 	}
 
-	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
-		const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-		geometryPassShader.bind();
-		
-		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, 
-			material, pointLights);
 	
-	}
-
 	void LightShader::setData(const glm::mat4 &viewProjMat, 
 		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
 		float gama, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
@@ -34480,6 +34483,8 @@ namespace gl3d
 
 	void LoadedModelData::load(const char *file, float scale)
 	{
+		stbi_set_flip_vertically_on_load(false);
+
 		loader.LoadFile(file);
 
 		//parse path
@@ -35621,6 +35626,8 @@ namespace gl3d
 	//	return 1;
 	//}
 
+
+
 	Texture Renderer3D::loadTexture(std::string path)
 	{
 
@@ -35656,10 +35663,39 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
 
-
 		internal.loadedTexturesIndexes.push_back(id);
 		internal.loadedTextures.push_back(text);
 		internal.loadedTexturesNames.push_back(path);
+
+		return Texture{ id };
+	}
+
+	Texture Renderer3D::loadTextureFromMemory(objl::LoadedTexture &t)
+	{
+		if (t.data.empty())
+		{
+			return Texture{ 0 };
+		}
+
+	
+		GpuTexture tex;
+		internal::GpuTextureWithFlags text;
+		int alphaExists = 1; tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
+
+		text.texture = tex;
+		text.flags = alphaExists;
+
+		//if texture is not loaded, return an invalid texture
+		if (tex.id == 0)
+		{
+			return Texture{ 0 };
+		}
+
+		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
+
+		internal.loadedTexturesIndexes.push_back(id);
+		internal.loadedTextures.push_back(text);
+		internal.loadedTexturesNames.push_back("");
 
 		return Texture{ id };
 	}
@@ -35837,17 +35873,31 @@ namespace gl3d
 					//gm.normalMapTexture.clear();
 					//gm.RMA_Texture.clear();
 
+					if (!mat.loadedDiffuse.data.empty())
+					{
+						textureData.albedoTexture = this->loadTextureFromMemory(mat.loadedDiffuse);
+
+					}else
 					if (!mat.map_Kd.empty())
 					{
 						textureData.albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
 					}
 
+					if (!mat.loadedNormal.data.empty())
+					{
+						textureData.normalMapTexture = this->loadTextureFromMemory(mat.loadedNormal);
+
+					}else
 					if (!mat.map_Kn.empty())
 					{
 						textureData.normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
-						//	TextureLoadQuality::linearMipmap);
 					}
 
+					if (!mat.loadedEmissive.data.empty())
+					{
+						textureData.emissiveTexture = this->loadTextureFromMemory(mat.loadedEmissive);
+
+					}else
 					if (!mat.map_emissive.empty())
 					{
 						textureData.emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
@@ -35876,6 +35926,32 @@ namespace gl3d
 
 					}
 
+
+					if (!mat.loadedORM.data.empty())
+					{
+						auto &t = mat.loadedORM;
+
+						//convert from ORM ro RMA
+						for (int j = 0; j < t.h; j++)
+							for (int i = 0; i < t.w; i++)
+							{
+								unsigned char R = t.data[(i + j * t.w) * 4 + 1];
+								unsigned char M = t.data[(i + j * t.w) * 4 + 2];
+								unsigned char A = t.data[(i + j * t.w) * 4 + 0];
+
+								t.data[(i + j * t.w) * 4 + 0] = R;
+								t.data[(i + j * t.w) * 4 + 1] = M;
+								t.data[(i + j * t.w) * 4 + 2] = A;
+							}
+
+						//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+						GpuTexture tex;
+						tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 4, rmaQuality); //todo 3 channels
+						textureData.pbrTexture.texture = this->createIntenralTexture(tex, 0);
+						textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+
+					}
+					else
 					if (!mat.map_ORM.empty() && textureData.pbrTexture.RMA_loadedTextures == 0)
 					{
 						stbi_set_flip_vertically_on_load(true);
@@ -35894,7 +35970,6 @@ namespace gl3d
 							else
 							{
 								//convert from ORM ro RMA
-
 								for (int j = 0; j < h; j++)
 									for (int i = 0; i < w; i++)
 									{
@@ -35999,14 +36074,22 @@ namespace gl3d
 							if (roughnessLoaded) { textureData.pbrTexture.RMA_loadedTextures = 1; }
 							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
 
-							auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
-								roughness, metallic, ambientOcclusion, internal.lightShader.quadDrawer.quadVAO);
+							if (textureData.pbrTexture.RMA_loadedTextures == 0)
+							{
 
-							textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
+							}
+							else
+							{
+								auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+									roughness, metallic, ambientOcclusion, internal.lightShader.quadDrawer.quadVAO);
+
+								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
+							}
 
 							roughness.clear();
 							metallic.clear();
 							ambientOcclusion.clear();
+							
 						}
 						else 
 						{
@@ -36167,7 +36250,6 @@ namespace gl3d
 
 				
 
-
 				if(model.loader.LoadedMeshes[index].materialIndex > -1)
 				{
 					gm.material = returnModel.createdMaterials[model.loader.LoadedMeshes[index].materialIndex];
@@ -36263,6 +36345,10 @@ namespace gl3d
 			if(index < internal.graphicModels[pos].models.size())
 			{
 				return internal.graphicModels[pos].models[pos].name;
+			}
+			else
+			{
+				return "";
 			}
 		}
 		else
@@ -40045,8 +40131,8 @@ namespace gl3d
 		for(int i=0; i<2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
@@ -40170,8 +40256,8 @@ namespace gl3d
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, textures[i]);
 
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -40223,23 +40309,20 @@ namespace gl3d
 		glGenFramebuffers(1, &fbo);
 		glGenFramebuffers(1, &staticGeometryfbo);
 
-		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+		GLuint textures[2] = { shadowTextures , staticGeometryTextures };
 
-		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+		}
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glDrawBuffer(GL_NONE);

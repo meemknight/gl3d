@@ -341,6 +341,13 @@ namespace gl3d
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
+		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
+		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
+		glGenBuffers(1, &jointsBlockBuffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
+		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
+
+		
 
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
 		lightingPassShader.bind();
@@ -425,56 +432,17 @@ namespace gl3d
 
 	}
 
-	void LightShader::bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama,
-		const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-		geometryPassShader.bind();
-		
-		this->setData(viewProjMat, transformMat, lightPosition, eyePosition, gama, 
-			material, pointLights);
 	
-	}
+	
 
-	void LightShader::setData(const glm::mat4 &viewProjMat, 
-		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
-		float gama, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-		glUniformMatrix4fv(u_transform, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniformMatrix4fv(u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
-		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
-		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(textureSamplerLocation, 0);
-		glUniform1i(normalMapSamplerLocation, 1);
-		glUniform1i(skyBoxSamplerLocation, 2);
-		glUniform1i(RMASamplerLocation, 3);
-
-		if(pointLights.size())
-		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
-
-			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
-				,&pointLights[0], GL_STREAM_DRAW); 
-
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
-
-		}
-
-		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
-
-		glUniform1i(pointLightCountLocation, pointLights.size());
-
-		setMaterial(material);
-	}
-
-	void LightShader::setMaterial(const MaterialValues &material)
-	{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
-			, &material, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-		glUniform1i(materialIndexLocation, 0);
-	}
+	//void LightShader::setMaterial(const MaterialValues &material)
+	//{
+	//	glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
+	//	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
+	//		, &material, GL_STREAM_DRAW);
+	//	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
+	//	glUniform1i(materialIndexLocation, 0);
+	//}
 
 
 

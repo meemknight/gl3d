@@ -55,7 +55,6 @@ namespace gl3d
 		
 	#pragma region material
 		
-
 		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
@@ -217,7 +216,6 @@ namespace gl3d
 		void setSpotLightShadowSize(int size);
 
 	#pragma endregion
-
 
 	#pragma region Entity
 	

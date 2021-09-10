@@ -1,4 +1,4 @@
-#version 330
+#version 430
 #pragma debug(on)
 
 layout(location = 0) in vec3 a_positions;
@@ -13,6 +13,13 @@ out vec3 v_normals;
 out vec3 v_position;
 out vec2 v_texCoord;
 out vec3 v_positionViewSpace;
+
+readonly restrict layout(std140) buffer u_jointTransforms
+{
+	mat4 jointTransforms[];
+};
+uniform int u_hasAnimations;
+
 
 void main()
 {

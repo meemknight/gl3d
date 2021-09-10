@@ -3517,10 +3517,10 @@ namespace gl3d
 		//material buffer
 		if (internal.materials.size())
 		{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
-			, &internal.materials[0], GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
+				, &internal.materials[0], GL_STREAM_DRAW);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
 		}
 
 		GLsizei n;

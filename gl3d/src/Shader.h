@@ -82,6 +82,11 @@ namespace gl3d
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
 
+		GLuint u_jointTransforms = GL_INVALID_INDEX;
+		GLuint jointsBlockBuffer = 0;
+		GLint u_hasAnimations = -1;
+
+
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint pointLightsBlockBuffer = 0;
 

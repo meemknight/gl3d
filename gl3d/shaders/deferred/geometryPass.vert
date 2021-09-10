@@ -1,9 +1,11 @@
-#version 330
+#version 430
 #pragma debug(on)
 
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals;
 layout(location = 2) in vec2 a_texCoord;
+layout(location = 3) in ivec4 a_jointsId;
+layout(location = 4) in vec4 a_weights;
 
 uniform mat4 u_transform; //full model view projection
 uniform mat4 u_modelTransform; //just model to world
@@ -13,6 +15,13 @@ out vec3 v_normals;
 out vec3 v_position;
 out vec2 v_texCoord;
 out vec3 v_positionViewSpace;
+
+readonly restrict layout(std140) buffer u_jointTransforms
+{
+	mat4 jointTransforms[];
+};
+uniform int u_hasAnimations;
+
 
 void main()
 {

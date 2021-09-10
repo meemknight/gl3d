@@ -92,7 +92,7 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
-			const unsigned int *indexes = nullptr, bool noTexture = false);
+			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false);
 
 		void clear();
 

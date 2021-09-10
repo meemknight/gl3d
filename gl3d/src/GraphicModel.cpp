@@ -246,33 +246,59 @@ namespace gl3d
 
 	
 
-	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, const unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, 
+		const unsigned int *indexes, bool noTexture, bool hasAnimationData)
 	{
 		/*
-			position				vec3
-			normals					vec3
-			texcoords if necessary	vec2
+			position					vec3
+			normals						vec3
+			(optional) texcoords		vec2
+			(optional) joints id		ivec4
+			(optional) joints weights	vec4
 		*/
 
-		#pragma region validate
-		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
-		if (indexSize % 3 != 0)return;
+		//todo check has texture data.
 
-		if (noTexture)
-		{
-			gl3dAssertComment(vertexSize % (sizeof(float)*6) == 0,
-				"VertexSize count must be multiple of 6 * sizeof(float)\nwhen not using texture data");
-			if (vertexSize % (sizeof(float) * 6) != 0)return;
-		}
-		else
-		{
-			gl3dAssertComment(vertexSize % (sizeof(float) * 8) == 0,
-				"VertexSize count must be multiple of 8 * sizeof(float)\nwhen using texture data");
-			if (vertexSize % (sizeof(float) * 8) != 0)return;
-		}
+		#pragma region validate
 
 		if (!vertexSize) { return; }
 
+
+		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
+		if (indexSize % 3 != 0)return;
+
+		if (hasAnimationData)
+		{
+			if (noTexture)
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 12) == 0,
+					"VertexSize count must be multiple of 12 * sizeof(float)\nwhen not using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 12) != 0)return;
+			}
+			else
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
+					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 14) != 0)return;
+			}
+		}
+		else
+		{
+			if (noTexture)
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 6) == 0,
+					"VertexSize count must be multiple of 6 * sizeof(float)\nwhen not using texture data\nand no animation data.");
+				if (vertexSize % (sizeof(float) * 6) != 0)return;
+			}
+			else
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 8) == 0,
+					"VertexSize count must be multiple of 8 * sizeof(float)\nwhen using texture data\nand no animation data.");
+				if (vertexSize % (sizeof(float) * 8) != 0)return;
+			}
+		}
+
+		
 		#pragma endregion
 
 		#pragma region determine object boundaries
@@ -329,7 +355,6 @@ namespace gl3d
 		#pragma endregion
 
 
-
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
 
@@ -337,24 +362,59 @@ namespace gl3d
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
 
-		//todo this is only for rendering gizmos stuff
-		if (noTexture)
+
+		if (hasAnimationData)
 		{
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+			if (noTexture)
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(3 * sizeof(float)));
+				//skip texture
+				glEnableVertexAttribArray(3);
+				glVertexAttribIPointer(3, 4, GL_INT, 14 * sizeof(int), (void *)(6 * sizeof(int)));
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(10 * sizeof(float)));
+			}
+			else
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(3 * sizeof(float)));
+				glEnableVertexAttribArray(2);
+				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(6 * sizeof(float)));
+				glEnableVertexAttribArray(3);
+				glVertexAttribIPointer(3, 4, GL_INT, 16 * sizeof(int), (void *)(8 * sizeof(int)));
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(12 * sizeof(float)));
+
+			}
 		}
 		else
 		{
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
-			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+			//double check this
+			if (noTexture)
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+			}
+			else
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+				glEnableVertexAttribArray(2);
+				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
 
+			}
 		}
+
+		
 
 
 		if (indexSize && indexes)

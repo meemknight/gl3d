@@ -187,6 +187,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Animations.cpp" />
     <ClCompile Include="src\gl3d.cpp" />
     <ClCompile Include="src\Core.cpp" />
     <ClCompile Include="src\GraphicModel.cpp" />
@@ -197,6 +198,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Animations.h" />
     <ClInclude Include="src\json.h" />
     <ClInclude Include="src\OBJ_Loader.h" />
     <ClInclude Include="profiler.h" />
