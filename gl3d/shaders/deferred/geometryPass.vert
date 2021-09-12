@@ -25,15 +25,38 @@ uniform int u_hasAnimations;
 
 void main()
 {
-	
-	v_positionViewSpace = vec3(u_motelViewTransform * vec4(a_positions, 1.f));
-	
-	gl_Position = u_transform * vec4(a_positions, 1.f);
+	vec4 totalLocalPos = vec4(0.f);
+	vec4 totalNorm = vec4(0.f);
 
-	v_position = (u_modelTransform * vec4(a_positions,1)).xyz;
+
+	if(false)
+	{
+		for(int i=0; i<4; i++)
+		{
+			mat4 jointTransform = jointTransforms[a_jointsId[i]];
+			vec4 posePosition = jointTransform * vec4(a_positions, 1);
+			totalLocalPos += posePosition * a_weights[i];
+			
+			vec3 worldNormal = mat3(transpose(inverse(mat3(jointTransform)))) * a_normals.xyz;// jointTransform * vec4(a_normals, 1);
+			totalNorm.xyz += worldNormal.xyz * a_weights[i];
+		}
+
+		totalNorm.xyz = normalize(totalNorm.xyz);
+	}else
+	{
+		totalLocalPos = vec4(a_positions, 1.f);
+		totalNorm = vec4(a_normals, 1);
+	}
+
+
+	v_positionViewSpace = vec3(u_motelViewTransform * totalLocalPos);
+	
+	gl_Position = u_transform * totalLocalPos;
+
+	v_position = (u_modelTransform * totalLocalPos).xyz;
 
 	//v_normals = (u_modelTransform * vec4(a_normals,0)).xyz; //uniform scale
-	v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
+	v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * totalNorm.xyz;  //non uniform scale
 
 	v_normals = normalize(v_normals);
 

@@ -96,6 +96,7 @@ namespace gl3d
 
 		void clear();
 
+
 		glm::vec3 minBoundary = {};
 		glm::vec3 maxBoundary = {};
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-09
+//built on 2021-09-12
 ////////////////////////////////////////////////
 
 
@@ -32111,7 +32111,7 @@ namespace objl
 			}
 
 
-		
+			return 1;
 
 		}
 
@@ -33361,7 +33361,7 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
-			const unsigned int *indexes = nullptr, bool noTexture = false);
+			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false);
 
 		void clear();
 

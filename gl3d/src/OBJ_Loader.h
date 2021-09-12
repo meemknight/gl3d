@@ -1,6 +1,10 @@
 // OBJ_Loader.h - A Single Header OBJ Model Loader
+//todo add license 
 
 #pragma once
+
+#include "Core.h"
+#include "Animations.h"
 
 // Iostream - STD I/O Library
 #include <iostream>
@@ -20,7 +24,10 @@
 // Print progress to console while loading (large models)
 //#define OBJL_CONSOLE_OUTPUT
 
-#include <glm\vec3.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "tiny_gltf.h"
 
@@ -162,6 +169,21 @@ namespace objl
 		Vector2 TextureCoordinate;
 	};
 
+	struct VertexAnimations
+	{
+		// Position Vector
+		Vector3 Position;
+
+		// Normal Vector
+		Vector3 Normal;
+
+		// Texture Coordinate Vector
+		Vector2 TextureCoordinate;
+
+		glm::ivec4 jointsId;
+		glm::vec4 weights;
+	};
+
 	struct LoadedTexture
 	{
 		std::vector<unsigned char > data;
@@ -252,6 +274,8 @@ namespace objl
 		std::string MeshName;
 		// Vertex List
 		std::vector<Vertex> Vertices;
+		std::vector<VertexAnimations> VerticesAnimations;
+
 		// Index List
 		std::vector<unsigned int> Indices;
 
@@ -539,18 +563,18 @@ namespace objl
 			std::string err;
 			std::string warn;
 
+		#pragma region load and check
 
 			bool ret;
 			if (glb)
 			{
 				ret = loader.LoadBinaryFromFile(&model, &err, &warn, Path); // for binary glTF(.glb)
 			}
-			else 
+			else
 			{
 				ret = loader.LoadASCIIFromFile(&model, &err, &warn, Path);
 			}
 
-			
 
 			if (!warn.empty())
 			{
@@ -567,6 +591,10 @@ namespace objl
 				printf("Failed to parse glTF\n");
 				return 0;
 			}
+
+		#pragma endregion
+
+		#pragma region materials
 
 			int count = 0;
 			LoadedMaterials.resize(model.materials.size());
@@ -697,6 +725,59 @@ namespace objl
 
 			}
 
+		#pragma endregion
+
+		#pragma region bones
+
+			joints.reserve(model.nodes.size());
+			int indexCount = 0;
+			for (auto &b : model.nodes)
+			{
+				gl3d::Joint joint;
+
+				joint.index = indexCount;
+				joint.children = b.children;
+				joint.name = b.name;
+				
+				glm::mat4 rotation(1.f);
+				glm::mat4 scale(1.f);
+				glm::mat4 translation(1.f);
+
+				//suppose 4 component quaternion
+				if (!b.rotation.empty())
+				{
+					glm::quat rot;
+					rot.x = b.rotation[0];
+					rot.y = b.rotation[1];
+					rot.z = b.rotation[2];
+					rot.w = b.rotation[3];
+
+					rotation = glm::toMat4(rot);
+				}
+				
+				if (!b.translation.empty())
+				{
+					translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+				}
+
+				if (!b.scale.empty()) 
+				{
+					scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+				}
+
+
+				joint.inversBindLocalTransform = translation * rotation * scale;
+				joint.inversBindLocalTransform =  glm::inverse(joint.inversBindLocalTransform);
+
+				joints.push_back(std::move(joint));
+			}
+
+		#pragma endregion
+
+
+		
+		#pragma region meshes
+
 			if (!model.meshes.empty()) 
 			{
 				int meshesCount = 0;
@@ -736,30 +817,164 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
-						//todo support models without texcoords
-
-						for (size_t i = 0; i < accessor.count; ++i)
-						{
-							// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
-							float x = positions[i * 3 + 0];// x
-							float y = positions[i * 3 + 1];// y
-							float z = positions[i * 3 + 2];// z
-
-							float nx = normals[i * 3 + 0];// x
-							float ny = normals[i * 3 + 1];// y
-							float nz = normals[i * 3 + 2];// z
-
-							float s = tex[i * 2 + 0];// s
-							float t = tex[i * 2 + 1];// t
-
-							Vertex v;
-							v.Position = Vector3(x, y, z);
-							v.Normal = Vector3(nx, ny, nz);
-							v.TextureCoordinate = Vector2(s, t);
-
-							m.Vertices.push_back(v);
-						}
 						
+
+
+						//todo look into support models without texcoords
+
+						if(p.attributes.find("JOINTS_0") != p.attributes.end() && 
+							p.attributes.find("WEIGHTS_0") != p.attributes.end()
+							)
+						{
+							tinygltf::Accessor &accessorJoints = model.accessors[p.attributes["JOINTS_0"]];
+							tinygltf::BufferView &bufferViewJoints = model.bufferViews[accessorJoints.bufferView];
+							tinygltf::Buffer &bufferJoints = model.buffers[bufferViewJoints.buffer];
+							
+
+							tinygltf::Accessor &accessorWeights = model.accessors[p.attributes["WEIGHTS_0"]];
+							tinygltf::BufferView &bufferViewWeights = model.bufferViews[accessorWeights.bufferView];
+							tinygltf::Buffer &bufferWeights = model.buffers[bufferViewWeights.buffer];
+							float *weights = (float *)
+								(&bufferWeights.data[bufferViewWeights.byteOffset + accessorWeights.byteOffset]);
+
+
+							for (size_t i = 0; i < accessor.count; ++i)
+							{
+								glm::ivec4 jointsIndex{};
+								glm::vec4 weightsVec{};
+								int componentCount = accessorJoints.ByteStride(bufferViewJoints);
+
+								switch (accessorJoints.componentType)
+								{
+									case TINYGLTF_COMPONENT_TYPE_INT:
+									{
+										componentCount /= sizeof(int);
+										int *joint = (int *)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+										
+										if (componentCount <= 4) 
+										{
+											for (int j = 0; j < componentCount; j++)
+											{
+												jointsIndex[j] = joint[i * componentCount + j];
+												weightsVec[j] = weights[i * componentCount + j];
+
+											}
+										}
+
+										break;
+									}
+									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+									{
+										componentCount /= sizeof(unsigned int);
+
+										unsigned int *joint = (unsigned int *)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+
+										if (componentCount <= 4)
+										{
+											for (int j = 0; j < componentCount; j++)
+											{
+												jointsIndex[j] = joint[i * componentCount + j];
+												weightsVec[j] = weights[i * componentCount + j];
+
+											}
+										}
+
+										break;
+									}
+									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+									{
+										componentCount /= sizeof(unsigned short);
+
+										unsigned short *joint = (unsigned short *)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+
+										if (componentCount <= 4)
+										{
+											for (int j = 0; j < componentCount; j++)
+											{
+												jointsIndex[j] = joint[i * componentCount + j];
+												weightsVec[j] = weights[i * componentCount + j];
+
+											}
+										}
+
+										break;
+									}
+									case TINYGLTF_COMPONENT_TYPE_SHORT:
+									{
+										componentCount /= sizeof(unsigned short);
+
+										short *joint = (short *)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+
+										if (componentCount <= 4)
+										{
+											for (int j = 0; j < componentCount; j++)
+											{
+												jointsIndex[j] = joint[i * componentCount + j];
+												weightsVec[j] = weights[i * componentCount + j];
+
+											}
+										}
+
+										break;
+									}
+
+								};
+
+								gl3dAssertComment(componentCount <= 4, "too many bone influences per vertex. Max: 4.");
+								//todo handle this case
+
+								// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
+								float x = positions[i * 3 + 0];// x
+								float y = positions[i * 3 + 1];// y
+								float z = positions[i * 3 + 2];// z
+
+								float nx = normals[i * 3 + 0];// x
+								float ny = normals[i * 3 + 1];// y
+								float nz = normals[i * 3 + 2];// z
+
+								float s = tex[i * 2 + 0];// s
+								float t = tex[i * 2 + 1];// t
+
+								VertexAnimations v;
+								v.Position = Vector3(x, y, z);
+								v.Normal = Vector3(nx, ny, nz);
+								v.TextureCoordinate = Vector2(s, t);
+								v.jointsId = jointsIndex;
+								v.weights = weightsVec;
+
+								m.VerticesAnimations.push_back(v);
+							}
+						}
+						else
+						{
+							for (size_t i = 0; i < accessor.count; ++i)
+							{
+								// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
+								float x = positions[i * 3 + 0];// x
+								float y = positions[i * 3 + 1];// y
+								float z = positions[i * 3 + 2];// z
+
+								float nx = normals[i * 3 + 0];// x
+								float ny = normals[i * 3 + 1];// y
+								float nz = normals[i * 3 + 2];// z
+
+								float s = tex[i * 2 + 0];// s
+								float t = tex[i * 2 + 1];// t
+
+								Vertex v;
+								v.Position = Vector3(x, y, z);
+								v.Normal = Vector3(nx, ny, nz);
+								v.TextureCoordinate = Vector2(s, t);
+
+								m.Vertices.push_back(v);
+							}
+						}
+
+					
 						tinygltf::Accessor &accessorIndices = model.accessors[p.indices];
 						tinygltf::BufferView &bufferViewInd = model.bufferViews[accessorIndices.bufferView];
 						tinygltf::Buffer &bufferInd = model.buffers[bufferViewInd.buffer];	
@@ -813,6 +1028,8 @@ namespace objl
 
 			}
 
+		#pragma endregion
+
 
 			return 1;
 
@@ -828,8 +1045,6 @@ namespace objl
 
 			//todo delete materials or make sure you can't load over things
 			LoadedMeshes.clear();
-			LoadedVertices.clear();
-			LoadedIndices.clear();
 
 			std::vector<Vector3> Positions;
 			std::vector<Vector2> TCoords;
@@ -972,7 +1187,6 @@ namespace objl
 					{
 						Vertices.push_back(vVerts[i]);
 
-						LoadedVertices.push_back(vVerts[i]);
 					}
 
 					std::vector<unsigned int> iIndices;
@@ -985,8 +1199,8 @@ namespace objl
 						unsigned int indnum = (unsigned int)((Vertices.size()) - vVerts.size()) + iIndices[i];
 						Indices.push_back(indnum);
 
-						indnum = (unsigned int)((LoadedVertices.size()) - vVerts.size()) + iIndices[i];
-						LoadedIndices.push_back(indnum);
+						//indnum = (unsigned int)((LoadedVertices.size()) - vVerts.size()) + iIndices[i];
+						//LoadedIndices.push_back(indnum);
 
 					}
 				}
@@ -1091,7 +1305,7 @@ namespace objl
 				}
 			}
 
-			if (LoadedMeshes.empty() && LoadedVertices.empty() && LoadedIndices.empty())
+			if (LoadedMeshes.empty())
 			{
 				return false;
 			}
@@ -1103,10 +1317,9 @@ namespace objl
 
 		// Loaded Mesh Objects
 		std::vector<Mesh> LoadedMeshes;
-		// Loaded Vertex Objects
-		std::vector<Vertex> LoadedVertices; //todo remove probably
-		// Loaded Index Positions
-		std::vector<unsigned int> LoadedIndices;
+
+		std::vector<gl3d::Joint> joints;
+
 		// Loaded Material Objects
 		std::vector<Material> LoadedMaterials;
 

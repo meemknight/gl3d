@@ -867,18 +867,39 @@ namespace gl3d
 				//TextureDataForModel textureData = {};
 
 				auto &mesh = model.loader.LoadedMeshes[index];
-				if (mesh.Indices.empty())
+				
+				if (mesh.Vertices.size())
 				{
-					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-						(float *)&mesh.Vertices[0],
-						0, nullptr);
+					if (mesh.Indices.empty())
+					{
+						gm.loadFromComputedData(mesh.Vertices.size() * sizeof(mesh.Vertices[0]),
+							(float *)&mesh.Vertices[0],
+							0, nullptr);
+					}
+					else
+					{
+						gm.loadFromComputedData(mesh.Vertices.size() * sizeof(mesh.Vertices[0]),
+							(float *)&mesh.Vertices[0],
+							mesh.Indices.size() * 4, &mesh.Indices[0]);
+					}
 				}
-				else
+				else //if(mesh.VerticesAnimations.size()) //todo empty model ?
 				{
-					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-						(float *)&mesh.Vertices[0],
-						mesh.Indices.size() * 4, &mesh.Indices[0]);
+					if (mesh.Indices.empty())
+					{
+						gm.loadFromComputedData(mesh.VerticesAnimations.size() * sizeof(mesh.VerticesAnimations[0]),
+							(float *)&mesh.VerticesAnimations[0],
+							0, nullptr, false, true);
+					}
+					else
+					{
+						gm.loadFromComputedData(mesh.VerticesAnimations.size() * sizeof(mesh.VerticesAnimations[0]),
+							(float *)&mesh.VerticesAnimations[0],
+							mesh.Indices.size() * 4, &mesh.Indices[0], false, true);
+					}
 				}
+
+				
 
 				
 

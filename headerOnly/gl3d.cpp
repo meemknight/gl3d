@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-09
+//built on 2021-09-12
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -32999,6 +32999,8 @@ a_outBloom = vec4(emissive.rgb, 1);
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals;
 layout(location = 2) in vec2 a_texCoord;
+layout(location = 3) in ivec4 a_jointsId;
+layout(location = 4) in vec4 a_weights;
 uniform mat4 u_transform; //full model view projection
 uniform mat4 u_modelTransform; //just model to world
 uniform mat4 u_motelViewTransform; //model to world to view
@@ -33992,7 +33994,7 @@ outColor = tmpvar_1;
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
 		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);
+		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
 		glGenBuffers(1, &jointsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
 		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
@@ -34083,45 +34085,16 @@ outColor = tmpvar_1;
 	}
 
 	
-	void LightShader::setData(const glm::mat4 &viewProjMat, 
-		const glm::mat4 &transformMat, const glm::vec3 &lightPosition, const glm::vec3 &eyePosition,
-		float gama, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights)
-	{
-		glUniformMatrix4fv(u_transform, 1, GL_FALSE, &viewProjMat[0][0]);
-		glUniformMatrix4fv(u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
-		glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
-		glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(textureSamplerLocation, 0);
-		glUniform1i(normalMapSamplerLocation, 1);
-		glUniform1i(skyBoxSamplerLocation, 2);
-		glUniform1i(RMASamplerLocation, 3);
+	
 
-		if(pointLights.size())
-		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
-
-			glBufferData(GL_SHADER_STORAGE_BUFFER, pointLights.size() * sizeof(internal::GpuPointLight)
-				,&pointLights[0], GL_STREAM_DRAW); 
-
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
-
-		}
-
-		//glUniform1fv(pointLightBufferLocation, pointLights.size() * 8, (float*)pointLights.data());
-
-		glUniform1i(pointLightCountLocation, pointLights.size());
-
-		setMaterial(material);
-	}
-
-	void LightShader::setMaterial(const MaterialValues &material)
-	{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
-			, &material, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-		glUniform1i(materialIndexLocation, 0);
-	}
+	//void LightShader::setMaterial(const MaterialValues &material)
+	//{
+	//	glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
+	//	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
+	//		, &material, GL_STREAM_DRAW);
+	//	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
+	//	glUniform1i(materialIndexLocation, 0);
+	//}
 
 
 
@@ -34624,33 +34597,59 @@ namespace gl3d
 
 	
 
-	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, const unsigned int *indexes, bool noTexture)
+	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, 
+		const unsigned int *indexes, bool noTexture, bool hasAnimationData)
 	{
 		/*
-			position				vec3
-			normals					vec3
-			texcoords if necessary	vec2
+			position					vec3
+			normals						vec3
+			(optional) texcoords		vec2
+			(optional) joints id		ivec4
+			(optional) joints weights	vec4
 		*/
 
-		#pragma region validate
-		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
-		if (indexSize % 3 != 0)return;
+		//todo check has texture data.
 
-		if (noTexture)
-		{
-			gl3dAssertComment(vertexSize % (sizeof(float)*6) == 0,
-				"VertexSize count must be multiple of 6 * sizeof(float)\nwhen not using texture data");
-			if (vertexSize % (sizeof(float) * 6) != 0)return;
-		}
-		else
-		{
-			gl3dAssertComment(vertexSize % (sizeof(float) * 8) == 0,
-				"VertexSize count must be multiple of 8 * sizeof(float)\nwhen using texture data");
-			if (vertexSize % (sizeof(float) * 8) != 0)return;
-		}
+		#pragma region validate
 
 		if (!vertexSize) { return; }
 
+
+		gl3dAssertComment(indexSize % 3 == 0, "Index count must be multiple of 3");
+		if (indexSize % 3 != 0)return;
+
+		if (hasAnimationData)
+		{
+			if (noTexture)
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 12) == 0,
+					"VertexSize count must be multiple of 12 * sizeof(float)\nwhen not using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 12) != 0)return;
+			}
+			else
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
+					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 14) != 0)return;
+			}
+		}
+		else
+		{
+			if (noTexture)
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 6) == 0,
+					"VertexSize count must be multiple of 6 * sizeof(float)\nwhen not using texture data\nand no animation data.");
+				if (vertexSize % (sizeof(float) * 6) != 0)return;
+			}
+			else
+			{
+				gl3dAssertComment(vertexSize % (sizeof(float) * 8) == 0,
+					"VertexSize count must be multiple of 8 * sizeof(float)\nwhen using texture data\nand no animation data.");
+				if (vertexSize % (sizeof(float) * 8) != 0)return;
+			}
+		}
+
+		
 		#pragma endregion
 
 		#pragma region determine object boundaries
@@ -34707,7 +34706,6 @@ namespace gl3d
 		#pragma endregion
 
 
-
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
 
@@ -34715,24 +34713,59 @@ namespace gl3d
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
 
-		//todo this is only for rendering gizmos stuff
-		if (noTexture)
+
+		if (hasAnimationData)
 		{
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+			if (noTexture)
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(3 * sizeof(float)));
+				//skip texture
+				glEnableVertexAttribArray(3);
+				glVertexAttribIPointer(3, 4, GL_INT, 14 * sizeof(int), (void *)(6 * sizeof(int)));
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void *)(10 * sizeof(float)));
+			}
+			else
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(3 * sizeof(float)));
+				glEnableVertexAttribArray(2);
+				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(6 * sizeof(float)));
+				glEnableVertexAttribArray(3);
+				glVertexAttribIPointer(3, 4, GL_INT, 16 * sizeof(int), (void *)(8 * sizeof(int)));
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void *)(12 * sizeof(float)));
+
+			}
 		}
 		else
 		{
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
-			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+			//double check this
+			if (noTexture)
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+			}
+			else
+			{
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+				glEnableVertexAttribArray(2);
+				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
 
+			}
 		}
+
+		
 
 
 		if (indexSize && indexes)
@@ -38885,10 +38918,10 @@ namespace gl3d
 		//material buffer
 		if (internal.materials.size())
 		{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
-			, &internal.materials[0], GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
+				, &internal.materials[0], GL_STREAM_DRAW);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
 		}
 
 		GLsizei n;
@@ -40110,12 +40143,20 @@ namespace gl3d
 		currentShadowSize = shadowSize;
 
 		GLuint textures[2] = { cascadesTexture, staticGeometryTexture };
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
 			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize * CASCADES,
 				textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 		}
 	}
 
@@ -40290,10 +40331,19 @@ namespace gl3d
 		{
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, textures[i]);
+
 			glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0,
 				GL_DEPTH_COMPONENT32, shadowSize, shadowSize,
 				textureCount*6, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+
 		}
 
 	}
@@ -40338,16 +40388,30 @@ namespace gl3d
 
 	void Renderer3D::SpotShadows::allocateTextures(int count)
 	{
-		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
 		textureCount = count;
 		currentShadowSize = shadowSize;
 
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
-			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-	
-		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
-			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		GLuint textures[2] = { shadowTextures , staticGeometryTextures };
+
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
+
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+				textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+
+		
+		}
+		
 
 	}
 

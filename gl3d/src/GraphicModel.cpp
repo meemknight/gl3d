@@ -127,14 +127,21 @@ namespace gl3d
 				j.Position.Y *= scale;
 				j.Position.Z *= scale;
 			}
+
+			for (auto &j : i.VerticesAnimations)
+			{
+				j.Position.X *= scale;
+				j.Position.Y *= scale;
+				j.Position.Z *= scale;
+			}
 		}
 
-		for (auto &j : loader.LoadedVertices)
-		{
-			j.Position.X *= scale;
-			j.Position.Y *= scale;
-			j.Position.Z *= scale;
-		}
+		//for (auto &j : loader.LoadedVertices)
+		//{
+		//	j.Position.X *= scale;
+		//	j.Position.Y *= scale;
+		//	j.Position.Z *= scale;
+		//}
 
 		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
 	}
@@ -271,15 +278,15 @@ namespace gl3d
 		{
 			if (noTexture)
 			{
-				gl3dAssertComment(vertexSize % (sizeof(float) * 12) == 0,
-					"VertexSize count must be multiple of 12 * sizeof(float)\nwhen not using texture data\nand using animation data.");
-				if (vertexSize % (sizeof(float) * 12) != 0)return;
+				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
+					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen not using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 14) != 0)return;
 			}
 			else
 			{
-				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
-					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen using texture data\nand using animation data.");
-				if (vertexSize % (sizeof(float) * 14) != 0)return;
+				gl3dAssertComment(vertexSize % (sizeof(float) * 16) == 0,
+					"VertexSize count must be multiple of 16 * sizeof(float)\nwhen using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 16) != 0)return;
 			}
 		}
 		else

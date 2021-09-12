@@ -4,6 +4,8 @@
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals;
 layout(location = 2) in vec2 a_texCoord;
+layout(location = 3) in ivec4 a_jointsId;
+layout(location = 4) in vec4 a_weights;
 
 uniform mat4 u_transform; //full model view projection
 uniform mat4 u_modelTransform; //just model to world
