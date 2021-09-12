@@ -4742,12 +4742,20 @@ namespace gl3d
 		currentShadowSize = shadowSize;
 
 		GLuint textures[2] = { cascadesTexture, staticGeometryTexture };
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 		for (int i = 0; i < 2; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
 			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize * CASCADES,
 				textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 		}
 	}
 
@@ -4922,10 +4930,19 @@ namespace gl3d
 		{
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, textures[i]);
+
 			glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0,
 				GL_DEPTH_COMPONENT32, shadowSize, shadowSize,
 				textureCount*6, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+
 		}
 
 	}
@@ -4970,16 +4987,30 @@ namespace gl3d
 
 	void Renderer3D::SpotShadows::allocateTextures(int count)
 	{
-		glBindTexture(GL_TEXTURE_2D_ARRAY, shadowTextures);
 		textureCount = count;
 		currentShadowSize = shadowSize;
 
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
-			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-	
-		glBindTexture(GL_TEXTURE_2D_ARRAY, staticGeometryTextures);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
-			textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		GLuint textures[2] = { shadowTextures , staticGeometryTextures };
+
+		for (int i = 0; i < 2; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D_ARRAY, textures[i]);
+
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24, shadowSize, shadowSize,
+				textureCount, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+
+		
+		}
+		
 
 	}
 

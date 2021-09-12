@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -405,7 +405,7 @@ int main()
 	auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
-	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
@@ -418,7 +418,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
-	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
