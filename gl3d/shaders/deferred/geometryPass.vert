@@ -28,11 +28,12 @@ void main()
 	vec4 totalLocalPos = vec4(0.f);
 	vec4 totalNorm = vec4(0.f);
 
-
-	if(false)
+	if(u_hasAnimations != 0)
 	{
 		for(int i=0; i<4; i++)
 		{
+			if(a_jointsId[i] < 0){break;}
+
 			mat4 jointTransform = jointTransforms[a_jointsId[i]];
 			vec4 posePosition = jointTransform * vec4(a_positions, 1);
 			totalLocalPos += posePosition * a_weights[i];

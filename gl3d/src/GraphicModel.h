@@ -92,10 +92,15 @@ namespace gl3d
 		GLsizei primitiveCount = 0;
 
 		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
-			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false);
-
+			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false,
+			Animation animation = {},
+			std::vector<Joint> joints = {}
+			);
+	
 		void clear();
 
+		Animation animation;
+		std::vector<Joint> joints;
 
 		glm::vec3 minBoundary = {};
 		glm::vec3 maxBoundary = {};

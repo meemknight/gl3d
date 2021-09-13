@@ -637,8 +637,8 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
-		bool frustumCulling = 1;
-		bool zPrePass = 1;
+		bool frustumCulling = 0;
+		bool zPrePass = 0;
 
 	};
 

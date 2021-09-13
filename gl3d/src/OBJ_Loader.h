@@ -553,6 +553,16 @@ namespace objl
 
 		}
 
+		void calculateInverseBindTransform(int index, glm::mat4 parentBindTransform, std::vector<gl3d::Joint> &joints)
+		{
+			glm::mat4 bindTransform = parentBindTransform * joints[index].localBindTransform;
+			joints[index].inverseBindTransform = glm::inverse(bindTransform);
+
+			for (auto &c : joints[index].children)
+			{
+				calculateInverseBindTransform(c, bindTransform, joints);
+			}
+		};
 
 		bool loadGltf(const std::string &Path, bool glb = 0)
 		{
@@ -603,15 +613,15 @@ namespace objl
 				auto &mat = model.materials[i];
 
 				LoadedMaterials[i].name = mat.name;
-				
-				LoadedMaterials[i].Kd.X = mat.pbrMetallicRoughness.baseColorFactor[0]; 
+
+				LoadedMaterials[i].Kd.X = mat.pbrMetallicRoughness.baseColorFactor[0];
 				LoadedMaterials[i].Kd.Y = mat.pbrMetallicRoughness.baseColorFactor[1];
 				LoadedMaterials[i].Kd.Z = mat.pbrMetallicRoughness.baseColorFactor[2];
 
 				//todo tweak default values for gltf to be the same
 				LoadedMaterials[i].metallic = mat.pbrMetallicRoughness.metallicFactor;
 				LoadedMaterials[i].roughness = mat.pbrMetallicRoughness.roughnessFactor;
-				
+
 
 				auto MimeToExt = [](const std::string &mimeType) -> std::string
 				{
@@ -639,9 +649,9 @@ namespace objl
 				{
 					if (index != -1)
 					{
-						if (t) 
+						if (t)
 						{
-							if (checkData) 
+							if (checkData)
 							{
 								bool isData = false;
 								t->data.resize(4 * model.images[index].width * model.images[index].height);
@@ -699,7 +709,7 @@ namespace objl
 						return "";
 
 					}
-					else 
+					else
 					{
 						return std::string();
 					}
@@ -707,9 +717,9 @@ namespace objl
 				};
 
 
-				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index, 
+				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index,
 					&LoadedMaterials[i].loadedDiffuse, false);
-				
+
 				LoadedMaterials[i].map_Kn = setTexture(mat.normalTexture.index,
 					&LoadedMaterials[i].loadedNormal, false);
 
@@ -729,51 +739,274 @@ namespace objl
 
 		#pragma region bones
 
-			joints.reserve(model.nodes.size());
-			int indexCount = 0;
-			for (auto &b : model.nodes)
+			joints.resize(model.nodes.size());
+			//int indexCount = 0;
+			std::vector<int> isMain;
+			isMain.resize(model.nodes.size(), 0);
+
+			std::vector<int> skinJoints;
+
+			if (!model.skins.empty())
 			{
-				gl3d::Joint joint;
 
-				joint.index = indexCount;
-				joint.children = b.children;
-				joint.name = b.name;
+				auto skin = model.skins[0];
+
+				for (auto &j : skin.joints)
+				{
+					isMain[j] = 1;
+				}
+
+				for (auto &j : skin.joints)
+				{
+					auto &b = model.nodes[j];
+
+					skinJoints.push_back(j);
+
+					gl3d::Joint joint;
+					joint.used = true;
+					//joint.index = j;
+					joint.children = b.children;
 				
-				glm::mat4 rotation(1.f);
-				glm::mat4 scale(1.f);
-				glm::mat4 translation(1.f);
-
-				//suppose 4 component quaternion
-				if (!b.rotation.empty())
-				{
-					glm::quat rot;
-					rot.x = b.rotation[0];
-					rot.y = b.rotation[1];
-					rot.z = b.rotation[2];
-					rot.w = b.rotation[3];
-
-					rotation = glm::toMat4(rot);
-				}
+					for (auto &c : joint.children)
+					{
+						isMain[c] = 0;
+					}
 				
-				if (!b.translation.empty())
-				{
-					translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+					joint.name = b.name;
+				
+					glm::mat4 rotation(1.f);
+					glm::mat4 scale(1.f);
+					glm::mat4 translation(1.f);
+				
+					//suppose 4 component quaternion
+					if (!b.rotation.empty())
+					{
+						glm::quat rot;
+						rot.x = b.rotation[0];
+						rot.y = b.rotation[1];
+						rot.z = b.rotation[2];
+						rot.w = b.rotation[3];
+				
+						rotation = glm::toMat4(rot);
+					}
+				
+					//suppose 3 component translation
+					if (!b.translation.empty())
+					{
+						translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+					}
+				
+					//suppose 3 component scale
+					if (!b.scale.empty())
+					{
+						scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+					}
+				
+					joint.localBindTransform = translation * rotation * scale;
+				
+					joints[j] = std::move(joint);
 				}
 
-				if (!b.scale.empty()) 
+				for (int i = 0; i < isMain.size(); i++)
 				{
-					scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+					if (isMain[i] == 1) 
+					{
+						joints[i].root = true;
+						calculateInverseBindTransform(i, glm::mat4(1.f), joints);
+					};
 				}
 
 
-				joint.inversBindLocalTransform = translation * rotation * scale;
-				joint.inversBindLocalTransform =  glm::inverse(joint.inversBindLocalTransform);
-
-				joints.push_back(std::move(joint));
 			}
+
+
+			//for (auto &b : model.nodes)
+			//{
+			//	gl3d::Joint joint;
+			//
+			//	joint.index = indexCount;
+			//	joint.children = b.children;
+			//
+			//	for (auto &c : joint.children)
+			//	{
+			//		isMain[c] = 0;
+			//	}
+			//
+			//	joint.name = b.name;
+			//
+			//	glm::mat4 rotation(1.f);
+			//	glm::mat4 scale(1.f);
+			//	glm::mat4 translation(1.f);
+			//
+			//	//suppose 4 component quaternion
+			//	if (!b.rotation.empty())
+			//	{
+			//		glm::quat rot;
+			//		rot.x = b.rotation[0];
+			//		rot.y = b.rotation[1];
+			//		rot.z = b.rotation[2];
+			//		rot.w = b.rotation[3];
+			//
+			//		rotation = glm::toMat4(rot);
+			//	}
+			//
+			//	//suppose 3 component translation
+			//	if (!b.translation.empty())
+			//	{
+			//		translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+			//	}
+			//
+			//	//suppose 3 component scale
+			//	if (!b.scale.empty())
+			//	{
+			//		scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+			//	}
+			//
+			//	joint.localBindTransform = translation * rotation * scale;
+			//	//joint.inverseBindTransform =  glm::inverse(joint.inverseBindTransform);
+			//
+			//	joints.push_back(std::move(joint));
+			//}
+			//
+			//for (int i = 0; i < isMain.size(); i++)
+			//{
+			//	if (isMain[i] == 1) 
+			//	{
+			//		joints[i].root = true;
+			//		calculateInverseBindTransform(i, glm::mat4(1.f), joints);
+			//	};
+			//}
+
 
 		#pragma endregion
 
+		#pragma region animations
+			
+			animations.reserve(model.animations.size());
+			for (auto &a : model.animations)
+			{
+				gl3d::Animation animation;
+				animation.name = a.name;
+				
+			#pragma region set key frames a default value
+
+				animation.keyFramesRot.resize(joints.size()); //each joint will potentially have keyframes
+				animation.keyFramesTrans.resize(joints.size()); //each joint will potentially have keyframes
+				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
+				animation.timeStamps.resize(joints.size());
+
+			#pragma endregion
+
+				for (int i = 0; i < a.channels.size(); i++) 
+				{
+					auto &channel = a.channels[i];
+					auto &sampler = a.samplers[channel.sampler];
+
+					int node = channel.target_node;
+					int type = 0; //translation rotation scale
+
+					std::vector<float> timeStamps;
+					{
+						auto &channel = a.channels[i];
+						auto &sampler = a.samplers[channel.sampler];
+						tinygltf::Accessor &accessor = model.accessors[sampler.input];
+						tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+						tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+						float *timeStamp = (float *)
+							(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+					
+						timeStamps.resize(accessor.count);
+						for (size_t i = 0; i < accessor.count; ++i)
+						{
+							timeStamps[i] = timeStamp[i];
+						}
+					}
+
+					if (channel.target_path == "translation") 
+					{
+						type = 0;
+
+						animation.keyFramesTrans[node].resize(timeStamps.size());
+						for (int t = 0; t < timeStamps.size(); t++) 
+						{
+							glm::vec3 move = {};
+							
+							tinygltf::Accessor &accessor = model.accessors[sampler.output];
+							tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+							tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+							float *translation = (float *)
+								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+
+							move.x = translation[t * 3 + 0];
+							move.y = translation[t * 3 + 1];
+							move.z = translation[t * 3 + 2];
+
+							animation.keyFramesTrans[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesTrans[node][t].translation = move;
+						}
+					}
+					else if (channel.target_path == "rotation") 
+					{
+						type = 1;
+						animation.keyFramesRot[node].resize(timeStamps.size());
+						for (int t = 0; t < timeStamps.size(); t++)
+						{
+							glm::quat rot = {};
+
+							tinygltf::Accessor &accessor = model.accessors[sampler.output];
+							tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+							tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+							float *rotation = (float *)
+								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+
+							accessor.count;
+
+							rot.x = rotation[t * 4 + 0];
+							rot.y = rotation[t * 4 + 1];
+							rot.z = rotation[t * 4 + 2];
+							rot.w = rotation[t * 4 + 3];
+
+							animation.keyFramesRot[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesRot[node][t].rotation = rot;
+						}
+					}
+					else if (channel.target_path == "scale") 
+					{
+						type = 2;
+
+						animation.keyFramesScale[node].resize(timeStamps.size());
+						for (int t = 0; t < timeStamps.size(); t++)
+						{
+							glm::vec3 scale = {};
+
+							tinygltf::Accessor &accessor = model.accessors[sampler.output];
+							tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+							tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+							float *scaleBuffer = (float *)
+								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+
+							accessor.count;
+
+							scale.x = scaleBuffer[t * 3 + 0];
+							scale.y = scaleBuffer[t * 3 + 1];
+							scale.z = scaleBuffer[t * 3 + 2];
+
+							animation.keyFramesScale[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesScale[node][t].scale = scale;
+						}
+					}
+					else 
+					{
+						continue;
+					}
+
+				}
+
+				animations.push_back(std::move(animation));
+			}
+
+
+		#pragma endregion
 
 		
 		#pragma region meshes
@@ -817,9 +1050,6 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
-						
-
-
 						//todo look into support models without texcoords
 
 						if(p.attributes.find("JOINTS_0") != p.attributes.end() && 
@@ -830,17 +1060,16 @@ namespace objl
 							tinygltf::BufferView &bufferViewJoints = model.bufferViews[accessorJoints.bufferView];
 							tinygltf::Buffer &bufferJoints = model.buffers[bufferViewJoints.buffer];
 							
-
 							tinygltf::Accessor &accessorWeights = model.accessors[p.attributes["WEIGHTS_0"]];
 							tinygltf::BufferView &bufferViewWeights = model.bufferViews[accessorWeights.bufferView];
 							tinygltf::Buffer &bufferWeights = model.buffers[bufferViewWeights.buffer];
 							float *weights = (float *)
 								(&bufferWeights.data[bufferViewWeights.byteOffset + accessorWeights.byteOffset]);
 
-
+							m.VerticesAnimations.reserve(accessor.count);
 							for (size_t i = 0; i < accessor.count; ++i)
 							{
-								glm::ivec4 jointsIndex{};
+								glm::ivec4 jointsIndex(-1,-1,-1,-1);
 								glm::vec4 weightsVec{};
 								int componentCount = accessorJoints.ByteStride(bufferViewJoints);
 
@@ -852,16 +1081,13 @@ namespace objl
 										int *joint = (int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
 										
-										if (componentCount <= 4) 
+										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
-											for (int j = 0; j < componentCount; j++)
-											{
-												jointsIndex[j] = joint[i * componentCount + j];
-												weightsVec[j] = weights[i * componentCount + j];
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
 
-											}
 										}
-
+										
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
@@ -871,14 +1097,11 @@ namespace objl
 										unsigned int *joint = (unsigned int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
 
-										if (componentCount <= 4)
+										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
-											for (int j = 0; j < componentCount; j++)
-											{
-												jointsIndex[j] = joint[i * componentCount + j];
-												weightsVec[j] = weights[i * componentCount + j];
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
 
-											}
 										}
 
 										break;
@@ -886,18 +1109,14 @@ namespace objl
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
 									{
 										componentCount /= sizeof(unsigned short);
-
 										unsigned short *joint = (unsigned short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
 
-										if (componentCount <= 4)
+										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
-											for (int j = 0; j < componentCount; j++)
-											{
-												jointsIndex[j] = joint[i * componentCount + j];
-												weightsVec[j] = weights[i * componentCount + j];
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
 
-											}
 										}
 
 										break;
@@ -909,14 +1128,11 @@ namespace objl
 										short *joint = (short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
 
-										if (componentCount <= 4)
+										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
-											for (int j = 0; j < componentCount; j++)
-											{
-												jointsIndex[j] = joint[i * componentCount + j];
-												weightsVec[j] = weights[i * componentCount + j];
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
 
-											}
 										}
 
 										break;
@@ -924,8 +1140,36 @@ namespace objl
 
 								};
 
-								gl3dAssertComment(componentCount <= 4, "too many bone influences per vertex. Max: 4.");
-								//todo handle this case
+								for (int j = 3; j>=0; j--)
+								{
+									if (weightsVec[j] == 0.f)
+									{
+										jointsIndex[j] = -1;
+									}
+									else
+									{
+										break;
+									}
+								}
+
+								for (int j = 0; j < 4; j++) 
+								{
+									if (jointsIndex[j] == -1)
+									{
+										break;
+									}
+									else
+									{
+										jointsIndex[j] = skinJoints[jointsIndex[j]]; 
+									}
+
+								}
+
+								if (componentCount > 4)
+								{
+									weightsVec /= weightsVec.x + weightsVec.y + weightsVec.z + weightsVec.w;
+								}
+
 
 								// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
 								float x = positions[i * 3 + 0];// x
@@ -951,6 +1195,7 @@ namespace objl
 						}
 						else
 						{
+							m.Vertices.reserve(accessor.count);
 							for (size_t i = 0; i < accessor.count; ++i)
 							{
 								// Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
@@ -1319,6 +1564,8 @@ namespace objl
 		std::vector<Mesh> LoadedMeshes;
 
 		std::vector<gl3d::Joint> joints;
+
+		std::vector<gl3d::Animation> animations;
 
 		// Loaded Material Objects
 		std::vector<Material> LoadedMaterials;

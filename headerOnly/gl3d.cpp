@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-12
+//built on 2021-09-13
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -33015,10 +33015,29 @@ mat4 jointTransforms[];
 uniform int u_hasAnimations;
 void main()
 {
-v_positionViewSpace = vec3(u_motelViewTransform * vec4(a_positions, 1.f));
-gl_Position = u_transform * vec4(a_positions, 1.f);
-v_position = (u_modelTransform * vec4(a_positions,1)).xyz;
-v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
+vec4 totalLocalPos = vec4(0.f);
+vec4 totalNorm = vec4(0.f);
+if(u_hasAnimations != 0)
+{
+for(int i=0; i<4; i++)
+{
+if(a_jointsId[i] < 0){break;}
+mat4 jointTransform = jointTransforms[a_jointsId[i]];
+vec4 posePosition = jointTransform * vec4(a_positions, 1);
+totalLocalPos += posePosition * a_weights[i];
+vec3 worldNormal = mat3(transpose(inverse(mat3(jointTransform)))) * a_normals.xyz;// jointTransform * vec4(a_normals, 1);
+totalNorm.xyz += worldNormal.xyz * a_weights[i];
+}
+totalNorm.xyz = normalize(totalNorm.xyz);
+}else
+{
+totalLocalPos = vec4(a_positions, 1.f);
+totalNorm = vec4(a_normals, 1);
+}
+v_positionViewSpace = vec3(u_motelViewTransform * totalLocalPos);
+gl_Position = u_transform * totalLocalPos;
+v_position = (u_modelTransform * totalLocalPos).xyz;
+v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * totalNorm.xyz;  //non uniform scale
 v_normals = normalize(v_normals);
 v_texCoord = a_texCoord;
 })"},
@@ -33973,6 +33992,7 @@ outColor = tmpvar_1;
 		//geometryPassShader.bind();
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform");
+		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
 		u_motelViewTransform = getUniform(geometryPassShader.id, "u_motelViewTransform");
 		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
@@ -33997,7 +34017,6 @@ outColor = tmpvar_1;
 		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
 		glGenBuffers(1, &jointsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
-		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
 
 		
 
@@ -34478,14 +34497,21 @@ namespace gl3d
 				j.Position.Y *= scale;
 				j.Position.Z *= scale;
 			}
+
+			for (auto &j : i.VerticesAnimations)
+			{
+				j.Position.X *= scale;
+				j.Position.Y *= scale;
+				j.Position.Z *= scale;
+			}
 		}
 
-		for (auto &j : loader.LoadedVertices)
-		{
-			j.Position.X *= scale;
-			j.Position.Y *= scale;
-			j.Position.Z *= scale;
-		}
+		//for (auto &j : loader.LoadedVertices)
+		//{
+		//	j.Position.X *= scale;
+		//	j.Position.Y *= scale;
+		//	j.Position.Z *= scale;
+		//}
 
 		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
 	}
@@ -34598,7 +34624,8 @@ namespace gl3d
 	
 
 	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, 
-		const unsigned int *indexes, bool noTexture, bool hasAnimationData)
+		const unsigned int *indexes, bool noTexture, bool hasAnimationData,
+		Animation animation, std::vector<Joint> joints)
 	{
 		/*
 			position					vec3
@@ -34622,15 +34649,15 @@ namespace gl3d
 		{
 			if (noTexture)
 			{
-				gl3dAssertComment(vertexSize % (sizeof(float) * 12) == 0,
-					"VertexSize count must be multiple of 12 * sizeof(float)\nwhen not using texture data\nand using animation data.");
-				if (vertexSize % (sizeof(float) * 12) != 0)return;
+				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
+					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen not using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 14) != 0)return;
 			}
 			else
 			{
-				gl3dAssertComment(vertexSize % (sizeof(float) * 14) == 0,
-					"VertexSize count must be multiple of 14 * sizeof(float)\nwhen using texture data\nand using animation data.");
-				if (vertexSize % (sizeof(float) * 14) != 0)return;
+				gl3dAssertComment(vertexSize % (sizeof(float) * 16) == 0,
+					"VertexSize count must be multiple of 16 * sizeof(float)\nwhen using texture data\nand using animation data.");
+				if (vertexSize % (sizeof(float) * 16) != 0)return;
 			}
 		}
 		else
@@ -34705,6 +34732,8 @@ namespace gl3d
 
 		#pragma endregion
 
+		this->animation = std::move(animation);
+		this->joints = std::move(joints);
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -35883,6 +35912,7 @@ namespace gl3d
 		ModelData returnModel;
 		{
 
+
 			int s = model.loader.LoadedMeshes.size();
 			returnModel.models.reserve(s);
 
@@ -36264,21 +36294,53 @@ namespace gl3d
 			for (int i = 0; i < s; i++)
 			{
 				GraphicModel gm;
+				
+
 				int index = i;
 				//TextureDataForModel textureData = {};
 
 				auto &mesh = model.loader.LoadedMeshes[index];
-				if (mesh.Indices.empty())
+				
+				if (mesh.Vertices.size())
 				{
-					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-						(float *)&mesh.Vertices[0],
-						0, nullptr);
+					if (mesh.Indices.empty())
+					{
+						gm.loadFromComputedData(mesh.Vertices.size() * sizeof(mesh.Vertices[0]),
+							(float *)&mesh.Vertices[0],
+							0, nullptr);
+					}
+					else
+					{
+						gm.loadFromComputedData(mesh.Vertices.size() * sizeof(mesh.Vertices[0]),
+							(float *)&mesh.Vertices[0],
+							mesh.Indices.size() * 4, &mesh.Indices[0]);
+					}
 				}
-				else
+				else //if(mesh.VerticesAnimations.size()) //todo empty model ?
 				{
-					gm.loadFromComputedData(mesh.Vertices.size() * 8 * 4,
-						(float *)&mesh.Vertices[0],
-						mesh.Indices.size() * 4, &mesh.Indices[0]);
+					if (mesh.Indices.empty())
+					{
+						gm.loadFromComputedData(mesh.VerticesAnimations.size() * sizeof(mesh.VerticesAnimations[0]),
+							(float *)&mesh.VerticesAnimations[0],
+							0, nullptr, false, true);
+					}
+					else
+					{
+						gm.loadFromComputedData(mesh.VerticesAnimations.size() * sizeof(mesh.VerticesAnimations[0]),
+							(float *)&mesh.VerticesAnimations[0],
+							mesh.Indices.size() * 4, &mesh.Indices[0], false, true);
+					}
+				}
+
+				
+				if (!model.loader.animations.empty())
+				{
+					gm.animation = model.loader.animations[0];
+				}
+
+				if (!model.loader.joints.empty())
+				{
+					gm.joints = model.loader.joints;
 				}
 
 				
@@ -38061,6 +38123,27 @@ namespace gl3d
 		return false;
 	}
 
+	void applyPoseToJoints(
+		std::vector<glm::mat4> &skinningMatrixes,
+		std::vector<glm::mat4> &appliedSkinningMatrixes,
+		std::vector<Joint> &joints, int index,
+		glm::mat4 parentTransform
+	)
+	{
+		auto currentTransform = skinningMatrixes[index];
+		auto worldSpaceTransform = parentTransform * currentTransform;
+
+		auto &j = joints[index];
+		for (auto &c : j.children)
+		{
+			applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, joints, c, worldSpaceTransform);
+		}
+
+		appliedSkinningMatrixes[index] = worldSpaceTransform * j.inverseBindTransform;
+
+	};
+
+
 	void Renderer3D::render(float deltaTime)
 	{
 	
@@ -38985,6 +39068,118 @@ namespace gl3d
 				}
 
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
+
+				if (!i.joints.empty())
+				{
+					glUniform1i(internal.lightShader.u_hasAnimations, true);
+					std::vector<glm::mat4> skinningMatrixes;
+					skinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
+
+					for (int b = 0; b < i.joints.size(); b++)
+					{
+						glm::mat4 rotMat(1.f);
+						glm::mat4 transMat(1.f);
+						
+						glm::vec3 scale;
+						glm::vec3 trans;
+
+						i.animation.timeStamps[b].passedTimeTrans += deltaTime;
+						i.animation.timeStamps[b].passedTimeScale += deltaTime;
+
+						
+						if (!i.animation.keyFramesRot[b].empty()) //no key frames for this bone...
+						{
+							i.animation.timeStamps[b].passedTimeRot += deltaTime;
+
+							while (i.animation.timeStamps[b].passedTimeRot >= i.animation.keyFramesRot[b].back().timeStemp)
+							{
+								i.animation.timeStamps[b].passedTimeRot -= i.animation.keyFramesRot[b].back().timeStemp;
+							}
+
+
+							for (int frame = i.animation.keyFramesRot[b].size()-1; frame >= 0; frame--)
+							{
+								int frames = i.animation.keyFramesRot[b].size();
+								float time = i.animation.timeStamps[b].passedTimeRot;
+								auto &currentFrame = i.animation.keyFramesRot[b][frame];
+								if (time >= currentFrame.timeStemp)
+								{
+									auto first = currentFrame.rotation;
+									auto second = i.animation.keyFramesRot[b][frame + 1].rotation;
+
+									float secondTime = i.animation.keyFramesRot[b][frame + 1].timeStemp;
+									float interpolation = (time - currentFrame.timeStemp) / (secondTime - currentFrame.timeStemp);
+								
+									rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+									break;
+
+								}
+
+							}
+
+						}
+
+						if (!i.animation.keyFramesTrans[b].empty()) //no key frames for this bone...
+						{
+							i.animation.timeStamps[b].passedTimeTrans += deltaTime;
+
+							while (i.animation.timeStamps[b].passedTimeTrans >= i.animation.keyFramesTrans[b].back().timeStemp)
+							{
+								i.animation.timeStamps[b].passedTimeTrans -= i.animation.keyFramesTrans[b].back().timeStemp;
+							}
+
+
+							for (int frame = i.animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = i.animation.keyFramesTrans[b].size();
+								float time = i.animation.timeStamps[b].passedTimeTrans;
+								auto &currentFrame = i.animation.keyFramesTrans[b][frame];
+								if (time >= currentFrame.timeStemp)
+								{
+									auto first = currentFrame.translation;
+									auto second = i.animation.keyFramesTrans[b][frame + 1].translation;
+
+									float secondTime = i.animation.keyFramesTrans[b][frame + 1].timeStemp;
+									float interpolation = (time - currentFrame.timeStemp) / (secondTime - currentFrame.timeStemp);
+
+									glm::lerp(first, second, interpolation);
+									break;
+
+								}
+
+							}
+
+						}
+
+
+						skinningMatrixes[b] = moveMat;
+					}
+
+					std::vector<glm::mat4> appliedSkinningMatrixes;
+					appliedSkinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
+
+					for (int j = 0; j < i.joints.size(); j++)
+					{
+						if (i.joints[j].root)
+						{
+							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, i.joints,
+								j, glm::mat4(1.f));
+						}
+					}
+
+
+					//send data
+					glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
+					glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
+						, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, internal.lightShader.jointsBlockBuffer);
+				}
+				else
+				{
+
+					glUniform1i(internal.lightShader.u_hasAnimations, false);
+
+				}
 
 
 				TextureDataForMaterial textureData = internal.materialTexturesData[materialId];

@@ -48,6 +48,7 @@ namespace gl3d
 		}quadDrawer;
 
 		GLint u_transform = -1;
+		GLint u_hasAnimations = -1;
 		GLint u_modelTransform = -1;
 		GLint u_motelViewTransform = -1;
 		GLint normalShaderLightposLocation = -1;
@@ -84,7 +85,6 @@ namespace gl3d
 
 		GLuint u_jointTransforms = GL_INVALID_INDEX;
 		GLuint jointsBlockBuffer = 0;
-		GLint u_hasAnimations = -1;
 
 
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;

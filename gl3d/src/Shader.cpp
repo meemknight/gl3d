@@ -321,6 +321,7 @@ namespace gl3d
 		//geometryPassShader.bind();
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform");
+		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
 		u_motelViewTransform = getUniform(geometryPassShader.id, "u_motelViewTransform");
 		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
@@ -345,7 +346,6 @@ namespace gl3d
 		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
 		glGenBuffers(1, &jointsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
-		u_hasAnimations = getUniform(geometryPassShader.id, "u_hasAnimations");
 
 		
 
