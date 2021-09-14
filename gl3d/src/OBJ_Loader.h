@@ -11,6 +11,8 @@
 
 // Vector - STD Vector/Array Library
 #include <vector>
+#include <unordered_set>
+#include <algorithm>
 
 // String - STD String Library
 #include <string>
@@ -645,22 +647,25 @@ namespace objl
 					return "";
 				};
 
-				auto setTexture = [&](int index, LoadedTexture *t, bool checkData)->std::string
+				auto setTexture = [&](int index, LoadedTexture *t, bool checkData)
 				{
 					if (index != -1)
 					{
+						auto &texture = model.textures[index];
+						auto &image = model.images[texture.source];
+
 						if (t)
 						{
 							if (checkData)
 							{
 								bool isData = false;
-								t->data.resize(4 * model.images[index].width * model.images[index].height);
-								for (int i = 0; i < model.images[index].width * model.images[index].height; i++)
+								t->data.resize(4 * image.width * image.height);
+								for (int i = 0; i < image.width * image.height; i++)
 								{
-									auto r = model.images[index].image[i * 4 + 0];
-									auto g = model.images[index].image[i * 4 + 1];
-									auto b = model.images[index].image[i * 4 + 2];
-									auto a = model.images[index].image[i * 4 + 3];
+									auto r = image.image[i * 4 + 0];
+									auto g = image.image[i * 4 + 1];
+									auto b = image.image[i * 4 + 2];
+									auto a = image.image[i * 4 + 3];
 
 									if (r != 0 || g != 0 || b != 0) { isData = true; }
 
@@ -673,9 +678,9 @@ namespace objl
 
 								if (isData)
 								{
-									t->w = model.images[index].width;
-									t->h = model.images[index].height;
-									t->components = model.images[index].component; //todo check component
+									t->w = image.width;
+									t->h = image.height;
+									t->components = image.component; //todo check component
 								}
 								else
 								{
@@ -684,52 +689,35 @@ namespace objl
 							}
 							else
 							{
-								t->w = model.images[index].width;
-								t->h = model.images[index].height;
-								t->components = model.images[index].component; //todo check component
-								t->data = model.images[index].image; //
+								t->w = image.width;
+								t->h = image.height;
+								t->components = image.component; //todo check component
+								t->data = image.image; //
 							}
 
 						}
-
-						//if (model.images[index].uri.empty())
-						//{
-						//	//std::string ret = model.images[index].name;
-						//	//ret += "." + MimeToExt(model.images[index].mimeType);
-						//	//return ret;
-						//	return "";
-						//}
-						//else 
-						//{
-						//	//std::string ret = 
-						//	//	std::string(model.images[index].uri.begin()+2, model.images[index].uri.end());
-						//	//return ret;
-						//	return "";
-						//}
-						return "";
-
-					}
-					else
-					{
-						return std::string();
 					}
 
 				};
 
 
-				LoadedMaterials[i].map_Kd = setTexture(mat.pbrMetallicRoughness.baseColorTexture.index,
+				//LoadedMaterials[i].map_Kd
+				setTexture(mat.pbrMetallicRoughness.baseColorTexture.index,
 					&LoadedMaterials[i].loadedDiffuse, false);
 
-				LoadedMaterials[i].map_Kn = setTexture(mat.normalTexture.index,
+				//LoadedMaterials[i].map_Kn
+				setTexture(mat.normalTexture.index,
 					&LoadedMaterials[i].loadedNormal, false);
 
-				LoadedMaterials[i].map_emissive = setTexture(mat.emissiveTexture.index,
+				//LoadedMaterials[i].map_emissive
+				setTexture(mat.emissiveTexture.index,
 					&LoadedMaterials[i].loadedEmissive, false);
 
 				//LoadedMaterials[i].map_Ka = setTexture(mat.occlusionTexture.index);
 				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
 				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
-				LoadedMaterials[i].map_ORM = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
+				//LoadedMaterials[i].map_ORM
+				setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
 					&LoadedMaterials[i].loadedORM, true);
 
 
@@ -894,9 +882,9 @@ namespace objl
 				animation.keyFramesTrans.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
 				animation.timeStamps.resize(joints.size());
-				animation.timePassed.resize(joints.size());
+				//animation.timePassed.resize(joints.size());
 
-				animation.keyFrames.resize(joints.size());
+				//animation.keyFrames.resize(joints.size());
 
 			#pragma endregion
 
@@ -1004,76 +992,93 @@ namespace objl
 					}
 				}
 
-				for (int node = 0; node < animation.timeStamps.size(); node++)
-				{
-					animation.keyFrames[node].reserve(animation.keyFramesTrans[node].size());
-					for (auto &frame : animation.keyFramesTrans[node])
-					{
-						gl3d::KeyFrame f;
-						f.timeStamp = frame.timeStamp;
-						f.translation = frame.translation;
-						animation.keyFrames[node].push_back(f);
-					}
-
-					for (auto &frame : animation.keyFramesRot[node])
-					{
-						for (int i = 0; i < animation.keyFrames[node].size(); i++)
-						{
-							if (animation.keyFrames[node][i].timeStamp == frame.timeStamp)
-							{
-								animation.keyFrames[node][i].rotation = frame.rotation;
-								break;
-							}
-							else if (frame.timeStamp < animation.keyFrames[node][i].timeStamp)
-							{
-								gl3dAssertComment(0, "not implemented");
-								gl3d::KeyFrame f;
-								f.timeStamp = frame.timeStamp;
-								f.rotation = frame.rotation;
-
-								if (i == animation.keyFrames[node].size() - 1)
-								{
-									f.scale = animation.keyFrames[node].back().scale;
-									f.translation = animation.keyFrames[node].back().translation;
-								}
-								else
-								{
-									
-								}
-
-								animation.keyFrames[node].insert(
-									animation.keyFrames[node].begin() + i - 1, f);
-								break;
-							}
-						}
-					}
-
-					for (auto &frame : animation.keyFramesScale[node])
-					{
-						for (int i = 0; i < animation.keyFrames[node].size(); i++)
-						{
-							if (animation.keyFrames[node][i].timeStamp == frame.timeStamp)
-							{
-								animation.keyFrames[node][i].scale = frame.scale;
-								break;
-							}
-							else if (frame.timeStamp < animation.keyFrames[node][i].timeStamp)
-							{
-								gl3dAssertComment(0, "not implemented");
-								gl3d::KeyFrame f;
-								f.timeStamp = frame.timeStamp;
-								f.scale = frame.scale;
-
-								animation.keyFrames[node].insert(
-									animation.keyFrames[node].begin() + i - 1, f);
-								break;
-							}
-						}
-					}
-
-					animation.keyFrames[node].shrink_to_fit();
-
-				}
+				//this code is not done
+				// it merges frames
+				// it will probably not be used
+				//for (int node = 0; node < animation.timeStamps.size(); node++)
+				//{
+				//
+				//	#pragma region get all the time stamps
+				//	std::vector<float> allFrames;
+				//	{
+				//		std::unordered_set<float> allFramesSet;
+				//		allFramesSet.reserve(animation.keyFramesTrans[node].size() +
+				//			animation.keyFramesScale[node].size() +
+				//			animation.keyFramesRot[node].size()
+				//		);
+				//
+				//		for (auto &frame : animation.keyFramesTrans[node])
+				//		{
+				//			allFramesSet.insert(frame.timeStamp);
+				//		}
+				//		for (auto &frame : animation.keyFramesScale[node])
+				//		{
+				//			allFramesSet.insert(frame.timeStamp);
+				//		}
+				//		for (auto &frame : animation.keyFramesRot[node])
+				//		{
+				//			allFramesSet.insert(frame.timeStamp);
+				//		}
+				//
+				//		allFrames.reserve(allFramesSet.size());
+				//		for (auto i : allFramesSet)
+				//		{
+				//			allFrames.push_back(i);
+				//		}
+				//
+				//		std::sort(allFrames.begin(), allFrames.end());
+				//	}
+				//	#pragma endregion
+				//
+				//	animation.keyFrames[node].resize(allFrames.size());
+				//	for (int i = 0; i < allFrames.size(); i++)
+				//	{
+				//		animation.keyFrames[node][i].timeStamp = allFrames[i];
+				//	}
+				//
+				//	//add translation
+				//	for (auto &frame : animation.keyFramesTrans[node])
+				//	{
+				//		for (int i = 0; i < allFrames.size(); i++) 
+				//		{
+				//			if (allFrames[i] == frame.timeStamp)
+				//			{
+				//				animation.keyFrames[node][i].translation = frame.translation;
+				//				animation.keyFrames[node][i].translationSet = true;
+				//				break;
+				//			}
+				//		}
+				//	}
+				//
+				//	//add rotation
+				//	for (auto &frame : animation.keyFramesRot[node])
+				//	{
+				//		for (int i = 0; i < allFrames.size(); i++)
+				//		{
+				//			if (allFrames[i] == frame.timeStamp)
+				//			{
+				//				animation.keyFrames[node][i].rotation = frame.rotation;
+				//				animation.keyFrames[node][i].rotationSet = true;
+				//				break;
+				//			}
+				//		}
+				//	}
+				//
+				//	//add rotation
+				//	for (auto &frame : animation.keyFramesRot[node])
+				//	{
+				//		for (int i = 0; i < allFrames.size(); i++)
+				//		{
+				//			if (allFrames[i] == frame.timeStamp)
+				//			{
+				//				animation.keyFrames[node][i].rotation = frame.rotation;
+				//				animation.keyFrames[node][i].rotationSet = true;
+				//				break;
+				//			}
+				//		}
+				//	}
+				//
+				//}
 
 				animations.push_back(std::move(animation));
 			}
