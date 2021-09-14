@@ -894,6 +894,9 @@ namespace objl
 				animation.keyFramesTrans.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
 				animation.timeStamps.resize(joints.size());
+				animation.timePassed.resize(joints.size());
+
+				animation.keyFrames.resize(joints.size());
 
 			#pragma endregion
 
@@ -941,7 +944,7 @@ namespace objl
 							move.y = translation[t * 3 + 1];
 							move.z = translation[t * 3 + 2];
 
-							animation.keyFramesTrans[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesTrans[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesTrans[node][t].translation = move;
 						}
 					}
@@ -966,7 +969,7 @@ namespace objl
 							rot.z = rotation[t * 4 + 2];
 							rot.w = rotation[t * 4 + 3];
 
-							animation.keyFramesRot[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesRot[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesRot[node][t].rotation = rot;
 						}
 					}
@@ -991,7 +994,7 @@ namespace objl
 							scale.y = scaleBuffer[t * 3 + 1];
 							scale.z = scaleBuffer[t * 3 + 2];
 
-							animation.keyFramesScale[node][t].timeStemp = timeStamps[t];
+							animation.keyFramesScale[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesScale[node][t].scale = scale;
 						}
 					}
@@ -999,6 +1002,76 @@ namespace objl
 					{
 						continue;
 					}
+				}
+
+				for (int node = 0; node < animation.timeStamps.size(); node++)
+				{
+					animation.keyFrames[node].reserve(animation.keyFramesTrans[node].size());
+					for (auto &frame : animation.keyFramesTrans[node])
+					{
+						gl3d::KeyFrame f;
+						f.timeStamp = frame.timeStamp;
+						f.translation = frame.translation;
+						animation.keyFrames[node].push_back(f);
+					}
+
+					for (auto &frame : animation.keyFramesRot[node])
+					{
+						for (int i = 0; i < animation.keyFrames[node].size(); i++)
+						{
+							if (animation.keyFrames[node][i].timeStamp == frame.timeStamp)
+							{
+								animation.keyFrames[node][i].rotation = frame.rotation;
+								break;
+							}
+							else if (frame.timeStamp < animation.keyFrames[node][i].timeStamp)
+							{
+								gl3dAssertComment(0, "not implemented");
+								gl3d::KeyFrame f;
+								f.timeStamp = frame.timeStamp;
+								f.rotation = frame.rotation;
+
+								if (i == animation.keyFrames[node].size() - 1)
+								{
+									f.scale = animation.keyFrames[node].back().scale;
+									f.translation = animation.keyFrames[node].back().translation;
+								}
+								else
+								{
+									
+								}
+
+								animation.keyFrames[node].insert(
+									animation.keyFrames[node].begin() + i - 1, f);
+								break;
+							}
+						}
+					}
+
+					for (auto &frame : animation.keyFramesScale[node])
+					{
+						for (int i = 0; i < animation.keyFrames[node].size(); i++)
+						{
+							if (animation.keyFrames[node][i].timeStamp == frame.timeStamp)
+							{
+								animation.keyFrames[node][i].scale = frame.scale;
+								break;
+							}
+							else if (frame.timeStamp < animation.keyFrames[node][i].timeStamp)
+							{
+								gl3dAssertComment(0, "not implemented");
+								gl3d::KeyFrame f;
+								f.timeStamp = frame.timeStamp;
+								f.scale = frame.scale;
+
+								animation.keyFrames[node].insert(
+									animation.keyFrames[node].begin() + i - 1, f);
+								break;
+							}
+						}
+					}
+
+					animation.keyFrames[node].shrink_to_fit();
 
 				}
 

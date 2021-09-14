@@ -22,22 +22,30 @@ namespace gl3d
 		int used = 0;
 	};
 
+	struct KeyFrame
+	{
+		glm::quat rotation{0.f,0.f,0.f,1.f};
+		glm::vec3 translation{};
+		glm::vec3 scale{1.f, 1.f, 1.f};
+		float timeStamp{};
+	};
+
 	struct KeyFrameRotation
 	{
-		glm::quat rotation{};
-		float timeStemp{};
+		glm::quat rotation{ 0.f,0.f,0.f,1.f };
+		float timeStamp{};
 	};
 
 	struct KeyFrameTranslation
 	{
 		glm::vec3 translation{};
-		float timeStemp{};
+		float timeStamp{};
 	};
 
 	struct KeyFrameScale
 	{
-		glm::vec3 scale{};
-		float timeStemp{};
+		glm::vec3 scale{ 1.f, 1.f, 1.f };
+		float timeStamp{};
 	};
 
 	struct TimeStamps
@@ -55,8 +63,10 @@ namespace gl3d
 		std::vector<std::vector<KeyFrameRotation>> keyFramesRot;
 		std::vector<std::vector<KeyFrameTranslation>> keyFramesTrans;
 		std::vector<std::vector<KeyFrameScale>> keyFramesScale;
-		
 		std::vector<TimeStamps> timeStamps;
+
+		std::vector<float> timePassed;
+		std::vector<std::vector<KeyFrame>> keyFrames;
 	};
 
 
