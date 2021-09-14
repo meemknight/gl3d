@@ -71,7 +71,8 @@ namespace gl3d
 		std::vector<std::vector<KeyFrameScale>> keyFramesScale;
 		std::vector<TimeStamps> timeStamps;
 
-		float totalTimePassed;
+		float animationDuration=0;
+		float totalTimePassed=0;
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;
 	};

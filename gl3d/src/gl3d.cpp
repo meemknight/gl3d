@@ -3647,108 +3647,106 @@ namespace gl3d
 					std::vector<glm::mat4> skinningMatrixes;
 					skinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
 
+					i.animation.totalTimePassed += deltaTime;
+					while (i.animation.totalTimePassed >= i.animation.animationDuration)
+					{
+						i.animation.totalTimePassed -= i.animation.animationDuration;
+					}
+
 					for (int b = 0; b < i.joints.size(); b++)
 					{
 						glm::mat4 rotMat(1.f);
 						glm::mat4 transMat(1.f);
 						glm::mat4 scaleMat(1.f);
 						
-						i.animation.timeStamps[b].passedTimeScale += deltaTime;
-
 						if (!i.animation.keyFramesRot[b].empty()) //no key frames for this bone...
 						{
-							i.animation.timeStamps[b].passedTimeRot += deltaTime;
-
-							while (i.animation.timeStamps[b].passedTimeRot >= i.animation.keyFramesRot[b].back().timeStamp)
-							{
-								i.animation.timeStamps[b].passedTimeRot -= i.animation.keyFramesRot[b].back().timeStamp;
-							}
 
 							for (int frame = i.animation.keyFramesRot[b].size()-1; frame >= 0; frame--)
 							{
 								int frames = i.animation.keyFramesRot[b].size();
-								float time = i.animation.timeStamps[b].passedTimeRot;
+								float time = i.animation.totalTimePassed;
 								auto &currentFrame = i.animation.keyFramesRot[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
 									auto first = currentFrame.rotation;
-									auto second = i.animation.keyFramesRot[b][frame + 1].rotation;
 
-									float secondTime = i.animation.keyFramesRot[b][frame + 1].timeStamp;
-									float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-								
-									rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+									if (frame == i.animation.keyFramesRot[b].size() - 1)
+									{
+										rotMat = glm::toMat4(first);
+									}
+									else
+									{
+										auto second = i.animation.keyFramesRot[b][frame + 1].rotation;
+										float secondTime = i.animation.keyFramesRot[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+									}
 									break;
 
 								}
 
 							}
 							//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
-
 						}
+
+						auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
+						{
+							return a *(1.f - x) + (b * x);
+						};
 
 						if (!i.animation.keyFramesTrans[b].empty()) //no key frames for this bone...
 						{
-							i.animation.timeStamps[b].passedTimeTrans += deltaTime;
-
-							while (i.animation.timeStamps[b].passedTimeTrans >= i.animation.keyFramesTrans[b].back().timeStamp)
-							{
-								i.animation.timeStamps[b].passedTimeTrans -= i.animation.keyFramesTrans[b].back().timeStamp;
-							}
-
-
 							for (int frame = i.animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = i.animation.keyFramesTrans[b].size();
-								float time = i.animation.timeStamps[b].passedTimeTrans;
+								float time = i.animation.totalTimePassed;
 								auto &currentFrame = i.animation.keyFramesTrans[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
 									auto first = currentFrame.translation;
-									auto second = i.animation.keyFramesTrans[b][frame + 1].translation;
 
-									float secondTime = i.animation.keyFramesTrans[b][frame + 1].timeStamp;
-									float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-
-									glm::vec3 tr(first *(1.f - interpolation) + (second * interpolation));
-									transMat = glm::translate(tr);
+									if (frame == i.animation.keyFramesTrans[b].size() - 1)
+									{
+										transMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = i.animation.keyFramesTrans[b][frame + 1].translation;
+										float secondTime = i.animation.keyFramesTrans[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										transMat = glm::translate(lerp(first, second, interpolation));
+									}
 									break;
-
 								}
-
 							}
 							//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
 						}
 
 						if (!i.animation.keyFramesScale[b].empty()) //no key frames for this bone...
 						{
-							i.animation.timeStamps[b].passedTimeScale += deltaTime;
-
-							while (i.animation.timeStamps[b].passedTimeScale >= i.animation.keyFramesScale[b].back().timeStamp)
-							{
-								i.animation.timeStamps[b].passedTimeScale -= i.animation.keyFramesScale[b].back().timeStamp;
-							}
-
-
 							for (int frame = i.animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = i.animation.keyFramesScale[b].size();
-								float time = i.animation.timeStamps[b].passedTimeScale;
+								float time = i.animation.totalTimePassed;
 								auto &currentFrame = i.animation.keyFramesScale[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
 									auto first = currentFrame.scale;
-									auto second = i.animation.keyFramesScale[b][frame + 1].scale;
 
-									float secondTime = i.animation.keyFramesScale[b][frame + 1].timeStamp;
-									float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-
-									glm::vec3 tr(first * (1.f - interpolation) + (second * interpolation));
-									scaleMat = glm::scale(tr);
+									if (frame == i.animation.keyFramesScale[b].size() - 1)
+									{
+										scaleMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = i.animation.keyFramesScale[b][frame + 1].scale;
+										float secondTime = i.animation.keyFramesScale[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										scaleMat = glm::scale(lerp(first, second, interpolation));
+									}
 									break;
-
 								}
-
 							}
 							//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
 						}

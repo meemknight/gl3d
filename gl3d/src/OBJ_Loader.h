@@ -913,6 +913,14 @@ namespace objl
 						}
 					}
 
+					for (auto &t : timeStamps)
+					{
+						if (t > animation.animationDuration)
+						{
+							animation.animationDuration = t;
+						}
+					}
+
 					if (channel.target_path == "translation") 
 					{
 						type = 0;
