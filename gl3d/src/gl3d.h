@@ -237,7 +237,9 @@ namespace gl3d
 		void setEntityVisible(Entity& e, bool v = true);
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
-		
+		void setEntityAnimationIndex(Entity &e, int ind);
+		int getEntityAnimationIndex(Entity &e);
+
 		//this is used for apis like imgui.
 		std::vector<char*> *getEntityMeshesNames(Entity& e);
 

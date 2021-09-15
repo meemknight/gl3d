@@ -93,13 +93,13 @@ namespace gl3d
 
 		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false,
-			Animation animation = {},
+			std::vector<Animation> animation = {},
 			std::vector<Joint> joints = {}
 			);
 	
 		void clear();
 
-		Animation animation;
+		std::vector<Animation> animations;
 		std::vector<Joint> joints;
 
 		glm::vec3 minBoundary = {};
@@ -133,8 +133,10 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		void clear();
 
+		int animationIndex = 0;
+		float animationSpeed = 1.f;
+
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
-		
 
 		bool castShadows() {return (flags & 0b0000'0100); }
 		void setCastShadows(bool s)

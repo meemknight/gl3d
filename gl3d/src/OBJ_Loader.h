@@ -745,7 +745,7 @@ namespace objl
 			if (!model.skins.empty())
 			{
 				auto skin = model.skins[0];
-
+				
 				joints.resize(skin.joints.size());
 				isMain.resize(skin.joints.size(), 1);
 
@@ -755,12 +755,12 @@ namespace objl
 					skinJoints.push_back(j);
 				}
 
-				skeletonRoot = skin.skeleton;
-
+				int jCount = 0;
 				for (auto &j : skin.joints)
 				{
 					auto &b = model.nodes[j];
-					
+					std::cout << jCount << ": " << b.name << "\n";
+
 					gl3d::Joint joint;
 					
 					joint.children.reserve(b.children.size());
@@ -769,14 +769,13 @@ namespace objl
 						joint.children.push_back(convertNode(b.children[i]));
 					}
 
-				
 					for (auto &c : joint.children)
 					{
 						isMain[c] = 0;
 					}
 				
 					joint.name = b.name;
-				
+					
 					glm::mat4 rotation(1.f);
 					glm::mat4 scale(1.f);
 					glm::mat4 translation(1.f);
@@ -817,12 +816,32 @@ namespace objl
 						scale = glm::scale(s);
 						joint.scale = s;
 					}
-				
+					
 					joint.localBindTransform = translation * rotation * scale;
+					//glm::mat4 trans = *(glm::mat4*)b.matrix.data();
+					//joint.localBindTransform = trans;
+
+					
+					tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
+					tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+					tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+					float *matData = (float *)
+						(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+					glm::mat4 inversBindMat;
+
+					for (int i = 0; i < 16; i++) 
+					{
+						((float*)&inversBindMat[0][0])[i] = matData[(jCount) * 16 + i];
+					}
+					//inversBindMat = glm::transpose(inversBindMat);
+					joint.inverseBindTransform = inversBindMat;
+
 
 					joints[convertNode(j)] = std::move(joint);
+					jCount++;
 				}
 
+				skeletonRoot = skin.skeleton;
 				if (skeletonRoot < 0) 
 				{
 					for (int i = 0; i < isMain.size(); i++)
@@ -830,14 +849,14 @@ namespace objl
 						if (isMain[i] == 1)
 						{
 							skeletonRoot = i;
-							calculateInverseBindTransform(i, glm::mat4(1.f), joints);
+							//calculateInverseBindTransform(i, glm::mat4(1.f), joints);
 							break;
 						};
 					}
 				}
 				else 
 				{
-					calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
+					//calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
 				}
 
 			}
@@ -1005,7 +1024,6 @@ namespace objl
 							rot.y = rotation[t * 4 + 1];
 							rot.z = rotation[t * 4 + 2];
 							rot.w = rotation[t * 4 + 3];
-
 
 							animation.keyFramesRot[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesRot[node][t].rotation = rot;
@@ -1298,7 +1316,7 @@ namespace objl
 								//
 								//}
 
-								if (componentCount > 4)
+								//if (componentCount > 4)
 								{
 									weightsVec /= weightsVec.x + weightsVec.y + weightsVec.z + weightsVec.w;
 								}

@@ -402,11 +402,11 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
 	//auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
-	auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
+	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
-	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
+	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
 	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
-	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
@@ -417,7 +417,7 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
-	auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
+	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
@@ -1069,6 +1069,14 @@ int main()
 				float s = 0;
 				ImGui::InputFloat("sameScale", &s);
 				ImGui::NewLine();
+
+				int animation = renderer.getEntityAnimationIndex(models[itemCurrent]);
+				float animationSpeed = 0;
+				ImGui::InputInt("animation", &animation);
+				ImGui::DragFloat("animation speed", &animationSpeed);
+				renderer.setEntityAnimationIndex(models[itemCurrent], animation);
+				ImGui::NewLine();
+
 
 				ImGui::Text("Object flags");
 				bool staticEntity = renderer.isEntityStatic(models[itemCurrent]);

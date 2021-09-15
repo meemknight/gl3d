@@ -70,6 +70,9 @@ Features and todos:
 - [x] Shadows settings per light (hardness)
 - [x] Set shadow quality globally
 ---
+- [ ] Animations
+- [ ] Skinning matrix computed on the gpu
+---
 - [ ] Transparency
 
 

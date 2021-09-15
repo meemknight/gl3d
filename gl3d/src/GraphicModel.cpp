@@ -255,7 +255,7 @@ namespace gl3d
 
 	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, 
 		const unsigned int *indexes, bool noTexture, bool hasAnimationData,
-		Animation animation, std::vector<Joint> joints)
+		std::vector<Animation> animation, std::vector<Joint> joints)
 	{
 		/*
 			position					vec3
@@ -362,7 +362,7 @@ namespace gl3d
 
 		#pragma endregion
 
-		this->animation = std::move(animation);
+		this->animations = std::move(animation);
 		this->joints = std::move(joints);
 
 		glGenVertexArrays(1, &vertexArray);

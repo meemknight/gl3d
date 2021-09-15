@@ -901,7 +901,7 @@ namespace gl3d
 
 				if (!model.loader.animations.empty())
 				{
-					gm.animation = model.loader.animations[0];
+					gm.animations = model.loader.animations;
 				}
 
 				if (!model.loader.joints.empty())
@@ -2155,6 +2155,20 @@ namespace gl3d
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return 0; } //warn or sthing
 		return internal.cpuEntities[i].castShadows();
+	}
+
+	void Renderer3D::setEntityAnimationIndex(Entity &e, int ind)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+		internal.cpuEntities[i].animationIndex = ind;
+	}
+
+	int Renderer3D::getEntityAnimationIndex(Entity &e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+		return internal.cpuEntities[i].animationIndex;
 	}
 
 	std::vector<char*> *Renderer3D::getEntityMeshesNames(Entity& e)
@@ -3635,16 +3649,20 @@ namespace gl3d
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 				#pragma region animations
-				if (!i.joints.empty() && !i.animation.keyFramesRot.empty())
+				if (!i.joints.empty() && !i.animations.empty() && !i.animations[0].keyFramesRot.empty())
 				{
+					int index = entity.animationIndex;
+					index = std::min(index, (int)i.animations.size() - 1);
+					auto &animation = i.animations[index];
+
 					glUniform1i(internal.lightShader.u_hasAnimations, true);
 					std::vector<glm::mat4> skinningMatrixes;
 					skinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
 
-					i.animation.totalTimePassed += deltaTime*0.2;
-					while (i.animation.totalTimePassed >= i.animation.animationDuration)
+					animation.totalTimePassed += deltaTime * entity.animationSpeed;
+					while (animation.totalTimePassed >= animation.animationDuration)
 					{
-						i.animation.totalTimePassed -= i.animation.animationDuration;
+						animation.totalTimePassed -= animation.animationDuration;
 					}
 
 					for (int b = 0; b < i.joints.size(); b++)
@@ -3657,34 +3675,34 @@ namespace gl3d
 						auto &joint = i.joints[b];
 
 						if(
-							i.animation.keyFramesRot[b].empty() &&
-							i.animation.keyFramesTrans[b].empty() &&
-							i.animation.keyFramesScale[b].empty()
+							animation.keyFramesRot[b].empty() &&
+							animation.keyFramesTrans[b].empty() &&
+							animation.keyFramesScale[b].empty()
 							)
 						{
-							skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations at all here
+							skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
 						}
 						else
 						{
-							if (!i.animation.keyFramesRot[b].empty()) //no key frames for this bone...
+							if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
 							{
-								for (int frame = i.animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
+								for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
 								{
-									int frames = i.animation.keyFramesRot[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesRot[b][frame];
+									int frames = animation.keyFramesRot[b].size();
+									float time = animation.totalTimePassed;
+									auto &currentFrame = animation.keyFramesRot[b][frame];
 									if (time >= currentFrame.timeStamp)
 									{
 										auto first = currentFrame.rotation;
 
-										if (frame == i.animation.keyFramesRot[b].size() - 1)
+										if (frame == animation.keyFramesRot[b].size() - 1)
 										{
 											rotMat = glm::toMat4(first);
 										}
 										else
 										{
-											auto second = i.animation.keyFramesRot[b][frame + 1].rotation;
-											float secondTime = i.animation.keyFramesRot[b][frame + 1].timeStamp;
+											auto second = animation.keyFramesRot[b][frame + 1].rotation;
+											float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
 											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
 											rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
 										}
@@ -3705,25 +3723,25 @@ namespace gl3d
 								return a * (1.f - x) + (b * x);
 							};
 
-							if (!i.animation.keyFramesTrans[b].empty()) //no key frames for this bone...
+							if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
 							{
-								for (int frame = i.animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+								for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
 								{
-									int frames = i.animation.keyFramesTrans[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesTrans[b][frame];
+									int frames = animation.keyFramesTrans[b].size();
+									float time = animation.totalTimePassed;
+									auto &currentFrame = animation.keyFramesTrans[b][frame];
 									if (time >= currentFrame.timeStamp)
 									{
 										auto first = currentFrame.translation;
 
-										if (frame == i.animation.keyFramesTrans[b].size() - 1)
+										if (frame == animation.keyFramesTrans[b].size() - 1)
 										{
 											transMat = glm::translate(first);
 										}
 										else
 										{
-											auto second = i.animation.keyFramesTrans[b][frame + 1].translation;
-											float secondTime = i.animation.keyFramesTrans[b][frame + 1].timeStamp;
+											auto second = animation.keyFramesTrans[b][frame + 1].translation;
+											float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
 											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
 											transMat = glm::translate(lerp(first, second, interpolation));
 										}
@@ -3737,25 +3755,25 @@ namespace gl3d
 								transMat = glm::translate(joint.trans);
 							}
 
-							if (!i.animation.keyFramesScale[b].empty()) //no key frames for this bone...
+							if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
 							{
-								for (int frame = i.animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
+								for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
 								{
-									int frames = i.animation.keyFramesScale[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesScale[b][frame];
+									int frames = animation.keyFramesScale[b].size();
+									float time = animation.totalTimePassed;
+									auto &currentFrame = animation.keyFramesScale[b][frame];
 									if (time >= currentFrame.timeStamp)
 									{
 										auto first = currentFrame.scale;
 
-										if (frame == i.animation.keyFramesScale[b].size() - 1)
+										if (frame == animation.keyFramesScale[b].size() - 1)
 										{
 											scaleMat = glm::translate(first);
 										}
 										else
 										{
-											auto second = i.animation.keyFramesScale[b][frame + 1].scale;
-											float secondTime = i.animation.keyFramesScale[b][frame + 1].timeStamp;
+											auto second = animation.keyFramesScale[b][frame + 1].scale;
+											float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
 											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
 											scaleMat = glm::scale(lerp(first, second, interpolation));
 										}
@@ -3776,23 +3794,13 @@ namespace gl3d
 
 					}
 
-					//skinningMatrixes[4] = glm::translate(glm::vec3{ -2,0.2,0 });
+					//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
 
 					std::vector<glm::mat4> appliedSkinningMatrixes;
 					appliedSkinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
 
-					//for (int j = 0; j < i.joints.size(); j++)
-					//{
-					//	if (i.joints[j].root)
-					//	{
-					//		applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, i.joints,
-					//			j, glm::mat4(1.f));
-					//	}
-					//}
-
 					applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, i.joints,
-						i.animation.root, glm::mat4(1.f));
-
+						animation.root, glm::mat4(1.f));
 
 					//send data
 					glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
