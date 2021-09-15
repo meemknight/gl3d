@@ -28,7 +28,6 @@ void main()
 	vec4 totalLocalPos = vec4(0.f);
 	vec4 totalNorm = vec4(0.f);
 
-
 	if(u_hasAnimations != 0)
 	{
 		for(int i=0; i<4; i++)

@@ -727,33 +727,48 @@ namespace objl
 
 		#pragma region bones
 
-			joints.resize(model.nodes.size());
 			//int indexCount = 0;
 			std::vector<int> isMain;
-			isMain.resize(model.nodes.size(), 0);
-
 			std::vector<int> skinJoints;
+			int skeletonRoot = 0;
+
+			auto convertNode = [&skinJoints](int index)
+			{
+				auto convertedNode = std::find(skinJoints.begin(), skinJoints.end(), index);
+				if (convertedNode == skinJoints.end())
+				{
+					return -1;
+				}
+				return convertedNode - skinJoints.begin();
+			};
 
 			if (!model.skins.empty())
 			{
-
 				auto skin = model.skins[0];
 
+				joints.resize(skin.joints.size());
+				isMain.resize(skin.joints.size(), 1);
+
+				skinJoints.reserve(skin.joints.size());
 				for (auto &j : skin.joints)
 				{
-					isMain[j] = 1;
+					skinJoints.push_back(j);
 				}
+
+				skeletonRoot = skin.skeleton;
 
 				for (auto &j : skin.joints)
 				{
 					auto &b = model.nodes[j];
-
-					skinJoints.push_back(j);
-
+					
 					gl3d::Joint joint;
-					joint.used = true;
-					//joint.index = j;
-					joint.children = b.children;
+					
+					joint.children.reserve(b.children.size());
+					for (int i = 0; i < b.children.size(); i++) 
+					{
+						joint.children.push_back(convertNode(b.children[i]));
+					}
+
 				
 					for (auto &c : joint.children)
 					{
@@ -776,37 +791,56 @@ namespace objl
 						rot.w = b.rotation[3];
 				
 						rotation = glm::toMat4(rot);
+						joint.rotation = rot;
 					}
 				
 					//suppose 3 component translation
 					if (!b.translation.empty())
 					{
-						translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+						glm::vec3 trans;
+						trans.x = b.translation[0];
+						trans.y = b.translation[1];
+						trans.z = b.translation[2];
+
+						translation = glm::translate(trans);
+						joint.trans = trans;
 					}
 				
 					//suppose 3 component scale
 					if (!b.scale.empty())
 					{
-						scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+						glm::vec3 s;
+						s.x = b.scale[0];
+						s.y = b.scale[1];
+						s.z = b.scale[2];
+
+						scale = glm::scale(s);
+						joint.scale = s;
 					}
 				
 					joint.localBindTransform = translation * rotation * scale;
-				
-					joints[j] = std::move(joint);
+
+					joints[convertNode(j)] = std::move(joint);
 				}
 
-				for (int i = 0; i < isMain.size(); i++)
+				if (skeletonRoot < 0) 
 				{
-					if (isMain[i] == 1) 
+					for (int i = 0; i < isMain.size(); i++)
 					{
-						joints[i].root = true;
-						calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-					};
+						if (isMain[i] == 1)
+						{
+							skeletonRoot = i;
+							calculateInverseBindTransform(i, glm::mat4(1.f), joints);
+							break;
+						};
+					}
 				}
-
+				else 
+				{
+					calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
+				}
 
 			}
-
 
 			//for (auto &b : model.nodes)
 			//{
@@ -871,11 +905,13 @@ namespace objl
 		#pragma region animations
 			
 			animations.reserve(model.animations.size());
+			std::cout << model.animations.size() << " :size\n";
 			for (auto &a : model.animations)
 			{
 				gl3d::Animation animation;
 				animation.name = a.name;
-				
+				animation.root = skeletonRoot;
+
 			#pragma region set key frames a default value
 
 				animation.keyFramesRot.resize(joints.size()); //each joint will potentially have keyframes
@@ -883,23 +919,26 @@ namespace objl
 				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
 				animation.timeStamps.resize(joints.size());
 				//animation.timePassed.resize(joints.size());
-
 				//animation.keyFrames.resize(joints.size());
 
 			#pragma endregion
 
-				for (int i = 0; i < a.channels.size(); i++) 
+				for (int i = 0; i < a.channels.size(); i++)
 				{
 					auto &channel = a.channels[i];
 					auto &sampler = a.samplers[channel.sampler];
 
-					int node = channel.target_node;
+					int node = convertNode(channel.target_node);
+					if (node == -1)
+					{
+						//std::cout << channel.target_path <<" : " << i <<"\n";
+						continue;
+					}
+
 					int type = 0; //translation rotation scale
 
 					std::vector<float> timeStamps;
 					{
-						auto &channel = a.channels[i];
-						auto &sampler = a.samplers[channel.sampler];
 						tinygltf::Accessor &accessor = model.accessors[sampler.input];
 						tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
 						tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
@@ -936,6 +975,8 @@ namespace objl
 							float *translation = (float *)
 								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
 
+							gl3dAssert(accessor.count == timeStamps.size());
+
 							move.x = translation[t * 3 + 0];
 							move.y = translation[t * 3 + 1];
 							move.z = translation[t * 3 + 2];
@@ -958,12 +999,13 @@ namespace objl
 							float *rotation = (float *)
 								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
 
-							accessor.count;
+							gl3dAssert(accessor.count == timeStamps.size());
 
 							rot.x = rotation[t * 4 + 0];
 							rot.y = rotation[t * 4 + 1];
 							rot.z = rotation[t * 4 + 2];
 							rot.w = rotation[t * 4 + 3];
+
 
 							animation.keyFramesRot[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesRot[node][t].rotation = rot;
@@ -984,7 +1026,7 @@ namespace objl
 							float *scaleBuffer = (float *)
 								(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
 
-							accessor.count;
+							gl3dAssert(accessor.count == timeStamps.size());
 
 							scale.x = scaleBuffer[t * 3 + 0];
 							scale.y = scaleBuffer[t * 3 + 1];
@@ -994,8 +1036,14 @@ namespace objl
 							animation.keyFramesScale[node][t].scale = scale;
 						}
 					}
+					else if (channel.target_path == "weights") 
+					{
+						gl3dAssertComment(0, "weights are supported");
+					}
 					else 
 					{
+						std::cout << channel.target_path << "\n";
+						gl3dAssertComment(0, "unknow animation target");
 						continue;
 					}
 				}
@@ -1093,7 +1141,6 @@ namespace objl
 
 
 		#pragma endregion
-
 		
 		#pragma region meshes
 
@@ -1238,18 +1285,18 @@ namespace objl
 									}
 								}
 
-								for (int j = 0; j < 4; j++) 
-								{
-									if (jointsIndex[j] == -1)
-									{
-										break;
-									}
-									else
-									{
-										jointsIndex[j] = skinJoints[jointsIndex[j]]; 
-									}
-
-								}
+								//for (int j = 0; j < 4; j++) 
+								//{
+								//	if (jointsIndex[j] == -1)
+								//	{
+								//		break;
+								//	}
+								//	else
+								//	{
+								//		jointsIndex[j] = skinJoints[jointsIndex[j]]; 
+								//	}
+								//
+								//}
 
 								if (componentCount > 4)
 								{

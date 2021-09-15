@@ -400,17 +400,17 @@ int main()
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
-	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
+	//auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
-	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
-	auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
+	auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
+	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
-	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
-	auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
+	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
-	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
+	auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);

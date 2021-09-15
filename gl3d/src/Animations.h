@@ -3,6 +3,7 @@
 #include <string>
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
 #include <vector>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -17,9 +18,12 @@ namespace gl3d
 		glm::mat4 localBindTransform{1.f};
 		std::string name{};
 		std::vector<int> children;
+		glm::quat rotation{ 0.f,0.f,0.f,1.f };
+		glm::vec3 trans{ 1.f,1.f,1.f };
+		glm::vec3 scale{ 1.f,1.f,1.f };
+
 		//int index{};
-		int root = 0;
-		int used = 0;
+		//int root = 0;
 	};
 
 	struct KeyFrame
@@ -73,6 +77,7 @@ namespace gl3d
 
 		float animationDuration=0;
 		float totalTimePassed=0;
+		int root = 0;
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;
 	};
