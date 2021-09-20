@@ -281,6 +281,8 @@ namespace objl
 		// Index List
 		std::vector<unsigned int> Indices;
 
+		bool hasBones = 0; 
+
 		// Material
 		//Material MeshMaterial;
 		int materialIndex = -1;
@@ -1175,8 +1177,10 @@ namespace objl
 				for (int j = 0; j < model.meshes.size(); j++)
 				{
 					
+
 					for (int i = 0; i < model.meshes[j].primitives.size(); i++)
 					{
+
 						Mesh m;
 						m.MeshName = model.meshes[j].name;
 						m.materialIndex = model.meshes[j].primitives[i].material;
@@ -1201,12 +1205,15 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
-						//todo look into support models without texcoords
+						bool hasBones = 0;
 
+						//todo look into support models without texcoords
 						if(p.attributes.find("JOINTS_0") != p.attributes.end() && 
 							p.attributes.find("WEIGHTS_0") != p.attributes.end()
 							)
 						{
+							hasBones = 1;
+
 							tinygltf::Accessor &accessorJoints = model.accessors[p.attributes["JOINTS_0"]];
 							tinygltf::BufferView &bufferViewJoints = model.bufferViews[accessorJoints.bufferView];
 							tinygltf::Buffer &bufferJoints = model.buffers[bufferViewJoints.buffer];
@@ -1415,6 +1422,8 @@ namespace objl
 							};
 								
 						}
+
+						m.hasBones = hasBones;
 
 						LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 

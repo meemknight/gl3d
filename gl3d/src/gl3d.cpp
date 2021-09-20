@@ -485,6 +485,7 @@ namespace gl3d
 			int s = model.loader.LoadedMeshes.size();
 			returnModel.models.reserve(s);
 
+			#pragma region materials
 			returnModel.createdMaterials.reserve(model.loader.LoadedMaterials.size());
 			for(int i=0;i<model.loader.LoadedMaterials.size(); i++)
 			{
@@ -856,6 +857,20 @@ namespace gl3d
 
 				returnModel.createdMaterials.push_back(m);
 			}
+			#pragma endregion
+
+			#pragma region aninmations
+			if (!model.loader.animations.empty())
+			{
+				returnModel.animations = model.loader.animations;
+			}
+
+			if (!model.loader.joints.empty())
+			{
+				returnModel.joints = model.loader.joints;
+			}
+			#pragma endregion
+
 
 
 			for (int i = 0; i < s; i++)
@@ -898,17 +913,8 @@ namespace gl3d
 							mesh.Indices.size() * 4, &mesh.Indices[0], false, true);
 					}
 				}
-
-				if (!model.loader.animations.empty())
-				{
-					gm.animations = model.loader.animations;
-				}
-
-				if (!model.loader.joints.empty())
-				{
-					gm.joints = model.loader.joints;
-				}
-
+				
+				gm.hasBones = mesh.hasBones;
 
 				if(model.loader.LoadedMeshes[index].materialIndex > -1)
 				{
@@ -930,13 +936,10 @@ namespace gl3d
 
 			}
 
-
 		}
-
 		
 		internal.graphicModelsIndexes.push_back(id);
 		internal.graphicModels.push_back(returnModel);
-
 
 		Model o;
 		o.id_ = id;
@@ -1730,6 +1733,9 @@ namespace gl3d
 		{
 			int size = internal.graphicModels[modelindex].models.size();
 			entity.models.reserve(size);
+
+			entity.animations = internal.graphicModels[modelindex].animations;
+			entity.joints = internal.graphicModels[modelindex].joints;
 
 			for (int i = 0; i < size; i++)
 			{
@@ -3629,8 +3635,169 @@ namespace gl3d
 			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(worldToViewMatrix * transformMat)[0][0]);
 			
-			bool changed = 1;
+			#pragma region animations
+			if (!entity.joints.empty() && !entity.animations.empty() && !entity.animations[0].keyFramesRot.empty())
+			{
 
+				int index = entity.animationIndex;
+				index = std::min(index, (int)entity.animations.size() - 1);
+				auto &animation = entity.animations[index];
+
+				std::vector<glm::mat4> skinningMatrixes;
+				skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+				animation.totalTimePassed += deltaTime * entity.animationSpeed;
+				while (animation.totalTimePassed >= animation.animationDuration)
+				{
+					animation.totalTimePassed -= animation.animationDuration;
+				}
+
+				for (int b = 0; b < entity.joints.size(); b++)
+				{
+
+					glm::mat4 rotMat(1.f);
+					glm::mat4 transMat(1.f);
+					glm::mat4 scaleMat(1.f);
+
+					auto &joint = entity.joints[b];
+
+					if (
+						animation.keyFramesRot[b].empty() &&
+						animation.keyFramesTrans[b].empty() &&
+						animation.keyFramesScale[b].empty()
+						)
+					{
+						skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
+					}
+					else
+					{
+						if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesRot[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesRot[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.rotation;
+
+									if (frame == animation.keyFramesRot[b].size() - 1)
+									{
+										rotMat = glm::toMat4(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesRot[b][frame + 1].rotation;
+										float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+									}
+									break;
+
+								}
+
+							}
+							//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
+						}
+						else
+						{
+							rotMat = glm::toMat4(joint.rotation);
+						}
+
+						auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
+						{
+							return a * (1.f - x) + (b * x);
+						};
+
+						if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesTrans[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesTrans[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.translation;
+
+									if (frame == animation.keyFramesTrans[b].size() - 1)
+									{
+										transMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesTrans[b][frame + 1].translation;
+										float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										transMat = glm::translate(lerp(first, second, interpolation));
+									}
+									break;
+								}
+							}
+							//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
+						}
+						else
+						{
+							transMat = glm::translate(joint.trans);
+						}
+
+						if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesScale[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesScale[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.scale;
+
+									if (frame == animation.keyFramesScale[b].size() - 1)
+									{
+										scaleMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesScale[b][frame + 1].scale;
+										float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										scaleMat = glm::scale(lerp(first, second, interpolation));
+									}
+									break;
+								}
+							}
+							//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
+						}
+						else
+						{
+							scaleMat = glm::scale(joint.scale);
+						}
+
+						skinningMatrixes[b] = transMat * rotMat * scaleMat;
+						//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
+
+					}
+
+				}
+
+				//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
+				std::vector<glm::mat4> appliedSkinningMatrixes;
+				appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+				applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
+					animation.root, glm::mat4(1.f));
+
+				//send data
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
+					, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, internal.lightShader.jointsBlockBuffer);
+			}
+			#pragma endregion
+
+
+			bool changed = 1;
 			for (auto& i : entity.models)
 			{
 
@@ -3649,164 +3816,10 @@ namespace gl3d
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 				#pragma region animations
-				if (!i.joints.empty() && !i.animations.empty() && !i.animations[0].keyFramesRot.empty())
+				if (i.hasBones)
 				{
-					int index = entity.animationIndex;
-					index = std::min(index, (int)i.animations.size() - 1);
-					auto &animation = i.animations[index];
-
 					glUniform1i(internal.lightShader.u_hasAnimations, true);
-					std::vector<glm::mat4> skinningMatrixes;
-					skinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
 
-					animation.totalTimePassed += deltaTime * entity.animationSpeed;
-					while (animation.totalTimePassed >= animation.animationDuration)
-					{
-						animation.totalTimePassed -= animation.animationDuration;
-					}
-
-					for (int b = 0; b < i.joints.size(); b++)
-					{
-
-						glm::mat4 rotMat(1.f);
-						glm::mat4 transMat(1.f);
-						glm::mat4 scaleMat(1.f);
-						
-						auto &joint = i.joints[b];
-
-						if(
-							animation.keyFramesRot[b].empty() &&
-							animation.keyFramesTrans[b].empty() &&
-							animation.keyFramesScale[b].empty()
-							)
-						{
-							skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
-						}
-						else
-						{
-							if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = animation.keyFramesRot[b].size();
-									float time = animation.totalTimePassed;
-									auto &currentFrame = animation.keyFramesRot[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.rotation;
-
-										if (frame == animation.keyFramesRot[b].size() - 1)
-										{
-											rotMat = glm::toMat4(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesRot[b][frame + 1].rotation;
-											float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
-										}
-										break;
-
-									}
-
-								}
-								//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
-							}
-							else
-							{
-								rotMat = glm::toMat4(joint.rotation);
-							}
-
-							auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
-							{
-								return a * (1.f - x) + (b * x);
-							};
-
-							if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = animation.keyFramesTrans[b].size();
-									float time = animation.totalTimePassed;
-									auto &currentFrame = animation.keyFramesTrans[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.translation;
-
-										if (frame == animation.keyFramesTrans[b].size() - 1)
-										{
-											transMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesTrans[b][frame + 1].translation;
-											float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											transMat = glm::translate(lerp(first, second, interpolation));
-										}
-										break;
-									}
-								}
-								//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
-							}
-							else
-							{
-								transMat = glm::translate(joint.trans);
-							}
-
-							if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = animation.keyFramesScale[b].size();
-									float time = animation.totalTimePassed;
-									auto &currentFrame = animation.keyFramesScale[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.scale;
-
-										if (frame == animation.keyFramesScale[b].size() - 1)
-										{
-											scaleMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesScale[b][frame + 1].scale;
-											float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											scaleMat = glm::scale(lerp(first, second, interpolation));
-										}
-										break;
-									}
-								}
-								//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
-							}
-							else
-							{
-								scaleMat = glm::scale(joint.scale);
-							}
-
-							skinningMatrixes[b] = transMat * rotMat * scaleMat;
-							//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
-
-						}
-
-					}
-
-					//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
-
-					std::vector<glm::mat4> appliedSkinningMatrixes;
-					appliedSkinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
-
-					applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, i.joints,
-						animation.root, glm::mat4(1.f));
-
-					//send data
-					glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
-					glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
-						, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, internal.lightShader.jointsBlockBuffer);
 				}
 				else
 				{

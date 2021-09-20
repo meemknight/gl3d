@@ -99,8 +99,7 @@ namespace gl3d
 	
 		void clear();
 
-		std::vector<Animation> animations;
-		std::vector<Joint> joints;
+		bool hasBones = 0;
 
 		glm::vec3 minBoundary = {};
 		glm::vec3 maxBoundary = {};
@@ -120,7 +119,10 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		std::vector <Material> createdMaterials;
 		void clear(Renderer3D &renderer);
-	
+
+		std::vector<gl3d::Animation> animations;
+		std::vector<gl3d::Joint> joints;
+
 	};
 
 	//the data for an entity
@@ -135,6 +137,9 @@ namespace gl3d
 
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
+		std::vector<Animation> animations;
+		std::vector<Joint> joints;
+
 
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 

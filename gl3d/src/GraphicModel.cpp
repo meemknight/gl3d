@@ -362,9 +362,6 @@ namespace gl3d
 
 		#pragma endregion
 
-		this->animations = std::move(animation);
-		this->joints = std::move(joints);
-
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
 
