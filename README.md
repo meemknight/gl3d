@@ -27,7 +27,7 @@ How to compile the repo (Visual studio 2019, Windows)
 Features and todos:
 
 - [x] Loading .obj Models (with materials)
-- [ ] Loading .mtl Materials (just the materials)
+- [x] Loading .mtl Materials (just the materials)
 - [x] Loading .gltf / .glb Models (with materials)
 ---
 - [x] Normal mapping (TBN calculated per fragment)

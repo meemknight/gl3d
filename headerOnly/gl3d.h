@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-15
+//built on 2021-09-25
 ////////////////////////////////////////////////
 
 
@@ -13,6 +13,11 @@
 #include <glm\vec3.hpp>
 #include <glm\mat4x4.hpp>
 #include <gl\glew.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/mat3x3.hpp>
+#include <glm/gtx/transform.hpp>
+
 
 #undef min
 #undef max
@@ -185,6 +190,102 @@ namespace gl3d
 			(!!(expression)) ||														\
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)\
 		)
+
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//Animations.h
+////////////////////////////////////////////////
+#pragma region Animations
+#pragma once
+
+#include <string>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
+#include <vector>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
+namespace gl3d
+{
+	//glm::mat4 animatedTransform{ 1.f }; //transform current default state to desired pos (model space)
+
+	struct Joint
+	{
+		glm::mat4 inverseBindTransform{ 1.f };
+		glm::mat4 localBindTransform{1.f};
+		std::string name{};
+		std::vector<int> children;
+		glm::quat rotation{ 0.f,0.f,0.f,1.f };
+		glm::vec3 trans{ 1.f,1.f,1.f };
+		glm::vec3 scale{ 1.f,1.f,1.f };
+
+		//int index{};
+		//int root = 0;
+	};
+
+	struct KeyFrame
+	{
+		glm::quat rotation{0.f,0.f,0.f,1.f};
+		
+		glm::vec3 translation{};
+		float timeStamp{};
+
+		glm::vec3 scale{1.f, 1.f, 1.f};
+		unsigned char rotationSet = 0;
+		unsigned char translationSet = 0;
+		unsigned char scaleSet = 0;
+		unsigned char notUsed = 0;
+	};
+
+	struct KeyFrameRotation
+	{
+		glm::quat rotation{ 0.f,0.f,0.f,1.f };
+		float timeStamp{};
+	};
+
+	struct KeyFrameTranslation
+	{
+		glm::vec3 translation{};
+		float timeStamp{};
+	};
+
+	struct KeyFrameScale
+	{
+		glm::vec3 scale{ 1.f, 1.f, 1.f };
+		float timeStamp{};
+	};
+
+	struct TimeStamps
+	{
+		float passedTimeRot = 0;
+		float passedTimeTrans = 0;
+		float passedTimeScale = 0;
+	};
+
+	struct Animation
+	{
+		std::string name;
+
+		//for each joint we have keyframes
+		std::vector<std::vector<KeyFrameRotation>> keyFramesRot;
+		std::vector<std::vector<KeyFrameTranslation>> keyFramesTrans;
+		std::vector<std::vector<KeyFrameScale>> keyFramesScale;
+		std::vector<TimeStamps> timeStamps;
+
+		float animationDuration=0;
+		float totalTimePassed=0;
+		int root = 0;
+		//std::vector<float> timePassed;
+		//std::vector<std::vector<KeyFrame>> keyFrames;
+	};
+
+
+};
+
+
 
 #pragma endregion
 
@@ -31301,7 +31402,7 @@ namespace tinygltf
 #pragma once
 
 
-#include "Animations.h"
+
 
 // Iostream - STD I/O Library
 #include <iostream>
@@ -31577,6 +31678,8 @@ namespace objl
 
 		// Index List
 		std::vector<unsigned int> Indices;
+
+		bool hasBones = 0; 
 
 		// Material
 		//Material MeshMaterial;
@@ -32027,6 +32130,7 @@ namespace objl
 			//int indexCount = 0;
 			std::vector<int> isMain;
 			std::vector<int> skinJoints;
+			int skeletonRoot = 0;
 
 			auto convertNode = [&skinJoints](int index)
 			{
@@ -32041,10 +32145,7 @@ namespace objl
 			if (!model.skins.empty())
 			{
 				auto skin = model.skins[0];
-
-				//joints.resize(model.nodes.size());
-				//isMain.resize(model.nodes.size(), 0);
-
+				
 				joints.resize(skin.joints.size());
 				isMain.resize(skin.joints.size(), 1);
 
@@ -32054,13 +32155,13 @@ namespace objl
 					skinJoints.push_back(j);
 				}
 
-
+				int jCount = 0;
 				for (auto &j : skin.joints)
 				{
 					auto &b = model.nodes[j];
+					std::cout << jCount << ": " << b.name << "\n";
 
 					gl3d::Joint joint;
-					//joint.index = j;
 					
 					joint.children.reserve(b.children.size());
 					for (int i = 0; i < b.children.size(); i++) 
@@ -32068,15 +32169,13 @@ namespace objl
 						joint.children.push_back(convertNode(b.children[i]));
 					}
 
-					//joint.children = b.children;
-				
 					for (auto &c : joint.children)
 					{
 						isMain[c] = 0;
 					}
 				
 					joint.name = b.name;
-				
+					
 					glm::mat4 rotation(1.f);
 					glm::mat4 scale(1.f);
 					glm::mat4 translation(1.f);
@@ -32091,32 +32190,73 @@ namespace objl
 						rot.w = b.rotation[3];
 				
 						rotation = glm::toMat4(rot);
+						joint.rotation = rot;
 					}
 				
 					//suppose 3 component translation
 					if (!b.translation.empty())
 					{
-						translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
+						glm::vec3 trans;
+						trans.x = b.translation[0];
+						trans.y = b.translation[1];
+						trans.z = b.translation[2];
+
+						translation = glm::translate(trans);
+						joint.trans = trans;
 					}
 				
 					//suppose 3 component scale
 					if (!b.scale.empty())
 					{
-						scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
+						glm::vec3 s;
+						s.x = b.scale[0];
+						s.y = b.scale[1];
+						s.z = b.scale[2];
+
+						scale = glm::scale(s);
+						joint.scale = s;
 					}
-				
+					
 					joint.localBindTransform = translation * rotation * scale;
+					//glm::mat4 trans = *(glm::mat4*)b.matrix.data();
+					//joint.localBindTransform = trans;
+
+					
+					tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
+					tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+					tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
+					float *matData = (float *)
+						(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+					glm::mat4 inversBindMat;
+
+					for (int i = 0; i < 16; i++) 
+					{
+						((float*)&inversBindMat[0][0])[i] = matData[(jCount) * 16 + i];
+					}
+					//inversBindMat = glm::transpose(inversBindMat);
+					joint.inverseBindTransform = inversBindMat;
+
 
 					joints[convertNode(j)] = std::move(joint);
+					jCount++;
 				}
 
-				for (int i = 0; i < isMain.size(); i++)
+				skeletonRoot = skin.skeleton;
+				if (skeletonRoot < 0) 
 				{
-					if (isMain[i] == 1) 
+					for (int i = 0; i < isMain.size(); i++)
 					{
-						joints[i].root = true;
-						calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-					};
+						if (isMain[i] == 1)
+						{
+							skeletonRoot = i;
+							//calculateInverseBindTransform(i, glm::mat4(1.f), joints);
+							break;
+						};
+					}
+				}
+				else 
+				{
+					//calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
 				}
 
 			}
@@ -32184,10 +32324,12 @@ namespace objl
 		#pragma region animations
 			
 			animations.reserve(model.animations.size());
+			std::cout << model.animations.size() << " :size\n";
 			for (auto &a : model.animations)
 			{
 				gl3d::Animation animation;
 				animation.name = a.name;
+				animation.root = skeletonRoot;
 
 			#pragma region set key frames a default value
 
@@ -32205,16 +32347,17 @@ namespace objl
 					auto &channel = a.channels[i];
 					auto &sampler = a.samplers[channel.sampler];
 
-					//int node = channel.target_node;
 					int node = convertNode(channel.target_node);
-					if (node == -1) { continue; }
+					if (node == -1)
+					{
+						//std::cout << channel.target_path <<" : " << i <<"\n";
+						continue;
+					}
 
 					int type = 0; //translation rotation scale
 
 					std::vector<float> timeStamps;
 					{
-						auto &channel = a.channels[i];
-						auto &sampler = a.samplers[channel.sampler];
 						tinygltf::Accessor &accessor = model.accessors[sampler.input];
 						tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
 						tinygltf::Buffer &buffer = model.buffers[bufferView.buffer];
@@ -32282,7 +32425,6 @@ namespace objl
 							rot.z = rotation[t * 4 + 2];
 							rot.w = rotation[t * 4 + 3];
 
-
 							animation.keyFramesRot[node][t].timeStamp = timeStamps[t];
 							animation.keyFramesRot[node][t].rotation = rot;
 						}
@@ -32318,6 +32460,8 @@ namespace objl
 					}
 					else 
 					{
+						std::cout << channel.target_path << "\n";
+						gl3dAssertComment(0, "unknow animation target");
 						continue;
 					}
 				}
@@ -32415,7 +32559,6 @@ namespace objl
 
 
 		#pragma endregion
-
 		
 		#pragma region meshes
 
@@ -32432,8 +32575,10 @@ namespace objl
 				for (int j = 0; j < model.meshes.size(); j++)
 				{
 					
+
 					for (int i = 0; i < model.meshes[j].primitives.size(); i++)
 					{
+
 						Mesh m;
 						m.MeshName = model.meshes[j].name;
 						m.materialIndex = model.meshes[j].primitives[i].material;
@@ -32458,12 +32603,15 @@ namespace objl
 						float *tex = (float *)
 							(&bufferTex.data[bufferViewTex.byteOffset + accessorTex.byteOffset]);
 
-						//todo look into support models without texcoords
+						bool hasBones = 0;
 
+						//todo look into support models without texcoords
 						if(p.attributes.find("JOINTS_0") != p.attributes.end() && 
 							p.attributes.find("WEIGHTS_0") != p.attributes.end()
 							)
 						{
+							hasBones = 1;
+
 							tinygltf::Accessor &accessorJoints = model.accessors[p.attributes["JOINTS_0"]];
 							tinygltf::BufferView &bufferViewJoints = model.bufferViews[accessorJoints.bufferView];
 							tinygltf::Buffer &bufferJoints = model.buffers[bufferViewJoints.buffer];
@@ -32573,7 +32721,7 @@ namespace objl
 								//
 								//}
 
-								if (componentCount > 4)
+								//if (componentCount > 4)
 								{
 									weightsVec /= weightsVec.x + weightsVec.y + weightsVec.z + weightsVec.w;
 								}
@@ -32672,6 +32820,8 @@ namespace objl
 							};
 								
 						}
+
+						m.hasBones = hasBones;
 
 						LoadedMeshes.push_back(std::move(m)); //todo add move constructor
 
@@ -32978,6 +33128,239 @@ namespace objl
 		// Loaded Material Objects
 		std::vector<Material> LoadedMaterials;
 
+		// Load Materials from .mtl file
+		bool LoadMaterials(std::string path)
+		{
+			// If the file is not a material file return false
+			if (path.substr(path.size() - 4, path.size()) != ".mtl")
+				return false;
+
+			std::ifstream file(path);
+
+			// If the file is not found return false
+			if (!file.is_open())
+			{
+				std::cout << "error loading mtl file: " << path << "\n";
+				return false;
+			}
+
+			Material tempMaterial;
+
+			bool listening = false;
+
+			// Go through each line looking for material variables
+			std::string curline;
+			while (std::getline(file, curline))
+			{
+				auto firstToken = algorithm::firstToken(curline);
+
+				// new material and material name
+				if (firstToken == "newmtl")
+				{
+					if (!listening)
+					{
+						listening = true;
+
+						if (curline.size() > 7)
+						{
+							tempMaterial.name = algorithm::tail(curline);
+						}
+						else
+						{
+							tempMaterial.name = "none";
+						}
+					}
+					else
+					{
+						// Generate the material
+
+						// Push Back loaded Material
+						LoadedMaterials.push_back(tempMaterial);
+
+						// Clear Loaded Material
+						tempMaterial = Material();
+
+						if (curline.size() > 7)
+						{
+							tempMaterial.name = algorithm::tail(curline);
+						}
+						else
+						{
+							tempMaterial.name = "none";
+						}
+					}
+				}
+				else
+				// Ambient Color
+				if (firstToken == "Ka")
+				{
+					std::vector<std::string> temp;
+					algorithm::split2(algorithm::tail(curline), temp, ' ');
+
+					if (temp.size() != 3)
+						continue;
+
+					tempMaterial.Ka.X = std::stof(temp[0]);
+					tempMaterial.Ka.Y = std::stof(temp[1]);
+					tempMaterial.Ka.Z = std::stof(temp[2]);
+				}
+				else
+				// Diffuse Color
+				if (firstToken == "Kd")
+				{
+					std::vector<std::string> temp;
+					algorithm::split2(algorithm::tail(curline), temp, ' ');
+
+					if (temp.size() != 3)
+						continue;
+
+					tempMaterial.Kd.X = std::stof(temp[0]);
+					tempMaterial.Kd.Y = std::stof(temp[1]);
+					tempMaterial.Kd.Z = std::stof(temp[2]);
+				}
+				else
+				// Specular Color
+				//if (algorithm::firstToken(curline) == "Ks")
+				//{
+				//	std::vector<std::string> temp;
+				//	algorithm::split2(algorithm::tail(curline), temp, ' ');
+				//
+				//	if (temp.size() != 3)
+				//		continue;
+				//
+				//	tempMaterial.Ks.X = std::stof(temp[0]);
+				//	tempMaterial.Ks.Y = std::stof(temp[1]);
+				//	tempMaterial.Ks.Z = std::stof(temp[2]);
+				//}
+				//else
+				// Specular Exponent
+				//if (algorithm::firstToken(curline) == "Ns")
+				//{
+				//	tempMaterial.Ns = std::stof(algorithm::tail(curline));
+				//}
+				//else
+				// Optical Density
+				//if (algorithm::firstToken(curline) == "Ni")
+				//{
+				//	tempMaterial.Ni = std::stof(algorithm::tail(curline));
+				//}
+				//else
+				//// Dissolve
+				//if (algorithm::firstToken(curline) == "d")
+				//{
+				//	tempMaterial.d = std::stof(algorithm::tail(curline));
+				//}
+				//else
+				//// Illumination
+				//if (algorithm::firstToken(curline) == "illum")
+				//{
+				//	tempMaterial.illum = std::stoi(algorithm::tail(curline));
+				//}
+				//else
+				if (firstToken == "Pm")
+				{
+					tempMaterial.metallic = std::stoi(algorithm::tail(curline));
+				}
+				else
+				if (firstToken == "Pr")
+				{
+					tempMaterial.roughness = std::stoi(algorithm::tail(curline));
+				}
+				else
+				if (firstToken == "Ao")
+				{
+					tempMaterial.ao = std::stoi(algorithm::tail(curline));
+				}
+				else
+				// Ambient Texture Map
+				if (firstToken == "map_Ka" ||
+					firstToken == "map_Ao")
+				{
+					tempMaterial.map_Ka = algorithm::tail(curline);
+				}
+				else
+				// Diffuse Texture Map
+				if (firstToken == "map_Kd")
+				{
+					tempMaterial.map_Kd = algorithm::tail(curline);
+				}
+				else
+				// Specular Texture Map
+				//if (firstToken == "map_Ks")
+				//{
+				//	tempMaterial.map_Ks = algorithm::tail(curline);
+				//}
+				//else
+				//// Specular Hightlight Map
+				//if (firstToken == "map_Ns")
+				//{
+				//	tempMaterial.map_Ns = algorithm::tail(curline);
+				//}
+				//else
+				// Alpha Texture Map
+				//if (firstToken == "map_d")
+				//{
+				//	tempMaterial.map_d = algorithm::tail(curline);
+				//}
+				//else
+				// Bump Map
+				//if (algorithm::firstToken(curline) == "map_Bump" || algorithm::firstToken(curline) == "map_bump" || algorithm::firstToken(curline) == "bump")
+				//{
+				//	tempMaterial.map_bump = algorithm::tail(curline);
+				//}
+				//else
+				// Normal Map
+				if (	firstToken == "map_Kn"
+					||	firstToken == "norm"
+					||	firstToken == "Norm"
+					)
+				{
+					tempMaterial.map_Kn = algorithm::tail(curline);
+				}
+				else
+				// Roughness Map
+				if (firstToken == "map_Pr")
+				{
+					tempMaterial.map_Pr = algorithm::tail(curline);
+				}
+				else
+				// Metallic Map
+				if (firstToken == "map_Pm")
+				{
+					tempMaterial.map_Pm = algorithm::tail(curline);
+				}
+				else
+				if (firstToken == "map_ORM")
+				{
+					tempMaterial.map_ORM = algorithm::tail(curline);
+				}
+				else
+				if (firstToken == "map_RMA")
+				{
+					tempMaterial.map_ORM = algorithm::tail(curline);
+				}
+				else
+				if (firstToken == "map_emissive" || firstToken == "map_Ke")
+				{
+					tempMaterial.map_emissive = algorithm::tail(curline);
+				}
+
+			}
+
+			// Deal with last material
+
+			// Push Back loaded Material
+			LoadedMaterials.push_back(tempMaterial);
+
+			// Test to see if anything was loaded
+			// If not return false
+			if (LoadedMaterials.empty())
+				return false;
+			// If so return true
+			else
+				return true;
+		}
+
 	private:
 		// Generate vertices from a list of positions, 
 		//	tcoords, normals and a face line
@@ -33264,239 +33647,6 @@ namespace objl
 				if (tVerts.size() == 0)
 					break;
 			}
-		}
-
-		// Load Materials from .mtl file
-		bool LoadMaterials(std::string path)
-		{
-			// If the file is not a material file return false
-			if (path.substr(path.size() - 4, path.size()) != ".mtl")
-				return false;
-
-			std::ifstream file(path);
-
-			// If the file is not found return false
-			if (!file.is_open())
-			{
-				std::cout << "error loading mtl file: " << path << "\n";
-				return false;
-			}
-
-			Material tempMaterial;
-
-			bool listening = false;
-
-			// Go through each line looking for material variables
-			std::string curline;
-			while (std::getline(file, curline))
-			{
-				auto firstToken = algorithm::firstToken(curline);
-
-				// new material and material name
-				if (firstToken == "newmtl")
-				{
-					if (!listening)
-					{
-						listening = true;
-
-						if (curline.size() > 7)
-						{
-							tempMaterial.name = algorithm::tail(curline);
-						}
-						else
-						{
-							tempMaterial.name = "none";
-						}
-					}
-					else
-					{
-						// Generate the material
-
-						// Push Back loaded Material
-						LoadedMaterials.push_back(tempMaterial);
-
-						// Clear Loaded Material
-						tempMaterial = Material();
-
-						if (curline.size() > 7)
-						{
-							tempMaterial.name = algorithm::tail(curline);
-						}
-						else
-						{
-							tempMaterial.name = "none";
-						}
-					}
-				}
-				else
-				// Ambient Color
-				if (firstToken == "Ka")
-				{
-					std::vector<std::string> temp;
-					algorithm::split2(algorithm::tail(curline), temp, ' ');
-
-					if (temp.size() != 3)
-						continue;
-
-					tempMaterial.Ka.X = std::stof(temp[0]);
-					tempMaterial.Ka.Y = std::stof(temp[1]);
-					tempMaterial.Ka.Z = std::stof(temp[2]);
-				}
-				else
-				// Diffuse Color
-				if (firstToken == "Kd")
-				{
-					std::vector<std::string> temp;
-					algorithm::split2(algorithm::tail(curline), temp, ' ');
-
-					if (temp.size() != 3)
-						continue;
-
-					tempMaterial.Kd.X = std::stof(temp[0]);
-					tempMaterial.Kd.Y = std::stof(temp[1]);
-					tempMaterial.Kd.Z = std::stof(temp[2]);
-				}
-				else
-				// Specular Color
-				//if (algorithm::firstToken(curline) == "Ks")
-				//{
-				//	std::vector<std::string> temp;
-				//	algorithm::split2(algorithm::tail(curline), temp, ' ');
-				//
-				//	if (temp.size() != 3)
-				//		continue;
-				//
-				//	tempMaterial.Ks.X = std::stof(temp[0]);
-				//	tempMaterial.Ks.Y = std::stof(temp[1]);
-				//	tempMaterial.Ks.Z = std::stof(temp[2]);
-				//}
-				//else
-				// Specular Exponent
-				//if (algorithm::firstToken(curline) == "Ns")
-				//{
-				//	tempMaterial.Ns = std::stof(algorithm::tail(curline));
-				//}
-				//else
-				// Optical Density
-				//if (algorithm::firstToken(curline) == "Ni")
-				//{
-				//	tempMaterial.Ni = std::stof(algorithm::tail(curline));
-				//}
-				//else
-				//// Dissolve
-				//if (algorithm::firstToken(curline) == "d")
-				//{
-				//	tempMaterial.d = std::stof(algorithm::tail(curline));
-				//}
-				//else
-				//// Illumination
-				//if (algorithm::firstToken(curline) == "illum")
-				//{
-				//	tempMaterial.illum = std::stoi(algorithm::tail(curline));
-				//}
-				//else
-				if (firstToken == "Pm")
-				{
-					tempMaterial.metallic = std::stoi(algorithm::tail(curline));
-				}
-				else
-				if (firstToken == "Pr")
-				{
-					tempMaterial.roughness = std::stoi(algorithm::tail(curline));
-				}
-				else
-				if (firstToken == "Ao")
-				{
-					tempMaterial.ao = std::stoi(algorithm::tail(curline));
-				}
-				else
-				// Ambient Texture Map
-				if (firstToken == "map_Ka" ||
-					firstToken == "map_Ao")
-				{
-					tempMaterial.map_Ka = algorithm::tail(curline);
-				}
-				else
-				// Diffuse Texture Map
-				if (firstToken == "map_Kd")
-				{
-					tempMaterial.map_Kd = algorithm::tail(curline);
-				}
-				else
-				// Specular Texture Map
-				//if (firstToken == "map_Ks")
-				//{
-				//	tempMaterial.map_Ks = algorithm::tail(curline);
-				//}
-				//else
-				//// Specular Hightlight Map
-				//if (firstToken == "map_Ns")
-				//{
-				//	tempMaterial.map_Ns = algorithm::tail(curline);
-				//}
-				//else
-				// Alpha Texture Map
-				//if (firstToken == "map_d")
-				//{
-				//	tempMaterial.map_d = algorithm::tail(curline);
-				//}
-				//else
-				// Bump Map
-				//if (algorithm::firstToken(curline) == "map_Bump" || algorithm::firstToken(curline) == "map_bump" || algorithm::firstToken(curline) == "bump")
-				//{
-				//	tempMaterial.map_bump = algorithm::tail(curline);
-				//}
-				//else
-				// Normal Map
-				if (	firstToken == "map_Kn"
-					||	firstToken == "norm"
-					||	firstToken == "Norm"
-					)
-				{
-					tempMaterial.map_Kn = algorithm::tail(curline);
-				}
-				else
-				// Roughness Map
-				if (firstToken == "map_Pr")
-				{
-					tempMaterial.map_Pr = algorithm::tail(curline);
-				}
-				else
-				// Metallic Map
-				if (firstToken == "map_Pm")
-				{
-					tempMaterial.map_Pm = algorithm::tail(curline);
-				}
-				else
-				if (firstToken == "map_ORM")
-				{
-					tempMaterial.map_ORM = algorithm::tail(curline);
-				}
-				else
-				if (firstToken == "map_RMA")
-				{
-					tempMaterial.map_ORM = algorithm::tail(curline);
-				}
-				else
-				if (firstToken == "map_emissive" || firstToken == "map_Ke")
-				{
-					tempMaterial.map_emissive = algorithm::tail(curline);
-				}
-
-			}
-
-			// Deal with last material
-
-			// Push Back loaded Material
-			LoadedMaterials.push_back(tempMaterial);
-
-			// Test to see if anything was loaded
-			// If not return false
-			if (LoadedMaterials.empty())
-				return false;
-			// If so return true
-			else
-				return true;
 		}
 
 	};
@@ -33933,14 +34083,13 @@ namespace gl3d
 
 		void loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false, bool hasAnimationData = false,
-			Animation animation = {},
+			std::vector<Animation> animation = {},
 			std::vector<Joint> joints = {}
 			);
 	
 		void clear();
 
-		Animation animation;
-		std::vector<Joint> joints;
+		bool hasBones = 0;
 
 		glm::vec3 minBoundary = {};
 		glm::vec3 maxBoundary = {};
@@ -33960,7 +34109,10 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		std::vector <Material> createdMaterials;
 		void clear(Renderer3D &renderer);
-	
+
+		std::vector<gl3d::Animation> animations;
+		std::vector<gl3d::Joint> joints;
+
 	};
 
 	//the data for an entity
@@ -33973,8 +34125,13 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		void clear();
 
+		int animationIndex = 0;
+		float animationSpeed = 1.f;
+		std::vector<Animation> animations;
+		std::vector<Joint> joints;
+
+
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
-		
 
 		bool castShadows() {return (flags & 0b0000'0100); }
 		void setCastShadows(bool s)
@@ -34191,11 +34348,13 @@ namespace gl3d
 		
 		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
-			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
-		
+			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
+			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
+			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
+
 		Material createMaterial(Material m);
 
-		Material loadMaterial(std::string file);
+		std::vector<Material> loadMaterial(std::string file);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -34371,7 +34530,9 @@ namespace gl3d
 		void setEntityVisible(Entity& e, bool v = true);
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
-		
+		void setEntityAnimationIndex(Entity &e, int ind);
+		int getEntityAnimationIndex(Entity &e);
+
 		//this is used for apis like imgui.
 		std::vector<char*> *getEntityMeshesNames(Entity& e);
 
@@ -34457,7 +34618,7 @@ namespace gl3d
 
 				GLuint createRMAtexture(int w, int h,
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
-					GLuint quadVAO);
+					GLuint quadVAO, int &RMA_loadedTextures);
 
 			}pBRtextureMaker;
 

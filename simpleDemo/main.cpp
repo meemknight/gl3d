@@ -79,13 +79,16 @@ int main()
 
 	renderer.skyBox = renderer.loadSkyBox(names);
 
+	auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl");
+
+
 	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj");
 	gl3d::Transform transform;
 
 	transform.rotation.x = glm::radians(90.f);
 	gl3d::Entity helmetEntity = renderer.createEntity(helmetModel, transform);
 	
-	renderer.enableFXAA(true);
+	//renderer.setEntityMeshMaterial(helmetEntity, 0, rockMaterialModel[0]);
 
 #pragma region deltaTime
 	int fpsCount = 0;
@@ -180,7 +183,6 @@ int main()
 		renderer.camera.aspectRatio = (float)w / h;
 
 	#pragma endregion
-
 		
 		transform = renderer.getEntityTransform(helmetEntity);
 		transform.position.x = std::sin(clock() / 1000.f);

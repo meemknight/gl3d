@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-09-15
+//built on 2021-09-25
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31238,6 +31238,14 @@ namespace gl3d
 
 
 ////////////////////////////////////////////////
+//Animations.cpp
+////////////////////////////////////////////////
+#pragma region Animations
+
+#pragma endregion
+
+
+////////////////////////////////////////////////
 //Texture.cpp
 ////////////////////////////////////////////////
 #pragma region Texture
@@ -34506,13 +34514,6 @@ namespace gl3d
 			}
 		}
 
-		//for (auto &j : loader.LoadedVertices)
-		//{
-		//	j.Position.X *= scale;
-		//	j.Position.Y *= scale;
-		//	j.Position.Z *= scale;
-		//}
-
 		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
 	}
 
@@ -34625,7 +34626,7 @@ namespace gl3d
 
 	void GraphicModel::loadFromComputedData(size_t vertexSize, const float *vertices, size_t indexSize, 
 		const unsigned int *indexes, bool noTexture, bool hasAnimationData,
-		Animation animation, std::vector<Joint> joints)
+		std::vector<Animation> animation, std::vector<Joint> joints)
 	{
 		/*
 			position					vec3
@@ -34731,9 +34732,6 @@ namespace gl3d
 		}
 
 		#pragma endregion
-
-		this->animation = std::move(animation);
-		this->joints = std::move(joints);
 
 		glGenVertexArrays(1, &vertexArray);
 		glBindVertexArray(vertexArray);
@@ -35507,8 +35505,10 @@ namespace gl3d
 
 	}
 	
-	Material Renderer3D::createMaterial(glm::vec3 kd, float roughness, float metallic, float ao
-	,std::string name)
+	Material Renderer3D::createMaterial(glm::vec3 kd,
+		float roughness, float metallic, float ao, std::string name,
+		gl3d::Texture albedoTexture, gl3d::Texture normalTexture, gl3d::Texture roughnessTexture, gl3d::Texture metallicTexture,
+		gl3d::Texture occlusionTexture, gl3d::Texture emmisiveTexture)
 	{
 
 		int id = internal::generateNewIndex(internal.materialIndexes);
@@ -35519,10 +35519,47 @@ namespace gl3d
 		gpuMaterial.metallic = metallic;
 		gpuMaterial.ao = ao;
 
+		TextureDataForMaterial textureData{};
+
+		textureData.albedoTexture = albedoTexture;
+		textureData.normalMapTexture = normalTexture;
+		textureData.emissiveTexture = emmisiveTexture;
+
+		//auto roughnessIndex = internal.getTextureIndex(roughnessTexture);
+		//gl3d::GpuTexture roughnessGpuTexture = {};
+		//if (roughnessIndex >= 0)
+		//{
+		//	roughnessGpuTexture = internal.loadedTextures[roughnessIndex].texture;
+		//}
+		//
+		//auto metallicIndex = internal.getTextureIndex(metallicTexture);
+		//gl3d::GpuTexture metallicGpuTexture = {};
+		//if (metallicIndex >= 0)
+		//{
+		//	metallicGpuTexture = internal.loadedTextures[metallicIndex].texture;
+		//}
+		//
+		//auto occlusionIndex = internal.getTextureIndex(occlusionTexture);
+		//gl3d::GpuTexture occlusionGpuTexture = {};
+		//if (occlusionIndex >= 0)
+		//{
+		//	occlusionGpuTexture = internal.loadedTextures[occlusionIndex].texture;
+		//}
+		//
+		//int rmaLoadedTexture = 0;
+		//
+		//auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024, 
+		//	roughnessGpuTexture, metallicGpuTexture, occlusionGpuTexture, internal.lightShader.quadDrawer.quadVAO, 
+		//	rmaLoadedTexture);
+		//textureData.pbrTexture.texture = t;
+
+		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture);
+
+
 		internal.materialIndexes.push_back(id);
 		internal.materials.push_back(gpuMaterial);
 		internal.materialNames.push_back(name);
-		internal.materialTexturesData.push_back({});
+		internal.materialTexturesData.push_back(textureData);
 
 		Material m;
 		m.id_ = id;
@@ -35538,15 +35575,366 @@ namespace gl3d
 		return newM;
 	}
 
-	Material Renderer3D::loadMaterial(std::string file)
+	static int max(int x, int y, int z)
+	{
+		return std::max(std::max(x, y), z);
+	}
+
+	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, objl::Material &mat, const std::string &path)
+	{
+		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
+			mat.metallic, mat.ao, mat.name);
+
+		//todo i moved the code from here
+		{
+			//load textures for materials
+			TextureDataForMaterial textureData;
+
+
+
+			if (!mat.loadedDiffuse.data.empty())
+			{
+				textureData.albedoTexture = renderer.loadTextureFromMemory(mat.loadedDiffuse);
+
+			}
+			else
+			if (!mat.map_Kd.empty())
+			{
+				textureData.albedoTexture = renderer.loadTexture(std::string(path + mat.map_Kd));
+			}
+
+			if (!mat.loadedNormal.data.empty())
+			{
+				textureData.normalMapTexture = renderer.loadTextureFromMemory(mat.loadedNormal);
+
+			}
+			else
+			if (!mat.map_Kn.empty())
+			{
+				textureData.normalMapTexture = renderer.loadTexture(std::string(path + mat.map_Kn));
+			}
+
+			if (!mat.loadedEmissive.data.empty())
+			{
+				textureData.emissiveTexture = renderer.loadTextureFromMemory(mat.loadedEmissive);
+
+			}
+			else
+			if (!mat.map_emissive.empty())
+			{
+				textureData.emissiveTexture = renderer.loadTexture(std::string(path + mat.map_emissive));
+			}
+
+			textureData.pbrTexture.RMA_loadedTextures = 0;
+
+			auto rmaQuality = TextureLoadQuality::linearMipmap;
+
+			if (!mat.map_RMA.empty())
+			{
+				//todo not tested
+				//rmaQuality);
+
+				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
+
+				if (textureData.pbrTexture.texture.id_ != 0)
+				{
+					textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+				}
+
+				//if (gm.RMA_Texture.id)
+				//{
+				//	gm.RMA_loadedTextures = 7; //all textures loaded
+				//}
+
+			}
+
+			if (!mat.loadedORM.data.empty())
+			{
+				auto &t = mat.loadedORM;
+
+				//convert from ORM ro RMA
+				for (int j = 0; j < t.h; j++)
+					for (int i = 0; i < t.w; i++)
+					{
+						unsigned char R = t.data[(i + j * t.w) * 4 + 1];
+						unsigned char M = t.data[(i + j * t.w) * 4 + 2];
+						unsigned char A = t.data[(i + j * t.w) * 4 + 0];
+
+						t.data[(i + j * t.w) * 4 + 0] = R;
+						t.data[(i + j * t.w) * 4 + 1] = M;
+						t.data[(i + j * t.w) * 4 + 2] = A;
+					}
+
+				//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+				GpuTexture tex;
+				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 4, rmaQuality); //todo 3 channels
+				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
+				textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+
+			}
+			else
+				if (!mat.map_ORM.empty() && textureData.pbrTexture.RMA_loadedTextures == 0)
+				{
+					stbi_set_flip_vertically_on_load(true);
+
+					int w = 0, h = 0;
+					unsigned char *data = 0;
+
+					{
+						data = stbi_load(std::string(path + mat.map_ORM).c_str(),
+							&w, &h, 0, 4);
+						if (!data)
+						{
+							std::cout << "err loading " << std::string(path + mat.map_ORM) << "\n";
+						}
+						else
+						{
+							//convert from ORM ro RMA
+							for (int j = 0; j < h; j++)
+								for (int i = 0; i < w; i++)
+								{
+									unsigned char R = data[(i + j * w) * 4 + 1];
+									unsigned char M = data[(i + j * w) * 4 + 2];
+									unsigned char A = data[(i + j * w) * 4 + 0];
+
+									data[(i + j * w) * 4 + 0] = R;
+									data[(i + j * w) * 4 + 1] = M;
+									data[(i + j * w) * 4 + 2] = A;
+								}
+
+							//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
+							GpuTexture t;
+							t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
+							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+
+							textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+
+							stbi_image_free(data);
+						}
+					}
+
+				}
+
+			//RMA trexture
+			if (textureData.pbrTexture.RMA_loadedTextures == 0)
+			{
+				constexpr int MERGE_TEXTURES_ON_GPU = 1;
+
+				if constexpr (MERGE_TEXTURES_ON_GPU)
+				{
+
+					GpuTexture roughness{};
+
+					if (!mat.map_Pr.empty())
+					{
+						roughness.loadTextureFromFile(std::string(path + mat.map_Pr).c_str(), dontSet, 1);
+						glBindTexture(GL_TEXTURE_2D, roughness.id);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					}
+
+					GpuTexture metallic{};
+					if (!mat.map_Pm.empty())
+					{
+						metallic.loadTextureFromFile(std::string(path + mat.map_Pm).c_str(), dontSet, 1);
+						glBindTexture(GL_TEXTURE_2D, metallic.id);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					}
+
+					GpuTexture ambientOcclusion{};
+					if (!mat.map_Ka.empty())
+					{
+						ambientOcclusion.loadTextureFromFile(std::string(path + mat.map_Ka).c_str(), dontSet, 1);
+						glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					}
+
+					auto t = renderer.internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+						roughness, metallic, ambientOcclusion, renderer.internal.lightShader.quadDrawer.quadVAO,
+						textureData.pbrTexture.RMA_loadedTextures);
+
+					if (textureData.pbrTexture.RMA_loadedTextures != 0)
+					{
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+					}
+					else
+					{
+						textureData.pbrTexture = {};
+					}
+
+					roughness.clear();
+					metallic.clear();
+					ambientOcclusion.clear();
+
+				}
+				else
+				{
+					stbi_set_flip_vertically_on_load(true);
+
+					int w1 = 0, h1 = 0;
+					unsigned char *data1 = 0;
+					unsigned char *data2 = 0;
+					unsigned char *data3 = 0;
+
+					if (!mat.map_Pr.empty())
+					{
+						data1 = stbi_load(std::string(path + mat.map_Pr).c_str(),
+							&w1, &h1, 0, 1);
+						if (!data1) { std::cout << "err loading " << std::string(path + mat.map_Pr) << "\n"; }
+					}
+
+					int w2 = 0, h2 = 0;
+					if (!mat.map_Pm.empty())
+					{
+						data2 = stbi_load(std::string(path + mat.map_Pm).c_str(),
+							&w2, &h2, 0, 1);
+						if (!data2) { std::cout << "err loading " << std::string(path + mat.map_Pm) << "\n"; }
+					}
+
+
+					int w3 = 0, h3 = 0;
+					if (!mat.map_Ka.empty())
+					{
+						data3 = stbi_load(std::string(path + mat.map_Ka).c_str(),
+							&w3, &h3, 0, 1);
+						if (!data3) { std::cout << "err loading " << std::string(path + mat.map_Ka) << "\n"; }
+					}
+
+					int w = max(w1, w2, w3);
+					int h = max(h1, h2, h3);
+
+					//calculate which function to use
+					if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
+					else
+					if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
+					else
+					if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
+					else
+					if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
+					else
+					if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
+					else
+					if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
+					else
+					if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
+					else { textureData.pbrTexture.RMA_loadedTextures = 0; }
+
+					if (textureData.pbrTexture.RMA_loadedTextures)
+					{
+
+						unsigned char *finalData = new unsigned char[w * h * 4];
+
+						for (int j = 0; j < h; j++)
+						{
+							for (int i = 0; i < w; i++)
+							{
+
+								if (data1)	//rough
+								{
+									int texelI = (i / (float)w) * w1;
+									int texelJ = (j / float(h)) * h1;
+
+									finalData[((j * w) + i) * 4 + 0] =
+										data1[(texelJ * w1) + texelI];
+
+								}
+								else
+								{
+									finalData[((j * w) + i) * 4 + 0] = 0;
+								}
+
+								if (data2)	//metalic
+								{
+
+									int texelI = (i / (float)w) * w2;
+									int texelJ = (j / float(h)) * h2;
+
+									finalData[((j * w) + i) * 4 + 1] =
+										data2[(texelJ * w2) + texelI];
+								}
+								else
+								{
+									finalData[((j * w) + i) * 4 + 1] = 0;
+								}
+
+								if (data3)	//ambient
+								{
+									int texelI = (i / (float)w) * w3;
+									int texelJ = (j / float(h)) * h3;
+
+									finalData[((j * w) + i) * 4 + 2] =
+										data3[(texelJ * w3) + texelI];
+								}
+								else
+								{
+									finalData[((j * w) + i) * 4 + 2] = 0;
+								}
+
+								finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
+							}
+						}
+
+						//gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
+						//	rmaQuality);
+
+						GpuTexture t;
+						t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+
+						stbi_image_free(data1);
+						stbi_image_free(data2);
+						stbi_image_free(data3);
+						delete[] finalData;
+
+					}
+				}
+
+				/*
+
+				*/
+
+			}
+
+			renderer.setMaterialTextures(m, textureData);
+
+		}
+
+		return m;
+	}
+
+	std::vector<Material> Renderer3D::loadMaterial(std::string file)
 	{
 
 		objl::Loader loader;
-		loader.LoadFile(file);
+		if (!loader.LoadMaterials(file)) 
+		{
+			std::cout << "err loading: " << file << "\n";
+			return {};
+		}
 
+		std::vector<Material> ret;
+		ret.reserve(loader.LoadedMaterials.size());
 
+		std::string path = file;
+		while (!path.empty() &&
+			*(path.end() - 1) != '\\' &&
+			*(path.end() - 1) != '/'
+			)
+		{
+			path.pop_back();
+		}
 
-		return Material();
+		for (auto &m : loader.LoadedMaterials)
+		{
+
+			auto material = createMaterialFromLoadedData(*this, m, path);
+			ret.push_back(material);
+
+		}
+
+		return std::move(ret);
 	}
 
 	bool Renderer3D::deleteMaterial(Material m)
@@ -35843,8 +36231,14 @@ namespace gl3d
 		return Texture{ id };
 	}
 
+	//this takes an id and adds the texture to the internal system
 	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData)
 	{
+		if (!id_)
+		{
+			return {};
+		}
+
 		GpuTexture t;
 		t.id = id_;
 		return createIntenralTexture(t, alphaData);
@@ -35854,31 +36248,13 @@ namespace gl3d
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
 		Texture& ambientOcclusion)
 	{
-		bool roughnessLoaded = 0;
-		bool metallicLoaded = 0;
-		bool ambientLoaded = 0;
 
 		PBRTexture ret = {};
-
-		if (roughnessLoaded && metallicLoaded && ambientLoaded) { ret.RMA_loadedTextures = 7; }
-		else
-		if (metallicLoaded && ambientLoaded) { ret.RMA_loadedTextures = 6; }
-		else
-		if (roughnessLoaded && ambientLoaded) { ret.RMA_loadedTextures = 5; }
-		else
-		if (roughnessLoaded && metallicLoaded) { ret.RMA_loadedTextures = 4; }
-		else
-		if (ambientLoaded) { ret.RMA_loadedTextures = 3; }
-		else
-		if (metallicLoaded) { ret.RMA_loadedTextures = 2; }
-		else
-		if (roughnessLoaded) { ret.RMA_loadedTextures = 1; }
-		else { ret.RMA_loadedTextures = 0; }
 
 		auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
 			{getTextureOpenglId(roughness)},
 			{ getTextureOpenglId(metallic) },
-			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO);
+			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures);
 
 		ret.texture = this->createIntenralTexture(t, 0);
 
@@ -35889,11 +36265,6 @@ namespace gl3d
 	{
 		deleteTexture(t.texture);
 		t.RMA_loadedTextures = 0;
-	}
-
-	static int max(int x, int y, int z)
-	{
-		return std::max(std::max(x, y), z);
 	}
 
 	Model Renderer3D::loadModel(std::string path, float scale)
@@ -35909,386 +36280,36 @@ namespace gl3d
 
 		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
 	
-		ModelData returnModel;
+		ModelData returnModel; //todo move stuff into a function
 		{
-
 
 			int s = model.loader.LoadedMeshes.size();
 			returnModel.models.reserve(s);
 
-
+			#pragma region materials
 			returnModel.createdMaterials.reserve(model.loader.LoadedMaterials.size());
 			for(int i=0;i<model.loader.LoadedMaterials.size(); i++)
 			{
 				auto &mat = model.loader.LoadedMaterials[i];
-				auto m = this->createMaterial(mat.Kd, mat.roughness,
-				mat.metallic, mat.ao, mat.name);
 				
-
-				{
-					//load textures for materials
-					TextureDataForMaterial textureData;
-
-					//auto &mat = model.loader.LoadedMeshes[index].MeshMaterial;
-					//gm.material = loadedMaterials[model.loader.LoadedMeshes[index].materialIndex];
-
-					//gm.albedoTexture.clear();
-					//gm.normalMapTexture.clear();
-					//gm.RMA_Texture.clear();
-
-					if (!mat.loadedDiffuse.data.empty())
-					{
-						textureData.albedoTexture = this->loadTextureFromMemory(mat.loadedDiffuse);
-
-					}else
-					if (!mat.map_Kd.empty())
-					{
-						textureData.albedoTexture = this->loadTexture(std::string(model.path + mat.map_Kd));
-					}
-
-					if (!mat.loadedNormal.data.empty())
-					{
-						textureData.normalMapTexture = this->loadTextureFromMemory(mat.loadedNormal);
-
-					}else
-					if (!mat.map_Kn.empty())
-					{
-						textureData.normalMapTexture = this->loadTexture(std::string(model.path + mat.map_Kn));
-					}
-
-					if (!mat.loadedEmissive.data.empty())
-					{
-						textureData.emissiveTexture = this->loadTextureFromMemory(mat.loadedEmissive);
-
-					}else
-					if (!mat.map_emissive.empty())
-					{
-						textureData.emissiveTexture = this->loadTexture(std::string(model.path + mat.map_emissive));
-					}
-
-					textureData.pbrTexture.RMA_loadedTextures = 0;
-
-					auto rmaQuality = TextureLoadQuality::linearMipmap;
-
-					if (!mat.map_RMA.empty()) 
-					{
-						//todo not tested
-						//rmaQuality);
-
-						textureData.pbrTexture.texture = this->loadTexture(mat.map_RMA.c_str());
-
-						if (textureData.pbrTexture.texture.id_ != 0)
-						{
-							textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
-						}
-
-						//if (gm.RMA_Texture.id)
-						//{
-						//	gm.RMA_loadedTextures = 7; //all textures loaded
-						//}
-
-					}
-
-
-					if (!mat.loadedORM.data.empty())
-					{
-						auto &t = mat.loadedORM;
-
-						//convert from ORM ro RMA
-						for (int j = 0; j < t.h; j++)
-							for (int i = 0; i < t.w; i++)
-							{
-								unsigned char R = t.data[(i + j * t.w) * 4 + 1];
-								unsigned char M = t.data[(i + j * t.w) * 4 + 2];
-								unsigned char A = t.data[(i + j * t.w) * 4 + 0];
-
-								t.data[(i + j * t.w) * 4 + 0] = R;
-								t.data[(i + j * t.w) * 4 + 1] = M;
-								t.data[(i + j * t.w) * 4 + 2] = A;
-							}
-
-						//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
-						GpuTexture tex;
-						tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 4, rmaQuality); //todo 3 channels
-						textureData.pbrTexture.texture = this->createIntenralTexture(tex, 0);
-						textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
-
-					}
-					else
-					if (!mat.map_ORM.empty() && textureData.pbrTexture.RMA_loadedTextures == 0)
-					{
-						stbi_set_flip_vertically_on_load(true);
-
-						int w = 0, h = 0;
-						unsigned char *data = 0;
-
-
-						{
-							data = stbi_load(std::string(model.path + mat.map_ORM).c_str(),
-							&w, &h, 0, 4);
-							if (!data)
-							{
-								std::cout << "err loading " << std::string(model.path + mat.map_ORM) << "\n";
-							}
-							else
-							{
-								//convert from ORM ro RMA
-								for (int j = 0; j < h; j++)
-									for (int i = 0; i < w; i++)
-									{
-										unsigned char R = data[(i + j * w) * 4 + 1];
-										unsigned char M = data[(i + j * w) * 4 + 2];
-										unsigned char A = data[(i + j * w) * 4 + 0];
-
-										data[(i + j * w) * 4 + 0] = R;
-										data[(i + j * w) * 4 + 1] = M;
-										data[(i + j * w) * 4 + 2] = A;
-									}
-
-								//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
-								GpuTexture t;
-								t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
-								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
-
-								textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
-
-								stbi_image_free(data);
-							}
-						}
-
-
-					}
-
-					//RMA trexture
-					if (textureData.pbrTexture.RMA_loadedTextures == 0)
-					{
-						constexpr int MERGE_TEXTURES_ON_GPU = 1;
-
-						if constexpr (MERGE_TEXTURES_ON_GPU)
-						{
-
-							GpuTexture roughness;
-							int emptyData[1] = {};
-							int roughnessLoaded = 0, metallicLoaded = 0, ambientLoaded = 0;
-
-							if (!mat.map_Pr.empty())
-							{
-								roughness.loadTextureFromFile(std::string(model.path + mat.map_Pr).c_str(), dontSet, 1);
-								glBindTexture(GL_TEXTURE_2D, roughness.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-								roughnessLoaded = 1;
-							}
-							else
-							{
-								roughness.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
-								glBindTexture(GL_TEXTURE_2D, roughness.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-							}
-
-							GpuTexture metallic;
-							if (!mat.map_Pm.empty())
-							{
-								metallic.loadTextureFromFile(std::string(model.path + mat.map_Pm).c_str(), dontSet, 1);
-								glBindTexture(GL_TEXTURE_2D, metallic.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-								metallicLoaded = 1;
-							}
-							else
-							{
-								metallic.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
-								glBindTexture(GL_TEXTURE_2D, metallic.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-							}
-
-							GpuTexture ambientOcclusion;
-							if (!mat.map_Ka.empty())
-							{
-								ambientOcclusion.loadTextureFromFile(std::string(model.path + mat.map_Ka).c_str(), dontSet, 1);
-								glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-								ambientLoaded = 1;
-							}
-							else
-							{
-								ambientOcclusion.loadTextureFromMemory(emptyData, 1, 1, 1, dontSet);
-								glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-							}
-
-							//calculate which function to use
-							if (roughnessLoaded && metallicLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 7; }
-							else
-							if (metallicLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 6; }
-							else
-							if (roughnessLoaded && ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 5; }
-							else
-							if (roughnessLoaded && metallicLoaded) { textureData.pbrTexture.RMA_loadedTextures = 4; }
-							else
-							if (ambientLoaded) { textureData.pbrTexture.RMA_loadedTextures = 3; }
-							else
-							if (metallicLoaded) { textureData.pbrTexture.RMA_loadedTextures = 2; }
-							else
-							if (roughnessLoaded) { textureData.pbrTexture.RMA_loadedTextures = 1; }
-							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
-
-							if (textureData.pbrTexture.RMA_loadedTextures == 0)
-							{
-
-							}
-							else
-							{
-								auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
-									roughness, metallic, ambientOcclusion, internal.lightShader.quadDrawer.quadVAO);
-
-								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
-							}
-
-							roughness.clear();
-							metallic.clear();
-							ambientOcclusion.clear();
-							
-						}
-						else 
-						{
-							stbi_set_flip_vertically_on_load(true);
-
-							int w1 = 0, h1 = 0;
-							unsigned char* data1 = 0;
-							unsigned char* data2 = 0;
-							unsigned char* data3 = 0;
-
-							if (!mat.map_Pr.empty())
-							{
-								data1 = stbi_load(std::string(model.path + mat.map_Pr).c_str(),
-									&w1, &h1, 0, 1);
-								if (!data1) { std::cout << "err loading " << std::string(model.path + mat.map_Pr) << "\n"; }
-							}
-
-							int w2 = 0, h2 = 0;
-							if (!mat.map_Pm.empty())
-							{
-								data2 = stbi_load(std::string(model.path + mat.map_Pm).c_str(),
-									&w2, &h2, 0, 1);
-								if (!data2) { std::cout << "err loading " << std::string(model.path + mat.map_Pm) << "\n"; }
-							}
-
-
-							int w3 = 0, h3 = 0;
-							if (!mat.map_Ka.empty())
-							{
-								data3 = stbi_load(std::string(model.path + mat.map_Ka).c_str(),
-									&w3, &h3, 0, 1);
-								if (!data3) { std::cout << "err loading " << std::string(model.path + mat.map_Ka) << "\n"; }
-							}
-
-							int w = max(w1, w2, w3);
-							int h = max(h1, h2, h3);
-
-							//calculate which function to use
-							if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
-							else
-							if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
-							else
-							if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
-							else
-							if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
-							else
-							if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
-							else
-							if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
-							else
-							if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
-							else { textureData.pbrTexture.RMA_loadedTextures = 0; }
-
-							if (textureData.pbrTexture.RMA_loadedTextures)
-							{
-
-								unsigned char* finalData = new unsigned char[w * h * 4];
-
-								for (int j = 0; j < h; j++)
-								{
-									for (int i = 0; i < w; i++)
-									{
-
-										if (data1)	//rough
-										{
-											int texelI = (i / (float)w) * w1;
-											int texelJ = (j / float(h)) * h1;
-
-											finalData[((j * w) + i) * 4 + 0] =
-												data1[(texelJ * w1) + texelI];
-
-										}
-										else
-										{
-											finalData[((j * w) + i) * 4 + 0] = 0;
-										}
-
-										if (data2)	//metalic
-										{
-
-											int texelI = (i / (float)w) * w2;
-											int texelJ = (j / float(h)) * h2;
-
-											finalData[((j * w) + i) * 4 + 1] =
-												data2[(texelJ * w2) + texelI];
-										}
-										else
-										{
-											finalData[((j * w) + i) * 4 + 1] = 0;
-										}
-
-										if (data3)	//ambient
-										{
-											int texelI = (i / (float)w) * w3;
-											int texelJ = (j / float(h)) * h3;
-
-											finalData[((j * w) + i) * 4 + 2] =
-												data3[(texelJ * w3) + texelI];
-										}
-										else
-										{
-											finalData[((j * w) + i) * 4 + 2] = 0;
-										}
-
-										finalData[((j * w) + i) * 4 + 3] = 255; //used only for imgui, remove later
-									}
-								}
-
-								//gm.RMA_Texture.loadTextureFromMemory(finalData, w, h, 4,
-								//	rmaQuality);
-
-								GpuTexture t;
-								t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-								textureData.pbrTexture.texture = this->createIntenralTexture(t, 0);
-
-								stbi_image_free(data1);
-								stbi_image_free(data2);
-								stbi_image_free(data3);
-								delete[] finalData;
-
-							}
-						}
-					
-
-						/*
-						
-						*/
-
-					}
-
-					this->setMaterialTextures(m, textureData);
-					
-				}
+				auto m = createMaterialFromLoadedData(*this, mat, model.path);
 
 				returnModel.createdMaterials.push_back(m);
 			}
+			#pragma endregion
+
+			#pragma region aninmations
+			if (!model.loader.animations.empty())
+			{
+				returnModel.animations = model.loader.animations;
+			}
+
+			if (!model.loader.joints.empty())
+			{
+				returnModel.joints = model.loader.joints;
+			}
+			#pragma endregion
+
 
 
 			for (int i = 0; i < s; i++)
@@ -36331,19 +36352,8 @@ namespace gl3d
 							mesh.Indices.size() * 4, &mesh.Indices[0], false, true);
 					}
 				}
-
 				
-				if (!model.loader.animations.empty())
-				{
-					gm.animation = model.loader.animations[0];
-				}
-
-				if (!model.loader.joints.empty())
-				{
-					gm.joints = model.loader.joints;
-				}
-
-				
+				gm.hasBones = mesh.hasBones;
 
 				if(model.loader.LoadedMeshes[index].materialIndex > -1)
 				{
@@ -36365,13 +36375,10 @@ namespace gl3d
 
 			}
 
-
 		}
-
 		
 		internal.graphicModelsIndexes.push_back(id);
 		internal.graphicModels.push_back(returnModel);
-
 
 		Model o;
 		o.id_ = id;
@@ -37166,6 +37173,9 @@ namespace gl3d
 			int size = internal.graphicModels[modelindex].models.size();
 			entity.models.reserve(size);
 
+			entity.animations = internal.graphicModels[modelindex].animations;
+			entity.joints = internal.graphicModels[modelindex].joints;
+
 			for (int i = 0; i < size; i++)
 			{
 				entity.models.push_back(internal.graphicModels[modelindex].models[i]);
@@ -37590,6 +37600,20 @@ namespace gl3d
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return 0; } //warn or sthing
 		return internal.cpuEntities[i].castShadows();
+	}
+
+	void Renderer3D::setEntityAnimationIndex(Entity &e, int ind)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+		internal.cpuEntities[i].animationIndex = ind;
+	}
+
+	int Renderer3D::getEntityAnimationIndex(Entity &e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+		return internal.cpuEntities[i].animationIndex;
 	}
 
 	std::vector<char*> *Renderer3D::getEntityMeshesNames(Entity& e)
@@ -39050,9 +39074,169 @@ namespace gl3d
 			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(worldToViewMatrix * transformMat)[0][0]);
 			
-			
-			bool changed = 1;
+			#pragma region animations
+			if (!entity.joints.empty() && !entity.animations.empty() && !entity.animations[0].keyFramesRot.empty())
+			{
 
+				int index = entity.animationIndex;
+				index = std::min(index, (int)entity.animations.size() - 1);
+				auto &animation = entity.animations[index];
+
+				std::vector<glm::mat4> skinningMatrixes;
+				skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+				animation.totalTimePassed += deltaTime * entity.animationSpeed;
+				while (animation.totalTimePassed >= animation.animationDuration)
+				{
+					animation.totalTimePassed -= animation.animationDuration;
+				}
+
+				for (int b = 0; b < entity.joints.size(); b++)
+				{
+
+					glm::mat4 rotMat(1.f);
+					glm::mat4 transMat(1.f);
+					glm::mat4 scaleMat(1.f);
+
+					auto &joint = entity.joints[b];
+
+					if (
+						animation.keyFramesRot[b].empty() &&
+						animation.keyFramesTrans[b].empty() &&
+						animation.keyFramesScale[b].empty()
+						)
+					{
+						skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
+					}
+					else
+					{
+						if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesRot[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesRot[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.rotation;
+
+									if (frame == animation.keyFramesRot[b].size() - 1)
+									{
+										rotMat = glm::toMat4(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesRot[b][frame + 1].rotation;
+										float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+									}
+									break;
+
+								}
+
+							}
+							//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
+						}
+						else
+						{
+							rotMat = glm::toMat4(joint.rotation);
+						}
+
+						auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
+						{
+							return a * (1.f - x) + (b * x);
+						};
+
+						if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesTrans[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesTrans[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.translation;
+
+									if (frame == animation.keyFramesTrans[b].size() - 1)
+									{
+										transMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesTrans[b][frame + 1].translation;
+										float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										transMat = glm::translate(lerp(first, second, interpolation));
+									}
+									break;
+								}
+							}
+							//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
+						}
+						else
+						{
+							transMat = glm::translate(joint.trans);
+						}
+
+						if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
+						{
+							for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
+							{
+								int frames = animation.keyFramesScale[b].size();
+								float time = animation.totalTimePassed;
+								auto &currentFrame = animation.keyFramesScale[b][frame];
+								if (time >= currentFrame.timeStamp)
+								{
+									auto first = currentFrame.scale;
+
+									if (frame == animation.keyFramesScale[b].size() - 1)
+									{
+										scaleMat = glm::translate(first);
+									}
+									else
+									{
+										auto second = animation.keyFramesScale[b][frame + 1].scale;
+										float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
+										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+										scaleMat = glm::scale(lerp(first, second, interpolation));
+									}
+									break;
+								}
+							}
+							//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
+						}
+						else
+						{
+							scaleMat = glm::scale(joint.scale);
+						}
+
+						skinningMatrixes[b] = transMat * rotMat * scaleMat;
+						//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
+
+					}
+
+				}
+
+				//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
+				std::vector<glm::mat4> appliedSkinningMatrixes;
+				appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+				applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
+					animation.root, glm::mat4(1.f));
+
+				//send data
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
+					, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, internal.lightShader.jointsBlockBuffer);
+			}
+			#pragma endregion
+
+
+			bool changed = 1;
 			for (auto& i : entity.models)
 			{
 
@@ -39071,154 +39255,10 @@ namespace gl3d
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 				#pragma region animations
-				if (!i.joints.empty() && !i.animation.keyFramesRot.empty())
+				if (i.hasBones)
 				{
 					glUniform1i(internal.lightShader.u_hasAnimations, true);
-					std::vector<glm::mat4> skinningMatrixes;
-					skinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
 
-					i.animation.totalTimePassed += deltaTime;
-					while (i.animation.totalTimePassed >= i.animation.animationDuration)
-					{
-						i.animation.totalTimePassed -= i.animation.animationDuration;
-					}
-
-					for (int b = 0; b < i.joints.size(); b++)
-					{
-
-						glm::mat4 rotMat(1.f);
-						glm::mat4 transMat(1.f);
-						glm::mat4 scaleMat(1.f);
-						
-						if(
-							i.animation.keyFramesRot[b].empty() &&
-							i.animation.keyFramesTrans[b].empty() &&
-							i.animation.keyFramesScale[b].empty()
-							)
-						{
-							skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations at all here
-						}
-						else
-						{
-							if (!i.animation.keyFramesRot[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = i.animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = i.animation.keyFramesRot[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesRot[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.rotation;
-
-										if (frame == i.animation.keyFramesRot[b].size() - 1)
-										{
-											rotMat = glm::toMat4(first);
-										}
-										else
-										{
-											auto second = i.animation.keyFramesRot[b][frame + 1].rotation;
-											float secondTime = i.animation.keyFramesRot[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
-										}
-										break;
-
-									}
-
-								}
-								//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
-							}
-
-							auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
-							{
-								return a * (1.f - x) + (b * x);
-							};
-
-							if (!i.animation.keyFramesTrans[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = i.animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = i.animation.keyFramesTrans[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesTrans[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.translation;
-
-										if (frame == i.animation.keyFramesTrans[b].size() - 1)
-										{
-											transMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = i.animation.keyFramesTrans[b][frame + 1].translation;
-											float secondTime = i.animation.keyFramesTrans[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											transMat = glm::translate(lerp(first, second, interpolation));
-										}
-										break;
-									}
-								}
-								//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
-							}
-
-							if (!i.animation.keyFramesScale[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = i.animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = i.animation.keyFramesScale[b].size();
-									float time = i.animation.totalTimePassed;
-									auto &currentFrame = i.animation.keyFramesScale[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.scale;
-
-										if (frame == i.animation.keyFramesScale[b].size() - 1)
-										{
-											scaleMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = i.animation.keyFramesScale[b][frame + 1].scale;
-											float secondTime = i.animation.keyFramesScale[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											scaleMat = glm::scale(lerp(first, second, interpolation));
-										}
-										break;
-									}
-								}
-								//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
-							}
-
-							skinningMatrixes[b] = transMat * rotMat * scaleMat;
-							//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
-
-						}
-
-
-					}
-
-					//skinningMatrixes[4] = glm::translate(glm::vec3{ -2,0.2,0 });
-
-					std::vector<glm::mat4> appliedSkinningMatrixes;
-					appliedSkinningMatrixes.resize(i.joints.size(), glm::mat4(1.f));
-
-					for (int j = 0; j < i.joints.size(); j++)
-					{
-						if (i.joints[j].root)
-						{
-							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, i.joints,
-								j, glm::mat4(1.f));
-						}
-					}
-
-
-					//send data
-					glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.jointsBlockBuffer);
-					glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
-						, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, internal.lightShader.jointsBlockBuffer);
 				}
 				else
 				{
@@ -40336,9 +40376,33 @@ namespace gl3d
 
 	}
 
+	//todo use the max w h to create it
+	//todo check if textures are invalid
 	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(int w, int h, GpuTexture roughness, 
-		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO)
+		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO, int &RMA_loadedTextures)
 	{
+		bool roughnessLoaded = (roughness.id != 0);
+		bool metallicLoaded = (metallic.id != 0);
+		bool ambientLoaded = (ambientOcclusion.id != 0);
+
+		RMA_loadedTextures = 0;
+
+		if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
+		else
+		if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
+		else
+		if (roughnessLoaded && ambientLoaded) { RMA_loadedTextures = 5; }
+		else
+		if (roughnessLoaded && metallicLoaded) { RMA_loadedTextures = 4; }
+		else
+		if (ambientLoaded) { RMA_loadedTextures = 3; }
+		else
+		if (metallicLoaded) { RMA_loadedTextures = 2; }
+		else
+		if (roughnessLoaded) { RMA_loadedTextures = 1; }
+		else { RMA_loadedTextures = 0; }
+
+		if (RMA_loadedTextures == 0) { return 0; }
 
 		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
 		GLuint texture = 0;
@@ -40349,12 +40413,11 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		//todo set the quality of this texture in a function parameter.
-		//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);
+		//todo set the size of this texture in a function parameter?.
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	
 
 		glBindVertexArray(quadVAO);
+
 
 		shader.bind();
 		glActiveTexture(GL_TEXTURE0);

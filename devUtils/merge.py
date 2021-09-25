@@ -1,10 +1,11 @@
 import os
 from datetime import date
 
-cppFiles = ["Core", "Texture", "Shader", "Camera", "GraphicModel",\
+cppFiles = ["Core", "Animations", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
-headerFiles = ["Core", "json", "stb_image_write", "tiny_gltf", "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
+headerFiles = ["Core", "Animations", "json", "stb_image_write", "tiny_gltf", \
+    "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
 

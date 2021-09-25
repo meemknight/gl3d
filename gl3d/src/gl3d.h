@@ -57,11 +57,13 @@ namespace gl3d
 		
 		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
-			float roughness = 0.5f, float metallic = 0.1, float ao = 1, std::string name = "");
-		
+			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
+			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
+			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
+
 		Material createMaterial(Material m);
 
-		Material loadMaterial(std::string file);
+		std::vector<Material> loadMaterial(std::string file);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -325,7 +327,7 @@ namespace gl3d
 
 				GLuint createRMAtexture(int w, int h,
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
-					GLuint quadVAO);
+					GLuint quadVAO, int &RMA_loadedTextures);
 
 			}pBRtextureMaker;
 

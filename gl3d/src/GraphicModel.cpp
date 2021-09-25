@@ -136,13 +136,6 @@ namespace gl3d
 			}
 		}
 
-		//for (auto &j : loader.LoadedVertices)
-		//{
-		//	j.Position.X *= scale;
-		//	j.Position.Y *= scale;
-		//	j.Position.Z *= scale;
-		//}
-
 		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
 	}
 
