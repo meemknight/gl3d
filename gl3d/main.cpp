@@ -402,7 +402,7 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
 	//auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
-	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
+	auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
@@ -418,7 +418,7 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
-	auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
+	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
@@ -1023,11 +1023,11 @@ int main()
 				items.push_back("Crate");
 				auto e = renderer.createEntity(levelModel);
 
-				renderer.setEntityMeshMaterial(e, 0, materials[0]);
-				auto textures = renderer.getEntityMeshMaterialTextures(e, 0);
-				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				//renderer.setEntityMeshMaterial(e, 0, materials[0]);
+				//auto textures = renderer.getEntityMeshMaterialTextures(e, 0);
+				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
 
 
 				models.push_back(e);

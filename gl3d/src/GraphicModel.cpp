@@ -105,9 +105,11 @@ namespace gl3d
 
 	void LoadedModelData::load(const char *file, float scale)
 	{
-		stbi_set_flip_vertically_on_load(false);
+		stbi_set_flip_vertically_on_load(true);
+		bool shouldFlipUVs = 0;
 
-		loader.LoadFile(file);
+
+		loader.LoadFile(file, &shouldFlipUVs);
 
 		//parse path
 		path = file;
@@ -121,19 +123,42 @@ namespace gl3d
 
 		for (auto &i : loader.LoadedMeshes)
 		{
-			for(auto &j : i.Vertices)
+			if (shouldFlipUVs)
 			{
-				j.Position.X *= scale;
-				j.Position.Y *= scale;
-				j.Position.Z *= scale;
+				for (auto &j : i.Vertices)
+				{
+					j.Position.X *= scale;
+					j.Position.Y *= scale;
+					j.Position.Z *= scale;
+					j.TextureCoordinate.Y = 1.f - j.TextureCoordinate.Y;
+				}
+
+				for (auto &j : i.VerticesAnimations)
+				{
+					j.Position.X *= scale;
+					j.Position.Y *= scale;
+					j.Position.Z *= scale;
+					j.TextureCoordinate.Y = 1.f - j.TextureCoordinate.Y;
+				}
+			}
+			else
+			{
+				for (auto &j : i.Vertices)
+				{
+					j.Position.X *= scale;
+					j.Position.Y *= scale;
+					j.Position.Z *= scale;
+				}
+
+				for (auto &j : i.VerticesAnimations)
+				{
+					j.Position.X *= scale;
+					j.Position.Y *= scale;
+					j.Position.Z *= scale;
+				}
 			}
 
-			for (auto &j : i.VerticesAnimations)
-			{
-				j.Position.X *= scale;
-				j.Position.Y *= scale;
-				j.Position.Z *= scale;
-			}
+			
 		}
 
 		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
