@@ -157,6 +157,8 @@ namespace gl3d
 		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
 			mat.metallic, mat.ao, mat.name);
 
+		stbi_set_flip_vertically_on_load(true);
+
 		//todo i moved the code from here
 		{
 			//load textures for materials

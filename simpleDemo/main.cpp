@@ -83,11 +83,23 @@ int main()
 
 
 	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj");
+	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb");
+	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
+	
+
 	gl3d::Transform transform;
 
 	transform.rotation.x = glm::radians(90.f);
-	gl3d::Entity helmetEntity = renderer.createEntity(helmetModel, transform);
-	
+	gl3d::Entity entity = renderer.createEntity(steveModel, transform);
+	//renderer.setEntityMeshMaterial(entity, 0, steveMaterial[0]);
+
+	auto textures = renderer.getEntityMeshMaterialTextures(entity, 0);
+
+	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+
+
 	//renderer.setEntityMeshMaterial(helmetEntity, 0, rockMaterialModel[0]);
 
 #pragma region deltaTime
@@ -184,9 +196,10 @@ int main()
 
 	#pragma endregion
 		
-		transform = renderer.getEntityTransform(helmetEntity);
-		transform.position.x = std::sin(clock() / 1000.f);
-		renderer.setEntityTransform(helmetEntity, transform);
+		transform = renderer.getEntityTransform(entity);
+		//transform.position.x = std::sin(clock() / 1000.f);
+		transform.position.z = -1.f;
+		renderer.setEntityTransform(entity, transform);
 
 	#pragma region render and events
 		renderer.render(deltaTime);

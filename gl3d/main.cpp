@@ -145,12 +145,12 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	//renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/bell_park_dawn_1k.hdr");
-	renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Milkyway_small.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBox.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
@@ -396,7 +396,7 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	auto materials = renderer.loadMaterial("resources/materials/rock/rock.mtl");
+	auto materials = renderer.loadMaterial("resources/materials/adventurer/adventurer.mtl");
 
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
@@ -407,6 +407,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
 	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
@@ -418,13 +419,15 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
-	auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
+	//auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
+
+
 
 	std::cout << "\n\nLoad profiler: time(s):" << rez.timeSeconds << "    cpu clocks:" << rez.cpuClocks << "\n";
 
@@ -613,8 +616,8 @@ int main()
 			ImGui::SameLine();
 
 			ImVec2 pos = ImGui::GetCursorScreenPos();
-			ImVec2 uv_min = ImVec2(0.0f, 1.0f);                 // Top-left
-			ImVec2 uv_max = ImVec2(1.0f, 0.0f);                 // Lower-right
+			ImVec2 uv_min = ImVec2(1.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(0.0f, 1.0f);                 // Lower-right
 			ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 			ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 			ImGui::Image((void*)(id),
@@ -1019,6 +1022,14 @@ int main()
 			{
 				items.push_back("Crate");
 				auto e = renderer.createEntity(levelModel);
+
+				renderer.setEntityMeshMaterial(e, 0, materials[0]);
+				auto textures = renderer.getEntityMeshMaterialTextures(e, 0);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+
+
 				models.push_back(e);
 			}
 			ImGui::SameLine();
@@ -1139,8 +1150,8 @@ int main()
 							int my_tex_w = 20;
 							int my_tex_h = 20;
 							ImVec2 pos = ImGui::GetCursorScreenPos();
-							ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-							ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+							ImVec2 uv_min = ImVec2(1.0f, 0.0f);                 // Top-left
+							ImVec2 uv_max = ImVec2(0.0f, 1.0f);                 // Lower-right
 							ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 							ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 							ImGui::Image((void*)(id),
@@ -1179,7 +1190,7 @@ int main()
 
 							ImGui::Combo("Texture Quality", &quality, items, 4);
 
-							//t.setTextureQuality(quality);
+							t.setTextureQuality(quality);
 							ImGui::PopID();
 						};
 
