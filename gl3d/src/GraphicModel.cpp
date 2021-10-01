@@ -994,7 +994,7 @@ namespace gl3d
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//todo telete mipmaps
+		//todo delete mipmaps
 		//GLuint newTexture = 0;
 		//glGenTextures(1, &newTexture);
 		//int w, h;

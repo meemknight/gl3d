@@ -230,7 +230,7 @@ namespace objl
 		// Specularity Map
 		//std::string map_Ns;
 		// Alpha Texture Map
-		//std::string map_d; //todo implement
+		//std::string map_d;
 		// Bump Map
 		//std::string map_bump;
 		// Normal Map
@@ -626,7 +626,6 @@ namespace objl
 				LoadedMaterials[i].Kd.Y = mat.pbrMetallicRoughness.baseColorFactor[1];
 				LoadedMaterials[i].Kd.Z = mat.pbrMetallicRoughness.baseColorFactor[2];
 
-				//todo tweak default values for gltf to be the same
 				LoadedMaterials[i].metallic = mat.pbrMetallicRoughness.metallicFactor;
 				LoadedMaterials[i].roughness = mat.pbrMetallicRoughness.roughnessFactor;
 
@@ -665,20 +664,38 @@ namespace objl
 							if (checkData)
 							{
 								bool isData = false;
-								t->data.resize(4 * image.width * image.height);
+								int comp = image.component;
+
+								t->data.resize(comp * image.width * image.height);
 								for (int i = 0; i < image.width * image.height; i++)
 								{
-									auto r = image.image[i * 4 + 0];
-									auto g = image.image[i * 4 + 1];
-									auto b = image.image[i * 4 + 2];
-									auto a = image.image[i * 4 + 3];
+									unsigned char r = 0;
+									unsigned char g = 0;
+									unsigned char b = 0;
+									unsigned char a = 0;
+
+									r = image.image[i * comp + 0];
+									t->data[i * comp + 0] = r;
+
+									if (comp >= 2) 
+									{
+										g = image.image[i * comp + 1];
+										t->data[i * comp + 1] = g;
+									}
+									
+									if(comp >= 3)
+									{
+										b = image.image[i * comp + 2];
+										t->data[i * comp + 2] = b;
+									}
+										
+									if (comp >= 4)
+									{
+										a = image.image[i * comp + 3];
+										t->data[i * comp + 3] = a;
+									}
 
 									if (r != 0 || g != 0 || b != 0) { isData = true; }
-
-									t->data[i * 4 + 0] = r;
-									t->data[i * 4 + 1] = g;
-									t->data[i * 4 + 2] = b;
-									t->data[i * 4 + 3] = a;
 
 								}
 
@@ -686,7 +703,7 @@ namespace objl
 								{
 									t->w = image.width;
 									t->h = image.height;
-									t->components = image.component; //todo check component
+									t->components = image.component;
 								}
 								else
 								{
@@ -697,8 +714,8 @@ namespace objl
 							{
 								t->w = image.width;
 								t->h = image.height;
-								t->components = image.component; //todo check component
-								t->data = image.image; //
+								t->components = image.component; 
+								t->data = image.image;
 							}
 
 						}
@@ -1946,7 +1963,7 @@ namespace objl
 					tempMaterial.map_ORM = algorithm::tail(curline);
 				}
 				else
-				if (firstToken == "map_emissive" || firstToken == "map_Ke")
+				if (firstToken == "map_emissive" || firstToken == "map_Ke" || firstToken == "map_Emissive")
 				{
 					tempMaterial.map_emissive = algorithm::tail(curline);
 				}

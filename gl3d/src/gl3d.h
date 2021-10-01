@@ -325,7 +325,7 @@ namespace gl3d
 
 				void init();
 
-				GLuint createRMAtexture(int w, int h,
+				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
 					GLuint quadVAO, int &RMA_loadedTextures);
 

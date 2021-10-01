@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include <stb_image.h>
 #include <iostream>
+#include <glm\vec2.hpp>
 #include <glm\vec3.hpp>
 #include "Core.h"
 #include <algorithm>
@@ -218,6 +219,24 @@ namespace gl3d
 		}
 
 		return leastPossible;
+
+	}
+
+	glm::ivec2 GpuTexture::getTextureSize()
+	{
+		if (!id)
+		{
+			return glm::ivec2();
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, id);
+			int w=0, h=0;
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+			return { w, h };
+		}
+
 
 	}
 

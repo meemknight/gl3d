@@ -31932,8 +31932,10 @@ namespace objl
 		//
 		// If the file is unable to be found
 		// or unable to be loaded return false
-		bool LoadFile(std::string Path)
+		bool LoadFile(std::string Path, bool *outShouldFlipUV = 0)
 		{
+			if (outShouldFlipUV) { *outShouldFlipUV = 0; }
+
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) == ".obj")
 			{
@@ -31941,9 +31943,11 @@ namespace objl
 			}
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
+				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
 				return loadGltf(Path, 0);
 			}else if (Path.substr(Path.size() - 4, 4) == ".glb")
 			{
+				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
 				return loadGltf(Path, 1);
 			}
 			else

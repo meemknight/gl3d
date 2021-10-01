@@ -396,7 +396,8 @@ int main()
 	PL::AverageProfiler loadProfiler;
 	loadProfiler.start();
 
-	auto materials = renderer.loadMaterial("resources/materials/adventurer/adventurer.mtl");
+	//auto materials = renderer.loadMaterial("resources/materials/adventurer/adventurer.mtl");
+	auto materials = renderer.loadMaterial("resources/materials/ironMan/ironMan.mtl");
 
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
@@ -1023,11 +1024,11 @@ int main()
 				items.push_back("Crate");
 				auto e = renderer.createEntity(levelModel);
 
-				//renderer.setEntityMeshMaterial(e, 0, materials[0]);
-				//auto textures = renderer.getEntityMeshMaterialTextures(e, 0);
-				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-				//gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				renderer.setEntityMeshMaterial(e, 0, materials[0]);
+				auto textures = renderer.getEntityMeshMaterialTextures(e, 0);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
+				gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
 
 
 				models.push_back(e);

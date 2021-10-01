@@ -87,9 +87,9 @@ int main()
 	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
 	
 
-	gl3d::Transform transform;
+	gl3d::Transform transform{};
 
-	transform.rotation.x = glm::radians(90.f);
+	//transform.rotation.x = glm::radians(90.f);
 	gl3d::Entity entity = renderer.createEntity(steveModel, transform);
 	//renderer.setEntityMeshMaterial(entity, 0, steveMaterial[0]);
 
@@ -100,7 +100,7 @@ int main()
 	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
 
 
-	//renderer.setEntityMeshMaterial(helmetEntity, 0, rockMaterialModel[0]);
+	renderer.setEntityMeshMaterial(entity, 0, rockMaterialModel[0]);
 
 #pragma region deltaTime
 	int fpsCount = 0;

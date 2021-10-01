@@ -841,8 +841,8 @@ namespace tinygltf
 	{
 		std::vector<double> baseColorFactor;  // len = 4. default [1,1,1,1]
 		TextureInfo baseColorTexture;
-		double metallicFactor;   // default 1
-		double roughnessFactor;  // default 1
+		double metallicFactor;   // default 0
+		double roughnessFactor;  // default 0.5
 		TextureInfo metallicRoughnessTexture;
 
 		Value extras;

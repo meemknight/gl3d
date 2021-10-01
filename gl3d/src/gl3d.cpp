@@ -97,33 +97,6 @@ namespace gl3d
 		textureData.normalMapTexture = normalTexture;
 		textureData.emissiveTexture = emmisiveTexture;
 
-		//auto roughnessIndex = internal.getTextureIndex(roughnessTexture);
-		//gl3d::GpuTexture roughnessGpuTexture = {};
-		//if (roughnessIndex >= 0)
-		//{
-		//	roughnessGpuTexture = internal.loadedTextures[roughnessIndex].texture;
-		//}
-		//
-		//auto metallicIndex = internal.getTextureIndex(metallicTexture);
-		//gl3d::GpuTexture metallicGpuTexture = {};
-		//if (metallicIndex >= 0)
-		//{
-		//	metallicGpuTexture = internal.loadedTextures[metallicIndex].texture;
-		//}
-		//
-		//auto occlusionIndex = internal.getTextureIndex(occlusionTexture);
-		//gl3d::GpuTexture occlusionGpuTexture = {};
-		//if (occlusionIndex >= 0)
-		//{
-		//	occlusionGpuTexture = internal.loadedTextures[occlusionIndex].texture;
-		//}
-		//
-		//int rmaLoadedTexture = 0;
-		//
-		//auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024, 
-		//	roughnessGpuTexture, metallicGpuTexture, occlusionGpuTexture, internal.lightShader.quadDrawer.quadVAO, 
-		//	rmaLoadedTexture);
-		//textureData.pbrTexture.texture = t;
 
 		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture);
 
@@ -163,7 +136,6 @@ namespace gl3d
 		{
 			//load textures for materials
 			TextureDataForMaterial textureData;
-
 
 
 			if (!mat.loadedDiffuse.data.empty())
@@ -325,7 +297,7 @@ namespace gl3d
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 					}
 
-					auto t = renderer.internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+					auto t = renderer.internal.pBRtextureMaker.createRMAtexture(
 						roughness, metallic, ambientOcclusion, renderer.internal.lightShader.quadDrawer.quadVAO,
 						textureData.pbrTexture.RMA_loadedTextures);
 
@@ -825,7 +797,7 @@ namespace gl3d
 
 		PBRTexture ret = {};
 
-		auto t = internal.pBRtextureMaker.createRMAtexture(1024, 1024,
+		auto t = internal.pBRtextureMaker.createRMAtexture(
 			{getTextureOpenglId(roughness)},
 			{ getTextureOpenglId(metallic) },
 			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures);
@@ -4952,7 +4924,7 @@ namespace gl3d
 
 	//todo use the max w h to create it
 	//todo check if textures are invalid
-	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(int w, int h, GpuTexture roughness, 
+	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(GpuTexture roughness, 
 		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO, int &RMA_loadedTextures)
 	{
 		bool roughnessLoaded = (roughness.id != 0);
@@ -4960,7 +4932,6 @@ namespace gl3d
 		bool ambientLoaded = (ambientOcclusion.id != 0);
 
 		RMA_loadedTextures = 0;
-
 		if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
 		else
 		if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
@@ -4978,6 +4949,20 @@ namespace gl3d
 
 		if (RMA_loadedTextures == 0) { return 0; }
 
+		//set w and h to the biggest texture size
+		int w = 0, h = 0;
+		GpuTexture textures[3] = { roughness, metallic, ambientOcclusion};
+		for (int i = 0; i < 3; i++)
+		{
+			if (textures[i].id)
+			{
+				auto s = textures[i].getTextureSize();
+				
+				if (s.x > w) { w = s.x; }
+				if (s.y > h) { h = s.y; }
+			}
+		}
+
 		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
 		GLuint texture = 0;
 		glGenTextures(1, &texture);
@@ -4987,12 +4972,10 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		//todo set the size of this texture in a function parameter?.
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+		
 
 		glBindVertexArray(quadVAO);
-
-
 		shader.bind();
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, roughness.id);

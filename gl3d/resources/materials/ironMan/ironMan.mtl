@@ -1,0 +1,14 @@
+# Material Count: 1
+
+newmtl rockMaterial
+Kd 1.00000 1.00000 1.00000
+illum 2
+Pm 0
+Pr 1
+Ao 1
+map_Kd albedo.png
+# map_Kn rockTestNormal.png
+ map_Pr roughness.png
+ map_Pm metallic.png
+ map_Emissive emissive.png
+# map_Ao rockTestAmbientOcclusion.png
