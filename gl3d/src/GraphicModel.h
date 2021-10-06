@@ -135,11 +135,14 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		void clear();
 
+		void allocateGpuData();
+		void deleteGpuData();
+
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
 		std::vector<Animation> animations;
 		std::vector<Joint> joints;
-
+		GLuint appliedSkinningMatricesBuffer;
 
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 

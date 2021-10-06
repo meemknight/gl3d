@@ -306,6 +306,7 @@ namespace gl3d
 		prePass.u_transform = getUniform(prePass.shader.id, "u_transform");
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler");
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
+		prePass.u_hasAnimations = getUniform(prePass.shader.id, "u_hasAnimations");
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
 			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag");
@@ -344,9 +345,6 @@ namespace gl3d
 
 		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
 		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
-		glGenBuffers(1, &jointsBlockBuffer);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, jointsBlockBuffer);
-
 		
 
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");

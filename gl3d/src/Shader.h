@@ -84,8 +84,6 @@ namespace gl3d
 		GLuint materialBlockBuffer = 0;
 
 		GLuint u_jointTransforms = GL_INVALID_INDEX;
-		GLuint jointsBlockBuffer = 0;
-
 
 		GLuint pointLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint pointLightsBlockBuffer = 0;
@@ -157,6 +155,7 @@ namespace gl3d
 			GLint u_transform;
 			GLint u_hasTexture;
 			GLint u_albedoSampler;
+			GLint u_hasAnimations;
 		}prePass;
 
 		Shader geometryPassShader;

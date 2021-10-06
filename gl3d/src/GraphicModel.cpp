@@ -1064,4 +1064,14 @@ namespace gl3d
 		preFilteredMap = 0;
 	}
 
+	void CpuEntity::allocateGpuData()
+	{
+		glGenBuffers(1, &appliedSkinningMatricesBuffer);
+	}
+
+	void CpuEntity::deleteGpuData()
+	{
+		glDeleteBuffers(1, &appliedSkinningMatricesBuffer);
+	}
+
 };

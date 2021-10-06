@@ -241,6 +241,10 @@ namespace gl3d
 		bool getEntityCastShadows(Entity& e);
 		void setEntityAnimationIndex(Entity &e, int ind);
 		int getEntityAnimationIndex(Entity &e);
+		void setEntityAnimationSpeed(Entity &e, float speed);
+		float getEntityAnimationSpeed(Entity &e);
+
+
 
 		//this is used for apis like imgui.
 		std::vector<char*> *getEntityMeshesNames(Entity& e);
