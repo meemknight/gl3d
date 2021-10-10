@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-10-06
+//built on 2021-10-10
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -38516,6 +38516,8 @@ namespace gl3d
 
 				glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
 					&modelViewProjMat[0][0]);
+				
+				
 
 				for (auto& i : i.models)
 				{

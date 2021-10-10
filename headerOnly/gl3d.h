@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-10-06
+//built on 2021-10-10
 ////////////////////////////////////////////////
 
 
@@ -33887,6 +33887,7 @@ namespace gl3d
 			GLint u_shadowMatrices;
 			GLint u_lightPos;
 			GLint u_farPlane;
+			
 		}pointShadowShader;
 
 		struct

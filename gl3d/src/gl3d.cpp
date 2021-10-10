@@ -1812,15 +1812,22 @@ namespace gl3d
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
 
-		if ((internal.cpuEntities[i].isStatic() != s)
-			&& internal.cpuEntities[i].isVisible()
-			&& internal.cpuEntities[i].castShadows()
+		auto &en = internal.cpuEntities[i];
+
+		if (en.animate()) //entities that animate can't be static
+		{
+			s = false;
+		}
+		
+		if ((en.isStatic() != s)
+			&& en.isVisible()
+			&& en.castShadows()
 			)
 		{
 			internal.perFrameFlags.staticGeometryChanged = true;
 		}
 
-		internal.cpuEntities[i].setStatic(s);
+		en.setStatic(s);
 	}
 
 	void Renderer3D::deleteEntity(Entity &e)
@@ -2156,7 +2163,13 @@ namespace gl3d
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
-		internal.cpuEntities[i].animationIndex = ind;
+
+		if (internal.cpuEntities[i].animationIndex != ind)
+		{
+			internal.cpuEntities[i].totalTimePassed = 0;
+			internal.cpuEntities[i].animationIndex = ind;
+		}
+
 	}
 
 	int Renderer3D::getEntityAnimationIndex(Entity &e)
@@ -2190,6 +2203,33 @@ namespace gl3d
 		if (i < 0) { return nullptr; } //warn or sthing
 		
 		return &internal.cpuEntities[i].subModelsNames;
+	}
+
+	void Renderer3D::setEntityAnimate(Entity& e, bool animate)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+		auto& en = internal.cpuEntities[i];
+		if (en.canBeAnimated())
+		{
+			en.setAnimate(animate);
+
+			if (animate && en.isStatic())
+			{
+				setEntityStatic(e, false);
+			}
+		}
+
+	}
+
+	int Renderer3D::getEntityAnimate(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		auto& en = internal.cpuEntities[i];
+
+		return en.animate() && en.canBeAnimated();
 	}
 
 	void Renderer3D::setExposure(float exposure)
@@ -2823,7 +2863,7 @@ namespace gl3d
 				continue;
 			}
 
-			if (!entity.joints.empty() && !entity.animations.empty() && !entity.animations[0].keyFramesRot.empty())
+			if (entity.canBeAnimated() && entity.animate())
 			{
 
 				int index = entity.animationIndex;
@@ -2833,10 +2873,10 @@ namespace gl3d
 				std::vector<glm::mat4> skinningMatrixes;
 				skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
-				animation.totalTimePassed += deltaTime * entity.animationSpeed;
-				while (animation.totalTimePassed >= animation.animationDuration)
+				entity.totalTimePassed += deltaTime * entity.animationSpeed;
+				while (entity.totalTimePassed >= animation.animationDuration)
 				{
-					animation.totalTimePassed -= animation.animationDuration;
+					entity.totalTimePassed -= animation.animationDuration;
 				}
 
 				for (int b = 0; b < entity.joints.size(); b++)
@@ -2863,7 +2903,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesRot[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesRot[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -2902,7 +2942,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesTrans[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesTrans[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -2934,7 +2974,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesScale[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesScale[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -2984,6 +3024,7 @@ namespace gl3d
 				#pragma endregion
 
 			}
+
 		}
 		#pragma endregion
 
@@ -3016,14 +3057,41 @@ namespace gl3d
 				glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
 					&modelViewProjMat[0][0]);
 
-				for (auto& i : i.models)
+				bool potentialAnimations = false;
+				if (!i.canBeAnimated() || !i.animate())
 				{
-					if(shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+					glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					potentialAnimations = true;
+				}
+
+				for (auto& j : i.models)
+				{
+					if (!(potentialAnimations && j.hasBones))
 					{
-						continue;
+						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
+						{
+							continue;
+						}
 					}
 
-					auto m = internal.getMaterialIndex(i.material);
+					if (potentialAnimations)
+					{
+						if (j.hasBones)
+						{
+							glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
+						}
+						else
+						{
+							glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+						}
+					}
+
+					auto m = internal.getMaterialIndex(j.material);
 
 					if (m < 0)
 					{
@@ -3051,15 +3119,15 @@ namespace gl3d
 						}
 					}
 
-					glBindVertexArray(i.vertexArray);
+					glBindVertexArray(j.vertexArray);
 
-					if (i.indexBuffer)
+					if (j.indexBuffer)
 					{
-						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 					}
 					else
 					{
-						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 					}
 				}
 
@@ -3120,10 +3188,32 @@ namespace gl3d
 				glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_transform, 1, GL_FALSE,
 					&transformMat[0][0]);
 
-				for (auto& i : i.models)
+				if (!i.canBeAnimated() || !i.animate())
+				{
+					glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+				}
+
+				for (auto& j : i.models)
 				{
 
-					auto m = internal.getMaterialIndex(i.material);
+					if (i.canBeAnimated() && i.animate())
+					{
+						if (j.hasBones)
+						{
+							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, true);
+						}
+						else
+						{
+							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+						}
+					}
+
+					auto m = internal.getMaterialIndex(j.material);
 
 					if (m < 0)
 					{
@@ -3151,15 +3241,15 @@ namespace gl3d
 						}
 					}
 
-					glBindVertexArray(i.vertexArray);
+					glBindVertexArray(j.vertexArray);
 
-					if (i.indexBuffer)
+					if (j.indexBuffer)
 					{
-						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 					}
 					else
 					{
-						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 					}
 				}
 
@@ -3677,33 +3767,70 @@ namespace gl3d
 					continue;
 				}
 
+				bool potentialAnimations = 0;
+				if (!i.canBeAnimated() || !i.animate())
+				{
+					glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+					
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					potentialAnimations = true;
+				}
+
 				auto transformMat = i.transform.getTransformMatrix();
 				auto modelViewProjMat = worldProjectionMatrix * transformMat;
 
 				if (zPrePass)
 				{
 					glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				
+					if (!potentialAnimations)
+					{
+						glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+					}
+					else
+					{
+						//send animation data
+						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					}
+				
 				}
 
-				for (auto& i : i.models)
+				for (auto& j : i.models)
 				{
 					//frustum culling
-					if (frustumCulling)
+					if (frustumCulling && potentialAnimations && !j.hasBones)
 					{
 
-						if (shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
 						{
-							i.culledThisFrame = true;
+							j.culledThisFrame = true;
 							continue;
 						}
 
 					}
 
-					i.culledThisFrame = false;
+					j.culledThisFrame = false;
 
 					if (zPrePass)
 					{
-						auto m = internal.getMaterialIndex(i.material);
+						if (i.canBeAnimated() && i.animate())
+						{
+							if (j.hasBones)
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
+							}
+							else
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+							}
+						}
+
+
+						auto m = internal.getMaterialIndex(j.material);
 
 						if (m < 0)
 						{
@@ -3732,20 +3859,19 @@ namespace gl3d
 
 						}
 
-						glBindVertexArray(i.vertexArray);
+						glBindVertexArray(j.vertexArray);
 
-						if (i.indexBuffer)
+						if (j.indexBuffer)
 						{
-							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+							glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 						}
 						else
 						{
-							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+							glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 						}
 					}
 					
 				}
-
 
 			}
 
@@ -3825,7 +3951,14 @@ namespace gl3d
 			
 
 			#pragma region send animation data
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, entity.appliedSkinningMatricesBuffer);
+			if (entity.animate())
+			{
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, entity.appliedSkinningMatricesBuffer);
+			}
+			else
+			{
+				glUniform1i(internal.lightShader.u_hasAnimations, false);
+			}
 			#pragma endregion
 
 
@@ -3848,13 +3981,16 @@ namespace gl3d
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 				#pragma region animations
-				if (i.hasBones)
+				if (entity.animate()) //if animations are off we set the uniform up
 				{
-					glUniform1i(internal.lightShader.u_hasAnimations, true);
-				}
-				else
-				{
-					glUniform1i(internal.lightShader.u_hasAnimations, false);
+					if (i.hasBones) //if the sub mesh has bones
+					{
+						glUniform1i(internal.lightShader.u_hasAnimations, true);
+					}
+					else
+					{
+						glUniform1i(internal.lightShader.u_hasAnimations, false);
+					}
 				}
 				#pragma endregion
 

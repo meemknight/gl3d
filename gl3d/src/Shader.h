@@ -147,6 +147,8 @@ namespace gl3d
 			GLint u_shadowMatrices;
 			GLint u_lightPos;
 			GLint u_farPlane;
+			GLint u_hasAnimations;
+			GLuint u_jointTransforms = GL_INVALID_INDEX;
 		}pointShadowShader;
 
 		struct
@@ -156,6 +158,7 @@ namespace gl3d
 			GLint u_hasTexture;
 			GLint u_albedoSampler;
 			GLint u_hasAnimations;
+			GLuint u_jointTransforms = GL_INVALID_INDEX;
 		}prePass;
 
 		Shader geometryPassShader;

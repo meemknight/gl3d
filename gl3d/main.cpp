@@ -407,9 +407,9 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
-	auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
-	//auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
@@ -1085,10 +1085,13 @@ int main()
 
 				int animation = renderer.getEntityAnimationIndex(models[itemCurrent]);
 				float animationSpeed = renderer.getEntityAnimationSpeed(models[itemCurrent]);
+				bool animate = renderer.getEntityAnimate(models[itemCurrent]);
+				ImGui::Checkbox("animate: ", &animate); ImGui::SameLine();
 				ImGui::InputInt("animation", &animation);
 				ImGui::DragFloat("animation speed", &animationSpeed, 0.001, 0);
 				renderer.setEntityAnimationIndex(models[itemCurrent], animation);
 				renderer.setEntityAnimationSpeed(models[itemCurrent], animationSpeed);
+				renderer.setEntityAnimate(models[itemCurrent], animate);
 				ImGui::NewLine();
 
 

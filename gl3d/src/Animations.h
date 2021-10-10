@@ -76,7 +76,6 @@ namespace gl3d
 		std::vector<TimeStamps> timeStamps;
 
 		float animationDuration=0;
-		float totalTimePassed=0;
 		int root = 0;
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;

@@ -11,6 +11,13 @@
 #include "Texture.h"
 #include "Core.h"
 
+#define GL3D_ADD_FLAG(NAME, SETNAME, VALUE)							\
+		bool NAME() {return (flags & ((unsigned char)1 << VALUE) );}	\
+		void SETNAME(bool s)										\
+		{	if (s) { flags = flags | ((unsigned char)1 << VALUE); }	\
+			else { flags = flags & ~((unsigned char)1 << VALUE); }	\
+		}
+
 namespace gl3d
 {
 
@@ -127,6 +134,9 @@ namespace gl3d
 
 	//the data for an entity
 	//todo move to internal
+	
+
+
 	struct CpuEntity
 	{
 		Transform transform;
@@ -143,50 +153,21 @@ namespace gl3d
 		std::vector<Animation> animations;
 		std::vector<Joint> joints;
 		GLuint appliedSkinningMatricesBuffer;
+		float totalTimePassed = 0;
+
+		bool canBeAnimated() { return !animations.empty() && !joints.empty(); }
 
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 
-		bool castShadows() {return (flags & 0b0000'0100); }
-		void setCastShadows(bool s)
-		{
-			if (s)
-			{
-				flags = flags | 0b0000'0100;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0100);
-			}
-		}
-
-		bool isVisible() { return (flags & 0b0000'0010); }
-		void setVisible(bool v)
-		{
-			if (v)
-			{
-				flags = flags | 0b0000'0010;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0010);
-			}
-		}
-
-		bool isStatic() { return (flags & 0b0000'0001); }
-		void setStatic(bool s)
-		{
-			if (s)
-			{
-				flags = flags | 0b0000'0001;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0001);
-			}
-		}
+		GL3D_ADD_FLAG(isStatic, setStatic, 0);
+		GL3D_ADD_FLAG(isVisible, setVisible, 1);
+		GL3D_ADD_FLAG(castShadows, setCastShadows, 2);
+		GL3D_ADD_FLAG(animate, setAnimate, 3);
 
 
 	};
+
+
 
 	struct LoadedTextures
 	{
@@ -293,5 +274,6 @@ namespace gl3d
 
 #pragma endregion
 
-
 };
+
+#undef GL3D_ADD_FLAG
