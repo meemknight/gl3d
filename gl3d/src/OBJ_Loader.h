@@ -740,6 +740,7 @@ namespace objl
 				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
 				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
 				//LoadedMaterials[i].map_ORM
+
 				setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
 					&LoadedMaterials[i].loadedORM, true);
 
@@ -782,7 +783,7 @@ namespace objl
 				for (auto &j : skin.joints)
 				{
 					auto &b = model.nodes[j];
-					std::cout << jCount << ": " << b.name << "\n";
+					//std::cout << jCount << ": " << b.name << "\n";
 
 					gl3d::Joint joint;
 					
@@ -947,7 +948,7 @@ namespace objl
 		#pragma region animations
 			
 			animations.reserve(model.animations.size());
-			std::cout << model.animations.size() << " :size\n";
+			//std::cout << model.animations.size() << " :size\n";
 			for (auto &a : model.animations)
 			{
 				gl3d::Animation animation;

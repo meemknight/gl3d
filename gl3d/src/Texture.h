@@ -41,7 +41,7 @@ namespace gl3d
 		{
 			GpuTextureWithFlags() = default;
 			GpuTexture texture;
-			unsigned int flags = 0; //
+			unsigned int flags = 0; //just alpha exist rn //todo add flag for components number
 		};
 	};
 

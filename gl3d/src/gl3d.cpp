@@ -125,6 +125,7 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
+	//this is the function that loads a material from parsed data
 	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, objl::Material &mat, const std::string &path)
 	{
 		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
@@ -163,34 +164,30 @@ namespace gl3d
 			if (!mat.loadedEmissive.data.empty())
 			{
 				textureData.emissiveTexture = renderer.loadTextureFromMemory(mat.loadedEmissive);
-
+				auto ind = renderer.internal.getMaterialIndex(m);
+				renderer.internal.materials[ind].emmisive = 1.f;
 			}
 			else
 			if (!mat.map_emissive.empty())
 			{
 				textureData.emissiveTexture = renderer.loadTexture(std::string(path + mat.map_emissive));
+				auto ind = renderer.internal.getMaterialIndex(m);
+				renderer.internal.materials[ind].emmisive = 1.f;
 			}
 
 			textureData.pbrTexture.RMA_loadedTextures = 0;
 
 			auto rmaQuality = TextureLoadQuality::linearMipmap;
 
+			//todo not working in gltf formats
 			if (!mat.map_RMA.empty())
 			{
-				//todo not tested
-				//rmaQuality);
-
+			
 				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
-
 				if (textureData.pbrTexture.texture.id_ != 0)
 				{
 					textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 				}
-
-				//if (gm.RMA_Texture.id)
-				//{
-				//	gm.RMA_loadedTextures = 7; //all textures loaded
-				//}
 
 			}
 
@@ -206,14 +203,13 @@ namespace gl3d
 						unsigned char M = t.data[(i + j * t.w) * 4 + 2];
 						unsigned char A = t.data[(i + j * t.w) * 4 + 0];
 
-						t.data[(i + j * t.w) * 4 + 0] = R;
-						t.data[(i + j * t.w) * 4 + 1] = M;
-						t.data[(i + j * t.w) * 4 + 2] = A;
+						t.data[(i + j * t.w) * 3 + 0] = R;
+						t.data[(i + j * t.w) * 3 + 1] = M;
+						t.data[(i + j * t.w) * 3 + 2] = A;
 					}
 
-				//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 				GpuTexture tex;
-				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 4, rmaQuality); //todo 3 channels
+				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
 				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
 				textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 
@@ -855,7 +851,6 @@ namespace gl3d
 				returnModel.joints = model.loader.joints;
 			}
 			#pragma endregion
-
 
 
 			for (int i = 0; i < s; i++)
@@ -2222,7 +2217,7 @@ namespace gl3d
 
 	}
 
-	int Renderer3D::getEntityAnimate(Entity& e)
+	bool Renderer3D::getEntityAnimate(Entity& e)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return 0; } //warn or sthing
@@ -2230,6 +2225,16 @@ namespace gl3d
 		auto& en = internal.cpuEntities[i];
 
 		return en.animate() && en.canBeAnimated();
+	}
+
+	bool Renderer3D::entityCanAnimate(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		auto& en = internal.cpuEntities[i];
+
+		return en.canBeAnimated();
 	}
 
 	void Renderer3D::setExposure(float exposure)

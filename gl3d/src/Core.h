@@ -144,7 +144,7 @@ namespace gl3d
 			float attenuation = 2;
 			float hardness = 1;
 			int shadowIndex = 0;
-			int castShadows = 1;	//todo implement
+			int castShadows = 1;
 			int	changedThisFrame = 1; //this is sent to the gpu but not used there
 			float nearPlane = 0.1;
 			float farPlane = 10;

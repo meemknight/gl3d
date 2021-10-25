@@ -1,0 +1,227 @@
+{
+  "accessors": [
+    {
+      "bufferView": 1,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 3575,
+      "max": [
+        0.0099211540073156357,
+        0.0097716301679611206,
+        0.010076245293021202
+      ],
+      "min": [
+        -0.0099211540073156357,
+        -0.0097716301679611206,
+        -0.010076245293021202
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 3575,
+      "max": [
+        0.99990028142929077,
+        0.97786223888397217
+      ],
+      "min": [
+        0.000658599310554564,
+        0.0032260417938232422
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 3575,
+      "max": [
+        1,
+        1,
+        0.99808233976364136
+      ],
+      "min": [
+        -1,
+        -1,
+        -0.99997824430465698
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 4,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 3575,
+      "max": [
+        0.99935925006866455,
+        0.99999755620956421,
+        1,
+        1
+      ],
+      "min": [
+        -1,
+        -0.99994343519210815,
+        -1,
+        1
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 0,
+      "componentType": 5123,
+      "count": 18108,
+      "max": [
+        3574
+      ],
+      "min": [
+        0
+      ],
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "generator": "Created by RapidCompact v1.6.0-alpha | www.rapidcompact.com",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 36216,
+      "byteOffset": 0,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 42900,
+      "byteOffset": 36216,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 28600,
+      "byteOffset": 79116,
+      "byteStride": 8,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 42900,
+      "byteOffset": 107716,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 57200,
+      "byteOffset": 150616,
+      "byteStride": 16,
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 207816,
+      "uri": "BoomBox.data.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "material0_basecolor.png"
+    },
+    {
+      "uri": "material0_normal.png"
+    },
+    {
+      "uri": "material0_emissive.png"
+    },
+    {
+      "uri": "material0_rma.png"
+    }
+  ],
+  "materials": [
+    {
+      "emissiveFactor": [
+        1,
+        1,
+        1
+      ],
+      "emissiveTexture": {
+        "index": 2
+      },
+      "normalTexture": {
+        "index": 1
+      },
+      "occlusionTexture": {
+        "index": 3
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 3
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "mainMesh",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 2,
+            "POSITION": 0,
+            "TANGENT": 3,
+            "TEXCOORD_0": 1
+          },
+          "indices": 4,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "rootNode"
+    }
+  ],
+  "samplers": [
+    {},
+    {},
+    {},
+    {}
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 1,
+      "source": 1
+    },
+    {
+      "sampler": 2,
+      "source": 2
+    },
+    {
+      "sampler": 3,
+      "source": 3
+    }
+  ]
+}

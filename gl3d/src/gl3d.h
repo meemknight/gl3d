@@ -244,7 +244,8 @@ namespace gl3d
 		void setEntityAnimationSpeed(Entity &e, float speed);
 		float getEntityAnimationSpeed(Entity &e);
 		void setEntityAnimate(Entity& e, bool animate); //true = display animations. To pause set the animation speed to 0.
-		int getEntityAnimate(Entity& e);
+		bool getEntityAnimate(Entity& e); //returns true if it is animating
+		bool entityCanAnimate(Entity& e); //returns true if it is can be animated
 
 
 		//this is used for apis like imgui.
