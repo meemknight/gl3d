@@ -232,9 +232,10 @@ namespace gl3d
 		struct
 		{
 			Shader shader;
-			//GLuint u_lightPos;
-			//GLuint u_g;
-			//GLuint u_g2;
+			GLuint u_lightPos;
+			GLuint u_g;
+			GLuint u_color1;
+			GLuint u_color2;
 			GLuint modelViewUniformLocation;
 
 		}atmosphericScatteringShader;
@@ -249,7 +250,7 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox);
 		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
-		void atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox);
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
 
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 

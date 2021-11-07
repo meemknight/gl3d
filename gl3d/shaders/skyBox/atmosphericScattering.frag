@@ -1,4 +1,4 @@
-#version 330 core
+#version 150 core
 //
 // Atmospheric scattering fragment shader
 //
@@ -6,12 +6,14 @@
 //
 // Copyright (c) 2004 Sean O'Neil
 //
-//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
+//--//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
 //moddified
 
 uniform vec3 u_lightPos;
-//uniform float u_g;
-//uniform float u_g2;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
+uniform vec3 u_groundColor;
+uniform float u_g;
 
 in vec3 v_localPos;
 out vec3 fragColor;
@@ -36,20 +38,30 @@ float fScale;			// 1 / (fOuterRadius - fInnerRadius)
 float fScaleDepth;		// The scale depth (i.e. the altitude at which the atmosphere's average density is found)
 float fScaleOverScaleDepth;	// fScale / fScaleDepth
 
-
-
-	vec3 firstColor;
-	vec3 secondColor;
+	vec3 skyColor = u_color1;
+	vec3 sunColor = u_color2;
 
 	vec3 localPos = normalize(v_localPos);
 	vec3 lightPos = normalize(u_lightPos);
 
-	float u_g = 0.76;
-	float u_g2 = u_g * u_g;
-	
-	float fCos = dot(lightPos, localPos);
-	float fMiePhase = 1.5 * ((1.0 - u_g2) / (2.0 + u_g2)) * (1.0 + fCos*fCos) / pow(1.0 + u_g2 - 2.0*u_g*fCos, 1.5);
+	vec3 upVector = vec3(0,1,0);
+	float fCosEarth = max(dot(localPos, upVector),0);
+	float foneMinusCosEarth = 1-fCosEarth;
+	float fCosSunEarth = 1-max(dot(lightPos, upVector), 0);
 
-	fragColor.rgb =  firstColor + fMiePhase * secondColor;
+	float g2 = u_g * u_g;
+	
+	float fCosSun = dot(lightPos, localPos);
+	float fMiePhase = 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCosSun*fCosSun) / pow(1.0 + g2 - 2.0*u_g*fCosSun, 1.5);
+	float horizonIntensity = 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCosSunEarth*fCosSunEarth) / pow(1.0 + g2 - 2.0*u_g*fCosSunEarth, 1.5);
+
+	vec3 computedSkyColor = skyColor + fMiePhase * sunColor + (1-fCosSunEarth)*sunColor*horizonIntensity*2 * 
+		pow(foneMinusCosEarth, 8);
+
+	//u_groundColor = vec3(0.2,0.2,0.2);
+
+	fragColor.rgb =  mix(vec3(0.1,0.1,0.1), computedSkyColor, pow(fCosEarth, 0.25));
+
+	//fragColor.rgb =  firstColor + vec3(fCos);
 
 }

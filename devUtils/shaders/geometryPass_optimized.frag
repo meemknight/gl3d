@@ -86,7 +86,7 @@ subroutine uniform GetNormalMapFunc getNormalMapFunc;
 subroutine vec3 GetEmmisiveFunc(vec3);
 subroutine (GetEmmisiveFunc) vec3 sampledEmmision(vec3 color)
 {
-	return texture2D(u_emissiveTexture, v_texCoord).rgb;
+	return texture2D(u_emissiveTexture, v_texCoord).rgb * mat[u_materialIndex].rma.a;
 }
 
 subroutine (GetEmmisiveFunc) vec3 notSampledEmmision(vec3 color)
@@ -122,7 +122,7 @@ subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
 {
 	vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
 
-	//c.rgb = pow(c.rgb , vec3(2.2,2.2,2.2)).rgb;
+	c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
 
 	return c;
 }

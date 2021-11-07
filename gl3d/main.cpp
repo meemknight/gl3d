@@ -145,7 +145,7 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -155,8 +155,11 @@ int main()
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/canary_wharf_2k.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
 	
-	//renderer.skyBox = renderer.atmosfericScattering(glm::normalize(glm::vec3{ -1, 1, -1 }), 10, 50);
-
+	renderer.skyBox.clearTextures();
+	renderer.skyBox = renderer.atmosfericScattering(glm::normalize(glm::vec3{-1, 1, -1}),
+		glm::vec3(141 / 255.f, 217 / 255.f, 224 / 255.f),
+		glm::vec3(207 / 255.f, 196 / 255.f, 157 / 255.f),
+		0.76);
 
 	//skyBox.loadTexture("resources/skyBoxes/ocean_1.png");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/chinese_garden_2k.hdr");
@@ -421,9 +424,10 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto rockModel = renderer.loadModel("resources/other/crate.obj", 0.01);
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
-	auto levelModel = renderer.loadModel("resources/obj/sphere3.obj");
-	auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
-	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto levelModel = renderer.loadModel("resources/planeta.glb");
+	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
+	auto sphereModel = renderer.loadModel("resources/birb.glb");
+	auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
@@ -500,6 +504,10 @@ int main()
 		int timeEnd = clock();
 		float deltaTime = (timeEnd - timeBeg) / 1000.f;
 		timeBeg = clock();
+
+
+
+		
 
 	#pragma region profiler ui code
 		{
@@ -635,6 +643,44 @@ int main()
 			ImGui::PopID();
 		};
 		
+		{
+			ImGui::Begin("skyBox");
+
+			static glm::vec3 color1 = glm::vec3(141 / 255.f, 217 / 255.f, 224 / 255.f);
+			static glm::vec3 color2 = glm::vec3(207 / 255.f, 196 / 255.f, 157 / 255.f);
+			static float g1 = 0.76;
+			static glm::vec3 direction = glm::normalize(glm::vec3{-1, 1, -1});
+
+			ImGui::DragFloat("g", &g1, 0.01, 0, 100);
+
+			ImGui::ColorEdit3("Color1 ##c1", &color1[0]);
+			ImGui::ColorEdit3("Color2 ##c2", &color2[0]);
+
+			ImGui::DragFloat3("Pos sun", &direction[0], 0.01, -1.f, 1.f);
+
+			if (glm::length(direction) == 0)
+			{
+				direction = glm::vec3{0, -1, 0};
+			}
+			else
+			{
+				direction = glm::normalize(direction);
+			}
+
+			if (ImGui::Button("generate"))
+			{
+			
+				renderer.skyBox.clearTextures();
+				renderer.skyBox = renderer.atmosfericScattering(direction,
+					color1,
+					color2,
+					g1);
+			}
+
+			ImGui::End();
+		}
+
+
 
 		//imgui main menu
 		{
@@ -1355,7 +1401,7 @@ int main()
 
 	#pragma region light cube
 		glDisable(GL_DEPTH_TEST);
-		for (auto &i : renderer.internal.pointLights)
+		for (auto &i : renderer.internal.spotLights)
 		{
 			lightCubeModel.position = i.position;
 		

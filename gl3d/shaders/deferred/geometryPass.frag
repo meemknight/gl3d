@@ -122,7 +122,7 @@ subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
 {
 	vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
 
-	//c.rgb = pow(c.rgb , vec3(2.2,2.2,2.2)).rgb;
+	c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
 
 	return c;
 }

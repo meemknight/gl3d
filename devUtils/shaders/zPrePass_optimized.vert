@@ -21,8 +21,8 @@ void main()
 {
 	vec4 totalLocalPos = vec4(0.f);
 
-	//if(u_hasAnimations != 0)
-	if(false)
+	if(u_hasAnimations != 0)
+	//if(false)
 	{
 		for(int i=0; i<4; i++)
 		{

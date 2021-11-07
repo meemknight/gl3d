@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-10-10
+//built on 2021-11-05
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31170,7 +31170,7 @@ namespace gl3d
 	}
 
 	//https://learnopengl.com/In-Practice/Debugging
-	//todo probably remove iostream
+	//todo probably remove iostream when error api is ready
 	void GLAPIENTRY glDebugOutput(GLenum source,
 								GLenum type,
 								unsigned int id,
@@ -32064,6 +32064,10 @@ fragColor = tmpvar_12;
 
       std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 330 core
 uniform vec3 u_lightPos;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
+uniform float u_g;
+uniform float u_g2;
 in vec3 v_localPos;
 out vec3 fragColor;
 void main (void)
@@ -32083,8 +32087,8 @@ float fKm4PI;			// Km * 4 * PI
 float fScale;			// 1 / (fOuterRadius - fInnerRadius)
 float fScaleDepth;		// The scale depth (i.e. the altitude at which the atmosphere's average density is found)
 float fScaleOverScaleDepth;	// fScale / fScaleDepth
-vec3 firstColor;
-vec3 secondColor;
+vec3 firstColor = u_color1;
+vec3 secondColor = u_color2;
 vec3 localPos = normalize(v_localPos);
 vec3 lightPos = normalize(u_lightPos);
 float u_g = 0.76;
@@ -32114,16 +32118,37 @@ tmpvar_2.y = (gl_FragCoord.z * gl_FragCoord.z);
 outColor = tmpvar_2;
 })"},
 
-      std::pair<std::string, const char*>{"pointShadow.vert", R"(#version 330
+      std::pair<std::string, const char*>{"pointShadow.vert", R"(#version 430
 #pragma debug(on)
 layout(location = 0) in vec3 a_positions;
 layout(location = 1) in vec3 a_normals; //todo comment out
 layout(location = 2) in vec2 a_texCoord;
+layout(location = 3) in ivec4 a_jointsId;
+layout(location = 4) in vec4 a_weights;
 uniform mat4 u_transform; //full model view projection or just model for point shadows
+readonly restrict layout(std140) buffer u_jointTransforms
+{
+mat4 jointTransforms[];
+};
+uniform int u_hasAnimations;
 out vec2 v_texCoord;
 void main()
 {
-gl_Position = u_transform * vec4(a_positions, 1.f);
+vec4 totalLocalPos = vec4(0.f);
+if(u_hasAnimations != 0)
+{
+for(int i=0; i<4; i++)
+{
+if(a_jointsId[i] < 0){break;}
+mat4 jointTransform = jointTransforms[a_jointsId[i]];
+vec4 posePosition = jointTransform * vec4(a_positions, 1);
+totalLocalPos += posePosition * a_weights[i];
+}
+}else
+{
+totalLocalPos = vec4(a_positions, 1.f);
+}
+gl_Position = u_transform * totalLocalPos;
 v_texCoord = a_texCoord;
 } )"},
 
@@ -32500,7 +32525,7 @@ out vec2 v_texCoord;
 void main()
 {
 vec4 totalLocalPos = vec4(0.f);
-if(false)
+if(u_hasAnimations != 0)
 {
 for(int i=0; i<4; i++)
 {
@@ -33144,7 +33169,7 @@ subroutine uniform GetNormalMapFunc getNormalMapFunc;
 subroutine vec3 GetEmmisiveFunc(vec3);
 subroutine (GetEmmisiveFunc) vec3 sampledEmmision(vec3 color)
 {
-return texture2D(u_emissiveTexture, v_texCoord).rgb;
+return texture2D(u_emissiveTexture, v_texCoord).rgb * mat[u_materialIndex].rma.a;
 }
 subroutine (GetEmmisiveFunc) vec3 notSampledEmmision(vec3 color)
 {
@@ -33163,6 +33188,7 @@ return color;
 subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
 {
 vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
+c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
 return c;
 }
 subroutine uniform GetAlbedoFunc u_getAlbedo;
@@ -34026,6 +34052,10 @@ outColor = tmpvar_1;
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler");
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
 		prePass.u_hasAnimations = getUniform(prePass.shader.id, "u_hasAnimations");
+		prePass.u_jointTransforms = getStorageBlockIndex(prePass.shader.id, "u_jointTransforms");
+		glShaderStorageBlockBinding(prePass.shader.id, prePass.u_jointTransforms, 4);		//todo define or enums for this
+
+
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
 			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag");
@@ -34036,6 +34066,11 @@ outColor = tmpvar_1;
 		pointShadowShader.u_shadowMatrices = getUniform(pointShadowShader.shader.id, "u_shadowMatrices");
 		pointShadowShader.u_transform = getUniform(pointShadowShader.shader.id, "u_transform");
 		pointShadowShader.u_lightIndex = getUniform(pointShadowShader.shader.id, "u_lightIndex");
+		pointShadowShader.u_hasAnimations = getUniform(pointShadowShader.shader.id, "u_hasAnimations");
+		pointShadowShader.u_jointTransforms = getStorageBlockIndex(pointShadowShader.shader.id, "u_jointTransforms");
+		glShaderStorageBlockBinding(pointShadowShader.shader.id, pointShadowShader.u_jointTransforms, 4);	//todo define or enums for this
+
+
 
 		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag");
 		//geometryPassShader.bind();
@@ -34230,7 +34265,6 @@ outColor = tmpvar_1;
 //Camera.cpp
 ////////////////////////////////////////////////
 #pragma region Camera
-
 
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -34910,9 +34944,11 @@ namespace gl3d
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
 			"shaders/skyBox/atmosphericScattering.frag");
-		//atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
-		//atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
-		//atmosphericScatteringShader.u_g2 = getUniform(atmosphericScatteringShader.shader.id, "u_g2");
+		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
+		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
+		atmosphericScatteringShader.u_g2 = getUniform(atmosphericScatteringShader.shader.id, "u_g2");
+		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1");
+		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2");
 		atmosphericScatteringShader.modelViewUniformLocation 
 			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection");
 
@@ -35231,7 +35267,7 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox)
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2, SkyBox& skyBox)
 	{
 		skyBox = {};
 
@@ -35259,9 +35295,11 @@ namespace gl3d
 			{
 
 				atmosphericScatteringShader.shader.bind();
-				//glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
-				//glUniform1f(atmosphericScatteringShader.u_g, g);
-				//glUniform1f(atmosphericScatteringShader.u_g2, g2);
+				glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
+				glUniform1f(atmosphericScatteringShader.u_g, g);
+				glUniform1f(atmosphericScatteringShader.u_g2, g2);
+				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
+				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
 
 				glViewport(0, 0, 512, 512);
 
@@ -35626,6 +35664,7 @@ namespace gl3d
 		return std::max(std::max(x, y), z);
 	}
 
+	//this is the function that loads a material from parsed data
 	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, objl::Material &mat, const std::string &path)
 	{
 		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
@@ -35664,34 +35703,30 @@ namespace gl3d
 			if (!mat.loadedEmissive.data.empty())
 			{
 				textureData.emissiveTexture = renderer.loadTextureFromMemory(mat.loadedEmissive);
-
+				auto ind = renderer.internal.getMaterialIndex(m);
+				renderer.internal.materials[ind].emmisive = 1.f;
 			}
 			else
 			if (!mat.map_emissive.empty())
 			{
 				textureData.emissiveTexture = renderer.loadTexture(std::string(path + mat.map_emissive));
+				auto ind = renderer.internal.getMaterialIndex(m);
+				renderer.internal.materials[ind].emmisive = 1.f;
 			}
 
 			textureData.pbrTexture.RMA_loadedTextures = 0;
 
 			auto rmaQuality = TextureLoadQuality::linearMipmap;
 
+			//todo not working in gltf formats
 			if (!mat.map_RMA.empty())
 			{
-				//todo not tested
-				//rmaQuality);
-
+			
 				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
-
 				if (textureData.pbrTexture.texture.id_ != 0)
 				{
 					textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 				}
-
-				//if (gm.RMA_Texture.id)
-				//{
-				//	gm.RMA_loadedTextures = 7; //all textures loaded
-				//}
 
 			}
 
@@ -35707,14 +35742,13 @@ namespace gl3d
 						unsigned char M = t.data[(i + j * t.w) * 4 + 2];
 						unsigned char A = t.data[(i + j * t.w) * 4 + 0];
 
-						t.data[(i + j * t.w) * 4 + 0] = R;
-						t.data[(i + j * t.w) * 4 + 1] = M;
-						t.data[(i + j * t.w) * 4 + 2] = A;
+						t.data[(i + j * t.w) * 3 + 0] = R;
+						t.data[(i + j * t.w) * 3 + 1] = M;
+						t.data[(i + j * t.w) * 3 + 2] = A;
 					}
 
-				//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 				GpuTexture tex;
-				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 4, rmaQuality); //todo 3 channels
+				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
 				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
 				textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
 
@@ -36356,7 +36390,6 @@ namespace gl3d
 				returnModel.joints = model.loader.joints;
 			}
 			#pragma endregion
-
 
 
 			for (int i = 0; i < s; i++)
@@ -37313,15 +37346,22 @@ namespace gl3d
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
 
-		if ((internal.cpuEntities[i].isStatic() != s)
-			&& internal.cpuEntities[i].isVisible()
-			&& internal.cpuEntities[i].castShadows()
+		auto &en = internal.cpuEntities[i];
+
+		if (en.animate()) //entities that animate can't be static
+		{
+			s = false;
+		}
+		
+		if ((en.isStatic() != s)
+			&& en.isVisible()
+			&& en.castShadows()
 			)
 		{
 			internal.perFrameFlags.staticGeometryChanged = true;
 		}
 
-		internal.cpuEntities[i].setStatic(s);
+		en.setStatic(s);
 	}
 
 	void Renderer3D::deleteEntity(Entity &e)
@@ -37657,7 +37697,13 @@ namespace gl3d
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
-		internal.cpuEntities[i].animationIndex = ind;
+
+		if (internal.cpuEntities[i].animationIndex != ind)
+		{
+			internal.cpuEntities[i].totalTimePassed = 0;
+			internal.cpuEntities[i].animationIndex = ind;
+		}
+
 	}
 
 	int Renderer3D::getEntityAnimationIndex(Entity &e)
@@ -37691,6 +37737,43 @@ namespace gl3d
 		if (i < 0) { return nullptr; } //warn or sthing
 		
 		return &internal.cpuEntities[i].subModelsNames;
+	}
+
+	void Renderer3D::setEntityAnimate(Entity& e, bool animate)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+		auto& en = internal.cpuEntities[i];
+		if (en.canBeAnimated())
+		{
+			en.setAnimate(animate);
+
+			if (animate && en.isStatic())
+			{
+				setEntityStatic(e, false);
+			}
+		}
+
+	}
+
+	bool Renderer3D::getEntityAnimate(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		auto& en = internal.cpuEntities[i];
+
+		return en.animate() && en.canBeAnimated();
+	}
+
+	bool Renderer3D::entityCanAnimate(Entity& e)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return 0; } //warn or sthing
+
+		auto& en = internal.cpuEntities[i];
+
+		return en.canBeAnimated();
 	}
 
 	void Renderer3D::setExposure(float exposure)
@@ -38324,7 +38407,7 @@ namespace gl3d
 				continue;
 			}
 
-			if (!entity.joints.empty() && !entity.animations.empty() && !entity.animations[0].keyFramesRot.empty())
+			if (entity.canBeAnimated() && entity.animate())
 			{
 
 				int index = entity.animationIndex;
@@ -38334,10 +38417,10 @@ namespace gl3d
 				std::vector<glm::mat4> skinningMatrixes;
 				skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
-				animation.totalTimePassed += deltaTime * entity.animationSpeed;
-				while (animation.totalTimePassed >= animation.animationDuration)
+				entity.totalTimePassed += deltaTime * entity.animationSpeed;
+				while (entity.totalTimePassed >= animation.animationDuration)
 				{
-					animation.totalTimePassed -= animation.animationDuration;
+					entity.totalTimePassed -= animation.animationDuration;
 				}
 
 				for (int b = 0; b < entity.joints.size(); b++)
@@ -38364,7 +38447,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesRot[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesRot[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -38403,7 +38486,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesTrans[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesTrans[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -38435,7 +38518,7 @@ namespace gl3d
 							for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
 							{
 								int frames = animation.keyFramesScale[b].size();
-								float time = animation.totalTimePassed;
+								float time = entity.totalTimePassed;
 								auto &currentFrame = animation.keyFramesScale[b][frame];
 								if (time >= currentFrame.timeStamp)
 								{
@@ -38485,6 +38568,7 @@ namespace gl3d
 				#pragma endregion
 
 			}
+
 		}
 		#pragma endregion
 
@@ -38516,17 +38600,42 @@ namespace gl3d
 
 				glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
 					&modelViewProjMat[0][0]);
-				
-				
 
-				for (auto& i : i.models)
+				bool potentialAnimations = false;
+				if (!i.canBeAnimated() || !i.animate())
 				{
-					if(shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+					glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					potentialAnimations = true;
+				}
+
+				for (auto& j : i.models)
+				{
+					if (!(potentialAnimations && j.hasBones))
 					{
-						continue;
+						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
+						{
+							continue;
+						}
 					}
 
-					auto m = internal.getMaterialIndex(i.material);
+					if (potentialAnimations)
+					{
+						if (j.hasBones)
+						{
+							glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
+						}
+						else
+						{
+							glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+						}
+					}
+
+					auto m = internal.getMaterialIndex(j.material);
 
 					if (m < 0)
 					{
@@ -38554,15 +38663,15 @@ namespace gl3d
 						}
 					}
 
-					glBindVertexArray(i.vertexArray);
+					glBindVertexArray(j.vertexArray);
 
-					if (i.indexBuffer)
+					if (j.indexBuffer)
 					{
-						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 					}
 					else
 					{
-						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 					}
 				}
 
@@ -38623,10 +38732,32 @@ namespace gl3d
 				glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_transform, 1, GL_FALSE,
 					&transformMat[0][0]);
 
-				for (auto& i : i.models)
+				if (!i.canBeAnimated() || !i.animate())
+				{
+					glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+				}
+
+				for (auto& j : i.models)
 				{
 
-					auto m = internal.getMaterialIndex(i.material);
+					if (i.canBeAnimated() && i.animate())
+					{
+						if (j.hasBones)
+						{
+							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, true);
+						}
+						else
+						{
+							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+						}
+					}
+
+					auto m = internal.getMaterialIndex(j.material);
 
 					if (m < 0)
 					{
@@ -38654,15 +38785,15 @@ namespace gl3d
 						}
 					}
 
-					glBindVertexArray(i.vertexArray);
+					glBindVertexArray(j.vertexArray);
 
-					if (i.indexBuffer)
+					if (j.indexBuffer)
 					{
-						glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 					}
 					else
 					{
-						glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 					}
 				}
 
@@ -39180,33 +39311,70 @@ namespace gl3d
 					continue;
 				}
 
+				bool potentialAnimations = 0;
+				if (!i.canBeAnimated() || !i.animate())
+				{
+					glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+					
+				}
+				else
+				{
+					//send animation data
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					potentialAnimations = true;
+				}
+
 				auto transformMat = i.transform.getTransformMatrix();
 				auto modelViewProjMat = worldProjectionMatrix * transformMat;
 
 				if (zPrePass)
 				{
 					glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
+				
+					if (!potentialAnimations)
+					{
+						glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+					}
+					else
+					{
+						//send animation data
+						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					}
+				
 				}
 
-				for (auto& i : i.models)
+				for (auto& j : i.models)
 				{
 					//frustum culling
-					if (frustumCulling)
+					if (frustumCulling && potentialAnimations && !j.hasBones)
 					{
 
-						if (shouldCullObject(i.minBoundary, i.maxBoundary, modelViewProjMat))
+						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
 						{
-							i.culledThisFrame = true;
+							j.culledThisFrame = true;
 							continue;
 						}
 
 					}
 
-					i.culledThisFrame = false;
+					j.culledThisFrame = false;
 
 					if (zPrePass)
 					{
-						auto m = internal.getMaterialIndex(i.material);
+						if (i.canBeAnimated() && i.animate())
+						{
+							if (j.hasBones)
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
+							}
+							else
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+							}
+						}
+
+
+						auto m = internal.getMaterialIndex(j.material);
 
 						if (m < 0)
 						{
@@ -39235,20 +39403,19 @@ namespace gl3d
 
 						}
 
-						glBindVertexArray(i.vertexArray);
+						glBindVertexArray(j.vertexArray);
 
-						if (i.indexBuffer)
+						if (j.indexBuffer)
 						{
-							glDrawElements(GL_TRIANGLES, i.primitiveCount, GL_UNSIGNED_INT, 0);
+							glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
 						}
 						else
 						{
-							glDrawArrays(GL_TRIANGLES, 0, i.primitiveCount);
+							glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 						}
 					}
 					
 				}
-
 
 			}
 
@@ -39328,7 +39495,14 @@ namespace gl3d
 			
 
 			#pragma region send animation data
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, entity.appliedSkinningMatricesBuffer);
+			if (entity.animate())
+			{
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, entity.appliedSkinningMatricesBuffer);
+			}
+			else
+			{
+				glUniform1i(internal.lightShader.u_hasAnimations, false);
+			}
 			#pragma endregion
 
 
@@ -39351,13 +39525,16 @@ namespace gl3d
 				glUniform1i(internal.lightShader.materialIndexLocation, materialId);
 
 				#pragma region animations
-				if (i.hasBones)
+				if (entity.animate()) //if animations are off we set the uniform up
 				{
-					glUniform1i(internal.lightShader.u_hasAnimations, true);
-				}
-				else
-				{
-					glUniform1i(internal.lightShader.u_hasAnimations, false);
+					if (i.hasBones) //if the sub mesh has bones
+					{
+						glUniform1i(internal.lightShader.u_hasAnimations, true);
+					}
+					else
+					{
+						glUniform1i(internal.lightShader.u_hasAnimations, false);
+					}
 				}
 				#pragma endregion
 
@@ -40183,10 +40360,10 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, float g, float g2)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, g, g2, skyBox);
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, g2, skyBox);
 		return skyBox;
 	}
 

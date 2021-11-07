@@ -494,9 +494,10 @@ namespace gl3d
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
 			"shaders/skyBox/atmosphericScattering.frag");
-		//atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
-		//atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
-		//atmosphericScatteringShader.u_g2 = getUniform(atmosphericScatteringShader.shader.id, "u_g2");
+		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
+		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
+		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1");
+		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2");
 		atmosphericScatteringShader.modelViewUniformLocation 
 			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection");
 
@@ -815,7 +816,7 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox)
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox)
 	{
 		skyBox = {};
 
@@ -843,9 +844,10 @@ namespace gl3d
 			{
 
 				atmosphericScatteringShader.shader.bind();
-				//glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
-				//glUniform1f(atmosphericScatteringShader.u_g, g);
-				//glUniform1f(atmosphericScatteringShader.u_g2, g2);
+				glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
+				glUniform1f(atmosphericScatteringShader.u_g, g);
+				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
+				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
 
 				glViewport(0, 0, 512, 512);
 

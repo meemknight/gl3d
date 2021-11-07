@@ -6,12 +6,14 @@
 //
 // Copyright (c) 2004 Sean O'Neil
 //
-//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
+//--//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
 //moddified
 
 uniform vec3 u_lightPos;
-//uniform float u_g;
-//uniform float u_g2;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
+uniform float u_g;
+uniform float u_g2;
 
 in vec3 v_localPos;
 out vec3 fragColor;
@@ -38,8 +40,8 @@ float fScaleOverScaleDepth;	// fScale / fScaleDepth
 
 
 
-	vec3 firstColor;
-	vec3 secondColor;
+	vec3 firstColor = u_color1;
+	vec3 secondColor = u_color2;
 
 	vec3 localPos = normalize(v_localPos);
 	vec3 lightPos = normalize(u_lightPos);
@@ -51,5 +53,7 @@ float fScaleOverScaleDepth;	// fScale / fScaleDepth
 	float fMiePhase = 1.5 * ((1.0 - u_g2) / (2.0 + u_g2)) * (1.0 + fCos*fCos) / pow(1.0 + u_g2 - 2.0*u_g*fCos, 1.5);
 
 	fragColor.rgb =  firstColor + fMiePhase * secondColor;
+
+	//fragColor.rgb =  firstColor + vec3(fCos);
 
 }

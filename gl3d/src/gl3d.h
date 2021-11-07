@@ -116,7 +116,7 @@ namespace gl3d
 		SkyBox loadHDRSkyBox(const char* name);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
 
 	#pragma endregion
 

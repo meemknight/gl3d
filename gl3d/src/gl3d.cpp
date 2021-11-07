@@ -1741,6 +1741,11 @@ namespace gl3d
 
 		auto& entity = internal.cpuEntities[i];
 
+		if (entity.isStatic() && entity.isVisible())
+		{
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
+
 		for (auto& i : entity.subModelsNames)
 		{
 			delete[] i;
@@ -4821,10 +4826,10 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, float g, float g2)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, g, g2, skyBox);
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox);
 		return skyBox;
 	}
 

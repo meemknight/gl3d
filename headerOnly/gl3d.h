@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-10-10
+//built on 2021-11-05
 ////////////////////////////////////////////////
 
 
@@ -154,7 +154,7 @@ namespace gl3d
 			float attenuation = 2;
 			float hardness = 1;
 			int shadowIndex = 0;
-			int castShadows = 1;	//todo implement
+			int castShadows = 1;
 			int	changedThisFrame = 1; //this is sent to the gpu but not used there
 			float nearPlane = 0.1;
 			float farPlane = 10;
@@ -276,7 +276,6 @@ namespace gl3d
 		std::vector<TimeStamps> timeStamps;
 
 		float animationDuration=0;
-		float totalTimePassed=0;
 		int root = 0;
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;
@@ -32138,6 +32137,7 @@ namespace objl
 				//LoadedMaterials[i].map_Pr = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
 				//LoadedMaterials[i].map_Pm = setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index);
 				//LoadedMaterials[i].map_ORM
+
 				setTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture.index,
 					&LoadedMaterials[i].loadedORM, true);
 
@@ -32180,7 +32180,7 @@ namespace objl
 				for (auto &j : skin.joints)
 				{
 					auto &b = model.nodes[j];
-					std::cout << jCount << ": " << b.name << "\n";
+					//std::cout << jCount << ": " << b.name << "\n";
 
 					gl3d::Joint joint;
 					
@@ -32345,7 +32345,7 @@ namespace objl
 		#pragma region animations
 			
 			animations.reserve(model.animations.size());
-			std::cout << model.animations.size() << " :size\n";
+			//std::cout << model.animations.size() << " :size\n";
 			for (auto &a : model.animations)
 			{
 				gl3d::Animation animation;
@@ -33723,7 +33723,7 @@ namespace gl3d
 		{
 			GpuTextureWithFlags() = default;
 			GpuTexture texture;
-			unsigned int flags = 0; //
+			unsigned int flags = 0; //just alpha exist rn //todo add flag for components number
 		};
 	};
 
@@ -33887,7 +33887,8 @@ namespace gl3d
 			GLint u_shadowMatrices;
 			GLint u_lightPos;
 			GLint u_farPlane;
-			
+			GLint u_hasAnimations;
+			GLuint u_jointTransforms = GL_INVALID_INDEX;
 		}pointShadowShader;
 
 		struct
@@ -33897,6 +33898,7 @@ namespace gl3d
 			GLint u_hasTexture;
 			GLint u_albedoSampler;
 			GLint u_hasAnimations;
+			GLuint u_jointTransforms = GL_INVALID_INDEX;
 		}prePass;
 
 		Shader geometryPassShader;
@@ -34024,6 +34026,13 @@ namespace gl3d
 
 
 
+#define GL3D_ADD_FLAG(NAME, SETNAME, VALUE)							\
+		bool NAME() {return (flags & ((unsigned char)1 << VALUE) );}	\
+		void SETNAME(bool s)										\
+		{	if (s) { flags = flags | ((unsigned char)1 << VALUE); }	\
+			else { flags = flags & ~((unsigned char)1 << VALUE); }	\
+		}
+
 namespace gl3d
 {
 
@@ -34140,6 +34149,9 @@ namespace gl3d
 
 	//the data for an entity
 	//todo move to internal
+	
+
+
 	struct CpuEntity
 	{
 		Transform transform;
@@ -34156,50 +34168,21 @@ namespace gl3d
 		std::vector<Animation> animations;
 		std::vector<Joint> joints;
 		GLuint appliedSkinningMatricesBuffer;
+		float totalTimePassed = 0;
+
+		bool canBeAnimated() { return !animations.empty() && !joints.empty(); }
 
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 
-		bool castShadows() {return (flags & 0b0000'0100); }
-		void setCastShadows(bool s)
-		{
-			if (s)
-			{
-				flags = flags | 0b0000'0100;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0100);
-			}
-		}
-
-		bool isVisible() { return (flags & 0b0000'0010); }
-		void setVisible(bool v)
-		{
-			if (v)
-			{
-				flags = flags | 0b0000'0010;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0010);
-			}
-		}
-
-		bool isStatic() { return (flags & 0b0000'0001); }
-		void setStatic(bool s)
-		{
-			if (s)
-			{
-				flags = flags | 0b0000'0001;
-			}
-			else
-			{
-				flags = flags & ~(0b0000'0001);
-			}
-		}
+		GL3D_ADD_FLAG(isStatic, setStatic, 0);
+		GL3D_ADD_FLAG(isVisible, setVisible, 1);
+		GL3D_ADD_FLAG(castShadows, setCastShadows, 2);
+		GL3D_ADD_FLAG(animate, setAnimate, 3);
 
 
 	};
+
+
 
 	struct LoadedTextures
 	{
@@ -34264,9 +34247,11 @@ namespace gl3d
 		struct
 		{
 			Shader shader;
-			//GLuint u_lightPos;
-			//GLuint u_g;
-			//GLuint u_g2;
+			GLuint u_lightPos;
+			GLuint u_g;
+			GLuint u_g2;
+			GLuint u_color1;
+			GLuint u_color2;
 			GLuint modelViewUniformLocation;
 
 		}atmosphericScatteringShader;
@@ -34281,7 +34266,7 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox);
 		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
-		void atmosphericScattering(glm::vec3 sun, float g, float g2, SkyBox& skyBox);
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2, SkyBox& skyBox);
 
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
 
@@ -34306,8 +34291,10 @@ namespace gl3d
 
 #pragma endregion
 
-
 };
+
+#undef GL3D_ADD_FLAG
+
 #pragma endregion
 
 
@@ -34433,7 +34420,7 @@ namespace gl3d
 		SkyBox loadHDRSkyBox(const char* name);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, float g, float g2);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2);
 
 	#pragma endregion
 
@@ -34560,7 +34547,9 @@ namespace gl3d
 		int getEntityAnimationIndex(Entity &e);
 		void setEntityAnimationSpeed(Entity &e, float speed);
 		float getEntityAnimationSpeed(Entity &e);
-
+		void setEntityAnimate(Entity& e, bool animate); //true = display animations. To pause set the animation speed to 0.
+		bool getEntityAnimate(Entity& e); //returns true if it is animating
+		bool entityCanAnimate(Entity& e); //returns true if it is can be animated
 
 
 		//this is used for apis like imgui.
