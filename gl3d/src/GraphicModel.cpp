@@ -486,11 +486,13 @@ namespace gl3d
 		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag");
 		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap");
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
+		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality");
 
 		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
 		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection");
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");
+		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount");
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
 			"shaders/skyBox/atmosphericScattering.frag");
@@ -874,12 +876,11 @@ namespace gl3d
 
 		}
 
-
-		createConvolutedAndPrefilteredTextureData(skyBox);
+		createConvolutedAndPrefilteredTextureData(skyBox, 0.02, 64u);
 
 	}
 
-	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality, unsigned int specularSamples)
 	{
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -911,6 +912,7 @@ namespace gl3d
 
 		convolute.shader.bind();
 		glUniform1i(convolute.u_environmentMap, 0);
+		glUniform1f(convolute.u_sampleQuality, sampleQuality);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glViewport(0, 0, 32, 32);
@@ -968,6 +970,7 @@ namespace gl3d
 			float roughness = (float)mip / (float)(maxMipMap - 1);
 			roughness *= roughness;
 			glUniform1f(preFilterSpecular.u_roughness, roughness);
+			glUniform1ui(preFilterSpecular.u_sampleCount, specularSamples);
 
 			for (int i = 0; i < 6; i++)
 			{

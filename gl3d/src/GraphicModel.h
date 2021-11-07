@@ -216,8 +216,9 @@ namespace gl3d
 		{
 			Shader shader;
 			GLuint u_environmentMap;
+			GLuint u_sampleQuality;
 			GLuint modelViewUniformLocation;
-
+			
 		}convolute;
 
 		struct
@@ -225,6 +226,7 @@ namespace gl3d
 			Shader shader;
 			GLuint u_environmentMap;
 			GLuint u_roughness;
+			GLuint u_sampleCount;
 			GLuint modelViewUniformLocation;
 
 		}preFilterSpecular;
@@ -252,7 +254,7 @@ namespace gl3d
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
 		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
 
-		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);
 
 		//void clearGpuData();
 		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,

@@ -8,6 +8,7 @@ uniform samplerCube u_environmentMap;
 
 const float PI = 3.14159265359;
 float u_spread = 2.0 * PI;
+uniform float u_sampleQuality;
 
 void main()
 {		
@@ -21,7 +22,7 @@ void main()
 	vec3 right = normalize(cross(up, normal));
 	up         = normalize(cross(normal, right));
 	
-	float sampleDelta = 0.025;
+	float sampleDelta = u_sampleQuality; //0.025; degfault
 	float nrSamples = 0.0; 
 	for(float phi = 0.0; phi < u_spread; phi += sampleDelta)
 	{

@@ -5,6 +5,7 @@ in vec3 v_localPos;
 
 uniform samplerCube u_environmentMap;
 uniform float u_roughness;
+uniform uint u_sampleCount;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -62,6 +63,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
 	return normalize(sampleVec);
 }
 // ----------------------------------------------------------------------------
+
 void main()
 {		
 	vec3 N = normalize(v_localPos);
@@ -70,14 +72,15 @@ void main()
 	vec3 R = N;
 	vec3 V = R;
 
-	const uint SAMPLE_COUNT = 1024u; //todo probably decrease ?
 	vec3 prefilteredColor = vec3(0.0);
 	float totalWeight = 0.0;
+
+	float resolution = textureSize(u_environmentMap, 0).x;
 	
-	for(uint i = 0u; i < SAMPLE_COUNT; ++i)
+	for(uint i = 0u; i < u_sampleCount; ++i)
 	{
 		// generates a sample vector that's biased towards the preferred alignment direction (importance sampling).
-		vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+		vec2 Xi = Hammersley(i, u_sampleCount);
 		vec3 H = ImportanceSampleGGX(Xi, N, u_roughness);
 		vec3 L  = normalize(2.0 * dot(V, H) * H - V);
 
@@ -90,9 +93,9 @@ void main()
 			float HdotV = max(dot(H, V), 0.0);
 			float pdf = D * NdotH / (4.0 * HdotV) + 0.0001; 
 
-			float resolution = 512.0; // resolution of source cubemap (per face)
+			//float resolution = 512.0; // resolution of source cubemap (per face) //todo probably obtain in shader
 			float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
-			float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
+			float saSample = 1.0 / (float(u_sampleCount) * pdf + 0.0001);
 
 			float mipLevel = u_roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
 			

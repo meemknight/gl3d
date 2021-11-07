@@ -651,7 +651,7 @@ int main()
 			static float g1 = 0.76;
 			static glm::vec3 direction = glm::normalize(glm::vec3{-1, 1, -1});
 
-			ImGui::DragFloat("g", &g1, 0.01, 0, 100);
+			ImGui::DragFloat("g", &g1, 0.01, 0.01, 0.99);
 
 			ImGui::ColorEdit3("Color1 ##c1", &color1[0]);
 			ImGui::ColorEdit3("Color2 ##c2", &color2[0]);
@@ -667,7 +667,7 @@ int main()
 				direction = glm::normalize(direction);
 			}
 
-			if (ImGui::Button("generate"))
+			//if (ImGui::Button("generate"))
 			{
 			
 				renderer.skyBox.clearTextures();
