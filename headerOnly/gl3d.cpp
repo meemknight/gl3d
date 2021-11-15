@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-05
+//built on 2021-11-15
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31853,100 +31853,107 @@ out vec4 FragColor;
 in vec3 v_localPos;
 uniform samplerCube u_environmentMap;
 uniform float u_roughness;
+uniform uint u_sampleCount;
 void main ()
 {
-float totalWeight_2;
-vec3 prefilteredColor_3;
-vec3 V_4;
-vec3 N_5;
-vec3 tmpvar_6;
-tmpvar_6 = normalize(v_localPos);
-N_5 = tmpvar_6;
-V_4 = tmpvar_6;
-prefilteredColor_3 = vec3(0.0, 0.0, 0.0);
-totalWeight_2 = 0.0;
-for (uint i_1 = uint(0); i_1 < 1024u; i_1++) {
-float tmpvar_7;
-uint bits_8;
-bits_8 = ((i_1 << 16u) | (i_1 >> 16u));
-bits_8 = (((bits_8 & 1431655765u) << 1u) | ((bits_8 & 2863311530u) >> 1u));
-bits_8 = (((bits_8 & 858993459u) << 2u) | ((bits_8 & 3435973836u) >> 2u));
-bits_8 = (((bits_8 & 252645135u) << 4u) | ((bits_8 & 4042322160u) >> 4u));
-bits_8 = (((bits_8 & 16711935u) << 8u) | ((bits_8 & 4278255360u) >> 8u));
-tmpvar_7 = (float(bits_8) * 2.328306e-10);
-vec2 tmpvar_9;
-tmpvar_9.x = (float(i_1) / 1024.0);
-tmpvar_9.y = tmpvar_7;
-vec3 H_10;
-float tmpvar_11;
-tmpvar_11 = (u_roughness * u_roughness);
+float resolution_2;
+float totalWeight_3;
+vec3 prefilteredColor_4;
+vec3 V_5;
+vec3 N_6;
+vec3 tmpvar_7;
+tmpvar_7 = normalize(v_localPos);
+N_6 = tmpvar_7;
+V_5 = tmpvar_7;
+prefilteredColor_4 = vec3(0.0, 0.0, 0.0);
+totalWeight_3 = 0.0;
+resolution_2 = float(textureSize (u_environmentMap, 0).x);
+for (uint i_1 = uint(0); i_1 < u_sampleCount; i_1++) {
+float tmpvar_8;
+uint bits_9;
+bits_9 = ((i_1 << 16u) | (i_1 >> 16u));
+bits_9 = (((bits_9 & 1431655765u) << 1u) | ((bits_9 & 2863311530u) >> 1u));
+bits_9 = (((bits_9 & 858993459u) << 2u) | ((bits_9 & 3435973836u) >> 2u));
+bits_9 = (((bits_9 & 252645135u) << 4u) | ((bits_9 & 4042322160u) >> 4u));
+bits_9 = (((bits_9 & 16711935u) << 8u) | ((bits_9 & 4278255360u) >> 8u));
+tmpvar_8 = (float(bits_9) * 2.328306e-10);
+vec2 tmpvar_10;
+tmpvar_10.x = (float(i_1) / float(u_sampleCount));
+tmpvar_10.y = tmpvar_8;
+vec3 H_11;
 float tmpvar_12;
-tmpvar_12 = (6.283185 * tmpvar_9.x);
+tmpvar_12 = (u_roughness * u_roughness);
 float tmpvar_13;
-tmpvar_13 = sqrt(((1.0 - tmpvar_7) / (1.0 + 
-(((tmpvar_11 * tmpvar_11) - 1.0) * tmpvar_7)
-)));
+tmpvar_13 = (6.283185 * tmpvar_10.x);
 float tmpvar_14;
-tmpvar_14 = sqrt((1.0 - (tmpvar_13 * tmpvar_13)));
-H_10.x = (cos(tmpvar_12) * tmpvar_14);
-H_10.y = (sin(tmpvar_12) * tmpvar_14);
-H_10.z = tmpvar_13;
+tmpvar_14 = sqrt(((1.0 - tmpvar_8) / (1.0 + 
+(((tmpvar_12 * tmpvar_12) - 1.0) * tmpvar_8)
+)));
 float tmpvar_15;
-tmpvar_15 = abs(N_5.z);
-vec3 tmpvar_16;
-if ((tmpvar_15 < 0.999)) {
-tmpvar_16 = vec3(0.0, 0.0, 1.0);
-} else {
-tmpvar_16 = vec3(1.0, 0.0, 0.0);
-};
+tmpvar_15 = sqrt((1.0 - (tmpvar_14 * tmpvar_14)));
+H_11.x = (cos(tmpvar_13) * tmpvar_15);
+H_11.y = (sin(tmpvar_13) * tmpvar_15);
+H_11.z = tmpvar_14;
+float tmpvar_16;
+tmpvar_16 = abs(N_6.z);
 vec3 tmpvar_17;
-tmpvar_17 = normalize(((tmpvar_16.yzx * N_5.zxy) - (tmpvar_16.zxy * N_5.yzx)));
+if ((tmpvar_16 < 0.999)) {
+tmpvar_17 = vec3(0.0, 0.0, 1.0);
+} else {
+tmpvar_17 = vec3(1.0, 0.0, 0.0);
+};
 vec3 tmpvar_18;
-tmpvar_18 = normalize(((
-(tmpvar_17 * H_10.x)
-+ 
-(((N_5.yzx * tmpvar_17.zxy) - (N_5.zxy * tmpvar_17.yzx)) * H_10.y)
-) + (N_5 * tmpvar_13)));
+tmpvar_18 = normalize(((tmpvar_17.yzx * N_6.zxy) - (tmpvar_17.zxy * N_6.yzx)));
 vec3 tmpvar_19;
 tmpvar_19 = normalize(((
-(2.0 * dot (V_4, tmpvar_18))
-* tmpvar_18) - V_4));
-float tmpvar_20;
-tmpvar_20 = max (dot (N_5, tmpvar_19), 0.0);
-if ((tmpvar_20 > 0.0)) {
+(tmpvar_18 * H_11.x)
++ 
+(((N_6.yzx * tmpvar_18.zxy) - (N_6.zxy * tmpvar_18.yzx)) * H_11.y)
+) + (N_6 * tmpvar_14)));
+vec3 tmpvar_20;
+tmpvar_20 = normalize(((
+(2.0 * dot (V_5, tmpvar_19))
+* tmpvar_19) - V_5));
 float tmpvar_21;
-tmpvar_21 = (u_roughness * u_roughness);
+tmpvar_21 = max (dot (N_6, tmpvar_20), 0.0);
+if ((tmpvar_21 > 0.0)) {
 float tmpvar_22;
-tmpvar_22 = (tmpvar_21 * tmpvar_21);
+tmpvar_22 = (u_roughness * u_roughness);
 float tmpvar_23;
-tmpvar_23 = max (dot (N_5, tmpvar_18), 0.0);
+tmpvar_23 = (tmpvar_22 * tmpvar_22);
 float tmpvar_24;
-tmpvar_24 = (((tmpvar_23 * tmpvar_23) * (tmpvar_22 - 1.0)) + 1.0);
+tmpvar_24 = max (dot (N_6, tmpvar_19), 0.0);
 float tmpvar_25;
-tmpvar_25 = (1.0/(((1024.0 * 
-((((tmpvar_22 / 
-((3.141593 * tmpvar_24) * tmpvar_24)
+tmpvar_25 = (((tmpvar_24 * tmpvar_24) * (tmpvar_23 - 1.0)) + 1.0);
+float tmpvar_26;
+tmpvar_26 = (12.56637 / ((6.0 * resolution_2) * resolution_2));
+float tmpvar_27;
+tmpvar_27 = (1.0/(((
+float(u_sampleCount)
+* 
+((((tmpvar_23 / 
+((3.141593 * tmpvar_25) * tmpvar_25)
 ) * max (
-dot (N_5, tmpvar_18)
+dot (N_6, tmpvar_19)
 , 0.0)) / (4.0 * max (
-dot (tmpvar_18, V_4)
+dot (tmpvar_19, V_5)
 , 0.0))) + 0.0001)
 ) + 0.0001)));
-float tmpvar_26;
+float tmpvar_28;
 if ((u_roughness == 0.0)) {
-tmpvar_26 = 0.0;
+tmpvar_28 = 0.0;
 } else {
-tmpvar_26 = (0.5 * log2((tmpvar_25 / 7.989483e-6)));
+tmpvar_28 = (0.5 * log2((tmpvar_27 / tmpvar_26)));
 };
-prefilteredColor_3 = (prefilteredColor_3 + (textureLod (u_environmentMap, tmpvar_19, tmpvar_26).xyz * tmpvar_20));
-totalWeight_2 = (totalWeight_2 + tmpvar_20);
+prefilteredColor_4 = (prefilteredColor_4 + (textureLod (u_environmentMap, tmpvar_20, tmpvar_28).xyz * tmpvar_21));
+totalWeight_3 = (totalWeight_3 + tmpvar_21);
 };
 };
-prefilteredColor_3 = (prefilteredColor_3 / totalWeight_2);
-vec4 tmpvar_27;
-tmpvar_27.w = 1.0;
-tmpvar_27.xyz = prefilteredColor_3;
-FragColor = tmpvar_27;
+prefilteredColor_4 = (prefilteredColor_4 / totalWeight_3);
+vec4 tmpvar_29;
+tmpvar_29.w = 1.0;
+tmpvar_29.xyz = prefilteredColor_4;
+FragColor = tmpvar_29;
 })"},
 
       std::pair<std::string, const char*>{"hdrToCubeMap.vert", R"(#version 330
@@ -32023,79 +32030,92 @@ FragColor = tmpvar_7;
 out vec4 fragColor;
 in vec3 v_localPos;
 uniform samplerCube u_environmentMap;
+uniform float u_sampleQuality;
 void main ()
 {
 float nrSamples_2;
-vec3 right_3;
-vec3 up_4;
-vec3 irradiance_5;
-vec3 normal_6;
-vec3 tmpvar_7;
-tmpvar_7 = normalize(v_localPos);
-normal_6 = tmpvar_7;
-irradiance_5 = vec3(0.0, 0.0, 0.0);
+float sampleDelta_3;
+vec3 right_4;
+vec3 up_5;
+vec3 irradiance_6;
+vec3 normal_7;
 vec3 tmpvar_8;
-tmpvar_8 = normalize(((vec3(1.0, 0.0, 0.0) * tmpvar_7.zxy) - (vec3(0.0, 0.0, 1.0) * tmpvar_7.yzx)));
-right_3 = tmpvar_8;
-up_4 = normalize(((tmpvar_7.yzx * tmpvar_8.zxy) - (tmpvar_7.zxy * tmpvar_8.yzx)));
+tmpvar_8 = normalize(v_localPos);
+normal_7 = tmpvar_8;
+irradiance_6 = vec3(0.0, 0.0, 0.0);
+vec3 tmpvar_9;
+tmpvar_9 = normalize(((vec3(1.0, 0.0, 0.0) * tmpvar_8.zxy) - (vec3(0.0, 0.0, 1.0) * tmpvar_8.yzx)));
+right_4 = tmpvar_9;
+up_5 = normalize(((tmpvar_8.yzx * tmpvar_9.zxy) - (tmpvar_8.zxy * tmpvar_9.yzx)));
+sampleDelta_3 = u_sampleQuality;
 nrSamples_2 = 0.0;
-for (float phi_1 = 0.0; phi_1 < 6.283185; phi_1 += 0.025) {
-for (float theta_9 = 0.0; theta_9 < 1.570796; theta_9 += 0.025) {
-float tmpvar_10;
-tmpvar_10 = cos(theta_9);
-vec3 tmpvar_11;
-tmpvar_11.x = (sin(theta_9) * cos(phi_1));
-tmpvar_11.y = (sin(theta_9) * sin(phi_1));
-tmpvar_11.z = tmpvar_10;
-irradiance_5 = (irradiance_5 + ((texture (u_environmentMap, 
-(((tmpvar_11.x * right_3) + (tmpvar_11.y * up_4)) + (tmpvar_10 * normal_6))
+for (float phi_1 = 0.0; phi_1 < 6.283185; phi_1 = (phi_1 + sampleDelta_3)) {
+for (float theta_10 = 0.0; theta_10 < 1.570796; theta_10 = (theta_10 + sampleDelta_3)) {
+float tmpvar_11;
+tmpvar_11 = cos(theta_10);
+vec3 tmpvar_12;
+tmpvar_12.x = (sin(theta_10) * cos(phi_1));
+tmpvar_12.y = (sin(theta_10) * sin(phi_1));
+tmpvar_12.z = tmpvar_11;
+irradiance_6 = (irradiance_6 + ((texture (u_environmentMap, 
+(((tmpvar_12.x * right_4) + (tmpvar_12.y * up_5)) + (tmpvar_11 * normal_7))
 ).xyz * 
-cos(theta_9)
-) * sin(theta_9)));
+cos(theta_10)
+) * sin(theta_10)));
 nrSamples_2 += 1.0;
 };
 };
-irradiance_5 = (irradiance_5 * (3.141593 / nrSamples_2));
-vec4 tmpvar_12;
-tmpvar_12.w = 1.0;
-tmpvar_12.xyz = irradiance_5;
-fragColor = tmpvar_12;
+irradiance_6 = (irradiance_6 * (3.141593 / nrSamples_2));
+vec4 tmpvar_13;
+tmpvar_13.w = 1.0;
+tmpvar_13.xyz = irradiance_6;
+fragColor = tmpvar_13;
 })"},
 
-      std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 330 core
+      std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 150
 uniform vec3 u_lightPos;
 uniform vec3 u_color1;
 uniform vec3 u_color2;
 uniform float u_g;
-uniform float u_g2;
 in vec3 v_localPos;
 out vec3 fragColor;
-void main (void)
+void main ()
 {
-vec3 v3CameraPos = vec3(0,0,0);		// The camera's current position
-vec3 v3InvWavelength;	// 1 / pow(wavelength, 4) for the red, green, and blue channels
-float fCameraHeight = 0;	// The camera's current height
-float fCameraHeight2 = fCameraHeight * fCameraHeight;	// fCameraHeight^2
-float fOuterRadius;		// The outer (atmosphere) radius
-float fOuterRadius2 = fOuterRadius * fOuterRadius;	// fOuterRadius^2
-float fInnerRadius;		// The inner (planetary) radius
-float fInnerRadius2 = fInnerRadius * fInnerRadius;	// fInnerRadius^2
-float fKrESun;			// Kr * ESun
-float fKmESun;			// Km * ESun
-float fKr4PI;			// Kr * 4 * PI
-float fKm4PI;			// Km * 4 * PI
-float fScale;			// 1 / (fOuterRadius - fInnerRadius)
-float fScaleDepth;		// The scale depth (i.e. the altitude at which the atmosphere's average density is found)
-float fScaleOverScaleDepth;	// fScale / fScaleDepth
-vec3 firstColor = u_color1;
-vec3 secondColor = u_color2;
-vec3 localPos = normalize(v_localPos);
-vec3 lightPos = normalize(u_lightPos);
-float u_g = 0.76;
-float u_g2 = u_g * u_g;
-float fCos = dot(lightPos, localPos);
-float fMiePhase = 1.5 * ((1.0 - u_g2) / (2.0 + u_g2)) * (1.0 + fCos*fCos) / pow(1.0 + u_g2 - 2.0*u_g*fCos, 1.5);
-fragColor.rgb =  firstColor + fMiePhase * secondColor;
+vec3 tmpvar_1;
+tmpvar_1 = normalize(v_localPos);
+vec3 tmpvar_2;
+tmpvar_2 = normalize(u_lightPos);
+float tmpvar_3;
+tmpvar_3 = max (tmpvar_1.y, 0.0);
+float tmpvar_4;
+tmpvar_4 = (1.0 - tmpvar_3);
+float tmpvar_5;
+tmpvar_5 = (u_g * u_g);
+float tmpvar_6;
+tmpvar_6 = dot (tmpvar_2, tmpvar_1);
+vec3 tmpvar_7;
+tmpvar_7 = (((u_color1 + 
+((((1.5 * 
+((1.0 - tmpvar_5) / (2.0 + tmpvar_5))
+) * (1.0 + 
+(tmpvar_6 * tmpvar_6)
+)) / pow ((
+(1.0 + tmpvar_5)
+- 
+((2.0 * u_g) * tmpvar_6)
+), 1.5)) * u_color2)
+) + (
+(((1.0 - abs(tmpvar_2.y)) * u_color2) * 4.0)
+* 
+pow (tmpvar_4, 12.0)
+)) + ((
+pow (tmpvar_4, 16.0)
+* u_color2) * 4.0));
+if ((tmpvar_3 < 0.01)) {
+fragColor = vec3(0.1, 0.9, 0.1);
+} else {
+fragColor = tmpvar_7;
+};
 })"},
 
       std::pair<std::string, const char*>{"varienceShadowMap.frag", R"(#version 150
@@ -34380,6 +34400,7 @@ namespace gl3d
 
 	}
 
+	//radians
 	glm::vec3 fromAnglesToDirection(float zenith, float azimuth)
 	{
 		glm::vec4 vec(0, 1, 0, 0);
@@ -34936,17 +34957,18 @@ namespace gl3d
 		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag");
 		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap");
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
+		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality");
 
 		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
 		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection");
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");
+		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount");
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
 			"shaders/skyBox/atmosphericScattering.frag");
 		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
 		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
-		atmosphericScatteringShader.u_g2 = getUniform(atmosphericScatteringShader.shader.id, "u_g2");
 		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1");
 		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2");
 		atmosphericScatteringShader.modelViewUniformLocation 
@@ -35267,7 +35289,7 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2, SkyBox& skyBox)
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox)
 	{
 		skyBox = {};
 
@@ -35297,7 +35319,6 @@ namespace gl3d
 				atmosphericScatteringShader.shader.bind();
 				glUniform3fv(atmosphericScatteringShader.u_lightPos, 1, &sun[0]);
 				glUniform1f(atmosphericScatteringShader.u_g, g);
-				glUniform1f(atmosphericScatteringShader.u_g2, g2);
 				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
 				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
 
@@ -35326,12 +35347,11 @@ namespace gl3d
 
 		}
 
-
-		createConvolutedAndPrefilteredTextureData(skyBox);
+		createConvolutedAndPrefilteredTextureData(skyBox, 0.02, 64u);
 
 	}
 
-	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality, unsigned int specularSamples)
 	{
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -35363,6 +35383,7 @@ namespace gl3d
 
 		convolute.shader.bind();
 		glUniform1i(convolute.u_environmentMap, 0);
+		glUniform1f(convolute.u_sampleQuality, sampleQuality);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glViewport(0, 0, 32, 32);
@@ -35420,6 +35441,7 @@ namespace gl3d
 			float roughness = (float)mip / (float)(maxMipMap - 1);
 			roughness *= roughness;
 			glUniform1f(preFilterSpecular.u_roughness, roughness);
+			glUniform1ui(preFilterSpecular.u_sampleCount, specularSamples);
 
 			for (int i = 0; i < 6; i++)
 			{
@@ -36402,7 +36424,7 @@ namespace gl3d
 
 				auto &mesh = model.loader.LoadedMeshes[index];
 				
-				if (mesh.Vertices.size())
+				if (!mesh.Vertices.empty()) //this has data without animation data
 				{
 					if (mesh.Indices.empty())
 					{
@@ -36897,7 +36919,7 @@ namespace gl3d
 
 #pragma region spot light
 
-	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec3 direction,
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fovRadians, glm::vec3 direction,
 		float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
 	{
 		int id = internal::generateNewIndex(internal.spotLightIndexes);
@@ -36905,10 +36927,10 @@ namespace gl3d
 		internal::GpuSpotLight light = {};
 		light.position = position;
 		
-		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f));
-		fov /= 2.f;
-		fov = std::cos(fov);
-		light.cosHalfAngle = fov;
+		fovRadians = glm::clamp(fovRadians, glm::radians(0.f), glm::radians(160.f));
+		fovRadians /= 2.f;
+		fovRadians = std::cos(fovRadians);
+		light.cosHalfAngle = fovRadians;
 		
 		if (glm::length(direction) == 0)
 		{
@@ -36938,11 +36960,12 @@ namespace gl3d
 		return { id };
 	}
 
-	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec2 angles, float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
+	//todo check
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fovRadians, glm::vec2 anglesRadians, float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
 	{
-		glm::vec3 direction = fromAnglesToDirection(angles.x, angles.y);
+		glm::vec3 direction = fromAnglesToDirection(anglesRadians.x, anglesRadians.y);
 
-		return createSpotLight(position, fov, direction, dist, attenuation,
+		return createSpotLight(position, fovRadians, direction, dist, attenuation,
 			color, hardness, castShadows);
 
 	}
@@ -37027,18 +37050,18 @@ namespace gl3d
 		return angle;
 	}
 
-	void Renderer3D::setSpotLightFov(SpotLight& l, float fov)
+	void Renderer3D::setSpotLightFov(SpotLight& l, float fovRadians)
 	{
 		auto i = internal.getSpotLightIndex(l);
 		if (i < 0) { return; } //warn or sthing
 
-		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f)); //todo magic number
-		fov /= 2.f;
-		fov = std::cos(fov);
+		fovRadians = glm::clamp(fovRadians, glm::radians(0.f), glm::radians(160.f)); //todo magic number
+		fovRadians /= 2.f;
+		fovRadians = std::cos(fovRadians);
 
-		if(internal.spotLights[i].cosHalfAngle != fov)
+		if(internal.spotLights[i].cosHalfAngle != fovRadians)
 		{
-			internal.spotLights[i].cosHalfAngle = fov;
+			internal.spotLights[i].cosHalfAngle = fovRadians;
 			internal.spotLights[i].changedThisFrame= true;
 		}
 	}
@@ -37279,6 +37302,11 @@ namespace gl3d
 		if (i < 0) { return ; } //warn
 
 		auto& entity = internal.cpuEntities[i];
+
+		if (entity.isStatic() && entity.isVisible())
+		{
+			internal.perFrameFlags.staticGeometryChanged = true;
+		}
 
 		for (auto& i : entity.subModelsNames)
 		{
@@ -38324,6 +38352,14 @@ namespace gl3d
 	void Renderer3D::render(float deltaTime)
 	{
 	
+		if (internal.w == 0 || internal.h == 0)
+		{
+			return;
+		}
+
+		camera.aspectRatio = (float)internal.w / internal.h;
+
+
 	#pragma region adaptive rezolution
 
 
@@ -38563,8 +38599,8 @@ namespace gl3d
 
 				#pragma region save animation data to the gpu
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
-				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
-					, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
+					&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
 				#pragma endregion
 
 			}
@@ -40360,10 +40396,10 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, g2, skyBox);
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox);
 		return skyBox;
 	}
 

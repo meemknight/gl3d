@@ -73,10 +73,10 @@ namespace gl3d
 		std::vector<std::vector<KeyFrameRotation>> keyFramesRot;
 		std::vector<std::vector<KeyFrameTranslation>> keyFramesTrans;
 		std::vector<std::vector<KeyFrameScale>> keyFramesScale;
-		std::vector<TimeStamps> timeStamps;
+		//std::vector<TimeStamps> timeStamps;
 
 		float animationDuration=0;
-		int root = 0;
+		std::vector<int> root = {};
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;
 	};

@@ -47,7 +47,8 @@ float fScaleOverScaleDepth;	// fScale / fScaleDepth
 	vec3 upVector = vec3(0,1,0);
 	float fCosEarth = max(dot(localPos, upVector),0);
 	float foneMinusCosEarth = 1-fCosEarth;
-	float fCosSunEarth = 1-max(dot(lightPos, upVector), 0);
+	//float fCosSunEarth = 1-max(dot(lightPos, upVector), 0);
+	float fCosSunEarth = 1-abs(dot(lightPos, upVector));
 
 	float g2 = u_g * u_g;
 	
@@ -55,12 +56,24 @@ float fScaleOverScaleDepth;	// fScale / fScaleDepth
 	float fMiePhase = 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCosSun*fCosSun) / pow(1.0 + g2 - 2.0*u_g*fCosSun, 1.5);
 	float horizonIntensity = 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCosSunEarth*fCosSunEarth) / pow(1.0 + g2 - 2.0*u_g*fCosSunEarth, 1.5);
 
-	vec3 computedSkyColor = skyColor + fMiePhase * sunColor + (1-fCosSunEarth)*sunColor*horizonIntensity*2 * 
-		pow(foneMinusCosEarth, 8);
+	vec3 computedSkyColor = skyColor
+							+ fMiePhase * sunColor 
+							+ (fCosSunEarth)*sunColor* 4 * pow(foneMinusCosEarth, 12)
+							+ pow(foneMinusCosEarth, 16) * sunColor * 4
+							;
 
 	//u_groundColor = vec3(0.2,0.2,0.2);
 
-	fragColor.rgb =  mix(vec3(0.1,0.1,0.1), computedSkyColor, pow(fCosEarth, 0.25));
+	vec3 computedGroundColor = vec3(0.1,0.9,0.1);// + pow(foneMinusCosEarth, 16) * sunColor;
+
+	if(fCosEarth < 0.01)
+	{
+		fragColor.rgb = computedGroundColor;	
+	}else
+	{
+		fragColor.rgb =  computedSkyColor;
+	}
+
 
 	//fragColor.rgb =  firstColor + vec3(fCos);
 

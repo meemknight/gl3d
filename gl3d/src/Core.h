@@ -178,5 +178,5 @@ namespace gl3d
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__), comment), 0)\
 		)

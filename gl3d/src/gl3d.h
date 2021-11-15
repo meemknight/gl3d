@@ -186,13 +186,13 @@ namespace gl3d
 
 	#pragma region spot light
 
-		SpotLight createSpotLight(glm::vec3 position, float fov,
+		SpotLight createSpotLight(glm::vec3 position, float fovRadians,
 			glm::vec3 direction, float dist = 20, float attenuation = 1, 
 			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
 
 		//angles is the angle from zenith and azimuth
-		SpotLight createSpotLight(glm::vec3 position, float fov,
-			glm::vec2 angles, float dist = 20, float attenuation = 1,
+		SpotLight createSpotLight(glm::vec3 position, float fovRadians,
+			glm::vec2 anglesRadians, float dist = 20, float attenuation = 1,
 			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
 
 		void deleteSpotLight(SpotLight& l);
@@ -203,7 +203,7 @@ namespace gl3d
 		glm::vec3 getSpotLightColor(SpotLight& l);
 		void setSpotLightColor(SpotLight& l, glm::vec3 color);
 		float getSpotLightFov(SpotLight& l);
-		void setSpotLightFov(SpotLight& l, float fov);
+		void setSpotLightFov(SpotLight& l, float fovRadians);
 		glm::vec3 getSpotLightDirection(SpotLight& l);
 		void setSpotLightDirection(SpotLight& l, glm::vec3 direction);
 		float getSpotLightDistance(SpotLight& l); //light distance

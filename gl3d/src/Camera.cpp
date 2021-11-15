@@ -113,6 +113,7 @@ namespace gl3d
 
 	}
 
+	//radians
 	glm::vec3 fromAnglesToDirection(float zenith, float azimuth)
 	{
 		glm::vec4 vec(0, 1, 0, 0);

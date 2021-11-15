@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-05
+//built on 2021-11-15
 ////////////////////////////////////////////////
 
 
@@ -9,6 +9,8 @@
 ////////////////////////////////////////////////
 #pragma region Core
 #pragma once
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm\vec4.hpp>
 #include <glm\vec3.hpp>
 #include <glm\mat4x4.hpp>
@@ -18,10 +20,8 @@
 #include <glm/mat3x3.hpp>
 #include <glm/gtx/transform.hpp>
 
-
 #undef min
 #undef max
-#define GLM_ENABLE_EXPERIMENTAL
 
 namespace gl3d
 {
@@ -273,7 +273,7 @@ namespace gl3d
 		std::vector<std::vector<KeyFrameRotation>> keyFramesRot;
 		std::vector<std::vector<KeyFrameTranslation>> keyFramesTrans;
 		std::vector<std::vector<KeyFrameScale>> keyFramesScale;
-		std::vector<TimeStamps> timeStamps;
+		//std::vector<TimeStamps> timeStamps;
 
 		float animationDuration=0;
 		int root = 0;
@@ -32149,7 +32149,7 @@ namespace objl
 		#pragma region bones
 
 			//int indexCount = 0;
-			std::vector<int> isMain;
+			std::vector<int> isMain; //used if the skeleton root is not specified for some wierd reason
 			std::vector<int> skinJoints;
 			int skeletonRoot = 0;
 
@@ -32357,7 +32357,7 @@ namespace objl
 				animation.keyFramesRot.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesTrans.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
-				animation.timeStamps.resize(joints.size());
+				//animation.timeStamps.resize(joints.size());
 				//animation.timePassed.resize(joints.size());
 				//animation.keyFrames.resize(joints.size());
 
@@ -32714,6 +32714,10 @@ namespace objl
 
 										break;
 									}
+
+									default:
+									gl3dAssertComment(0, "model parsing error");
+									break;
 
 								};
 
@@ -34231,8 +34235,9 @@ namespace gl3d
 		{
 			Shader shader;
 			GLuint u_environmentMap;
+			GLuint u_sampleQuality;
 			GLuint modelViewUniformLocation;
-
+			
 		}convolute;
 
 		struct
@@ -34240,6 +34245,7 @@ namespace gl3d
 			Shader shader;
 			GLuint u_environmentMap;
 			GLuint u_roughness;
+			GLuint u_sampleCount;
 			GLuint modelViewUniformLocation;
 
 		}preFilterSpecular;
@@ -34249,7 +34255,6 @@ namespace gl3d
 			Shader shader;
 			GLuint u_lightPos;
 			GLuint u_g;
-			GLuint u_g2;
 			GLuint u_color1;
 			GLuint u_color2;
 			GLuint modelViewUniformLocation;
@@ -34266,9 +34271,9 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox);
 		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
 		void loadHDRtexture(const char *name, SkyBox &skyBox);
-		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2, SkyBox& skyBox);
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
 
-		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox);
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);
 
 		//void clearGpuData();
 		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,
@@ -34420,7 +34425,7 @@ namespace gl3d
 		SkyBox loadHDRSkyBox(const char* name);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, float g2);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
 
 	#pragma endregion
 
@@ -34490,13 +34495,13 @@ namespace gl3d
 
 	#pragma region spot light
 
-		SpotLight createSpotLight(glm::vec3 position, float fov,
+		SpotLight createSpotLight(glm::vec3 position, float fovRadians,
 			glm::vec3 direction, float dist = 20, float attenuation = 1, 
 			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
 
 		//angles is the angle from zenith and azimuth
-		SpotLight createSpotLight(glm::vec3 position, float fov,
-			glm::vec2 angles, float dist = 20, float attenuation = 1,
+		SpotLight createSpotLight(glm::vec3 position, float fovRadians,
+			glm::vec2 anglesRadians, float dist = 20, float attenuation = 1,
 			glm::vec3 color = glm::vec3(1), float hardness = 1, int castShadows = 1);
 
 		void deleteSpotLight(SpotLight& l);
@@ -34507,7 +34512,7 @@ namespace gl3d
 		glm::vec3 getSpotLightColor(SpotLight& l);
 		void setSpotLightColor(SpotLight& l, glm::vec3 color);
 		float getSpotLightFov(SpotLight& l);
-		void setSpotLightFov(SpotLight& l, float fov);
+		void setSpotLightFov(SpotLight& l, float fovRadians);
 		glm::vec3 getSpotLightDirection(SpotLight& l);
 		void setSpotLightDirection(SpotLight& l, glm::vec3 direction);
 		float getSpotLightDistance(SpotLight& l); //light distance

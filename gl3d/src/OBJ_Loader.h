@@ -752,9 +752,9 @@ namespace objl
 		#pragma region bones
 
 			//int indexCount = 0;
-			std::vector<int> isMain;
+			std::vector<int> isMain; //used if the skeleton root is not specified for some wierd reason
 			std::vector<int> skinJoints;
-			int skeletonRoot = 0;
+			std::vector<int> skeletonRoots = {};
 
 			auto convertNode = [&skinJoints](int index)
 			{
@@ -865,82 +865,26 @@ namespace objl
 					jCount++;
 				}
 
-				skeletonRoot = skin.skeleton;
-				if (skeletonRoot < 0) 
+
+				if (skin.skeleton < 0)
 				{
 					for (int i = 0; i < isMain.size(); i++)
 					{
 						if (isMain[i] == 1)
 						{
-							skeletonRoot = i;
+							skeletonRoots.push_back(i);
 							//calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-							break;
+							//break;
 						};
 					}
 				}
 				else 
 				{
+					skeletonRoots.push_back(skin.skeleton);
 					//calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
 				}
 
 			}
-
-			//for (auto &b : model.nodes)
-			//{
-			//	gl3d::Joint joint;
-			//
-			//	joint.index = indexCount;
-			//	joint.children = b.children;
-			//
-			//	for (auto &c : joint.children)
-			//	{
-			//		isMain[c] = 0;
-			//	}
-			//
-			//	joint.name = b.name;
-			//
-			//	glm::mat4 rotation(1.f);
-			//	glm::mat4 scale(1.f);
-			//	glm::mat4 translation(1.f);
-			//
-			//	//suppose 4 component quaternion
-			//	if (!b.rotation.empty())
-			//	{
-			//		glm::quat rot;
-			//		rot.x = b.rotation[0];
-			//		rot.y = b.rotation[1];
-			//		rot.z = b.rotation[2];
-			//		rot.w = b.rotation[3];
-			//
-			//		rotation = glm::toMat4(rot);
-			//	}
-			//
-			//	//suppose 3 component translation
-			//	if (!b.translation.empty())
-			//	{
-			//		translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
-			//	}
-			//
-			//	//suppose 3 component scale
-			//	if (!b.scale.empty())
-			//	{
-			//		scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
-			//	}
-			//
-			//	joint.localBindTransform = translation * rotation * scale;
-			//	//joint.inverseBindTransform =  glm::inverse(joint.inverseBindTransform);
-			//
-			//	joints.push_back(std::move(joint));
-			//}
-			//
-			//for (int i = 0; i < isMain.size(); i++)
-			//{
-			//	if (isMain[i] == 1) 
-			//	{
-			//		joints[i].root = true;
-			//		calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-			//	};
-			//}
 
 
 		#pragma endregion
@@ -953,14 +897,14 @@ namespace objl
 			{
 				gl3d::Animation animation;
 				animation.name = a.name;
-				animation.root = skeletonRoot;
+				animation.root = skeletonRoots;
 
 			#pragma region set key frames a default value
 
 				animation.keyFramesRot.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesTrans.resize(joints.size()); //each joint will potentially have keyframes
 				animation.keyFramesScale.resize(joints.size()); //each joint will potentially have keyframes
-				animation.timeStamps.resize(joints.size());
+				//animation.timeStamps.resize(joints.size());
 				//animation.timePassed.resize(joints.size());
 				//animation.keyFrames.resize(joints.size());
 
@@ -1260,14 +1204,11 @@ namespace objl
 										componentCount /= sizeof(int);
 										int *joint = (int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-										
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-										
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
@@ -1276,14 +1217,11 @@ namespace objl
 
 										unsigned int *joint = (unsigned int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
@@ -1291,32 +1229,52 @@ namespace objl
 										componentCount /= sizeof(unsigned short);
 										unsigned short *joint = (unsigned short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_SHORT:
 									{
 										componentCount /= sizeof(unsigned short);
-
 										short *joint = (short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
+									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+									{
+										componentCount /= sizeof(unsigned char);
+										unsigned char* joint = (unsigned char*)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+										for (int j = 0; j < std::min(componentCount, 4); j++)
+										{
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
+										}
+										break;
+									}
+									case TINYGLTF_COMPONENT_TYPE_BYTE:
+									{
+										componentCount /= sizeof(char);
+										char* joint = (char*)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+										for (int j = 0; j < std::min(componentCount, 4); j++)
+										{
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
+										}
+										break;
+									}
+									default:
+										gl3dAssertComment(0, "model parsing error");
+									break;
 
 								};
 
@@ -1412,7 +1370,6 @@ namespace objl
 								{
 									int *ind = (int *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -1420,7 +1377,6 @@ namespace objl
 								{
 									unsigned int *ind = (unsigned int *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -1428,7 +1384,6 @@ namespace objl
 								{
 									unsigned short *ind = (unsigned short *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -1436,11 +1391,26 @@ namespace objl
 								{
 									short *ind = (short *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
-
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								{
+									unsigned char* ind = (unsigned char*)
+										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
+									m.Indices.push_back(ind[i]);
+									break;
+								}
+								case TINYGLTF_COMPONENT_TYPE_BYTE:
+								{
+									char* ind = (char*)
+										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
+									m.Indices.push_back(ind[i]);
+									break;
+								}
+								default:
+									gl3dAssertComment(0, "model parsing error");
+								break;
 							};
 								
 						}

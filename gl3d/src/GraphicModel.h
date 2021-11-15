@@ -151,7 +151,7 @@ namespace gl3d
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
 		std::vector<Animation> animations;
-		std::vector<Joint> joints;
+		std::vector<Joint> joints; //todo root should be here not at animations probably?
 		GLuint appliedSkinningMatricesBuffer;
 		float totalTimePassed = 0;
 

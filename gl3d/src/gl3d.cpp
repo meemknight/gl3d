@@ -863,7 +863,7 @@ namespace gl3d
 
 				auto &mesh = model.loader.LoadedMeshes[index];
 				
-				if (mesh.Vertices.size())
+				if (!mesh.Vertices.empty()) //this has data without animation data
 				{
 					if (mesh.Indices.empty())
 					{
@@ -1358,7 +1358,7 @@ namespace gl3d
 
 #pragma region spot light
 
-	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec3 direction,
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fovRadians, glm::vec3 direction,
 		float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
 	{
 		int id = internal::generateNewIndex(internal.spotLightIndexes);
@@ -1366,10 +1366,10 @@ namespace gl3d
 		internal::GpuSpotLight light = {};
 		light.position = position;
 		
-		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f));
-		fov /= 2.f;
-		fov = std::cos(fov);
-		light.cosHalfAngle = fov;
+		fovRadians = glm::clamp(fovRadians, glm::radians(0.f), glm::radians(160.f));
+		fovRadians /= 2.f;
+		fovRadians = std::cos(fovRadians);
+		light.cosHalfAngle = fovRadians;
 		
 		if (glm::length(direction) == 0)
 		{
@@ -1399,11 +1399,12 @@ namespace gl3d
 		return { id };
 	}
 
-	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fov, glm::vec2 angles, float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
+	//todo check
+	SpotLight Renderer3D::createSpotLight(glm::vec3 position, float fovRadians, glm::vec2 anglesRadians, float dist, float attenuation, glm::vec3 color, float hardness, int castShadows)
 	{
-		glm::vec3 direction = fromAnglesToDirection(angles.x, angles.y);
+		glm::vec3 direction = fromAnglesToDirection(anglesRadians.x, anglesRadians.y);
 
-		return createSpotLight(position, fov, direction, dist, attenuation,
+		return createSpotLight(position, fovRadians, direction, dist, attenuation,
 			color, hardness, castShadows);
 
 	}
@@ -1488,18 +1489,18 @@ namespace gl3d
 		return angle;
 	}
 
-	void Renderer3D::setSpotLightFov(SpotLight& l, float fov)
+	void Renderer3D::setSpotLightFov(SpotLight& l, float fovRadians)
 	{
 		auto i = internal.getSpotLightIndex(l);
 		if (i < 0) { return; } //warn or sthing
 
-		fov = glm::clamp(fov, glm::radians(0.f), glm::radians(160.f)); //todo magic number
-		fov /= 2.f;
-		fov = std::cos(fov);
+		fovRadians = glm::clamp(fovRadians, glm::radians(0.f), glm::radians(160.f)); //todo magic number
+		fovRadians /= 2.f;
+		fovRadians = std::cos(fovRadians);
 
-		if(internal.spotLights[i].cosHalfAngle != fov)
+		if(internal.spotLights[i].cosHalfAngle != fovRadians)
 		{
-			internal.spotLights[i].cosHalfAngle = fov;
+			internal.spotLights[i].cosHalfAngle = fovRadians;
 			internal.spotLights[i].changedThisFrame= true;
 		}
 	}
@@ -2790,6 +2791,14 @@ namespace gl3d
 	void Renderer3D::render(float deltaTime)
 	{
 	
+		if (internal.w == 0 || internal.h == 0)
+		{
+			return;
+		}
+
+		camera.aspectRatio = (float)internal.w / internal.h;
+
+
 	#pragma region adaptive rezolution
 
 
@@ -3024,13 +3033,16 @@ namespace gl3d
 				appliedSkinningMatrixes.clear();
 				appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
-				applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
-					animation.root, glm::mat4(1.f));
-
+				for (auto r : animation.root)
+				{
+					applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
+						r, glm::mat4(1.f));
+				}
+				
 				#pragma region save animation data to the gpu
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
-				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4)
-					, &appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
+					&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
 				#pragma endregion
 
 			}
