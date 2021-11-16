@@ -738,7 +738,27 @@ int main()
 			ImGui::Checkbox("Light sub scater", &lightSubScater);
 			renderer.enableLightSubScattering(lightSubScater);
 
-			ImGui::Checkbox("FXAA", &renderer.antiAlias.usingFXAA);
+			if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			{
+				ImGui::PushID(__COUNTER__);
+
+			
+				ImGui::Checkbox("FXAA", &renderer.antiAlias.usingFXAA);
+					
+				auto& fxaaData = renderer.getFxaaSettings();
+
+				ImGui::DragFloat("edgeDarkTreshold", &fxaaData.edgeDarkTreshold, 0.001, 0, 1);
+				ImGui::DragFloat("edgeMinTreshold", &fxaaData.edgeMinTreshold, 0.001, 0, 1);
+				ImGui::DragFloat("quaityMultiplier", &fxaaData.quaityMultiplier, 0.001, 0, 1);
+				ImGui::DragInt("ITERATIONS", &fxaaData.ITERATIONS, 1, 1, 32);
+				ImGui::DragFloat("SUBPIXEL_QUALITY", &fxaaData.SUBPIXEL_QUALITY, 0.001, 0, 1);
+
+				ImGui::PopID();
+			}
+			
+
+
+			
 			ImGui::Checkbox("Adaptive resolution", &renderer.adaptiveResolution.useAdaptiveResolution);
 			ImGui::Text("Adaptive rez ratio: %.1f", renderer.adaptiveResolution.rezRatio);
 			ImGui::Checkbox("Z pre pass", &renderer.zPrePass);

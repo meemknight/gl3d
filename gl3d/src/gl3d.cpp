@@ -2329,6 +2329,11 @@ namespace gl3d
 		this->antiAlias.usingFXAA = fxaa;
 	}
 
+	Renderer3D::FXAAData& Renderer3D::getFxaaSettings()
+	{
+		return antiAlias.fxaaData;
+	}
+
 	bool &Renderer3D::isFXAAenabeled()
 	{
 		return antiAlias.usingFXAA;
@@ -4356,6 +4361,7 @@ namespace gl3d
 
 	#pragma endregion
 
+
 		#pragma region filter bloom data
 
 		if (internal.lightShader.bloom)
@@ -4687,6 +4693,12 @@ namespace gl3d
 				glUniform1i(antiAlias.u_texture, 0);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, adaptiveResolution.texture);
+
+				//send data.
+				//todo lazyness
+				glBindBuffer(GL_UNIFORM_BUFFER, antiAlias.fxaaDataBuffer);
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(antiAlias.fxaaData), &antiAlias.fxaaData);
+
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
 			else
@@ -4903,7 +4915,7 @@ namespace gl3d
 		
 		u_SSAODATA = glGetUniformBlockIndex(shader.id, "u_SSAODATA");
 		glUniformBlockBinding(shader.id, u_SSAODATA, internal::SSAODataBlockBinding);
-
+		
 		//blur
 		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag");
 		
@@ -5308,13 +5320,21 @@ namespace gl3d
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
 			"shaders/aa/fxaa.frag");
-
 		u_texture = getUniform(shader.id, "u_texture");
+
+		u_FXAAData = glGetUniformBlockIndex(shader.id, "u_FXAAData");
+		glGenBuffers(1, &fxaaDataBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, fxaaDataBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(fxaaData), &fxaaData, GL_DYNAMIC_DRAW);
+
+		glUniformBlockBinding(shader.id, u_FXAAData, internal::FXAADataBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, internal::FXAADataBlockBinding, fxaaDataBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 		noAAshader.loadShaderProgramFromFile("shaders/drawQuads.vert",
 			"shaders/aa/noaa.frag");
-
 		noAAu_texture = getUniform(noAAshader.id, "u_texture");
+
 
 
 	}

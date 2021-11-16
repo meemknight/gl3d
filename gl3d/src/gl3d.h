@@ -287,10 +287,26 @@ namespace gl3d
 		float &getSSAOExponent();
 		void setSSAOExponent(float exponent);
 
-		//very little performance penalty
-		void enableFXAA(bool fxaa = 1);
-		bool &isFXAAenabeled();
-		//todo add quality sttings to shader
+		#pragma region fxaa
+
+			//todo explain this parameters
+			//http://blog.simonrodriguez.fr/articles/2016/07/implementing_fxaa.html
+			struct FXAAData
+			{
+				float edgeMinTreshold = 0.028;
+				float edgeDarkTreshold = 0.125;
+				int ITERATIONS = 12;
+				float quaityMultiplier = 0.8;
+				float SUBPIXEL_QUALITY = 0.95;
+			};
+
+			//very little performance penalty
+			void enableFXAA(bool fxaa = 1);
+			FXAAData& getFxaaSettings();
+			bool& isFXAAenabeled();
+
+		#pragma endregion
+		
 
 	#pragma endregion
 
@@ -579,6 +595,11 @@ namespace gl3d
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
+			GLuint u_FXAAData;
+			GLuint fxaaDataBuffer;
+
+			FXAAData fxaaData;
+
 			bool usingFXAA = true;
 		}antiAlias;
 

@@ -23,6 +23,7 @@ namespace gl3d
 		{
 			LightPassDataBlockBinding = 0,
 			SSAODataBlockBinding = 1,
+			FXAADataBlockBinding = 2,
 		};
 	}
 

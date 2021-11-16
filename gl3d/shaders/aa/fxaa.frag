@@ -1,4 +1,4 @@
-#version 150 core
+#version 330 core
 out vec4 a_color;
 
 noperspective in vec2 v_texCoords;
@@ -35,18 +35,28 @@ float quality(int i)
 	}else return r[i-FIRST_SAMPLES_COUNT];
 }
 
+/*
+default values example
+float edgeMinTreshold = 0.028;
+float edgeDarkTreshold = 0.125;
+int ITERATIONS = 12;
+float quaityMultiplier = 0.8;
+float SUBPIXEL_QUALITY = 0.95;
+*/
+
+layout(std140) uniform u_FXAAData
+{
+	float edgeMinTreshold;
+	float edgeDarkTreshold;
+	int ITERATIONS;
+	float quaityMultiplier;
+	float SUBPIXEL_QUALITY;
+
+}fxaaData;
 
 //http://blog.simonrodriguez.fr/articles/2016/07/implementing_fxaa.html
 void main()
 {
-
-	//float edgeMinTreshold = 0.0312;
-	float edgeMinTreshold = 0.028;
-	float edgeDarkTreshold = 0.125;
-	int ITERATIONS = 12;
-	float quaityMultiplier = 0.8;
-	//float SUBPIXEL_QUALITY = 0.75;
-	float SUBPIXEL_QUALITY = 0.95;
 
 	vec3 colorCenter = getTexture(vec2(0,0)).rgb;
 	
@@ -67,7 +77,7 @@ void main()
 	float lumaRange = lumaMax - lumaMin;
 	
 	// If the luma variation is lower that a threshold (or if we are in a really dark area), we are not on an edge, don't perform any AA.
-	if(lumaRange < max(edgeMinTreshold,lumaMax*edgeDarkTreshold))
+	if(lumaRange < max(fxaaData.edgeMinTreshold,lumaMax*fxaaData.edgeDarkTreshold))
 	{
 		a_color = vec4(colorCenter, 1);
 		return;
@@ -169,7 +179,7 @@ void main()
 	if(!reachedBoth)
 	{
 
-		for(int i = 2; i < ITERATIONS; i++)
+		for(int i = 0; i < fxaaData.ITERATIONS; i++)
 		{
 			// If needed, read luma in 1st direction, compute delta.
 			if(!reached1){
@@ -189,11 +199,11 @@ void main()
 			// If the side is not reached, we continue to explore in this direction, with a variable quality.
 			if(!reached1)
 			{
-				uv1 -= offset * quality(i) * quaityMultiplier;
+				uv1 -= offset * quality(i) * fxaaData.quaityMultiplier;
 			}
 			if(!reached2)
 			{
-				uv2 += offset * quality(i) * quaityMultiplier;
+				uv2 += offset * quality(i) * fxaaData.quaityMultiplier;
 			}
 
 			// If both sides have been reached, stop the exploration.
@@ -233,7 +243,7 @@ void main()
 	float subPixelOffset1 = clamp(abs(lumaAverage - lumaCenter)/lumaRange,0.0,1.0);
 	float subPixelOffset2 = (-2.0 * subPixelOffset1 + 3.0) * subPixelOffset1 * subPixelOffset1;
 	// Compute a sub-pixel offset based on this delta.
-	float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * SUBPIXEL_QUALITY;
+	float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * fxaaData.SUBPIXEL_QUALITY;
 	
 	// Pick the biggest of the two offsets.
 	finalOffset = max(finalOffset,subPixelOffsetFinal);
@@ -252,70 +262,3 @@ void main()
 	a_color = vec4(finalColor, 1);
 
 }
-
-
-/*
-//https://www.youtube.com/watch?v=Z9bYzpwVINA&t=1661s
-void main()
-{
-	float fxaaSpan = 2.0;
-	float fxaaReduceMin = 0.001;
-	float fxaaReduceMul = 0.1;
-
-	vec2 tSize = 1.f/textureSize(u_texture, 0).xy;
-
-	vec3 tL		= getTexture(vec2(-tSize.x,-tSize.y));
-	vec3 tR		= getTexture(vec2(tSize.x,-tSize.y));
-	vec3 mid	= getTexture(vec2(0,0));
-	vec3 bL		= getTexture(vec2(-tSize.x,tSize.y));
-	vec3 bR		= getTexture(vec2(tSize.x,tSize.y));
-
-	float lumaTL = luminance(tL);	
-	float lumaTR = luminance(tR);	
-	float lumaMid = luminance(mid);
-	float lumaBL = luminance(bL);
-	float lumaBR = luminance(bR);
-
-	float dirReduce = max((lumaTL + lumaTR + lumaBL + lumaBR) * 0.25f * fxaaReduceMul, fxaaReduceMin);
-
-	vec2 dir;
-	dir.x = -((lumaTL + lumaTR)-(lumaBL + lumaBR));
-	dir.y = (lumaTL + lumaBL)-(lumaTR + lumaBR);
-	 
-	float minScale = 1.0/min(abs(dir.x), abs(dir.y)+dirReduce);
-	dir = clamp(vec2(-fxaaSpan), vec2(fxaaSpan), dir * minScale);
-
-	if(abs(dir).x < 0.1 && abs(dir).y < 0.1)
-	{
-		a_color = vec4(mid,1);
-	}else
-	{
-		dir *= tSize;
-		
-		vec3 rezult1 = 0.5 * (
-			getTexture(dir * vec2(1.f/3.f - 0.5f))+
-			getTexture(dir * vec2(2.f/3.f - 0.5f))
-		);
-
-		vec3 rezult2 = rezult1*0.5 + 0.25 * (
-			getTexture(dir * vec2(-0.5f))+
-			getTexture(dir * vec2(0.5f))
-		);
-
-		float lumaRez2 = luminance(rezult2);
-		
-		float lumaMin = min(min(min(min(lumaTL,lumaTR),lumaMid), lumaBL), lumaBR);
-		float lumaMax = max(max(max(max(lumaTL,lumaTR),lumaMid), lumaBL), lumaBR);
-
-		if(lumaRez2 < lumaMin || lumaRez2 > lumaMax)
-		{
-			a_color = vec4(rezult1,1);
-		}else
-		{
-			a_color = vec4(rezult2,1);
-		}
-	}
-
-
-}
-*/
