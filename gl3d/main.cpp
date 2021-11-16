@@ -413,7 +413,7 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
-	//auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
@@ -426,7 +426,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/planeta.glb");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
-	auto sphereModel = renderer.loadModel("resources/birb.glb");
+	//auto sphereModel = renderer.loadModel("resources/birb.glb");
 	auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
@@ -750,10 +750,10 @@ int main()
 				ImGui::PushID(__COUNTER__);
 
 				ImGui::Checkbox("SSAO", &renderer.internal.lightShader.useSSAO);
-				ImGui::SliderFloat("SSAO bias", &renderer.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
-				ImGui::SliderFloat("SSAO radius", &renderer.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
-				ImGui::SliderInt("SSAO sample count", &renderer.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
-				ImGui::SliderFloat("SSAO exponent", &renderer.ssao.ssao_finalColor_exponent, 0, 16);
+				ImGui::SliderFloat("SSAO bias", &renderer.internal.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
+				ImGui::SliderFloat("SSAO radius", &renderer.internal.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
+				ImGui::SliderInt("SSAO sample count", &renderer.internal.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
+				ImGui::SliderFloat("SSAO exponent", &renderer.internal.ssao.ssao_finalColor_exponent, 0, 16);
 
 				ImGui::PopID();
 			}

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-15
+//built on 2021-11-16
 ////////////////////////////////////////////////
 
 
@@ -188,7 +188,7 @@ namespace gl3d
 
 #define gl3dAssertComment(expression, comment) (void)(								\
 			(!!(expression)) ||														\
-			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), comment)\
+			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__), comment), 0)\
 		)
 
 #pragma endregion
@@ -276,7 +276,7 @@ namespace gl3d
 		//std::vector<TimeStamps> timeStamps;
 
 		float animationDuration=0;
-		int root = 0;
+		std::vector<int> root = {};
 		//std::vector<float> timePassed;
 		//std::vector<std::vector<KeyFrame>> keyFrames;
 	};
@@ -32151,7 +32151,7 @@ namespace objl
 			//int indexCount = 0;
 			std::vector<int> isMain; //used if the skeleton root is not specified for some wierd reason
 			std::vector<int> skinJoints;
-			int skeletonRoot = 0;
+			std::vector<int> skeletonRoots = {};
 
 			auto convertNode = [&skinJoints](int index)
 			{
@@ -32262,82 +32262,26 @@ namespace objl
 					jCount++;
 				}
 
-				skeletonRoot = skin.skeleton;
-				if (skeletonRoot < 0) 
+
+				if (skin.skeleton < 0)
 				{
 					for (int i = 0; i < isMain.size(); i++)
 					{
 						if (isMain[i] == 1)
 						{
-							skeletonRoot = i;
+							skeletonRoots.push_back(i);
 							//calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-							break;
+							//break;
 						};
 					}
 				}
 				else 
 				{
+					skeletonRoots.push_back(skin.skeleton);
 					//calculateInverseBindTransform(skeletonRoot, glm::mat4(1.f), joints);
 				}
 
 			}
-
-			//for (auto &b : model.nodes)
-			//{
-			//	gl3d::Joint joint;
-			//
-			//	joint.index = indexCount;
-			//	joint.children = b.children;
-			//
-			//	for (auto &c : joint.children)
-			//	{
-			//		isMain[c] = 0;
-			//	}
-			//
-			//	joint.name = b.name;
-			//
-			//	glm::mat4 rotation(1.f);
-			//	glm::mat4 scale(1.f);
-			//	glm::mat4 translation(1.f);
-			//
-			//	//suppose 4 component quaternion
-			//	if (!b.rotation.empty())
-			//	{
-			//		glm::quat rot;
-			//		rot.x = b.rotation[0];
-			//		rot.y = b.rotation[1];
-			//		rot.z = b.rotation[2];
-			//		rot.w = b.rotation[3];
-			//
-			//		rotation = glm::toMat4(rot);
-			//	}
-			//
-			//	//suppose 3 component translation
-			//	if (!b.translation.empty())
-			//	{
-			//		translation = glm::translate(glm::vec3((float)b.translation[0], (float)b.translation[1], (float)b.translation[2]));
-			//	}
-			//
-			//	//suppose 3 component scale
-			//	if (!b.scale.empty())
-			//	{
-			//		scale = glm::scale(glm::vec3((float)b.scale[0], (float)b.scale[1], (float)b.scale[2]));
-			//	}
-			//
-			//	joint.localBindTransform = translation * rotation * scale;
-			//	//joint.inverseBindTransform =  glm::inverse(joint.inverseBindTransform);
-			//
-			//	joints.push_back(std::move(joint));
-			//}
-			//
-			//for (int i = 0; i < isMain.size(); i++)
-			//{
-			//	if (isMain[i] == 1) 
-			//	{
-			//		joints[i].root = true;
-			//		calculateInverseBindTransform(i, glm::mat4(1.f), joints);
-			//	};
-			//}
 
 
 		#pragma endregion
@@ -32350,7 +32294,7 @@ namespace objl
 			{
 				gl3d::Animation animation;
 				animation.name = a.name;
-				animation.root = skeletonRoot;
+				animation.root = skeletonRoots;
 
 			#pragma region set key frames a default value
 
@@ -32657,14 +32601,11 @@ namespace objl
 										componentCount /= sizeof(int);
 										int *joint = (int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-										
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-										
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
@@ -32673,14 +32614,11 @@ namespace objl
 
 										unsigned int *joint = (unsigned int *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
@@ -32688,35 +32626,51 @@ namespace objl
 										componentCount /= sizeof(unsigned short);
 										unsigned short *joint = (unsigned short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
 									case TINYGLTF_COMPONENT_TYPE_SHORT:
 									{
 										componentCount /= sizeof(unsigned short);
-
 										short *joint = (short *)
 											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
-
 										for (int j = 0; j < std::min(componentCount, 4); j++)
 										{
 											jointsIndex[j] = joint[i * componentCount + j];
 											weightsVec[j] = weights[i * componentCount + j];
-
 										}
-
 										break;
 									}
-
+									case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+									{
+										componentCount /= sizeof(unsigned char);
+										unsigned char* joint = (unsigned char*)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+										for (int j = 0; j < std::min(componentCount, 4); j++)
+										{
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
+										}
+										break;
+									}
+									case TINYGLTF_COMPONENT_TYPE_BYTE:
+									{
+										componentCount /= sizeof(char);
+										char* joint = (char*)
+											(&bufferJoints.data[bufferViewJoints.byteOffset + accessorJoints.byteOffset]);
+										for (int j = 0; j < std::min(componentCount, 4); j++)
+										{
+											jointsIndex[j] = joint[i * componentCount + j];
+											weightsVec[j] = weights[i * componentCount + j];
+										}
+										break;
+									}
 									default:
-									gl3dAssertComment(0, "model parsing error");
+										gl3dAssertComment(0, "model parsing error");
 									break;
 
 								};
@@ -32813,7 +32767,6 @@ namespace objl
 								{
 									int *ind = (int *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -32821,7 +32774,6 @@ namespace objl
 								{
 									unsigned int *ind = (unsigned int *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -32829,7 +32781,6 @@ namespace objl
 								{
 									unsigned short *ind = (unsigned short *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
@@ -32837,11 +32788,26 @@ namespace objl
 								{
 									short *ind = (short *)
 										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
-
 									m.Indices.push_back(ind[i]);
 									break;
 								}
-
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								{
+									unsigned char* ind = (unsigned char*)
+										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
+									m.Indices.push_back(ind[i]);
+									break;
+								}
+								case TINYGLTF_COMPONENT_TYPE_BYTE:
+								{
+									char* ind = (char*)
+										(&bufferInd.data[bufferViewInd.byteOffset + accessorIndices.byteOffset]);
+									m.Indices.push_back(ind[i]);
+									break;
+								}
+								default:
+									gl3dAssertComment(0, "model parsing error");
+								break;
 							};
 								
 						}
@@ -34170,7 +34136,7 @@ namespace gl3d
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
 		std::vector<Animation> animations;
-		std::vector<Joint> joints;
+		std::vector<Joint> joints; //todo root should be here not at animations probably?
 		GLuint appliedSkinningMatricesBuffer;
 		float totalTimePassed = 0;
 
@@ -34362,9 +34328,10 @@ namespace gl3d
 	{
 		void init(int x, int y);
 		
+		//todo implement error callback
+
 	#pragma region material
 		
-		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
@@ -34395,8 +34362,6 @@ namespace gl3d
 
 	#pragma region Texture
 
-		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
-
 		Texture loadTexture(std::string path);
 		Texture loadTextureFromMemory(objl::LoadedTexture &t);
 		GLuint getTextureOpenglId(Texture& t);
@@ -34418,8 +34383,6 @@ namespace gl3d
 
 	#pragma region skyBox
 
-		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
-		void renderSkyBoxBefore(); //todo this thing will dissapear after the render function will do everything
 		SkyBox loadSkyBox(const char* names[6]);
 		SkyBox loadSkyBox(const char* name, int format = 0);
 		SkyBox loadHDRSkyBox(const char* name);
@@ -34602,7 +34565,7 @@ namespace gl3d
 		//very little performance penalty
 		void enableFXAA(bool fxaa = 1);
 		bool isFXAAenabeled();
-
+		//todo add quality sttings to shader
 
 	#pragma endregion
 
@@ -34616,6 +34579,7 @@ namespace gl3d
 		Camera camera;
 		SkyBox skyBox;
 
+		//debug stuff todo
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
 		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
@@ -34647,6 +34611,8 @@ namespace gl3d
 			}pBRtextureMaker;
 
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+			void renderSkyBox(Camera &c, SkyBox &s); //todo remove this later
+			void renderSkyBoxBefore(Camera& c, SkyBox& s);
 
 			int getMaterialIndex(Material m);
 			int getModelIndex(Model o);
@@ -34701,20 +34667,71 @@ namespace gl3d
 				bool shouldUpdateDirectionalShadows = 0;
 
 			}perFrameFlags;
+			
+			#pragma region different shaders
+
+				struct
+				{
+					Shader shader;
+					GLint modelTransformLocation;
+					GLint projectionLocation;
+					GLint sizeLocation;
+					GLint colorLocation;
+					
+					//todo add a create function when ill work at this
+				}showNormalsProgram;
+
+				struct SSAO
+				{
+					//https://learnopengl.com/Advanced-Lighting/SSAO
+
+					void create(int w, int h);
+					void resize(int w, int h);
+
+					glm::ivec2 currentDimensions = {};
+
+					GLuint noiseTexture;
+					GLuint ssaoFBO;
+					GLuint ssaoColorBuffer;
+
+					Shader shader;
+
+					GLuint ssaoUniformBlockBuffer;
+					struct SsaoShaderUniformBlockData
+					{
+						float radius = 0.2;
+						float bias = 0.025;
+						int samplesTestSize = 16; // should be less than kernelSize (64)
+
+					}ssaoShaderUniformBlockData;
+
+					GLint u_projection = -1;
+					GLint u_view = -1;
+					GLint u_gPosition = -1;
+					GLint u_gNormal = -1;
+					GLint u_texNoise = -1;
+					GLint u_samples = -1;
+					GLuint u_SSAODATA;
+
+					std::vector<glm::vec3> ssaoKernel;
+
+					GLuint blurBuffer;
+					GLuint blurColorBuffer;
+					GLint u_ssaoInput;
+					Shader blurShader;
+
+					float ssao_finalColor_exponent = 5.f;
+				}ssao;
+
+			#pragma endregion
+
+			
 
 
 		}internal;
 
 	
-		struct
-		{
-			Shader shader;
-			GLint modelTransformLocation;
-			GLint projectionLocation;
-			GLint sizeLocation;
-			GLint colorLocation;
-		}showNormalsProgram;
-	
+		
 		struct GBuffer
 		{
 			void create(int w, int h);
@@ -34841,49 +34858,6 @@ namespace gl3d
 			bool usingFXAA = true;
 		}antiAlias;
 
-		struct SSAO
-		{
-			//https://learnopengl.com/Advanced-Lighting/SSAO
-
-			void create(int w, int h);
-			void resize(int w, int h);
-			
-			glm::ivec2 currentDimensions = {};
-
-			GLuint noiseTexture;
-			GLuint ssaoFBO;
-			GLuint ssaoColorBuffer;
-
-			Shader shader;
-			
-			GLuint ssaoUniformBlockBuffer;
-			struct SsaoShaderUniformBlockData
-			{
-				float radius = 0.2;
-				float bias = 0.025;
-				int samplesTestSize = 16; // should be less than kernelSize (64)
-
-			}ssaoShaderUniformBlockData;
-
-			GLint u_projection = -1;
-			GLint u_view = -1;
-			GLint u_gPosition = -1;
-			GLint u_gNormal = -1;
-			GLint u_texNoise = -1;
-			GLint u_samples = -1;
-			GLuint u_SSAODATA;
-
-			std::vector<glm::vec3> ssaoKernel;
-
-			GLuint blurBuffer;
-			GLuint blurColorBuffer;
-			GLint u_ssaoInput;
-			Shader blurShader;
-
-			float ssao_finalColor_exponent = 5.f;
-
-		}ssao;
-
 		struct DirectionalShadows
 		{
 			void create();
@@ -34938,7 +34912,7 @@ namespace gl3d
 
 		}pointShadows;
 
-		//todo remove
+		//todo remove or implement properly
 		struct RenderDepthMap
 		{
 			void create();
@@ -34950,7 +34924,6 @@ namespace gl3d
 			GLuint texture;
 
 		}renderDepthMap;
-
 		void renderADepthMap(GLuint texture);
 
 		void render(float deltaTime);

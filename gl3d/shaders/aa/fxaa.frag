@@ -22,15 +22,17 @@ vec3 getTexture(in vec2 offset)
 
 float quality(int i)
 {
-	const float r[7] = float[7](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0);
+	const int SIZE = 8;
+	const int FIRST_SAMPLES_COUNT = 5;
+	const float r[SIZE] = float[SIZE](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 6.0, 7.0);
 
-	if(i < 5)
+	if(i < FIRST_SAMPLES_COUNT)
 	{
 		return 1;
-	}else if(i >= 12)
+	}else if(i >= FIRST_SAMPLES_COUNT + SIZE)
 	{
 		return 8;
-	}else return r[i-5];
+	}else return r[i-FIRST_SAMPLES_COUNT];
 }
 
 
@@ -167,7 +169,8 @@ void main()
 	if(!reachedBoth)
 	{
 
-		for(int i = 2; i < ITERATIONS; i++){
+		for(int i = 2; i < ITERATIONS; i++)
+		{
 			// If needed, read luma in 1st direction, compute delta.
 			if(!reached1){
 				lumaEnd1 = lumaSqr(texture(u_texture, uv1).rgb);

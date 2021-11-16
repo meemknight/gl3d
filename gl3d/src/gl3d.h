@@ -53,9 +53,10 @@ namespace gl3d
 	{
 		void init(int x, int y);
 		
+		//todo implement error callback
+
 	#pragma region material
 		
-		//todo add texture data overloads
 		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
@@ -86,8 +87,6 @@ namespace gl3d
 
 	#pragma region Texture
 
-		//GpuTexture defaultTexture; //todo refactor this so it doesn't have an index or sthing
-
 		Texture loadTexture(std::string path);
 		Texture loadTextureFromMemory(objl::LoadedTexture &t);
 		GLuint getTextureOpenglId(Texture& t);
@@ -109,8 +108,6 @@ namespace gl3d
 
 	#pragma region skyBox
 
-		void renderSkyBox(); //todo this thing will dissapear after the render function will do everything
-		void renderSkyBoxBefore(); //todo this thing will dissapear after the render function will do everything
 		SkyBox loadSkyBox(const char* names[6]);
 		SkyBox loadSkyBox(const char* name, int format = 0);
 		SkyBox loadHDRSkyBox(const char* name);
@@ -280,20 +277,20 @@ namespace gl3d
 
 		//rather expensive
 		void enableSSAO(bool ssao = 1);
-		bool isSSAOenabeled();
-		float getSSAOBias();
+		bool &isSSAOenabeled();
+		float &getSSAOBias();
 		void setSSAOBias(float bias);
-		float getSSAORadius();
+		float &getSSAORadius();
 		void setSSAORadius(float radius);
-		int getSSAOSampleCount();
+		int &getSSAOSampleCount();
 		void setSSAOSampleCount(int samples);
-		float getSSAOExponent();
+		float &getSSAOExponent();
 		void setSSAOExponent(float exponent);
 
 		//very little performance penalty
 		void enableFXAA(bool fxaa = 1);
-		bool isFXAAenabeled();
-
+		bool &isFXAAenabeled();
+		//todo add quality sttings to shader
 
 	#pragma endregion
 
@@ -307,6 +304,7 @@ namespace gl3d
 		Camera camera;
 		SkyBox skyBox;
 
+		//debug stuff todo
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
 		void renderSubModelNormals(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
@@ -338,6 +336,8 @@ namespace gl3d
 			}pBRtextureMaker;
 
 			SkyBoxLoaderAndDrawer skyBoxLoaderAndDrawer;
+			void renderSkyBox(Camera &c, SkyBox &s); //todo remove this later
+			void renderSkyBoxBefore(Camera& c, SkyBox& s);
 
 			int getMaterialIndex(Material m);
 			int getModelIndex(Model o);
@@ -392,43 +392,93 @@ namespace gl3d
 				bool shouldUpdateDirectionalShadows = 0;
 
 			}perFrameFlags;
+			
+			#pragma region different shaders
+
+				struct
+				{
+					Shader shader;
+					GLint modelTransformLocation;
+					GLint projectionLocation;
+					GLint sizeLocation;
+					GLint colorLocation;
+					
+					//todo add a create function when ill work at this
+				}showNormalsProgram;
+
+				struct SSAO
+				{
+					//https://learnopengl.com/Advanced-Lighting/SSAO
+
+					void create(int w, int h);
+					void resize(int w, int h);
+
+					glm::ivec2 currentDimensions = {};
+
+					GLuint noiseTexture;
+					GLuint ssaoFBO;
+					GLuint ssaoColorBuffer;
+
+					Shader shader;
+
+					GLuint ssaoUniformBlockBuffer;
+					struct SsaoShaderUniformBlockData
+					{
+						float radius = 0.2;
+						float bias = 0.025;
+						int samplesTestSize = 16; // should be less than kernelSize (64)
+
+					}ssaoShaderUniformBlockData;
+
+					GLint u_projection = -1;
+					GLint u_view = -1;
+					GLint u_gPosition = -1;
+					GLint u_gNormal = -1;
+					GLint u_texNoise = -1;
+					GLint u_samples = -1;
+					GLuint u_SSAODATA;
+
+					std::vector<glm::vec3> ssaoKernel;
+
+					GLuint blurBuffer;
+					GLuint blurColorBuffer;
+					GLint u_ssaoInput;
+					Shader blurShader;
+
+					float ssao_finalColor_exponent = 5.f;
+				}ssao;
+
+				struct GBuffer
+				{
+					void create(int w, int h);
+					void resize(int w, int h);
+
+					enum bufferTargers
+					{
+						position = 0,
+						normal,
+						albedo,
+						material,
+						positionViewSpace,
+						emissive,
+						bufferCount,
+					};
+
+					unsigned int gBuffer;
+					unsigned int buffers[bufferCount];
+					unsigned int depthBuffer;
+
+					glm::ivec2 currentDimensions = {};
+
+				}gBuffer;
+
+			#pragma endregion
+			
 
 
 		}internal;
 
-	
-		struct
-		{
-			Shader shader;
-			GLint modelTransformLocation;
-			GLint projectionLocation;
-			GLint sizeLocation;
-			GLint colorLocation;
-		}showNormalsProgram;
-	
-		struct GBuffer
-		{
-			void create(int w, int h);
-			void resize(int w, int h);
-
-			enum bufferTargers
-			{
-				position = 0,
-				normal,
-				albedo,
-				material,
-				positionViewSpace,
-				emissive,
-				bufferCount,
-			};
-
-			unsigned int gBuffer;
-			unsigned int buffers[bufferCount];
-			unsigned int depthBuffer;
-
-			glm::ivec2 currentDimensions = {};
-
-		}gBuffer;
+		
 
 		struct PostProcess
 		{
@@ -532,49 +582,6 @@ namespace gl3d
 			bool usingFXAA = true;
 		}antiAlias;
 
-		struct SSAO
-		{
-			//https://learnopengl.com/Advanced-Lighting/SSAO
-
-			void create(int w, int h);
-			void resize(int w, int h);
-			
-			glm::ivec2 currentDimensions = {};
-
-			GLuint noiseTexture;
-			GLuint ssaoFBO;
-			GLuint ssaoColorBuffer;
-
-			Shader shader;
-			
-			GLuint ssaoUniformBlockBuffer;
-			struct SsaoShaderUniformBlockData
-			{
-				float radius = 0.2;
-				float bias = 0.025;
-				int samplesTestSize = 16; // should be less than kernelSize (64)
-
-			}ssaoShaderUniformBlockData;
-
-			GLint u_projection = -1;
-			GLint u_view = -1;
-			GLint u_gPosition = -1;
-			GLint u_gNormal = -1;
-			GLint u_texNoise = -1;
-			GLint u_samples = -1;
-			GLuint u_SSAODATA;
-
-			std::vector<glm::vec3> ssaoKernel;
-
-			GLuint blurBuffer;
-			GLuint blurColorBuffer;
-			GLint u_ssaoInput;
-			Shader blurShader;
-
-			float ssao_finalColor_exponent = 5.f;
-
-		}ssao;
-
 		struct DirectionalShadows
 		{
 			void create();
@@ -629,7 +636,7 @@ namespace gl3d
 
 		}pointShadows;
 
-		//todo remove
+		//todo remove or implement properly
 		struct RenderDepthMap
 		{
 			void create();
@@ -641,7 +648,6 @@ namespace gl3d
 			GLuint texture;
 
 		}renderDepthMap;
-
 		void renderADepthMap(GLuint texture);
 
 		void render(float deltaTime);

@@ -308,8 +308,7 @@ namespace gl3d
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
 		prePass.u_hasAnimations = getUniform(prePass.shader.id, "u_hasAnimations");
 		prePass.u_jointTransforms = getStorageBlockIndex(prePass.shader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(prePass.shader.id, prePass.u_jointTransforms, 4);		//todo define or enums for this
-
+		glShaderStorageBlockBinding(prePass.shader.id, prePass.u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
@@ -323,7 +322,7 @@ namespace gl3d
 		pointShadowShader.u_lightIndex = getUniform(pointShadowShader.shader.id, "u_lightIndex");
 		pointShadowShader.u_hasAnimations = getUniform(pointShadowShader.shader.id, "u_hasAnimations");
 		pointShadowShader.u_jointTransforms = getStorageBlockIndex(pointShadowShader.shader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(pointShadowShader.shader.id, pointShadowShader.u_jointTransforms, 4);	//todo define or enums for this
+		glShaderStorageBlockBinding(pointShadowShader.shader.id, pointShadowShader.u_jointTransforms, internal::JointsTransformBlockBinding);	//todo define or enums for this
 
 
 
@@ -348,12 +347,12 @@ namespace gl3d
 		
 
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
-		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
+		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, internal::MaterialBlockBinding);
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
 		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
+		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 		
 
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
@@ -382,8 +381,8 @@ namespace gl3d
 		glBindBuffer(GL_UNIFORM_BUFFER, lightPassShaderData.lightPassDataBlockBuffer);
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(LightPassData), &lightPassUniformBlockCpuData, GL_DYNAMIC_DRAW);
 		
-		glUniformBlockBinding(lightingPassShader.id, lightPassShaderData.u_lightPassData, 1);
-		glBindBufferBase(GL_UNIFORM_BUFFER, 1, lightPassShaderData.lightPassDataBlockBuffer);
+		glUniformBlockBinding(lightingPassShader.id, lightPassShaderData.u_lightPassData, internal::LightPassDataBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, internal::LightPassDataBlockBinding, lightPassShaderData.lightPassDataBlockBuffer);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -391,25 +390,25 @@ namespace gl3d
 
 	#pragma region block buffers
 		pointLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_pointLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);
+		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, internal::PointLightsBlockBinding);
 		glGenBuffers(1, &pointLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::PointLightsBlockBinding, pointLightsBlockBuffer);
 
 		directionalLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_directionalLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, directionalLightsBlockLocation, 2);
+		glShaderStorageBlockBinding(lightingPassShader.id, directionalLightsBlockLocation, internal::DirectionalLightsBlockBinding);
 		glGenBuffers(1, &directionalLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, directionalLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, directionalLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::DirectionalLightsBlockBinding, directionalLightsBlockBuffer);
 
 		spotLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_spotLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, spotLightsBlockLocation, 3);
+		glShaderStorageBlockBinding(lightingPassShader.id, spotLightsBlockLocation, internal::SpotLightsBlockBinding);
 		glGenBuffers(1, &spotLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, spotLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, spotLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::SpotLightsBlockBinding, spotLightsBlockBuffer);
 
 	#pragma endregion
 
@@ -438,19 +437,6 @@ namespace gl3d
 		glBindVertexArray(0);
 
 	}
-
-	
-	
-
-	//void LightShader::setMaterial(const MaterialValues &material)
-	//{
-	//	glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
-	//	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
-	//		, &material, GL_STREAM_DRAW);
-	//	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-	//	glUniform1i(materialIndexLocation, 0);
-	//}
-
 
 
 	void LightShader::getSubroutines()

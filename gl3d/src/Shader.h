@@ -7,6 +7,24 @@
 
 namespace gl3d
 {
+	
+	namespace internal
+	{
+		enum ShaderStorageBlockBindings
+		{
+			MaterialBlockBinding = 0,
+			PointLightsBlockBinding = 1,
+			DirectionalLightsBlockBinding = 2,
+			SpotLightsBlockBinding = 3,
+			JointsTransformBlockBinding = 4,
+		};
+
+		enum UniformBlockBindings
+		{
+			LightPassDataBlockBinding = 0,
+			SSAODataBlockBinding = 1,
+		};
+	}
 
 	struct Shader
 	{

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-15
+//built on 2021-11-16
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -35590,14 +35590,14 @@ namespace gl3d
 		internal.skyBoxLoaderAndDrawer.createGpuData();
 
 
-		showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
+		internal.showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
 		"shaders/showNormals.geom", "shaders/showNormals.frag");
 
 
-		showNormalsProgram.modelTransformLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_modelTransform");
-		showNormalsProgram.projectionLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_projection");
-		showNormalsProgram.sizeLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_size");
-		showNormalsProgram.colorLocation = glGetUniformLocation(showNormalsProgram.shader.id, "u_color");
+		internal.showNormalsProgram.modelTransformLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_modelTransform");
+		internal.showNormalsProgram.projectionLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_projection");
+		internal.showNormalsProgram.sizeLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_size");
+		internal.showNormalsProgram.colorLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_color");
 		
 		//unsigned char textureData[] =
 		//{
@@ -35610,7 +35610,7 @@ namespace gl3d
 
 
 		gBuffer.create(x, y);	
-		ssao.create(x, y);
+		internal.ssao.create(x, y);
 		postProcess.create(x, y);
 		directionalShadows.create();
 		spotShadows.create();
@@ -37847,43 +37847,43 @@ namespace gl3d
 
 	float Renderer3D::getSSAOBias()
 	{
-		return ssao.ssaoShaderUniformBlockData.bias;
+		return internal.ssao.ssaoShaderUniformBlockData.bias;
 	}
 
 	void Renderer3D::setSSAOBias(float bias)
 	{
-		ssao.ssaoShaderUniformBlockData.bias = std::max(bias, 0.f);
+		internal.ssao.ssaoShaderUniformBlockData.bias = std::max(bias, 0.f);
 	}
 
 	float Renderer3D::getSSAORadius()
 	{
-		return ssao.ssaoShaderUniformBlockData.radius;
+		return internal.ssao.ssaoShaderUniformBlockData.radius;
 	}
 
 	void Renderer3D::setSSAORadius(float radius)
 	{
-		ssao.ssaoShaderUniformBlockData.radius = std::max(radius, 0.01f);
+		internal.ssao.ssaoShaderUniformBlockData.radius = std::max(radius, 0.01f);
 	}
 
 	int Renderer3D::getSSAOSampleCount()
 	{
-		return ssao.ssaoShaderUniformBlockData.samplesTestSize;
+		return internal.ssao.ssaoShaderUniformBlockData.samplesTestSize;
 
 	}
 
 	void Renderer3D::setSSAOSampleCount(int samples)
 	{
-		ssao.ssaoShaderUniformBlockData.samplesTestSize = std::min(std::max(samples, 5), 64);
+		internal.ssao.ssaoShaderUniformBlockData.samplesTestSize = std::min(std::max(samples, 5), 64);
 	}
 
 	float Renderer3D::getSSAOExponent()
 	{
-		return ssao.ssao_finalColor_exponent;
+		return internal.ssao.ssao_finalColor_exponent;
 	}
 
 	void Renderer3D::setSSAOExponent(float exponent)
 	{
-		ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 32.f);
+		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 32.f);
 	}
 
 	void Renderer3D::enableFXAA(bool fxaa)
@@ -37926,7 +37926,7 @@ namespace gl3d
 		glm::vec3 scale, float normalSize, glm::vec3 normalColor)
 	{
 			
-		showNormalsProgram.shader.bind();
+		internal.showNormalsProgram.shader.bind();
 		
 		auto projMat = camera.getProjectionMatrix();
 		auto viewMat = camera.getWorldToViewMatrix();
@@ -37934,15 +37934,15 @@ namespace gl3d
 		
 		auto viewTransformMat = viewMat * transformMat;
 		
-		glUniformMatrix4fv(showNormalsProgram.modelTransformLocation,
+		glUniformMatrix4fv(internal.showNormalsProgram.modelTransformLocation,
 			1, GL_FALSE, &viewTransformMat[0][0]);
 		
-		glUniformMatrix4fv(showNormalsProgram.projectionLocation,
+		glUniformMatrix4fv(internal.showNormalsProgram.projectionLocation,
 			1, GL_FALSE, &projMat[0][0]);
 		
-		glUniform1f(showNormalsProgram.sizeLocation, normalSize);
+		glUniform1f(internal.showNormalsProgram.sizeLocation, normalSize);
 
-		glUniform3fv(showNormalsProgram.colorLocation, 1, &(normalColor[0]));
+		glUniform3fv(internal.showNormalsProgram.colorLocation, 1, &(normalColor[0]));
 
 		auto modelIndex = this->internal.getModelIndex(o);
 
@@ -38360,51 +38360,50 @@ namespace gl3d
 		camera.aspectRatio = (float)internal.w / internal.h;
 
 
-	#pragma region adaptive rezolution
+		#pragma region adaptive rezolution
 
-
-		if (adaptiveResolution.timeSample >= adaptiveResolution.timeSamplesCount)
-		{
-			float ms = 0;
-			for (int i = 0; i < adaptiveResolution.timeSamplesCount; i++)
+			if (adaptiveResolution.timeSample >= adaptiveResolution.timeSamplesCount)
 			{
-				ms += adaptiveResolution.msSampled[i];
-			}
-			ms /= adaptiveResolution.timeSamplesCount;
-			float seconds = ms * 1000;
-
-			if (seconds < adaptiveResolution.stepUpSecTarget)
-			{
-				adaptiveResolution.rezRatio += 0.1f;
-
-				if (adaptiveResolution.rezRatio >= 1.f)
+				float ms = 0;
+				for (int i = 0; i < adaptiveResolution.timeSamplesCount; i++)
 				{
-					adaptiveResolution.rezRatio = 1.f;
-					adaptiveResolution.shouldUseAdaptiveResolution = false;
+					ms += adaptiveResolution.msSampled[i];
 				}
-			}
-			else if(seconds > adaptiveResolution.stepDownSecTarget)
-			{
-				adaptiveResolution.rezRatio -= 0.1f;
-				if (adaptiveResolution.rezRatio <= adaptiveResolution.maxScaleDown)
+				ms /= adaptiveResolution.timeSamplesCount;
+				float seconds = ms * 1000;
+
+				if (seconds < adaptiveResolution.stepUpSecTarget)
 				{
-					adaptiveResolution.rezRatio = adaptiveResolution.maxScaleDown;
+					adaptiveResolution.rezRatio += 0.1f;
+
+					if (adaptiveResolution.rezRatio >= 1.f)
+					{
+						adaptiveResolution.rezRatio = 1.f;
+						adaptiveResolution.shouldUseAdaptiveResolution = false;
+					}
 				}
+				else if(seconds > adaptiveResolution.stepDownSecTarget)
+				{
+					adaptiveResolution.rezRatio -= 0.1f;
+					if (adaptiveResolution.rezRatio <= adaptiveResolution.maxScaleDown)
+					{
+						adaptiveResolution.rezRatio = adaptiveResolution.maxScaleDown;
+					}
 
-				adaptiveResolution.shouldUseAdaptiveResolution = true;
+					adaptiveResolution.shouldUseAdaptiveResolution = true;
+				}
+				adaptiveResolution.timeSample = 0;
 			}
-			adaptiveResolution.timeSample = 0;
-		}
-		else
-		{
-			adaptiveResolution.msSampled[adaptiveResolution.timeSample] = deltaTime;
-			adaptiveResolution.timeSample++;
-		}
+			else
+			{
+				adaptiveResolution.msSampled[adaptiveResolution.timeSample] = deltaTime;
+				adaptiveResolution.timeSample++;
+			}
 
-		updateWindowMetrics(internal.w, internal.h);
+			updateWindowMetrics(internal.w, internal.h);
 		
 
-	#pragma endregion
+		#pragma endregion
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -38423,298 +38422,311 @@ namespace gl3d
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
-		renderSkyBoxBefore();
+		internal.renderSkyBoxBefore(camera, skyBox);
 
 		auto worldToViewMatrix		= camera.getWorldToViewMatrix();
 		auto projectionMatrix		= camera.getProjectionMatrix();
 		auto worldProjectionMatrix	= projectionMatrix * worldToViewMatrix;
 
-		
-		#pragma region animations
-		for (auto &entity : internal.cpuEntities)
-		{
-			if (!entity.isVisible())
+		#pragma region check camera changes
+
+			bool cameraChanged = false;
+			if (camera != internal.lastFrameCamera)
 			{
-				continue;
+				cameraChanged = true;
 			}
+			internal.lastFrameCamera = camera;
 
-			if (entity.models.empty())
-			{
-				continue;
-			}
-
-			if (entity.canBeAnimated() && entity.animate())
-			{
-
-				int index = entity.animationIndex;
-				index = std::min(index, (int)entity.animations.size() - 1);
-				auto &animation = entity.animations[index];
-
-				std::vector<glm::mat4> skinningMatrixes;
-				skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
-
-				entity.totalTimePassed += deltaTime * entity.animationSpeed;
-				while (entity.totalTimePassed >= animation.animationDuration)
-				{
-					entity.totalTimePassed -= animation.animationDuration;
-				}
-
-				for (int b = 0; b < entity.joints.size(); b++)
-				{
-
-					glm::mat4 rotMat(1.f);
-					glm::mat4 transMat(1.f);
-					glm::mat4 scaleMat(1.f);
-
-					auto &joint = entity.joints[b];
-
-					if (
-						animation.keyFramesRot[b].empty() &&
-						animation.keyFramesTrans[b].empty() &&
-						animation.keyFramesScale[b].empty()
-						)
-					{
-						skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
-					}
-					else
-					{
-						if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
-						{
-							for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
-							{
-								int frames = animation.keyFramesRot[b].size();
-								float time = entity.totalTimePassed;
-								auto &currentFrame = animation.keyFramesRot[b][frame];
-								if (time >= currentFrame.timeStamp)
-								{
-									auto first = currentFrame.rotation;
-
-									if (frame == animation.keyFramesRot[b].size() - 1)
-									{
-										rotMat = glm::toMat4(first);
-									}
-									else
-									{
-										auto second = animation.keyFramesRot[b][frame + 1].rotation;
-										float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
-										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-										rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
-									}
-									break;
-
-								}
-
-							}
-							//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
-						}
-						else
-						{
-							rotMat = glm::toMat4(joint.rotation);
-						}
-
-						auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
-						{
-							return a * (1.f - x) + (b * x);
-						};
-
-						if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
-						{
-							for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
-							{
-								int frames = animation.keyFramesTrans[b].size();
-								float time = entity.totalTimePassed;
-								auto &currentFrame = animation.keyFramesTrans[b][frame];
-								if (time >= currentFrame.timeStamp)
-								{
-									auto first = currentFrame.translation;
-
-									if (frame == animation.keyFramesTrans[b].size() - 1)
-									{
-										transMat = glm::translate(first);
-									}
-									else
-									{
-										auto second = animation.keyFramesTrans[b][frame + 1].translation;
-										float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
-										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-										transMat = glm::translate(lerp(first, second, interpolation));
-									}
-									break;
-								}
-							}
-							//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
-						}
-						else
-						{
-							transMat = glm::translate(joint.trans);
-						}
-
-						if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
-						{
-							for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
-							{
-								int frames = animation.keyFramesScale[b].size();
-								float time = entity.totalTimePassed;
-								auto &currentFrame = animation.keyFramesScale[b][frame];
-								if (time >= currentFrame.timeStamp)
-								{
-									auto first = currentFrame.scale;
-
-									if (frame == animation.keyFramesScale[b].size() - 1)
-									{
-										scaleMat = glm::translate(first);
-									}
-									else
-									{
-										auto second = animation.keyFramesScale[b][frame + 1].scale;
-										float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
-										float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-										scaleMat = glm::scale(lerp(first, second, interpolation));
-									}
-									break;
-								}
-							}
-							//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
-						}
-						else
-						{
-							scaleMat = glm::scale(joint.scale);
-						}
-
-						skinningMatrixes[b] = transMat * rotMat * scaleMat;
-						//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
-
-					}
-
-				}
-
-				//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
-				//std::vector<glm::mat4> appliedSkinningMatrixes;
-				std::vector<glm::mat4> appliedSkinningMatrixes;
-				appliedSkinningMatrixes.clear();
-				appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
-
-				applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
-					animation.root, glm::mat4(1.f));
-
-				#pragma region save animation data to the gpu
-				glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
-				glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
-					&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
-				#pragma endregion
-
-			}
-
-		}
 		#pragma endregion
 
-
-		#pragma region render shadow maps
 		
-		//filter true and onlyStatic true renders only static geometry
-		auto renderModelsShadows = [&](glm::mat4& lightSpaceMatrix, bool filter =0, bool onlyStatic=0)
-		{
-			//render shadow of the models
-			for (auto& i : internal.cpuEntities)
+		#pragma region animations
+			for (auto &entity : internal.cpuEntities)
 			{
-
-				if (!i.isVisible() || !i.castShadows())
+				if (!entity.isVisible())
 				{
 					continue;
 				}
 
-				if (filter)
+				if (entity.models.empty())
 				{
-					if (onlyStatic != i.isStatic())
+					continue;
+				}
+
+				if (entity.canBeAnimated() && entity.animate())
+				{
+
+					int index = entity.animationIndex;
+					index = std::min(index, (int)entity.animations.size() - 1);
+					auto &animation = entity.animations[index];
+
+					std::vector<glm::mat4> skinningMatrixes;
+					skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+					entity.totalTimePassed += deltaTime * entity.animationSpeed;
+					while (entity.totalTimePassed >= animation.animationDuration)
+					{
+						entity.totalTimePassed -= animation.animationDuration;
+					}
+
+					for (int b = 0; b < entity.joints.size(); b++)
+					{
+
+						glm::mat4 rotMat(1.f);
+						glm::mat4 transMat(1.f);
+						glm::mat4 scaleMat(1.f);
+
+						auto &joint = entity.joints[b];
+
+						if (
+							animation.keyFramesRot[b].empty() &&
+							animation.keyFramesTrans[b].empty() &&
+							animation.keyFramesScale[b].empty()
+							)
+						{
+							skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
+						}
+						else
+						{
+							if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
+							{
+								for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
+								{
+									int frames = animation.keyFramesRot[b].size();
+									float time = entity.totalTimePassed;
+									auto &currentFrame = animation.keyFramesRot[b][frame];
+									if (time >= currentFrame.timeStamp)
+									{
+										auto first = currentFrame.rotation;
+
+										if (frame == animation.keyFramesRot[b].size() - 1)
+										{
+											rotMat = glm::toMat4(first);
+										}
+										else
+										{
+											auto second = animation.keyFramesRot[b][frame + 1].rotation;
+											float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
+											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+											rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
+										}
+										break;
+
+									}
+
+								}
+								//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
+							}
+							else
+							{
+								rotMat = glm::toMat4(joint.rotation);
+							}
+
+							auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
+							{
+								return a * (1.f - x) + (b * x);
+							};
+
+							if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
+							{
+								for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+								{
+									int frames = animation.keyFramesTrans[b].size();
+									float time = entity.totalTimePassed;
+									auto &currentFrame = animation.keyFramesTrans[b][frame];
+									if (time >= currentFrame.timeStamp)
+									{
+										auto first = currentFrame.translation;
+
+										if (frame == animation.keyFramesTrans[b].size() - 1)
+										{
+											transMat = glm::translate(first);
+										}
+										else
+										{
+											auto second = animation.keyFramesTrans[b][frame + 1].translation;
+											float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
+											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+											transMat = glm::translate(lerp(first, second, interpolation));
+										}
+										break;
+									}
+								}
+								//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
+							}
+							else
+							{
+								transMat = glm::translate(joint.trans);
+							}
+
+							if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
+							{
+								for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
+								{
+									int frames = animation.keyFramesScale[b].size();
+									float time = entity.totalTimePassed;
+									auto &currentFrame = animation.keyFramesScale[b][frame];
+									if (time >= currentFrame.timeStamp)
+									{
+										auto first = currentFrame.scale;
+
+										if (frame == animation.keyFramesScale[b].size() - 1)
+										{
+											scaleMat = glm::translate(first);
+										}
+										else
+										{
+											auto second = animation.keyFramesScale[b][frame + 1].scale;
+											float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
+											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+											scaleMat = glm::scale(lerp(first, second, interpolation));
+										}
+										break;
+									}
+								}
+								//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
+							}
+							else
+							{
+								scaleMat = glm::scale(joint.scale);
+							}
+
+							skinningMatrixes[b] = transMat * rotMat * scaleMat;
+							//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
+
+						}
+
+					}
+
+					//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
+					//std::vector<glm::mat4> appliedSkinningMatrixes;
+					std::vector<glm::mat4> appliedSkinningMatrixes;
+					appliedSkinningMatrixes.clear();
+					appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+
+					for (auto r : animation.root)
+					{
+						applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
+							r, glm::mat4(1.f));
+					}
+					
+					#pragma region save animation data to the gpu
+					glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
+					glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
+						&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+					#pragma endregion
+
+				}
+
+			}
+		#pragma endregion
+
+
+		#pragma region render shadow maps
+			//filter true and onlyStatic true renders only static geometry
+			auto renderModelsShadows = [&](glm::mat4& lightSpaceMatrix, bool filter =0, bool onlyStatic=0)
+			{
+				//render shadow of the models
+				for (auto& i : internal.cpuEntities)
+				{
+
+					if (!i.isVisible() || !i.castShadows())
 					{
 						continue;
 					}
-				}
 
-				auto transformMat = i.transform.getTransformMatrix();
-				auto modelViewProjMat = lightSpaceMatrix * transformMat;
-
-				glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
-					&modelViewProjMat[0][0]);
-
-				bool potentialAnimations = false;
-				if (!i.canBeAnimated() || !i.animate())
-				{
-					glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
-				}
-				else
-				{
-					//send animation data
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
-					potentialAnimations = true;
-				}
-
-				for (auto& j : i.models)
-				{
-					if (!(potentialAnimations && j.hasBones))
+					if (filter)
 					{
-						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
+						if (onlyStatic != i.isStatic())
 						{
 							continue;
 						}
 					}
 
-					if (potentialAnimations)
-					{
-						if (j.hasBones)
-						{
-							glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
-						}
-						else
-						{
-							glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
-						}
-					}
+					auto transformMat = i.transform.getTransformMatrix();
+					auto modelViewProjMat = lightSpaceMatrix * transformMat;
 
-					auto m = internal.getMaterialIndex(j.material);
+					glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE,
+						&modelViewProjMat[0][0]);
 
-					if (m < 0)
+					bool potentialAnimations = false;
+					if (!i.canBeAnimated() || !i.animate())
 					{
-						glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
+						glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
 					}
 					else
 					{
+						//send animation data
+						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+						potentialAnimations = true;
+					}
 
-						auto t = internal.materialTexturesData[m];
-						auto tId = internal.getTextureIndex(t.albedoTexture);
+					for (auto& j : i.models)
+					{
+						if (!(potentialAnimations && j.hasBones))
+						{
+							if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
+							{
+								continue;
+							}
+						}
 
-						if (tId < 0)
+						if (potentialAnimations)
+						{
+							if (j.hasBones)
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, true);
+							}
+							else
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
+							}
+						}
+
+						auto m = internal.getMaterialIndex(j.material);
+
+						if (m < 0)
 						{
 							glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 						}
 						else
 						{
-							auto texture = internal.loadedTextures[tId];
 
-							glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
-							glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
+							auto t = internal.materialTexturesData[m];
+							auto tId = internal.getTextureIndex(t.albedoTexture);
 
-							glActiveTexture(GL_TEXTURE0);
-							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							if (tId < 0)
+							{
+								glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
+							}
+							else
+							{
+								auto texture = internal.loadedTextures[tId];
+
+								glUniform1i(internal.lightShader.prePass.u_hasTexture, 1);
+								glUniform1i(internal.lightShader.prePass.u_albedoSampler, 0);
+
+								glActiveTexture(GL_TEXTURE0);
+								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							}
+						}
+
+						glBindVertexArray(j.vertexArray);
+
+						if (j.indexBuffer)
+						{
+							glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
+						}
+						else
+						{
+							glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 						}
 					}
 
-					glBindVertexArray(j.vertexArray);
-
-					if (j.indexBuffer)
-					{
-						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
-					}
-					else
-					{
-						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
-					}
 				}
-
-			}
-		};
-		
-		auto renderModelsPointShadows = [&](int lightIndex, int shadowCastIndex, bool filter = 0, bool onlyStatic = 0)
+			};
+			
+			auto renderModelsPointShadows = [&](int lightIndex, int shadowCastIndex, bool filter = 0, bool onlyStatic = 0)
 		{
 			glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, shadowCastIndex);
 
@@ -38836,7 +38848,7 @@ namespace gl3d
 			}
 		};
 
-		if (internal.pointLights.size())
+			if (internal.pointLights.size())
 		{
 			int shouldUpdateAllPointShadows = internal.perFrameFlags.staticGeometryChanged
 				|| internal.perFrameFlags.shouldUpdatePointShadows;
@@ -38931,398 +38943,390 @@ namespace gl3d
 			
 		}
 
-		internal.lightShader.prePass.shader.bind();
+			internal.lightShader.prePass.shader.bind();
 
-		bool cameraChanged = false;
-		if (camera != internal.lastFrameCamera)
-		{
-			cameraChanged = true;
-		}
-		internal.lastFrameCamera = camera;
-
-		if (internal.directionalLights.size())
-		{
-
-			bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged
-				|| internal.perFrameFlags.shouldUpdateDirectionalShadows
-				|| cameraChanged;
-
-			int directionalLightsShadows = 0;
-			for (int i=0; i< internal.directionalLights.size(); i++)
+			if (internal.directionalLights.size())
 			{
-				if (internal.directionalLights[i].castShadows != 0) 
-				{ 
-					internal.directionalLights[i].castShadowsIndex = directionalLightsShadows;
-					directionalLightsShadows++; 
-				}
-			}
 
-			if (directionalLightsShadows != directionalShadows.textureCount
-				|| directionalShadows.shadowSize != directionalShadows.currentShadowSize
-				)
-			{
-				directionalShadows.allocateTextures(directionalLightsShadows);
-				shouldRenderStaticGeometryAllLights = true;
-			}
-			
+				bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged
+					|| internal.perFrameFlags.shouldUpdateDirectionalShadows
+					|| cameraChanged;
 
-			auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, 
-				float nearPlane, float farPlane,
-				float zOffset)
-			{
-				glm::vec3 rVector = {};
-				glm::vec3 upVectpr = {};
-				generateTangentSpace(lightDir, upVectpr, rVector);
-
-				glm::vec2 nearDimensions{};
-				glm::vec2 farDimensions{};
-				glm::vec3 centerNear{};
-				glm::vec3 centerFar{};
-
-				computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
-					nearPlane, farPlane, nearDimensions, farDimensions, centerNear, centerFar);
-
-				glm::vec3 nearTopLeft{};
-				glm::vec3 nearTopRight{};
-				glm::vec3 nearBottomLeft{};
-				glm::vec3 nearBottomRight{};
-				glm::vec3 farTopLeft{};
-				glm::vec3 farTopRight{};
-				glm::vec3 farBottomLeft{};
-				glm::vec3 farBottomRight{};
-
-				computeFrustumSplitCorners(camera.viewDirection, nearDimensions, farDimensions, centerNear, centerFar,
-					nearTopLeft,
-					nearTopRight,
-					nearBottomLeft,
-					nearBottomRight,
-					farTopLeft,
-					farTopRight,
-					farBottomLeft,
-					farBottomRight
-				);
-
-
-				glm::vec3 corners[] =
+				int directionalLightsShadows = 0;
+				for (int i=0; i< internal.directionalLights.size(); i++)
 				{
-					nearTopLeft,
-					nearTopRight,
-					nearBottomLeft,
-					nearBottomRight,
-					farTopLeft,
-					farTopRight,
-					farBottomLeft,
-					farBottomRight,
+					if (internal.directionalLights[i].castShadows != 0) 
+					{ 
+						internal.directionalLights[i].castShadowsIndex = directionalLightsShadows;
+						directionalLightsShadows++; 
+					}
+				}
+
+				if (directionalLightsShadows != directionalShadows.textureCount
+					|| directionalShadows.shadowSize != directionalShadows.currentShadowSize
+					)
+				{
+					directionalShadows.allocateTextures(directionalLightsShadows);
+					shouldRenderStaticGeometryAllLights = true;
+				}
+				
+
+				auto calculateLightProjectionMatrix = [&](glm::vec3 lightDir, glm::mat4 lightView, 
+					float nearPlane, float farPlane,
+					float zOffset)
+				{
+					glm::vec3 rVector = {};
+					glm::vec3 upVectpr = {};
+					generateTangentSpace(lightDir, upVectpr, rVector);
+
+					glm::vec2 nearDimensions{};
+					glm::vec2 farDimensions{};
+					glm::vec3 centerNear{};
+					glm::vec3 centerFar{};
+
+					computeFrustumDimensions(camera.position, camera.viewDirection, camera.fovRadians, camera.aspectRatio,
+						nearPlane, farPlane, nearDimensions, farDimensions, centerNear, centerFar);
+
+					glm::vec3 nearTopLeft{};
+					glm::vec3 nearTopRight{};
+					glm::vec3 nearBottomLeft{};
+					glm::vec3 nearBottomRight{};
+					glm::vec3 farTopLeft{};
+					glm::vec3 farTopRight{};
+					glm::vec3 farBottomLeft{};
+					glm::vec3 farBottomRight{};
+
+					computeFrustumSplitCorners(camera.viewDirection, nearDimensions, farDimensions, centerNear, centerFar,
+						nearTopLeft,
+						nearTopRight,
+						nearBottomLeft,
+						nearBottomRight,
+						farTopLeft,
+						farTopRight,
+						farBottomLeft,
+						farBottomRight
+					);
+
+
+					glm::vec3 corners[] =
+					{
+						nearTopLeft,
+						nearTopRight,
+						nearBottomLeft,
+						nearBottomRight,
+						farTopLeft,
+						farTopRight,
+						farBottomLeft,
+						farBottomRight,
+					};
+
+					float longestDiagonal = glm::distance(nearTopLeft, farBottomRight);
+
+					glm::vec3 minVal{};
+					glm::vec3 maxVal{};
+
+					for (int i = 0; i < 8; i++)
+					{
+						glm::vec4 corner(corners[i], 1);
+
+						glm::vec4 lightViewCorner = lightView * corner;
+
+						if (i == 0)
+						{
+							minVal = lightViewCorner;
+							maxVal = lightViewCorner;
+						}
+						else
+						{
+							if (lightViewCorner.x < minVal.x) { minVal.x = lightViewCorner.x; }
+							if (lightViewCorner.y < minVal.y) { minVal.y = lightViewCorner.y; }
+							if (lightViewCorner.z < minVal.z) { minVal.z = lightViewCorner.z; }
+
+							if (lightViewCorner.x > maxVal.x) { maxVal.x = lightViewCorner.x; }
+							if (lightViewCorner.y > maxVal.y) { maxVal.y = lightViewCorner.y; }
+							if (lightViewCorner.z > maxVal.z) { maxVal.z = lightViewCorner.z; }
+
+						}
+
+					}
+
+					//keep them square and the same size:
+					//https://www.youtube.com/watch?v=u0pk1LyLKYQ&t=99s&ab_channel=WesleyLaFerriere
+					if (1)
+					{
+						float firstSize = maxVal.x - minVal.x;
+						float secondSize = maxVal.y - minVal.y;
+						float thirdSize = maxVal.z - minVal.z;
+
+						{
+							float ratio = longestDiagonal / firstSize;
+
+							glm::vec2 newVecValues = { minVal.x, maxVal.x };
+							float dimension = firstSize;
+							float dimensionOver2 = dimension / 2.f;
+
+							newVecValues -= glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+							newVecValues *= ratio;
+							newVecValues += glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
+
+							minVal.x = newVecValues.x;
+							maxVal.x = newVecValues.y;
+						}
+
+						{
+							float ratio = longestDiagonal / secondSize;
+
+							glm::vec2 newVecValues = { minVal.y, maxVal.y };
+							float dimension = secondSize;
+							float dimensionOver2 = dimension / 2.f;
+
+							newVecValues -= glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+							newVecValues *= ratio;
+							newVecValues += glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
+
+							minVal.y = newVecValues.x;
+							maxVal.y = newVecValues.y;
+						}
+
+						{//todo this size probably can be far-close
+							float ratio = longestDiagonal / thirdSize;
+
+							glm::vec2 newVecValues = { minVal.z, maxVal.z };
+							float dimension = thirdSize;
+							float dimensionOver2 = dimension / 2.f;
+
+							newVecValues -= glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
+							newVecValues *= ratio;
+							newVecValues += glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
+
+							minVal.z = newVecValues.x;
+							maxVal.z = newVecValues.y;
+						}
+
+					}
+
+					float near_plane = minVal.z - zOffset;
+					float far_plane = maxVal.z;
+
+
+					glm::vec2 ortoMin = { minVal.x, minVal.y };
+					glm::vec2 ortoMax = { maxVal.x, maxVal.y };
+
+					//remove shadow flicker
+					if (1)
+					{
+						glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
+						glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
+
+						ortoMin /= worldUnitsPerTexel;
+						ortoMin = glm::floor(ortoMin);
+						ortoMin *= worldUnitsPerTexel;
+
+						ortoMax /= worldUnitsPerTexel;
+						ortoMax = glm::floor(ortoMax);
+						ortoMax *= worldUnitsPerTexel;
+
+						float zWorldUnitsPerTexel = (far_plane - near_plane) / directionalShadows.shadowSize;
+
+						near_plane /= zWorldUnitsPerTexel;
+						far_plane /= zWorldUnitsPerTexel;
+						near_plane = glm::floor(near_plane);
+						far_plane = glm::floor(far_plane);
+						near_plane *= zWorldUnitsPerTexel;
+						far_plane *= zWorldUnitsPerTexel;
+
+					}
+
+					glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
+
+					return lightProjection;
+
 				};
 
-				float longestDiagonal = glm::distance(nearTopLeft, farBottomRight);
-
-				glm::vec3 minVal{};
-				glm::vec3 maxVal{};
-
-				for (int i = 0; i < 8; i++)
+				if (directionalLightsShadows)
 				{
-					glm::vec4 corner(corners[i], 1);
-
-					glm::vec4 lightViewCorner = lightView * corner;
-
-					if (i == 0)
+					glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.staticGeometryFbo);
+					for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
 					{
-						minVal = lightViewCorner;
-						maxVal = lightViewCorner;
-					}
-					else
-					{
-						if (lightViewCorner.x < minVal.x) { minVal.x = lightViewCorner.x; }
-						if (lightViewCorner.y < minVal.y) { minVal.y = lightViewCorner.y; }
-						if (lightViewCorner.z < minVal.z) { minVal.z = lightViewCorner.z; }
-
-						if (lightViewCorner.x > maxVal.x) { maxVal.x = lightViewCorner.x; }
-						if (lightViewCorner.y > maxVal.y) { maxVal.y = lightViewCorner.y; }
-						if (lightViewCorner.z > maxVal.z) { maxVal.z = lightViewCorner.z; }
-
-					}
-
-				}
-
-				//keep them square and the same size:
-				//https://www.youtube.com/watch?v=u0pk1LyLKYQ&t=99s&ab_channel=WesleyLaFerriere
-				if (1)
-				{
-					float firstSize = maxVal.x - minVal.x;
-					float secondSize = maxVal.y - minVal.y;
-					float thirdSize = maxVal.z - minVal.z;
-
-					{
-						float ratio = longestDiagonal / firstSize;
-
-						glm::vec2 newVecValues = { minVal.x, maxVal.x };
-						float dimension = firstSize;
-						float dimensionOver2 = dimension / 2.f;
-
-						newVecValues -= glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
-						newVecValues *= ratio;
-						newVecValues += glm::vec2(minVal.x + dimensionOver2, minVal.x + dimensionOver2);
-
-						minVal.x = newVecValues.x;
-						maxVal.x = newVecValues.y;
-					}
-
-					{
-						float ratio = longestDiagonal / secondSize;
-
-						glm::vec2 newVecValues = { minVal.y, maxVal.y };
-						float dimension = secondSize;
-						float dimensionOver2 = dimension / 2.f;
-
-						newVecValues -= glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
-						newVecValues *= ratio;
-						newVecValues += glm::vec2(minVal.y + dimensionOver2, minVal.y + dimensionOver2);
-
-						minVal.y = newVecValues.x;
-						maxVal.y = newVecValues.y;
-					}
-
-					{//todo this size probably can be far-close
-						float ratio = longestDiagonal / thirdSize;
-
-						glm::vec2 newVecValues = { minVal.z, maxVal.z };
-						float dimension = thirdSize;
-						float dimensionOver2 = dimension / 2.f;
-
-						newVecValues -= glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
-						newVecValues *= ratio;
-						newVecValues += glm::vec2(minVal.z + dimensionOver2, minVal.z + dimensionOver2);
-
-						minVal.z = newVecValues.x;
-						maxVal.z = newVecValues.y;
-					}
-
-				}
-
-				float near_plane = minVal.z - zOffset;
-				float far_plane = maxVal.z;
-
-
-				glm::vec2 ortoMin = { minVal.x, minVal.y };
-				glm::vec2 ortoMax = { maxVal.x, maxVal.y };
-
-				//remove shadow flicker
-				if (1)
-				{
-					glm::vec2 shadowMapSize(directionalShadows.shadowSize, directionalShadows.shadowSize);
-					glm::vec2 worldUnitsPerTexel = (ortoMax - ortoMin) / shadowMapSize;
-
-					ortoMin /= worldUnitsPerTexel;
-					ortoMin = glm::floor(ortoMin);
-					ortoMin *= worldUnitsPerTexel;
-
-					ortoMax /= worldUnitsPerTexel;
-					ortoMax = glm::floor(ortoMax);
-					ortoMax *= worldUnitsPerTexel;
-
-					float zWorldUnitsPerTexel = (far_plane - near_plane) / directionalShadows.shadowSize;
-
-					near_plane /= zWorldUnitsPerTexel;
-					far_plane /= zWorldUnitsPerTexel;
-					near_plane = glm::floor(near_plane);
-					far_plane = glm::floor(far_plane);
-					near_plane *= zWorldUnitsPerTexel;
-					far_plane *= zWorldUnitsPerTexel;
-
-				}
-
-				glm::mat4 lightProjection = glm::ortho(ortoMin.x, ortoMax.x, ortoMin.y, ortoMax.y, near_plane, far_plane);
-
-				return lightProjection;
-
-			};
-
-			if (directionalLightsShadows)
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.staticGeometryFbo);
-				for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
-				{
-					if (internal.directionalLights[lightIndex].castShadows != 0
-						&& (internal.directionalLights[lightIndex].changedThisFrame
-						|| shouldRenderStaticGeometryAllLights)
-						)
-					{
-						internal.directionalLights[lightIndex].changedThisFrame = false;
-
-						glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
-						//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
-
-						glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
-						//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
-
-						//zoffset is used to move the light further
-
-
-						float zOffsets[] = { 15 / 200.f,0,0 };
-
-						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							directionalShadows.staticGeometryTexture, 0,
-							internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
-
-						glClear(GL_DEPTH_BUFFER_BIT);
-						float lastNearPlane = 0.0001;
-
-						for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+						if (internal.directionalLights[lightIndex].castShadows != 0
+							&& (internal.directionalLights[lightIndex].changedThisFrame
+							|| shouldRenderStaticGeometryAllLights)
+							)
 						{
-							glViewport(0, directionalShadows.shadowSize * i,
-								directionalShadows.shadowSize, directionalShadows.shadowSize);
+							internal.directionalLights[lightIndex].changedThisFrame = false;
 
-							auto projection = calculateLightProjectionMatrix(lightDir, lightView,
-								lastNearPlane,
-								directionalShadows.frustumSplits[i] * camera.farPlane,
-								zOffsets[i] * camera.farPlane);
+							glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
+							//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-							//this will add some precision but add artefacts todo?
-							//lastNearPlane = zOffsets[i] * camera.farPlane;
+							glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
+							//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
 
-							internal.directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
-
-							renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
-								true, true);
-
-						}
-					}
-
-				}
-
-				//copy static geometry
-				glCopyImageSubData(directionalShadows.staticGeometryTexture, GL_TEXTURE_2D_ARRAY, 0,
-					0, 0, 0,
-					directionalShadows.cascadesTexture, GL_TEXTURE_2D_ARRAY, 0,
-					0, 0, 0,
-					directionalShadows.shadowSize, directionalShadows.shadowSize * directionalShadows.CASCADES,
-					directionalLightsShadows
-				);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
-				
-				for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
-				{
-					if (internal.directionalLights[lightIndex].castShadows != 0)
-					{
-
-						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							directionalShadows.cascadesTexture, 0, 
-							internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
-						//glClear(GL_DEPTH_BUFFER_BIT);
-
-						for (int i = 0; i < DirectionalShadows::CASCADES; i++)
-						{
-							glViewport(0, directionalShadows.shadowSize * i,
-								directionalShadows.shadowSize, directionalShadows.shadowSize);
-
-							renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
-								true, false);
-
-						}
-
-					}
+							//zoffset is used to move the light further
 
 
-				}
-			}
-			
-		}
-
-		if (internal.spotLights.size())
-		{
-			bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged
-				|| internal.perFrameFlags.shouldUpdateSpotShadows;
-
-			int spotLightsShadowsCount = 0;
-			for (const auto& i : internal.spotLights)
-			{
-				if (i.castShadows) { spotLightsShadowsCount++; }
-			}
-
-			if (spotLightsShadowsCount != spotShadows.textureCount
-				|| spotShadows.shadowSize != spotShadows.currentShadowSize
-				)
-			{
-				spotShadows.allocateTextures(spotLightsShadowsCount);
-				shouldRenderStaticGeometryAllLights = true; 
-			}
-
-			if (spotLightsShadowsCount)
-			{
-				glViewport(0, 0, spotShadows.shadowSize, spotShadows.shadowSize);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.staticGeometryfbo);
-
-				int shadowCastCount = 0;
-				for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
-				{
-					if (internal.spotLights[lightIndex].castShadows)
-					{
-						if (shouldRenderStaticGeometryAllLights || internal.spotLights[lightIndex].changedThisFrame)
-						{
-
-							glm::vec3 lightDir = internal.spotLights[lightIndex].direction;
-							glm::vec3 lightPos = internal.spotLights[lightIndex].position;
-							glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
-							float fov = internal.spotLights[lightIndex].cosHalfAngle;
-							fov = std::acos(fov);
-							fov *= 2;
-
-							float nearPlane = 0.01f;
-							float farPlane = internal.spotLights[lightIndex].dist;
-
-							auto projection = glm::perspective(fov, 1.f, nearPlane, farPlane);
-							internal.spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
-							internal.spotLights[lightIndex].shadowIndex = shadowCastCount;
-
-							internal.spotLights[lightIndex].nearPlane = nearPlane;
-							internal.spotLights[lightIndex].farPlane = farPlane;
-
-							internal.spotLights[lightIndex].changedThisFrame = false;
+							float zOffsets[] = { 15 / 200.f,0,0 };
 
 							glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-								spotShadows.staticGeometryTextures, 0, shadowCastCount);
+								directionalShadows.staticGeometryTexture, 0,
+								internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
+
 							glClear(GL_DEPTH_BUFFER_BIT);
-							//render only static geometry first
-							renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, true);
+							float lastNearPlane = 0.0001;
+
+							for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+							{
+								glViewport(0, directionalShadows.shadowSize * i,
+									directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+								auto projection = calculateLightProjectionMatrix(lightDir, lightView,
+									lastNearPlane,
+									directionalShadows.frustumSplits[i] * camera.farPlane,
+									zOffsets[i] * camera.farPlane);
+
+								//this will add some precision but add artefacts todo?
+								//lastNearPlane = zOffsets[i] * camera.farPlane;
+
+								internal.directionalLights[lightIndex].lightSpaceMatrix[i] = projection * lightView;
+
+								renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
+									true, true);
+
+							}
+						}
+
+					}
+
+					//copy static geometry
+					glCopyImageSubData(directionalShadows.staticGeometryTexture, GL_TEXTURE_2D_ARRAY, 0,
+						0, 0, 0,
+						directionalShadows.cascadesTexture, GL_TEXTURE_2D_ARRAY, 0,
+						0, 0, 0,
+						directionalShadows.shadowSize, directionalShadows.shadowSize * directionalShadows.CASCADES,
+						directionalLightsShadows
+					);
+
+					glBindFramebuffer(GL_FRAMEBUFFER, directionalShadows.cascadesFbo);
+					
+					for (int lightIndex = 0; lightIndex < internal.directionalLights.size(); lightIndex++)
+					{
+						if (internal.directionalLights[lightIndex].castShadows != 0)
+						{
+
+							glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+								directionalShadows.cascadesTexture, 0, 
+								internal.directionalLights[lightIndex].castShadowsIndex); //last is layer
+							//glClear(GL_DEPTH_BUFFER_BIT);
+
+							for (int i = 0; i < DirectionalShadows::CASCADES; i++)
+							{
+								glViewport(0, directionalShadows.shadowSize * i,
+									directionalShadows.shadowSize, directionalShadows.shadowSize);
+
+								renderModelsShadows(internal.directionalLights[lightIndex].lightSpaceMatrix[i],
+									true, false);
+
+							}
 
 						}
 
-						shadowCastCount++;
+
 					}
-
 				}
-
-				//copy static geometry
-				glCopyImageSubData(spotShadows.staticGeometryTextures, GL_TEXTURE_2D_ARRAY, 0,
-					0, 0, 0,
-					spotShadows.shadowTextures, GL_TEXTURE_2D_ARRAY, 0,
-					0, 0, 0,
-					spotShadows.shadowSize, spotShadows.shadowSize, spotLightsShadowsCount
-				);
-
-				//render dynamic geometry on top
-				glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
-				shadowCastCount = 0; //todo remove !!! bug here
-				for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
-				{
-					if (internal.spotLights[lightIndex].castShadows)
-					{
-						glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							spotShadows.shadowTextures, 0, shadowCastCount);
-
-						renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, false);
-						shadowCastCount++;
-					}
-
-				}
+				
 			}
 
+			if (internal.spotLights.size())
+			{
+				bool shouldRenderStaticGeometryAllLights = internal.perFrameFlags.staticGeometryChanged
+					|| internal.perFrameFlags.shouldUpdateSpotShadows;
 
-		}
-	
+				int spotLightsShadowsCount = 0;
+				for (const auto& i : internal.spotLights)
+				{
+					if (i.castShadows) { spotLightsShadowsCount++; }
+				}
+
+				if (spotLightsShadowsCount != spotShadows.textureCount
+					|| spotShadows.shadowSize != spotShadows.currentShadowSize
+					)
+				{
+					spotShadows.allocateTextures(spotLightsShadowsCount);
+					shouldRenderStaticGeometryAllLights = true; 
+				}
+
+				if (spotLightsShadowsCount)
+				{
+					glViewport(0, 0, spotShadows.shadowSize, spotShadows.shadowSize);
+
+					glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.staticGeometryfbo);
+
+					int shadowCastCount = 0;
+					for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
+					{
+						if (internal.spotLights[lightIndex].castShadows)
+						{
+							if (shouldRenderStaticGeometryAllLights || internal.spotLights[lightIndex].changedThisFrame)
+							{
+
+								glm::vec3 lightDir = internal.spotLights[lightIndex].direction;
+								glm::vec3 lightPos = internal.spotLights[lightIndex].position;
+								glm::mat4 lightView = lookAtSafe(lightPos, lightPos + lightDir, { 0.f,1.f,0.f });
+								float fov = internal.spotLights[lightIndex].cosHalfAngle;
+								fov = std::acos(fov);
+								fov *= 2;
+
+								float nearPlane = 0.01f;
+								float farPlane = internal.spotLights[lightIndex].dist;
+
+								auto projection = glm::perspective(fov, 1.f, nearPlane, farPlane);
+								internal.spotLights[lightIndex].lightSpaceMatrix = projection * lightView;
+								internal.spotLights[lightIndex].shadowIndex = shadowCastCount;
+
+								internal.spotLights[lightIndex].nearPlane = nearPlane;
+								internal.spotLights[lightIndex].farPlane = farPlane;
+
+								internal.spotLights[lightIndex].changedThisFrame = false;
+
+								glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+									spotShadows.staticGeometryTextures, 0, shadowCastCount);
+								glClear(GL_DEPTH_BUFFER_BIT);
+								//render only static geometry first
+								renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, true);
+
+							}
+
+							shadowCastCount++;
+						}
+
+					}
+
+					//copy static geometry
+					glCopyImageSubData(spotShadows.staticGeometryTextures, GL_TEXTURE_2D_ARRAY, 0,
+						0, 0, 0,
+						spotShadows.shadowTextures, GL_TEXTURE_2D_ARRAY, 0,
+						0, 0, 0,
+						spotShadows.shadowSize, spotShadows.shadowSize, spotLightsShadowsCount
+					);
+
+					//render dynamic geometry on top
+					glBindFramebuffer(GL_FRAMEBUFFER, spotShadows.fbo);
+					shadowCastCount = 0; //todo remove !!! bug here
+					for (int lightIndex = 0; lightIndex < internal.spotLights.size(); lightIndex++)
+					{
+						if (internal.spotLights[lightIndex].castShadows)
+						{
+							glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+								spotShadows.shadowTextures, 0, shadowCastCount);
+
+							renderModelsShadows(internal.spotLights[lightIndex].lightSpaceMatrix, true, false);
+							shadowCastCount++;
+						}
+
+					}
+				}
+
+
+			}
 		#pragma endregion
 
 		
@@ -39748,34 +39752,34 @@ namespace gl3d
 		{
 			glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
-			glUseProgram(ssao.shader.id);
+			glUseProgram(internal.ssao.shader.id);
 
-			glBindBuffer(GL_UNIFORM_BUFFER, ssao.ssaoUniformBlockBuffer);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(SSAO::SsaoShaderUniformBlockData),
-				&ssao.ssaoShaderUniformBlockData);
+			glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
+				&internal.ssao.ssaoShaderUniformBlockData);
 
-			glUniformMatrix4fv(ssao.u_projection, 1, GL_FALSE,
+			glUniformMatrix4fv(internal.ssao.u_projection, 1, GL_FALSE,
 				&(camera.getProjectionMatrix())[0][0]);
 
-			glUniformMatrix4fv(ssao.u_view, 1, GL_FALSE,
+			glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
 				&(camera.getWorldToViewMatrix())[0][0]);
 
-			glUniform3fv(ssao.u_samples, 64, &(ssao.ssaoKernel[0][0]));
+			glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
 
-			glBindFramebuffer(GL_FRAMEBUFFER, ssao.ssaoFBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
-			glUniform1i(ssao.u_gPosition, 0);
+			glUniform1i(internal.ssao.u_gPosition, 0);
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
-			glUniform1i(ssao.u_gNormal, 1);
+			glUniform1i(internal.ssao.u_gNormal, 1);
 
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, ssao.noiseTexture);
-			glUniform1i(ssao.u_texNoise, 2);
+			glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
+			glUniform1i(internal.ssao.u_texNoise, 2);
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -39783,12 +39787,12 @@ namespace gl3d
 		#pragma region ssao "blur" (more like average blur)
 			glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, ssao.blurBuffer);
-			ssao.blurShader.bind();
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.blurBuffer);
+			internal.ssao.blurShader.bind();
 			glClear(GL_COLOR_BUFFER_BIT);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, ssao.ssaoColorBuffer);
-			glUniform1i(ssao.u_ssaoInput, 0);
+			glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
+			glUniform1i(internal.ssao.u_ssaoInput, 0);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
@@ -40198,12 +40202,12 @@ namespace gl3d
 		{
 			glUniform1i(postProcess.u_useSSAO, 1);
 			//todo change ssao_finalColor_exponent
-			glUniform1f(postProcess.u_ssaoExponent, ssao.ssao_finalColor_exponent);
+			glUniform1f(postProcess.u_ssaoExponent, internal.ssao.ssao_finalColor_exponent);
 			
 			
 			glUniform1i(postProcess.u_ssao, 3);
 			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, ssao.blurColorBuffer);
+			glBindTexture(GL_TEXTURE_2D, internal.ssao.blurColorBuffer);
 			
 
 		}else
@@ -40303,7 +40307,7 @@ namespace gl3d
 		gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
 
 		//ssao
-		ssao.resize(internal.adaptiveW, internal.adaptiveH);
+		internal.ssao.resize(internal.adaptiveW, internal.adaptiveH);
 	
 		//bloom buffer and color buffer
 		postProcess.resize(internal.adaptiveW, internal.adaptiveH);
@@ -40341,33 +40345,6 @@ namespace gl3d
 		
 		glEnable(GL_DEPTH_TEST);
 
-	}
-
-	void Renderer3D::renderSkyBox()
-	{
-		//todo move into render
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		viewMat = glm::mat4(glm::mat3(viewMat));
-
-		auto viewProjMat = projMat * viewMat;
-
-		internal.skyBoxLoaderAndDrawer.draw(viewProjMat, skyBox, 
-			internal.lightShader.lightPassUniformBlockCpuData.exposure,
-			internal.lightShader.lightPassUniformBlockCpuData.ambientLight);
-	}
-
-	void Renderer3D::renderSkyBoxBefore()
-	{
-		auto projMat = camera.getProjectionMatrix();
-		auto viewMat = camera.getWorldToViewMatrix();
-		viewMat = glm::mat4(glm::mat3(viewMat));
-
-		auto viewProjMat = projMat * viewMat;
-
-		internal.skyBoxLoaderAndDrawer.drawBefore(viewProjMat, skyBox,
-			internal.lightShader.lightPassUniformBlockCpuData.exposure,
-			internal.lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -40408,7 +40385,7 @@ namespace gl3d
 		return a + f * (b - a);
 	}
 
-	void Renderer3D::SSAO::create(int w, int h)
+	void Renderer3D::InternalStruct::SSAO::create(int w, int h)
 	{
 		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
 		std::uniform_real_distribution<float> randomFloatsSmaller(0.1f, 0.9f); //avoid ssao artefacts
@@ -40508,7 +40485,7 @@ namespace gl3d
 		resize(w, h);
 	}
 
-	void Renderer3D::SSAO::resize(int w, int h)
+	void Renderer3D::InternalStruct::SSAO::resize(int w, int h)
 	{
 		if (currentDimensions.x != w || currentDimensions.y != h)
 		{
@@ -40682,6 +40659,32 @@ namespace gl3d
 		glGenFramebuffers(1, &fbo);
 
 
+	}
+
+	void Renderer3D::InternalStruct::renderSkyBox(Camera& c, SkyBox& s)
+	{
+		auto projMat = c.getProjectionMatrix();
+		auto viewMat = c.getWorldToViewMatrix();
+		viewMat = glm::mat4(glm::mat3(viewMat));
+
+		auto viewProjMat = projMat * viewMat;
+
+		skyBoxLoaderAndDrawer.draw(viewProjMat, s,
+			lightShader.lightPassUniformBlockCpuData.exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
+	}
+
+	void Renderer3D::InternalStruct::renderSkyBoxBefore(Camera& c, SkyBox& s)
+	{
+		auto projMat = c.getProjectionMatrix();
+		auto viewMat = c.getWorldToViewMatrix();
+		viewMat = glm::mat4(glm::mat3(viewMat));
+
+		auto viewProjMat = projMat * viewMat;
+
+		skyBoxLoaderAndDrawer.drawBefore(viewProjMat, s,
+			lightShader.lightPassUniformBlockCpuData.exposure,
+			lightShader.lightPassUniformBlockCpuData.ambientLight);
 	}
 
 	//todo use the max w h to create it
