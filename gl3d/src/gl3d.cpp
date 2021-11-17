@@ -2166,9 +2166,35 @@ namespace gl3d
 
 		if (internal.cpuEntities[i].animationIndex != ind)
 		{
+			
+			if (ind < 0 || ind >= internal.cpuEntities[i].animations.size())
+			{
+				return; //warn or sthing
+			}
+
 			internal.cpuEntities[i].totalTimePassed = 0;
 			internal.cpuEntities[i].animationIndex = ind;
 		}
+
+	}
+
+	void Renderer3D::transitionToAnimation(Entity& e, int newAnimationIndex, float transitionTimeSecconds,
+		float newAnimationTimeStampSecconds)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		auto& ent = internal.cpuEntities[i];
+
+		if (newAnimationIndex < 0 || newAnimationIndex >= ent.animations.size())
+		{
+			return; //warn or sthing
+		}
+
+		ent.animationTransition.remainintgTime = transitionTimeSecconds;
+		ent.animationTransition.totalTime = transitionTimeSecconds;
+		ent.animationTransition.ToTime = newAnimationTimeStampSecconds;
+		ent.animationTransition.ToIndex = newAnimationIndex;
 
 	}
 
@@ -2909,19 +2935,29 @@ namespace gl3d
 						std::vector<glm::mat4> skinningMatrixes;
 						skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
-						entity.totalTimePassed += deltaTime * entity.animationSpeed;
-						while (entity.totalTimePassed >= animation.animationDuration)
+						
+						if (entity.animationTransition.remainintgTime > 0)
 						{
-							entity.totalTimePassed -= animation.animationDuration;
+							//perform a transition (this will get delta time substracted later down the code).
 						}
+						else
+						{
+							//performa a normal animation
+							entity.totalTimePassed += deltaTime * entity.animationSpeed;
+							while (entity.totalTimePassed >= animation.animationDuration)
+							{
+								entity.totalTimePassed -= animation.animationDuration;
+							}
 
+						}
+						
 						//compute per bone position
 						for (int b = 0; b < entity.joints.size(); b++)
 						{
 
-							glm::mat4 rotMat(1.f);
-							glm::mat4 transMat(1.f);
-							glm::mat4 scaleMat(1.f);
+							glm::quat rotation = {0.f,0.f,0.f,1.f};
+							glm::vec3 translation = {0.f,0.f,0.f};
+							glm::vec3 scale = {1.f,1.f,1.f};
 
 							auto& joint = entity.joints[b];
 
@@ -2943,14 +2979,17 @@ namespace gl3d
 									float interpolate;
 								};
 
-
-								auto searchFrame = [&](auto& frames)
+								auto searchFrame = [&](auto& frames, float time)
 								{
+									
 									int size = frames.size();
 									int begin = size - 1;
 									int end = 0;
-
-									float time = entity.totalTimePassed;
+									
+									if (time >= frames.back().timeStamp)
+									{
+										return FoundFrames{size-1, size-1, 0};
+									}
 
 									//for (int frame = begin; frame >= end; frame--)
 									while (true)
@@ -2996,59 +3035,104 @@ namespace gl3d
 									return FoundFrames{0,0,0.f}; //first frame
 								};
 
-
-
-								if (!animation.keyFramesRot[b].empty())
-								{
-									auto foundFrames = searchFrame(animation.keyFramesRot[b]);
-									rotMat = glm::toMat4(glm::slerp(
-										animation.keyFramesRot[b][foundFrames.id1].rotation,
-										animation.keyFramesRot[b][foundFrames.id2].rotation,
-										foundFrames.interpolate));
-
-								}
-								else
-								{
-									//no key frames for this bone...
-									rotMat = glm::toMat4(joint.rotation);
-								}
-
 								auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
 								{
 									return a * (1.f - x) + (b * x);
 								};
-
-								if (!animation.keyFramesTrans[b].empty())
+								
+								struct BonePositions
 								{
+									glm::quat rotation = {0.f,0.f,0.f,1.f};
+									glm::vec3 translation = {0.f,0.f,0.f};
+									glm::vec3 scale = {1.f,1.f,1.f};
+								};
 
-									auto foundFrames = searchFrame(animation.keyFramesTrans[b]);
-									transMat = glm::translate(lerp(
-										animation.keyFramesTrans[b][foundFrames.id1].translation,
-										animation.keyFramesTrans[b][foundFrames.id2].translation,
-										foundFrames.interpolate));
+								auto getBonePositions = [&](gl3d::Animation& animation, float time)
+								{
+									if (!animation.keyFramesRot[b].empty())
+									{
+										auto foundFrames = searchFrame(animation.keyFramesRot[b], time);
+
+										rotation = glm::slerp(
+											animation.keyFramesRot[b][foundFrames.id1].rotation,
+											animation.keyFramesRot[b][foundFrames.id2].rotation,
+											foundFrames.interpolate);
+									}
+									else
+									{
+										//no key frames for this bone...
+										//rotMat = glm::toMat4(joint.rotation);
+
+										rotation = joint.rotation;
+									}
+
+									if (!animation.keyFramesTrans[b].empty())
+									{
+
+										auto foundFrames = searchFrame(animation.keyFramesTrans[b], time);
+
+										translation = lerp(
+											animation.keyFramesTrans[b][foundFrames.id1].translation,
+											animation.keyFramesTrans[b][foundFrames.id2].translation,
+											foundFrames.interpolate);
+
+									}
+									else
+									{
+										//no key frames for this bone...
+										//transMat = glm::translate(joint.trans);
+
+										translation = joint.trans;
+									}
+
+									if (!animation.keyFramesScale[b].empty())
+									{
+
+										auto foundFrames = searchFrame(animation.keyFramesScale[b], time);
+
+										scale = lerp(
+											animation.keyFramesScale[b][foundFrames.id1].scale,
+											animation.keyFramesScale[b][foundFrames.id2].scale,
+											foundFrames.interpolate);
+
+									}
+									else
+									{
+										//no key frames for this bone...
+										//scaleMat = glm::scale(joint.scale);
+
+										scale = joint.scale;
+									}
+
+									BonePositions positions = {rotation, translation, scale};
+									return positions;
+								};
+
+								auto positions = getBonePositions(animation, entity.totalTimePassed);
+
+								if (entity.animationTransition.remainintgTime > 0)
+								{
+									//we now perform a new interpolation to the new state
+									auto positions2 
+										= getBonePositions(entity.animations[entity.animationTransition.ToIndex],
+										entity.animationTransition.ToTime);
+									
+									float interpolate =  
+										(entity.animationTransition.totalTime - entity.animationTransition.remainintgTime)/
+										entity.animationTransition.totalTime;
+
+									positions.rotation = glm::slerp(positions.rotation, positions2.rotation, interpolate);
+									positions.translation = lerp(positions.translation, positions2.translation, interpolate);
+									positions.scale = lerp(positions.scale, positions2.scale, interpolate);
 
 								}
-								else
-								{
-									//no key frames for this bone...
-									transMat = glm::translate(joint.trans);
-								}
 
-								if (!animation.keyFramesScale[b].empty())
-								{
-
-									auto foundFrames = searchFrame(animation.keyFramesScale[b]);
-									scaleMat = glm::scale(lerp(
-										animation.keyFramesScale[b][foundFrames.id1].scale,
-										animation.keyFramesScale[b][foundFrames.id2].scale,
-										foundFrames.interpolate));
-
-								}
-								else
-								{
-									//no key frames for this bone...
-									scaleMat = glm::scale(joint.scale);
-								}
+								glm::mat4 rotMat(1.f);
+								glm::mat4 transMat(1.f);
+								glm::mat4 scaleMat(1.f);
+								rotMat = glm::toMat4(positions.rotation);
+								transMat = glm::translate(positions.translation);
+								scaleMat = glm::scale(positions.scale);
 
 								skinningMatrixes[b] = transMat * rotMat * scaleMat;
 								//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
@@ -3057,12 +3141,28 @@ namespace gl3d
 
 						}
 
+						//check if the transation finished
+						if (entity.animationTransition.remainintgTime > 0)
+						{
+
+							entity.animationTransition.remainintgTime -= deltaTime; //here we can apply animation speed if wanted
+
+							if (entity.animationTransition.remainintgTime < 0)
+							{
+								entity.totalTimePassed = entity.animationTransition.ToTime;
+								entity.animationIndex = entity.animationTransition.ToIndex;
+
+								std::cout << entity.totalTimePassed << "\n";
+							}
+
+						}
+
 						//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
 						//std::vector<glm::mat4> appliedSkinningMatrixes;
-						appliedSkinningMatrixes.clear();
-						appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
 						//calculate per bone matrix to be send to the gpu
+						appliedSkinningMatrixes.clear();
+						appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 						for (auto r : animation.root)
 						{
 							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,

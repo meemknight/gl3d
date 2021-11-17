@@ -1153,9 +1153,17 @@ int main()
 				float animationSpeed = renderer.getEntityAnimationSpeed(models[itemCurrent]);
 				bool animate = renderer.getEntityAnimate(models[itemCurrent]);
 				ImGui::Checkbox("animate: ", &animate); ImGui::SameLine();
+				int oldAnimation = animation;
 				ImGui::InputInt("animation", &animation);
 				ImGui::DragFloat("animation speed", &animationSpeed, 0.001, 0);
-				renderer.setEntityAnimationIndex(models[itemCurrent], animation);
+				
+				if (animation != oldAnimation)
+				{
+					renderer.transitionToAnimation(models[itemCurrent], animation, 0.2f);
+				}
+				//renderer.setEntityAnimationIndex(models[itemCurrent], animation);
+				
+				
 				renderer.setEntityAnimationSpeed(models[itemCurrent], animationSpeed);
 				renderer.setEntityAnimate(models[itemCurrent], animate);
 				ImGui::NewLine();

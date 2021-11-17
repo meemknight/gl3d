@@ -237,6 +237,15 @@ namespace gl3d
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
 		void setEntityAnimationIndex(Entity &e, int ind);
+
+		//transitions from to ecurrent state
+		//to a new animation specified newAnimationIndex. it takes transitionTimeSecconds,
+		//and it will translate to newAnimationIndex at newAnimationTimeStampSecconds time stamp.
+		//if the object is not curently animated it will start the animation.
+		void transitionToAnimation(Entity& e, int newAnimationIndex, float transitionTimeSecconds,
+			float newAnimationTimeStampSecconds = 0);
+
+
 		int getEntityAnimationIndex(Entity &e);
 		void setEntityAnimationSpeed(Entity &e, float speed);
 		float getEntityAnimationSpeed(Entity &e);

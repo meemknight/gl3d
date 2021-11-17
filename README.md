@@ -2,7 +2,7 @@
 - Still in working progress (the proper api for the users is not ready)
 
 ![](https://github.com/meemknight/photos/blob/master/gl3d2.png)
-
+![](https://github.com/meemknight/photos/blob/master/gl3d.gif)
 
 <h3>How to integrate the library in your project:</h3>
 

@@ -150,10 +150,23 @@ namespace gl3d
 
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
+		float totalTimePassed = 0;
+
+		struct
+		{
+			//remainintgTime used to check if we are performing a transition
+			float remainintgTime = 0;
+
+			float totalTime = 0;
+			float ToTime = 0;
+			int ToIndex = 0;
+		}animationTransition;
+
+		
+
 		std::vector<Animation> animations;
 		std::vector<Joint> joints; //todo root should be here not at animations probably?
 		GLuint appliedSkinningMatricesBuffer;
-		float totalTimePassed = 0;
 
 		bool canBeAnimated() { return !animations.empty() && !joints.empty(); }
 
