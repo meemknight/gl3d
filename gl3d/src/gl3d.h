@@ -97,8 +97,8 @@ namespace gl3d
 		GpuTexture* getTextureData(Texture& t);
 
 		//internal
-		Texture createIntenralTexture(GpuTexture t, int alphaData);
-		Texture createIntenralTexture(GLuint id_, int alphaData);
+		Texture createIntenralTexture(GpuTexture t, int alphaData, const std::string &name = "");
+		Texture createIntenralTexture(GLuint id_, int alphaData, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
 			Texture& ambientOcclusion);
@@ -383,9 +383,10 @@ namespace gl3d
 
 			//texture
 			std::vector <internal::GpuTextureWithFlags> loadedTextures;
+			std::vector<GLuint64> loadedTexturesBindlessHandle;
 			std::vector<int> loadedTexturesIndexes;
 			std::vector<std::string> loadedTexturesNames;
-		
+
 			//models
 			std::vector< ModelData > graphicModels;
 			std::vector<int> graphicModelsIndexes;
@@ -683,7 +684,7 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
-		bool frustumCulling = 0;
+		bool frustumCulling = 1;
 		bool zPrePass = 0;
 
 	};

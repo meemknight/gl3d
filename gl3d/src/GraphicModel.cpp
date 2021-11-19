@@ -5,6 +5,8 @@
 #include "Texture.h"
 #include <algorithm>
 #include "gl3d.h"
+#include "glm/gtx/matrix_decompose.hpp"
+#include "glm/gtx/euler_angles.hpp"
 
 namespace gl3d 
 {
@@ -227,9 +229,12 @@ namespace gl3d
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		auto s = glm::scale(scale);
-		auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-			glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-			glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+		//auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+		//	glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+		//	glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+
+		auto r = glm::eulerAngleYXZ(rotation.y, rotation.x, rotation.z);
+
 		auto t = glm::translate(position);
 
 		return t * r * s;
@@ -245,6 +250,53 @@ namespace gl3d
 		return gl3d::getTransformMatrix(*this);
 	}
 
+	//https://stackoverflow.com/questions/1996957/conversion-euler-to-matrix-and-matrix-to-euler
+	void getRotation(const glm::mat4 &mat, float& Yaw, float& Pitch, float& Roll)
+	{
+		Pitch = asinf(-mat[2][1]);                  // Pitch
+		if (abs(cosf(Pitch)) > 0.0001)                 // Not at poles
+		{
+			Yaw = atan2f(mat[2][0], mat[2][2]);     // Yaw
+			Roll = atan2f(mat[0][1], mat[1][1]);     // Roll
+		}
+		else
+		{
+			Yaw = 0.0f;								// Yaw
+			Roll = atan2f(-mat[1][0], mat[0][0]);    // Roll
+		}
+	}
+
+	void Transform::setFromMatrix(const glm::mat4& mat)
+	{
+		glm::quat rot = {};
+		glm::vec3 notUsed = {};
+		glm::vec4 notUsed2 = {};
+
+		glm::decompose(mat, scale, rot, position, notUsed, notUsed2);
+		//rot = glm::conjugate(rot);
+		//scale = glm::normalize(scale);
+		//rotation = glm::eulerAngles(rot);
+		//rotation.z *= -1;
+		
+		//if (abs(rotation.x) < 0.01)
+		//{
+		//	rotation.x = 0;
+		//}
+		//if (abs(rotation.y) < 0.01)
+		//{
+		//	rotation.y = 0;
+		//}
+		//if (abs(rotation.z) < 0.01)
+		//{
+		//	rotation.z = 0;
+		//}
+		
+		//std::swap(rotation.x, rotation.z);
+		getRotation(mat, rotation.y, rotation.x, rotation.z);
+		//rotation.y = -rotation.y;
+		//rotation.x = -rotation.x;
+		//rotation = -rotation;
+	}
 
 	void ModelData::clear(Renderer3D& renderer)
 	{

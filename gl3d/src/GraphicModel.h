@@ -43,6 +43,9 @@ namespace gl3d
 		{
 			return !(*this == other);
 		};
+
+		void setFromMatrix(const glm::mat4 &mat);
+
 	};
 
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);

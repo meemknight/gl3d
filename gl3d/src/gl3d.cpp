@@ -178,7 +178,7 @@ namespace gl3d
 
 			auto rmaQuality = TextureLoadQuality::linearMipmap;
 
-			//todo not working in gltf formats
+			//todo not working in all gltf formats
 			if (!mat.map_RMA.empty())
 			{
 			
@@ -618,7 +618,6 @@ namespace gl3d
 	//}
 
 
-
 	Texture Renderer3D::loadTexture(std::string path)
 	{
 
@@ -640,25 +639,10 @@ namespace gl3d
 		}
 
 		GpuTexture t;
-		internal::GpuTextureWithFlags text;
 		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
 
-		text.texture = t;
-		text.flags = alphaExists;
+		return createIntenralTexture(t.id, alphaExists, path);
 
-		//if texture is not loaded, return an invalid texture
-		if(t.id == 0)
-		{
-			return Texture{ 0 };
-		}
-
-		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
-
-		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back(path);
-
-		return Texture{ id };
 	}
 
 	Texture Renderer3D::loadTextureFromMemory(objl::LoadedTexture &t)
@@ -668,27 +652,12 @@ namespace gl3d
 			return Texture{ 0 };
 		}
 
-	
 		GpuTexture tex;
-		internal::GpuTextureWithFlags text;
-		int alphaExists = 1; tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
+		int alphaExists = 1; 
+		tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
 
-		text.texture = tex;
-		text.flags = alphaExists;
+		return createIntenralTexture(tex, alphaExists);
 
-		//if texture is not loaded, return an invalid texture
-		if (tex.id == 0)
-		{
-			return Texture{ 0 };
-		}
-
-		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
-
-		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back("");
-
-		return Texture{ id };
 	}
 
 	GLuint Renderer3D::getTextureOpenglId(Texture& t)
@@ -730,6 +699,7 @@ namespace gl3d
 		auto gpuTexture = internal.loadedTextures[index];
 
 		internal.loadedTexturesIndexes.erase(internal.loadedTexturesIndexes.begin() + index);
+		internal.loadedTexturesBindlessHandle.erase(internal.loadedTexturesBindlessHandle.begin() + index);
 		internal.loadedTextures.erase(internal.loadedTextures.begin() + index);
 		internal.loadedTexturesNames.erase(internal.loadedTexturesNames.begin() + index);
 		
@@ -751,12 +721,12 @@ namespace gl3d
 		return &data->texture;
 	}
 
-	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData)
+	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, const std::string& name)
 	{
 		//if t is null return an empty texture
 		if (t.id == 0)
 		{
-			Texture{ 0 };
+			return Texture{ 0 };
 		}
 
 		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
@@ -765,25 +735,23 @@ namespace gl3d
 		text.texture = t;
 		text.flags= alphaData;
 
+		auto handle = glGetTextureHandleARB(t.id);
+		glMakeTextureHandleResidentARB(handle);
+
 		internal.loadedTexturesIndexes.push_back(id);
 		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back("");
+		internal.loadedTexturesBindlessHandle.push_back(0);
+		internal.loadedTexturesNames.push_back(name);
 
 		return Texture{ id };
 	}
 
 	//this takes an id and adds the texture to the internal system
-	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData)
+	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, const std::string &name)
 	{
-		if (!id_)
-		{
-			return {};
-		}
-
 		GpuTexture t;
 		t.id = id_;
-		return createIntenralTexture(t, alphaData);
-
+		return createIntenralTexture(t, alphaData, name);
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
@@ -851,7 +819,7 @@ namespace gl3d
 			}
 			#pragma endregion
 
-
+			#pragma region meshes
 			for (int i = 0; i < s; i++)
 			{
 				GraphicModel gm;
@@ -914,6 +882,7 @@ namespace gl3d
 				returnModel.models.push_back(gm);
 
 			}
+			#pragma endregion
 
 		}
 		
@@ -2880,15 +2849,22 @@ namespace gl3d
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
 
-
+		
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, adaptiveResolution.fbo);
-			glClear(GL_COLOR_BUFFER_BIT);
+			//glClear(GL_COLOR_BUFFER_BIT);
+			GLenum attachments[1] = {GL_COLOR_ATTACHMENT0};
+			glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		glClear(GL_COLOR_BUFFER_BIT);
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+			//glClear(GL_COLOR_BUFFER_BIT);
+			GLenum attachments[1] = {GL_COLOR_ATTACHMENT0};
+			glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
+
+		}
 
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		internal.renderSkyBoxBefore(camera, skyBox);
@@ -4015,6 +3991,7 @@ namespace gl3d
 
 			if (zPrePass)
 			{
+				//undo some settings set by zPrePass
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			}
 		}
@@ -4022,7 +3999,6 @@ namespace gl3d
 
 
 		#pragma region stuff to be bound for rendering the geometry
-
 
 		internal.lightShader.geometryPassShader.bind();
 		internal.lightShader.getSubroutines();
@@ -4088,7 +4064,6 @@ namespace gl3d
 			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(worldToViewMatrix * transformMat)[0][0]);
 			
-
 			#pragma region send animation data
 			if (entity.animate())
 			{
@@ -4100,7 +4075,6 @@ namespace gl3d
 				glUniform1i(internal.lightShader.u_hasAnimations, false);
 			}
 			#pragma endregion
-
 
 			bool changed = 1;
 			for (auto& i : entity.models)
