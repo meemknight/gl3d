@@ -3,6 +3,7 @@
 
 //#extension GL_NV_shadow_samplers_cube : enable
 //#extension ARB_program_interface_query : enable
+#extension GL_ARB_bindless_texture: require
 
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
@@ -21,8 +22,35 @@ uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
+uniform isampler2D u_materialIndex;
+uniform sampler2D u_textureUV;
+uniform sampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
+
+struct MaterialStruct
+{
+	vec4 kd;
+	vec4 rma; //last component emmisive
+	
+	//float kdr; //= 1;
+	//float kdg; //= 1;
+	//float kdb; //= 1;
+	//float roughness;
+	//float metallic;
+	//float ao; //one means full light
+
+	layout(bindless_sampler) sampler2D albedoSampler;
+	layout(bindless_sampler) sampler2D rmaSampler;
+	layout(bindless_sampler) sampler2D emmissiveSampler;
+	vec2 notUsed;
+
+};
+readonly layout(std140) buffer u_material
+{
+	MaterialStruct mat[];
+};
+
 
 layout (std140) uniform u_lightPassData
 {
@@ -586,7 +614,34 @@ void main()
 		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
 
 	vec3 normal = texture(u_normals, v_texCoords).xyz;
-	vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
+	//vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
+	int materialIndex = texture(u_materialIndex, v_texCoords).r;
+	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
+	vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+	vec4 albedoAlpha;
+	
+	if(materialIndex == 0)
+	{
+		albedoAlpha = vec4(0,0,0,0);
+	}else
+	{
+		//if(mat[materialIndex-1].albedoSampler == 0)
+		//{
+		//	albedoAlpha.rgb = vec3(1,1,1);
+		//}else
+		{
+			albedoAlpha = 
+				textureGrad(mat[materialIndex-1].albedoSampler, sampledUV.xy, 
+					sampledDerivates.xy, sampledDerivates.zw).rgba;
+				//texture(mat[materialIndex-1].albedoSampler, v_texCoords);
+			//albedoAlpha2 = mat[materialIndex-1].kd;
+		}
+		albedoAlpha.a = 1;
+		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+	}
+	
+
+	
 	vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
 
 	vec3 albedo = albedoAlpha.rgb;
@@ -850,7 +905,7 @@ void main()
 	a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
 	a_outBloom = vec4(emissive.rgb, 1);
 
-	
+	//a_outColor.rgb = vec3(albedoAlpha);
 	//a_outColor.rgb =  material.bbb;
 	//a_outColor.rgba =  vec4(albedoAlpha.aaa, 1);
 	//a_outColor.rgb = vec3(ssaof, ssaof, ssaof);

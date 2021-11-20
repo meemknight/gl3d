@@ -421,18 +421,18 @@ namespace gl3d
 			
 			#pragma region different shaders
 
-				struct
-				{
-					Shader shader;
-					GLint modelTransformLocation;
-					GLint projectionLocation;
-					GLint sizeLocation;
-					GLint colorLocation;
-					
-					//todo add a create function when ill work at this
-				}showNormalsProgram;
+			struct
+			{
+				Shader shader;
+				GLint modelTransformLocation;
+				GLint projectionLocation;
+				GLint sizeLocation;
+				GLint colorLocation;
+				
+				//todo add a create function when ill work at this
+			}showNormalsProgram;
 
-				struct SSAO
+			struct SSAO
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
@@ -474,29 +474,33 @@ namespace gl3d
 					float ssao_finalColor_exponent = 5.f;
 				}ssao;
 
-				struct GBuffer
+			struct GBuffer
+			{
+				void create(int w, int h);
+				void resize(int w, int h);
+
+				enum bufferTargers
 				{
-					void create(int w, int h);
-					void resize(int w, int h);
+					position = 0,
+					normal,
+					textureDerivates,
+					//albedo,
+					material,
+					positionViewSpace,
+					emissive,
+					materialIndex,
+					textureUV,
+					//textureDerivates,
+					bufferCount,
+				};
 
-					enum bufferTargers
-					{
-						position = 0,
-						normal,
-						albedo,
-						material,
-						positionViewSpace,
-						emissive,
-						bufferCount,
-					};
+				unsigned int gBuffer;
+				unsigned int buffers[bufferCount];
+				unsigned int depthBuffer;
 
-					unsigned int gBuffer;
-					unsigned int buffers[bufferCount];
-					unsigned int depthBuffer;
+				glm::ivec2 currentDimensions = {};
 
-					glm::ivec2 currentDimensions = {};
-
-				}gBuffer;
+			}gBuffer;
 
 			#pragma endregion
 			

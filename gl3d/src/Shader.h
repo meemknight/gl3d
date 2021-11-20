@@ -97,7 +97,12 @@ namespace gl3d
 		GLint light_u_cascades = -1;
 		GLint light_u_spotShadows = -1;
 		GLint light_u_pointShadows = -1;
+		GLint light_u_materialIndex = -1;
+		GLint light_u_textureUV = -1;
+		GLint light_u_textureDerivates = -1;
 		
+		
+		GLint light_materialBlockLocation = GL_INVALID_INDEX;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;

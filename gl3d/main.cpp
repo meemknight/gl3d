@@ -98,7 +98,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
+	glDisable(GL_DITHER);
 
 #pragma endregion
 
@@ -413,7 +413,7 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
-	//auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
@@ -426,7 +426,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
 	//auto levelModel = renderer.loadModel("resources/planeta.glb");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
-	auto sphereModel = renderer.loadModel("resources/birb.glb");
+	//auto sphereModel = renderer.loadModel("resources/birb.glb");
 	auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");

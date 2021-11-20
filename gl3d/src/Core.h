@@ -76,6 +76,11 @@ namespace gl3d
 		float emmisive = 0;
 		//rma
 
+		GLuint64 albedoSampler = 0;
+		GLuint64 rmaSampler = 0;
+		GLuint64 emmissiveSampler = 0;
+		glm::vec2 notUsed = {};
+
 		MaterialValues setDefaultMaterial()
 		{
 			*this = MaterialValues();

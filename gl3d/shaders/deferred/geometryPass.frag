@@ -2,13 +2,17 @@
 #pragma debug(on)
 
 //#extension GL_NV_shadow_samplers_cube : enable
+#extension GL_ARB_bindless_texture: require
 
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
-layout(location = 2) out vec4 a_outColor;
+//layout(location = 2) out vec4 a_outColor;
 layout(location = 3) out vec3 a_material;
 layout(location = 4) out vec3 a_posViewSpace;
 layout(location = 5) out vec3 a_emmisive;
+layout(location = 6) out int a_materialIndex;
+layout(location = 7) out vec4 a_textureUV;
+layout(location = 2) out vec4 a_textureDerivates;
 
 in vec3 v_normals;
 in vec3 v_position;	//world space
@@ -34,6 +38,12 @@ struct MaterialStruct
 	//float roughness;
 	//float metallic;
 	//float ao; //one means full light
+
+	layout(bindless_sampler) sampler2D albedoSampler;
+	layout(bindless_sampler) sampler2D rmaSampler;
+	layout(bindless_sampler) sampler2D emmissiveSampler;
+	vec2 notUsed;
+
 };
 
 readonly layout(std140) buffer u_material
@@ -202,12 +212,18 @@ void main()
 
 	a_pos = v_position;
 	a_normal = normalize(normal);
-	a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
+	//a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 	a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 	a_posViewSpace = v_positionViewSpace;
+	a_materialIndex = u_materialIndex+1;
+	a_textureUV.xy = v_texCoord.xy;
+	a_textureDerivates.x = dFdx(v_texCoord.x);
+	a_textureDerivates.y = dFdy(v_texCoord.x);
+	a_textureDerivates.z = dFdx(v_texCoord.y);
+	a_textureDerivates.w = dFdy(v_texCoord.y);
 	//a_emmisive = a_outColor.rgb * mat[u_materialIndex].rma.a;
 
 	//a_emmisive = texture2D(u_emissiveTexture, v_texCoord).rgb;
-	a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
+	a_emmisive = u_getEmmisiveFunc(vec3(clamp(color.rgb, 0, 1)));
 
 }

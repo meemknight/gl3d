@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-16
+//built on 2021-11-20
 ////////////////////////////////////////////////
 
 
@@ -85,6 +85,11 @@ namespace gl3d
 		float ao = 1;
 		float emmisive = 0;
 		//rma
+
+		GLuint64 albedoSampler = 0;
+		GLuint64 rmaSampler = 0;
+		GLuint64 emmissiveSampler = 0;
+		glm::vec2 notUsed = {};
 
 		MaterialValues setDefaultMaterial()
 		{
@@ -33717,6 +33722,25 @@ namespace gl3d
 
 namespace gl3d
 {
+	
+	namespace internal
+	{
+		enum ShaderStorageBlockBindings
+		{
+			MaterialBlockBinding = 0,
+			PointLightsBlockBinding = 1,
+			DirectionalLightsBlockBinding = 2,
+			SpotLightsBlockBinding = 3,
+			JointsTransformBlockBinding = 4,
+		};
+
+		enum UniformBlockBindings
+		{
+			LightPassDataBlockBinding = 0,
+			SSAODataBlockBinding = 1,
+			FXAADataBlockBinding = 2,
+		};
+	}
 
 	struct Shader
 	{
@@ -33788,7 +33812,12 @@ namespace gl3d
 		GLint light_u_cascades = -1;
 		GLint light_u_spotShadows = -1;
 		GLint light_u_pointShadows = -1;
+		GLint light_u_materialIndex = -1;
+		GLint light_u_textureUV = -1;
+		GLint light_u_textureDerivates = -1;
 		
+		
+		GLint light_materialBlockLocation = GL_INVALID_INDEX;
 
 		GLuint materialBlockLocation = GL_INVALID_INDEX;
 		GLuint materialBlockBuffer = 0;
@@ -34028,6 +34057,9 @@ namespace gl3d
 		{
 			return !(*this == other);
 		};
+
+		void setFromMatrix(const glm::mat4 &mat);
+
 	};
 
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
@@ -34135,10 +34167,23 @@ namespace gl3d
 
 		int animationIndex = 0;
 		float animationSpeed = 1.f;
+		float totalTimePassed = 0;
+
+		struct
+		{
+			//remainintgTime used to check if we are performing a transition
+			float remainintgTime = 0;
+
+			float totalTime = 0;
+			float ToTime = 0;
+			int ToIndex = 0;
+		}animationTransition;
+
+		
+
 		std::vector<Animation> animations;
 		std::vector<Joint> joints; //todo root should be here not at animations probably?
 		GLuint appliedSkinningMatricesBuffer;
-		float totalTimePassed = 0;
 
 		bool canBeAnimated() { return !animations.empty() && !joints.empty(); }
 
@@ -34372,8 +34417,8 @@ namespace gl3d
 		GpuTexture* getTextureData(Texture& t);
 
 		//internal
-		Texture createIntenralTexture(GpuTexture t, int alphaData);
-		Texture createIntenralTexture(GLuint id_, int alphaData);
+		Texture createIntenralTexture(GpuTexture t, int alphaData, const std::string &name = "");
+		Texture createIntenralTexture(GLuint id_, int alphaData, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
 			Texture& ambientOcclusion);
@@ -34512,6 +34557,15 @@ namespace gl3d
 		void setEntityCastShadows(Entity& e, bool s = true);
 		bool getEntityCastShadows(Entity& e);
 		void setEntityAnimationIndex(Entity &e, int ind);
+
+		//transitions from to ecurrent state
+		//to a new animation specified newAnimationIndex. it takes transitionTimeSecconds,
+		//and it will translate to newAnimationIndex at newAnimationTimeStampSecconds time stamp.
+		//if the object is not curently animated it will start the animation.
+		void transitionToAnimation(Entity& e, int newAnimationIndex, float transitionTimeSecconds,
+			float newAnimationTimeStampSecconds = 0);
+
+
 		int getEntityAnimationIndex(Entity &e);
 		void setEntityAnimationSpeed(Entity &e, float speed);
 		float getEntityAnimationSpeed(Entity &e);
@@ -34552,20 +34606,36 @@ namespace gl3d
 
 		//rather expensive
 		void enableSSAO(bool ssao = 1);
-		bool isSSAOenabeled();
-		float getSSAOBias();
+		bool &isSSAOenabeled();
+		float &getSSAOBias();
 		void setSSAOBias(float bias);
-		float getSSAORadius();
+		float &getSSAORadius();
 		void setSSAORadius(float radius);
-		int getSSAOSampleCount();
+		int &getSSAOSampleCount();
 		void setSSAOSampleCount(int samples);
-		float getSSAOExponent();
+		float &getSSAOExponent();
 		void setSSAOExponent(float exponent);
 
-		//very little performance penalty
-		void enableFXAA(bool fxaa = 1);
-		bool isFXAAenabeled();
-		//todo add quality sttings to shader
+		#pragma region fxaa
+
+			//todo explain this parameters
+			//http://blog.simonrodriguez.fr/articles/2016/07/implementing_fxaa.html
+			struct FXAAData
+			{
+				float edgeMinTreshold = 0.028;
+				float edgeDarkTreshold = 0.125;
+				int ITERATIONS = 12;
+				float quaityMultiplier = 0.8;
+				float SUBPIXEL_QUALITY = 0.95;
+			};
+
+			//very little performance penalty
+			void enableFXAA(bool fxaa = 1);
+			FXAAData& getFxaaSettings();
+			bool& isFXAAenabeled();
+
+		#pragma endregion
+		
 
 	#pragma endregion
 
@@ -34633,9 +34703,10 @@ namespace gl3d
 
 			//texture
 			std::vector <internal::GpuTextureWithFlags> loadedTextures;
+			std::vector<GLuint64> loadedTexturesBindlessHandle;
 			std::vector<int> loadedTexturesIndexes;
 			std::vector<std::string> loadedTexturesNames;
-		
+
 			//models
 			std::vector< ModelData > graphicModels;
 			std::vector<int> graphicModelsIndexes;
@@ -34670,18 +34741,18 @@ namespace gl3d
 			
 			#pragma region different shaders
 
-				struct
-				{
-					Shader shader;
-					GLint modelTransformLocation;
-					GLint projectionLocation;
-					GLint sizeLocation;
-					GLint colorLocation;
-					
-					//todo add a create function when ill work at this
-				}showNormalsProgram;
+			struct
+			{
+				Shader shader;
+				GLint modelTransformLocation;
+				GLint projectionLocation;
+				GLint sizeLocation;
+				GLint colorLocation;
+				
+				//todo add a create function when ill work at this
+			}showNormalsProgram;
 
-				struct SSAO
+			struct SSAO
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
@@ -34723,38 +34794,40 @@ namespace gl3d
 					float ssao_finalColor_exponent = 5.f;
 				}ssao;
 
-			#pragma endregion
+			struct GBuffer
+			{
+				void create(int w, int h);
+				void resize(int w, int h);
 
+				enum bufferTargers
+				{
+					position = 0,
+					normal,
+					albedo,
+					material,
+					positionViewSpace,
+					emissive,
+					materialIndex,
+					textureUV,
+					textureDerivates,
+					bufferCount,
+				};
+
+				unsigned int gBuffer;
+				unsigned int buffers[bufferCount];
+				unsigned int depthBuffer;
+
+				glm::ivec2 currentDimensions = {};
+
+			}gBuffer;
+
+			#pragma endregion
 			
 
 
 		}internal;
 
-	
 		
-		struct GBuffer
-		{
-			void create(int w, int h);
-			void resize(int w, int h);
-
-			enum bufferTargers
-			{
-				position = 0,
-				normal,
-				albedo,
-				material,
-				positionViewSpace,
-				emissive,
-				bufferCount,
-			};
-
-			unsigned int gBuffer;
-			unsigned int buffers[bufferCount];
-			unsigned int depthBuffer;
-
-			glm::ivec2 currentDimensions = {};
-
-		}gBuffer;
 
 		struct PostProcess
 		{
@@ -34855,6 +34928,11 @@ namespace gl3d
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
+			GLuint u_FXAAData;
+			GLuint fxaaDataBuffer;
+
+			FXAAData fxaaData;
+
 			bool usingFXAA = true;
 		}antiAlias;
 
@@ -34929,7 +35007,7 @@ namespace gl3d
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
-		bool frustumCulling = 0;
+		bool frustumCulling = 1;
 		bool zPrePass = 0;
 
 	};

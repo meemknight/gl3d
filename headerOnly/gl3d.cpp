@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-16
+//built on 2021-11-20
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31282,8 +31282,6 @@ namespace gl3d
 
 	}
 
-
-
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
@@ -31415,14 +31413,14 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4.f);
 			}
 			break;
 			case maxQuality:
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.f);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8.f);
 			}
 			break;
 			default:
@@ -32579,6 +32577,7 @@ discard;
 
       std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430 core
 #pragma debug(on)
+#extension GL_ARB_bindless_texture: require
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
 noperspective in vec2 v_texCoords;
@@ -32593,7 +32592,23 @@ uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
+uniform isampler2D u_materialIndex;
+uniform sampler2D u_textureUV;
+uniform sampler2D u_textureDerivates;
 uniform vec3 u_eyePosition;
+struct MaterialStruct
+{
+vec4 kd;
+vec4 rma; //last component emmisive
+layout(bindless_sampler) sampler2D albedoSampler;
+layout(bindless_sampler) sampler2D rmaSampler;
+layout(bindless_sampler) sampler2D emmissiveSampler;
+vec2 notUsed;
+};
+readonly layout(std140) buffer u_material
+{
+MaterialStruct mat[];
+};
 layout (std140) uniform u_lightPassData
 {
 vec4 ambientColor;
@@ -32931,6 +32946,20 @@ void main()
 vec3 pos = texture(u_positions, v_texCoords).xyz;
 vec3 normal = texture(u_normals, v_texCoords).xyz;
 vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
+int materialIndex = texture(u_materialIndex, v_texCoords).r;
+vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
+vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+vec4 albedoAlpha2;
+if(materialIndex == 0)
+{
+albedoAlpha2 = vec4(0,0,0,0);
+}else
+{
+albedoAlpha2 = 
+textureGrad(mat[materialIndex-1].albedoSampler, sampledUV.xy, 
+sampledDerivates.xy, sampledDerivates.zw).rgba;
+albedoAlpha2.a = 1;
+}
 vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
 vec3 albedo = albedoAlpha.rgb;
 albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
@@ -33083,8 +33112,9 @@ vec3 hdrCorrectedColor = color;
 hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
+a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha2.a);
 a_outBloom = vec4(emissive.rgb, 1);
+a_outColor.rgb = vec3(albedoAlpha2);
 })"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 430
@@ -33137,12 +33167,15 @@ v_texCoord = a_texCoord;
 
       std::pair<std::string, const char*>{"geometryPass.frag", R"(#version 430
 #pragma debug(on)
+#extension GL_ARB_bindless_texture: require
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
-layout(location = 2) out vec4 a_outColor;
 layout(location = 3) out vec3 a_material;
 layout(location = 4) out vec3 a_posViewSpace;
 layout(location = 5) out vec3 a_emmisive;
+layout(location = 6) out int a_materialIndex;
+layout(location = 7) out vec4 a_textureUV;
+layout(location = 2) out vec4 a_textureDerivates;
 in vec3 v_normals;
 in vec3 v_position;	//world space
 in vec2 v_texCoord;
@@ -33156,6 +33189,10 @@ struct MaterialStruct
 {
 vec4 kd;
 vec4 rma; //last component emmisive
+layout(bindless_sampler) sampler2D albedoSampler;
+layout(bindless_sampler) sampler2D rmaSampler;
+layout(bindless_sampler) sampler2D emmissiveSampler;
+vec2 notUsed;
 };
 readonly layout(std140) buffer u_material
 {
@@ -33264,9 +33301,14 @@ vec3 noMappedNorals = normalize(v_normals);
 vec3 normal = getNormalMapFunc(noMappedNorals);
 a_pos = v_position;
 a_normal = normalize(normal);
-a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 a_posViewSpace = v_positionViewSpace;
+a_materialIndex = u_materialIndex+1;
+a_textureUV.xy = v_texCoord.xy;
+a_textureDerivates.x = dFdx(v_texCoord.x);
+a_textureDerivates.y = dFdy(v_texCoord.x);
+a_textureDerivates.z = dFdx(v_texCoord.y);
+a_textureDerivates.w = dFdy(v_texCoord.y);
 a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
 })"},
 
@@ -33282,7 +33324,7 @@ tmpvar_1.xyz = texture (u_texture, v_texCoords).xyz;
 a_color = tmpvar_1;
 })"},
 
-      std::pair<std::string, const char*>{"fxaa.frag", R"(#version 150 core
+      std::pair<std::string, const char*>{"fxaa.frag", R"(#version 330 core
 out vec4 a_color;
 noperspective in vec2 v_texCoords;
 uniform sampler2D u_texture;
@@ -33300,22 +33342,35 @@ return texture2D(u_texture, v_texCoords + offset).rgb;
 }
 float quality(int i)
 {
-const float r[7] = float[7](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0);
-if(i < 5)
+const int SIZE = 8;
+const int FIRST_SAMPLES_COUNT = 5;
+const float r[SIZE] = float[SIZE](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 6.0, 7.0);
+if(i < FIRST_SAMPLES_COUNT)
 {
 return 1;
-}else if(i >= 12)
+}else if(i >= FIRST_SAMPLES_COUNT + SIZE)
 {
 return 8;
-}else return r[i-5];
+}else return r[i-FIRST_SAMPLES_COUNT];
 }
-void main()
-{
+/*
+default values example
 float edgeMinTreshold = 0.028;
 float edgeDarkTreshold = 0.125;
 int ITERATIONS = 12;
 float quaityMultiplier = 0.8;
 float SUBPIXEL_QUALITY = 0.95;
+*/
+layout(std140) uniform u_FXAAData
+{
+float edgeMinTreshold;
+float edgeDarkTreshold;
+int ITERATIONS;
+float quaityMultiplier;
+float SUBPIXEL_QUALITY;
+}fxaaData;
+void main()
+{
 vec3 colorCenter = getTexture(vec2(0,0)).rgb;
 float lumaCenter = lumaSqr(colorCenter);
 float lumaDown = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(0,-1)).rgb);
@@ -33325,7 +33380,7 @@ float lumaRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,0)).rgb);
 float lumaMin = min(lumaCenter,min(min(lumaDown,lumaUp),min(lumaLeft,lumaRight)));
 float lumaMax = max(lumaCenter,max(max(lumaDown,lumaUp),max(lumaLeft,lumaRight)));
 float lumaRange = lumaMax - lumaMin;
-if(lumaRange < max(edgeMinTreshold,lumaMax*edgeDarkTreshold))
+if(lumaRange < max(fxaaData.edgeMinTreshold,lumaMax*fxaaData.edgeDarkTreshold))
 {
 a_color = vec4(colorCenter, 1);
 return;
@@ -33387,7 +33442,8 @@ uv2 += offset;
 }   
 if(!reachedBoth)
 {
-for(int i = 2; i < ITERATIONS; i++){
+for(int i = 0; i < fxaaData.ITERATIONS; i++)
+{
 if(!reached1){
 lumaEnd1 = lumaSqr(texture(u_texture, uv1).rgb);
 lumaEnd1 = lumaEnd1 - lumaLocalAverage;
@@ -33401,11 +33457,11 @@ reached2 = abs(lumaEnd2) >= gradientScaled;
 reachedBoth = reached1 && reached2;
 if(!reached1)
 {
-uv1 -= offset * quality(i) * quaityMultiplier;
+uv1 -= offset * quality(i) * fxaaData.quaityMultiplier;
 }
 if(!reached2)
 {
-uv2 += offset * quality(i) * quaityMultiplier;
+uv2 += offset * quality(i) * fxaaData.quaityMultiplier;
 }
 if(reachedBoth){ break;}
 }
@@ -33422,7 +33478,7 @@ float finalOffset = correctVariation ? pixelOffset : 0.0;
 float lumaAverage = (1.0/12.0) * (2.0 * (lumaDownUp + lumaLeftRight) + lumaLeftCorners + lumaRightCorners);
 float subPixelOffset1 = clamp(abs(lumaAverage - lumaCenter)/lumaRange,0.0,1.0);
 float subPixelOffset2 = (-2.0 * subPixelOffset1 + 3.0) * subPixelOffset1 * subPixelOffset1;
-float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * SUBPIXEL_QUALITY;
+float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * fxaaData.SUBPIXEL_QUALITY;
 finalOffset = max(finalOffset,subPixelOffsetFinal);
 vec2 finalUv = v_texCoords;
 if(isHorizontal){
@@ -33432,57 +33488,7 @@ finalUv.x += finalOffset * stepLength;
 }
 vec3 finalColor = texture(u_texture, finalUv).rgb;
 a_color = vec4(finalColor, 1);
-}
-/*
-void main()
-{
-float fxaaSpan = 2.0;
-float fxaaReduceMin = 0.001;
-float fxaaReduceMul = 0.1;
-vec2 tSize = 1.f/textureSize(u_texture, 0).xy;
-vec3 tL		= getTexture(vec2(-tSize.x,-tSize.y));
-vec3 tR		= getTexture(vec2(tSize.x,-tSize.y));
-vec3 mid	= getTexture(vec2(0,0));
-vec3 bL		= getTexture(vec2(-tSize.x,tSize.y));
-vec3 bR		= getTexture(vec2(tSize.x,tSize.y));
-float lumaTL = luminance(tL);	
-float lumaTR = luminance(tR);	
-float lumaMid = luminance(mid);
-float lumaBL = luminance(bL);
-float lumaBR = luminance(bR);
-float dirReduce = max((lumaTL + lumaTR + lumaBL + lumaBR) * 0.25f * fxaaReduceMul, fxaaReduceMin);
-vec2 dir;
-dir.x = -((lumaTL + lumaTR)-(lumaBL + lumaBR));
-dir.y = (lumaTL + lumaBL)-(lumaTR + lumaBR);
-float minScale = 1.0/min(abs(dir.x), abs(dir.y)+dirReduce);
-dir = clamp(vec2(-fxaaSpan), vec2(fxaaSpan), dir * minScale);
-if(abs(dir).x < 0.1 && abs(dir).y < 0.1)
-{
-a_color = vec4(mid,1);
-}else
-{
-dir *= tSize;
-vec3 rezult1 = 0.5 * (
-getTexture(dir * vec2(1.f/3.f - 0.5f))+
-getTexture(dir * vec2(2.f/3.f - 0.5f))
-);
-vec3 rezult2 = rezult1*0.5 + 0.25 * (
-getTexture(dir * vec2(-0.5f))+
-getTexture(dir * vec2(0.5f))
-);
-float lumaRez2 = luminance(rezult2);
-float lumaMin = min(min(min(min(lumaTL,lumaTR),lumaMid), lumaBL), lumaBR);
-float lumaMax = max(max(max(max(lumaTL,lumaTR),lumaMid), lumaBL), lumaBR);
-if(lumaRez2 < lumaMin || lumaRez2 > lumaMax)
-{
-a_color = vec4(rezult1,1);
-}else
-{
-a_color = vec4(rezult2,1);
-}
-}
-}
-*/)"},
+})"},
 
       std::pair<std::string, const char*>{"stencil.vert", R"(#version 330
 #pragma debug(on)
@@ -34073,8 +34079,7 @@ outColor = tmpvar_1;
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture");
 		prePass.u_hasAnimations = getUniform(prePass.shader.id, "u_hasAnimations");
 		prePass.u_jointTransforms = getStorageBlockIndex(prePass.shader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(prePass.shader.id, prePass.u_jointTransforms, 4);		//todo define or enums for this
-
+		glShaderStorageBlockBinding(prePass.shader.id, prePass.u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
@@ -34088,7 +34093,7 @@ outColor = tmpvar_1;
 		pointShadowShader.u_lightIndex = getUniform(pointShadowShader.shader.id, "u_lightIndex");
 		pointShadowShader.u_hasAnimations = getUniform(pointShadowShader.shader.id, "u_hasAnimations");
 		pointShadowShader.u_jointTransforms = getStorageBlockIndex(pointShadowShader.shader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(pointShadowShader.shader.id, pointShadowShader.u_jointTransforms, 4);	//todo define or enums for this
+		glShaderStorageBlockBinding(pointShadowShader.shader.id, pointShadowShader.u_jointTransforms, internal::JointsTransformBlockBinding);	//todo define or enums for this
 
 
 
@@ -34110,15 +34115,14 @@ outColor = tmpvar_1;
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
 		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
-		
 
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
-		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, 0);
+		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, internal::MaterialBlockBinding);
 		glGenBuffers(1, &materialBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
 
 		u_jointTransforms = getStorageBlockIndex(geometryPassShader.id, "u_jointTransforms");
-		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, 4);		//todo define or enums for this
+		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 		
 
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
@@ -34139,6 +34143,12 @@ outColor = tmpvar_1;
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
 		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
 		light_u_pointShadows = getUniform(lightingPassShader.id, "u_pointShadows");
+		light_u_materialIndex = getUniform(lightingPassShader.id, "u_materialIndex");
+		light_u_textureUV = getUniform(lightingPassShader.id, "u_textureUV");
+		light_u_textureDerivates = getUniform(lightingPassShader.id, "u_textureDerivates");
+
+		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material");
+		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);
 
 	#pragma region uniform buffer
 
@@ -34147,8 +34157,8 @@ outColor = tmpvar_1;
 		glBindBuffer(GL_UNIFORM_BUFFER, lightPassShaderData.lightPassDataBlockBuffer);
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(LightPassData), &lightPassUniformBlockCpuData, GL_DYNAMIC_DRAW);
 		
-		glUniformBlockBinding(lightingPassShader.id, lightPassShaderData.u_lightPassData, 1);
-		glBindBufferBase(GL_UNIFORM_BUFFER, 1, lightPassShaderData.lightPassDataBlockBuffer);
+		glUniformBlockBinding(lightingPassShader.id, lightPassShaderData.u_lightPassData, internal::LightPassDataBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, internal::LightPassDataBlockBinding, lightPassShaderData.lightPassDataBlockBuffer);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -34156,25 +34166,25 @@ outColor = tmpvar_1;
 
 	#pragma region block buffers
 		pointLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_pointLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, 1);
+		glShaderStorageBlockBinding(lightingPassShader.id, pointLightsBlockLocation, internal::PointLightsBlockBinding);
 		glGenBuffers(1, &pointLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, pointLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, pointLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::PointLightsBlockBinding, pointLightsBlockBuffer);
 
 		directionalLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_directionalLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, directionalLightsBlockLocation, 2);
+		glShaderStorageBlockBinding(lightingPassShader.id, directionalLightsBlockLocation, internal::DirectionalLightsBlockBinding);
 		glGenBuffers(1, &directionalLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, directionalLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, directionalLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::DirectionalLightsBlockBinding, directionalLightsBlockBuffer);
 
 		spotLightsBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_spotLights");
-		glShaderStorageBlockBinding(lightingPassShader.id, spotLightsBlockLocation, 3);
+		glShaderStorageBlockBinding(lightingPassShader.id, spotLightsBlockLocation, internal::SpotLightsBlockBinding);
 		glGenBuffers(1, &spotLightsBlockBuffer);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, spotLightsBlockBuffer);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_STREAM_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, spotLightsBlockBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::SpotLightsBlockBinding, spotLightsBlockBuffer);
 
 	#pragma endregion
 
@@ -34203,19 +34213,6 @@ outColor = tmpvar_1;
 		glBindVertexArray(0);
 
 	}
-
-	
-	
-
-	//void LightShader::setMaterial(const MaterialValues &material)
-	//{
-	//	glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialBlockBuffer);
-	//	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(material)
-	//		, &material, GL_STREAM_DRAW);
-	//	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, materialBlockBuffer);
-	//	glUniform1i(materialIndexLocation, 0);
-	//}
-
 
 
 	void LightShader::getSubroutines()
@@ -34476,6 +34473,8 @@ namespace gl3d
 
 #include <algorithm>
 
+#include "glm/gtx/matrix_decompose.hpp"
+#include "glm/gtx/euler_angles.hpp"
 
 namespace gl3d 
 {
@@ -34698,9 +34697,12 @@ namespace gl3d
 	glm::mat4 getTransformMatrix(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 	{
 		auto s = glm::scale(scale);
-		auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
-			glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
-			glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+		//auto r = glm::rotate(rotation.x, glm::vec3(1, 0, 0)) *
+		//	glm::rotate(rotation.y, glm::vec3(0, 1, 0)) *
+		//	glm::rotate(rotation.z, glm::vec3(0, 0, 1));
+
+		auto r = glm::eulerAngleYXZ(rotation.y, rotation.x, rotation.z);
+
 		auto t = glm::translate(position);
 
 		return t * r * s;
@@ -34716,6 +34718,53 @@ namespace gl3d
 		return gl3d::getTransformMatrix(*this);
 	}
 
+	//https://stackoverflow.com/questions/1996957/conversion-euler-to-matrix-and-matrix-to-euler
+	void getRotation(const glm::mat4 &mat, float& Yaw, float& Pitch, float& Roll)
+	{
+		Pitch = asinf(-mat[2][1]);                  // Pitch
+		if (abs(cosf(Pitch)) > 0.0001)                 // Not at poles
+		{
+			Yaw = atan2f(mat[2][0], mat[2][2]);     // Yaw
+			Roll = atan2f(mat[0][1], mat[1][1]);     // Roll
+		}
+		else
+		{
+			Yaw = 0.0f;								// Yaw
+			Roll = atan2f(-mat[1][0], mat[0][0]);    // Roll
+		}
+	}
+
+	void Transform::setFromMatrix(const glm::mat4& mat)
+	{
+		glm::quat rot = {};
+		glm::vec3 notUsed = {};
+		glm::vec4 notUsed2 = {};
+
+		glm::decompose(mat, scale, rot, position, notUsed, notUsed2);
+		//rot = glm::conjugate(rot);
+		//scale = glm::normalize(scale);
+		//rotation = glm::eulerAngles(rot);
+		//rotation.z *= -1;
+		
+		//if (abs(rotation.x) < 0.01)
+		//{
+		//	rotation.x = 0;
+		//}
+		//if (abs(rotation.y) < 0.01)
+		//{
+		//	rotation.y = 0;
+		//}
+		//if (abs(rotation.z) < 0.01)
+		//{
+		//	rotation.z = 0;
+		//}
+		
+		//std::swap(rotation.x, rotation.z);
+		getRotation(mat, rotation.y, rotation.x, rotation.z);
+		//rotation.y = -rotation.y;
+		//rotation.x = -rotation.x;
+		//rotation = -rotation;
+	}
 
 	void ModelData::clear(Renderer3D& renderer)
 	{
@@ -35608,8 +35657,7 @@ namespace gl3d
 		//};
 		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
-
-		gBuffer.create(x, y);	
+		internal.gBuffer.create(x, y);
 		internal.ssao.create(x, y);
 		postProcess.create(x, y);
 		directionalShadows.create();
@@ -35740,7 +35788,7 @@ namespace gl3d
 
 			auto rmaQuality = TextureLoadQuality::linearMipmap;
 
-			//todo not working in gltf formats
+			//todo not working in all gltf formats
 			if (!mat.map_RMA.empty())
 			{
 			
@@ -36180,7 +36228,6 @@ namespace gl3d
 	//}
 
 
-
 	Texture Renderer3D::loadTexture(std::string path)
 	{
 
@@ -36202,25 +36249,10 @@ namespace gl3d
 		}
 
 		GpuTexture t;
-		internal::GpuTextureWithFlags text;
 		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
 
-		text.texture = t;
-		text.flags = alphaExists;
+		return createIntenralTexture(t.id, alphaExists, path);
 
-		//if texture is not loaded, return an invalid texture
-		if(t.id == 0)
-		{
-			return Texture{ 0 };
-		}
-
-		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
-
-		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back(path);
-
-		return Texture{ id };
 	}
 
 	Texture Renderer3D::loadTextureFromMemory(objl::LoadedTexture &t)
@@ -36230,27 +36262,12 @@ namespace gl3d
 			return Texture{ 0 };
 		}
 
-	
 		GpuTexture tex;
-		internal::GpuTextureWithFlags text;
-		int alphaExists = 1; tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
+		int alphaExists = 1; 
+		tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
 
-		text.texture = tex;
-		text.flags = alphaExists;
+		return createIntenralTexture(tex, alphaExists);
 
-		//if texture is not loaded, return an invalid texture
-		if (tex.id == 0)
-		{
-			return Texture{ 0 };
-		}
-
-		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
-
-		internal.loadedTexturesIndexes.push_back(id);
-		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back("");
-
-		return Texture{ id };
 	}
 
 	GLuint Renderer3D::getTextureOpenglId(Texture& t)
@@ -36292,6 +36309,7 @@ namespace gl3d
 		auto gpuTexture = internal.loadedTextures[index];
 
 		internal.loadedTexturesIndexes.erase(internal.loadedTexturesIndexes.begin() + index);
+		internal.loadedTexturesBindlessHandle.erase(internal.loadedTexturesBindlessHandle.begin() + index);
 		internal.loadedTextures.erase(internal.loadedTextures.begin() + index);
 		internal.loadedTexturesNames.erase(internal.loadedTexturesNames.begin() + index);
 		
@@ -36313,12 +36331,12 @@ namespace gl3d
 		return &data->texture;
 	}
 
-	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData)
+	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, const std::string& name)
 	{
 		//if t is null return an empty texture
 		if (t.id == 0)
 		{
-			Texture{ 0 };
+			return Texture{ 0 };
 		}
 
 		int id = internal::generateNewIndex(internal.loadedTexturesIndexes);
@@ -36327,25 +36345,23 @@ namespace gl3d
 		text.texture = t;
 		text.flags= alphaData;
 
+		auto handle = glGetTextureHandleARB(t.id);
+		glMakeTextureHandleResidentARB(handle);
+
 		internal.loadedTexturesIndexes.push_back(id);
 		internal.loadedTextures.push_back(text);
-		internal.loadedTexturesNames.push_back("");
+		internal.loadedTexturesBindlessHandle.push_back(handle);
+		internal.loadedTexturesNames.push_back(name);
 
 		return Texture{ id };
 	}
 
 	//this takes an id and adds the texture to the internal system
-	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData)
+	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, const std::string &name)
 	{
-		if (!id_)
-		{
-			return {};
-		}
-
 		GpuTexture t;
 		t.id = id_;
-		return createIntenralTexture(t, alphaData);
-
+		return createIntenralTexture(t, alphaData, name);
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
@@ -36413,7 +36429,7 @@ namespace gl3d
 			}
 			#pragma endregion
 
-
+			#pragma region meshes
 			for (int i = 0; i < s; i++)
 			{
 				GraphicModel gm;
@@ -36476,6 +36492,7 @@ namespace gl3d
 				returnModel.models.push_back(gm);
 
 			}
+			#pragma endregion
 
 		}
 		
@@ -37728,9 +37745,35 @@ namespace gl3d
 
 		if (internal.cpuEntities[i].animationIndex != ind)
 		{
+			
+			if (ind < 0 || ind >= internal.cpuEntities[i].animations.size())
+			{
+				return; //warn or sthing
+			}
+
 			internal.cpuEntities[i].totalTimePassed = 0;
 			internal.cpuEntities[i].animationIndex = ind;
 		}
+
+	}
+
+	void Renderer3D::transitionToAnimation(Entity& e, int newAnimationIndex, float transitionTimeSecconds,
+		float newAnimationTimeStampSecconds)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return; } //warn or sthing
+
+		auto& ent = internal.cpuEntities[i];
+
+		if (newAnimationIndex < 0 || newAnimationIndex >= ent.animations.size())
+		{
+			return; //warn or sthing
+		}
+
+		ent.animationTransition.remainintgTime = transitionTimeSecconds;
+		ent.animationTransition.totalTime = transitionTimeSecconds;
+		ent.animationTransition.ToTime = newAnimationTimeStampSecconds;
+		ent.animationTransition.ToIndex = newAnimationIndex;
 
 	}
 
@@ -37840,12 +37883,12 @@ namespace gl3d
 		internal.lightShader.useSSAO = ssao;
 	}
 
-	bool Renderer3D::isSSAOenabeled()
+	bool &Renderer3D::isSSAOenabeled()
 	{
 		return internal.lightShader.useSSAO;
 	}
 
-	float Renderer3D::getSSAOBias()
+	float &Renderer3D::getSSAOBias()
 	{
 		return internal.ssao.ssaoShaderUniformBlockData.bias;
 	}
@@ -37855,7 +37898,7 @@ namespace gl3d
 		internal.ssao.ssaoShaderUniformBlockData.bias = std::max(bias, 0.f);
 	}
 
-	float Renderer3D::getSSAORadius()
+	float &Renderer3D::getSSAORadius()
 	{
 		return internal.ssao.ssaoShaderUniformBlockData.radius;
 	}
@@ -37865,7 +37908,7 @@ namespace gl3d
 		internal.ssao.ssaoShaderUniformBlockData.radius = std::max(radius, 0.01f);
 	}
 
-	int Renderer3D::getSSAOSampleCount()
+	int &Renderer3D::getSSAOSampleCount()
 	{
 		return internal.ssao.ssaoShaderUniformBlockData.samplesTestSize;
 
@@ -37876,14 +37919,14 @@ namespace gl3d
 		internal.ssao.ssaoShaderUniformBlockData.samplesTestSize = std::min(std::max(samples, 5), 64);
 	}
 
-	float Renderer3D::getSSAOExponent()
+	float &Renderer3D::getSSAOExponent()
 	{
 		return internal.ssao.ssao_finalColor_exponent;
 	}
 
 	void Renderer3D::setSSAOExponent(float exponent)
 	{
-		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 32.f);
+		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 64.f);
 	}
 
 	void Renderer3D::enableFXAA(bool fxaa)
@@ -37891,7 +37934,12 @@ namespace gl3d
 		this->antiAlias.usingFXAA = fxaa;
 	}
 
-	bool Renderer3D::isFXAAenabeled()
+	Renderer3D::FXAAData& Renderer3D::getFxaaSettings()
+	{
+		return antiAlias.fxaaData;
+	}
+
+	bool &Renderer3D::isFXAAenabeled()
 	{
 		return antiAlias.usingFXAA;
 	}
@@ -38411,15 +38459,22 @@ namespace gl3d
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
 
-
+		
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, adaptiveResolution.fbo);
-			glClear(GL_COLOR_BUFFER_BIT);
+			//glClear(GL_COLOR_BUFFER_BIT);
+			GLenum attachments[1] = {GL_COLOR_ATTACHMENT0};
+			glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-		glClear(GL_COLOR_BUFFER_BIT);
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
+			//glClear(GL_COLOR_BUFFER_BIT);
+			GLenum attachments[1] = {GL_COLOR_ATTACHMENT0};
+			glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
+
+		}
 
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 		internal.renderSkyBoxBefore(camera, skyBox);
@@ -38441,180 +38496,272 @@ namespace gl3d
 
 		
 		#pragma region animations
-			for (auto &entity : internal.cpuEntities)
 			{
-				if (!entity.isVisible())
+				std::vector<glm::mat4> appliedSkinningMatrixes;
+
+				for (auto& entity : internal.cpuEntities)
 				{
-					continue;
-				}
-
-				if (entity.models.empty())
-				{
-					continue;
-				}
-
-				if (entity.canBeAnimated() && entity.animate())
-				{
-
-					int index = entity.animationIndex;
-					index = std::min(index, (int)entity.animations.size() - 1);
-					auto &animation = entity.animations[index];
-
-					std::vector<glm::mat4> skinningMatrixes;
-					skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
-
-					entity.totalTimePassed += deltaTime * entity.animationSpeed;
-					while (entity.totalTimePassed >= animation.animationDuration)
+					if (!entity.isVisible())
 					{
-						entity.totalTimePassed -= animation.animationDuration;
+						continue;
 					}
 
-					for (int b = 0; b < entity.joints.size(); b++)
+					if (entity.models.empty())
+					{
+						continue;
+					}
+
+					if (entity.canBeAnimated() && entity.animate())
 					{
 
-						glm::mat4 rotMat(1.f);
-						glm::mat4 transMat(1.f);
-						glm::mat4 scaleMat(1.f);
+						int index = entity.animationIndex;
+						index = std::min(index, (int)entity.animations.size() - 1);
+						auto& animation = entity.animations[index];
 
-						auto &joint = entity.joints[b];
+						std::vector<glm::mat4> skinningMatrixes;
+						skinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
 
-						if (
-							animation.keyFramesRot[b].empty() &&
-							animation.keyFramesTrans[b].empty() &&
-							animation.keyFramesScale[b].empty()
-							)
+						
+						if (entity.animationTransition.remainintgTime > 0)
 						{
-							skinningMatrixes[b] = joint.localBindTransform; //no animations at all here
+							//perform a transition (this will get delta time substracted later down the code).
 						}
 						else
 						{
-							if (!animation.keyFramesRot[b].empty()) //no key frames for this bone...
+							//performa a normal animation
+							entity.totalTimePassed += deltaTime * entity.animationSpeed;
+							while (entity.totalTimePassed >= animation.animationDuration)
 							{
-								for (int frame = animation.keyFramesRot[b].size() - 1; frame >= 0; frame--)
-								{
-									int frames = animation.keyFramesRot[b].size();
-									float time = entity.totalTimePassed;
-									auto &currentFrame = animation.keyFramesRot[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.rotation;
+								entity.totalTimePassed -= animation.animationDuration;
+							}
 
-										if (frame == animation.keyFramesRot[b].size() - 1)
-										{
-											rotMat = glm::toMat4(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesRot[b][frame + 1].rotation;
-											float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											rotMat = glm::toMat4(glm::slerp(first, second, interpolation));
-										}
-										break;
+						}
+						
+						//compute per bone position
+						for (int b = 0; b < entity.joints.size(); b++)
+						{
 
-									}
+							glm::quat rotation = {0.f,0.f,0.f,1.f};
+							glm::vec3 translation = {0.f,0.f,0.f};
+							glm::vec3 scale = {1.f,1.f,1.f};
 
-								}
-								//rotMat = glm::toMat4(i.animation.keyFramesRot[b][0].rotation);
+							auto& joint = entity.joints[b];
+
+							if (
+								animation.keyFramesRot[b].empty() &&
+								animation.keyFramesTrans[b].empty() &&
+								animation.keyFramesScale[b].empty()
+								)
+							{
+								//no animations for this joint
+								skinningMatrixes[b] = joint.localBindTransform;
 							}
 							else
 							{
-								rotMat = glm::toMat4(joint.rotation);
-							}
-
-							auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
-							{
-								return a * (1.f - x) + (b * x);
-							};
-
-							if (!animation.keyFramesTrans[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = animation.keyFramesTrans[b].size() - 1; frame >= 0; frame--)
+								struct FoundFrames
 								{
-									int frames = animation.keyFramesTrans[b].size();
-									float time = entity.totalTimePassed;
-									auto &currentFrame = animation.keyFramesTrans[b][frame];
-									if (time >= currentFrame.timeStamp)
-									{
-										auto first = currentFrame.translation;
+									int id1;
+									int id2;
+									float interpolate;
+								};
 
-										if (frame == animation.keyFramesTrans[b].size() - 1)
-										{
-											transMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesTrans[b][frame + 1].translation;
-											float secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											transMat = glm::translate(lerp(first, second, interpolation));
-										}
-										break;
-									}
-								}
-								//transMat = glm::translate(i.animation.keyFramesTrans[b][0].translation);
-							}
-							else
-							{
-								transMat = glm::translate(joint.trans);
-							}
-
-							if (!animation.keyFramesScale[b].empty()) //no key frames for this bone...
-							{
-								for (int frame = animation.keyFramesScale[b].size() - 1; frame >= 0; frame--)
+								auto searchFrame = [&](auto& frames, float time)
 								{
-									int frames = animation.keyFramesScale[b].size();
-									float time = entity.totalTimePassed;
-									auto &currentFrame = animation.keyFramesScale[b][frame];
-									if (time >= currentFrame.timeStamp)
+									
+									int size = frames.size();
+									int begin = size - 1;
+									int end = 0;
+									
+									if (time >= frames.back().timeStamp)
 									{
-										auto first = currentFrame.scale;
-
-										if (frame == animation.keyFramesScale[b].size() - 1)
-										{
-											scaleMat = glm::translate(first);
-										}
-										else
-										{
-											auto second = animation.keyFramesScale[b][frame + 1].scale;
-											float secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
-											float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-											scaleMat = glm::scale(lerp(first, second, interpolation));
-										}
-										break;
+										return FoundFrames{size-1, size-1, 0};
 									}
-								}
-								//scaleMat = glm::scale(i.animation.keyFramesScale[b][0].scale);
-							}
-							else
-							{
-								scaleMat = glm::scale(joint.scale);
-							}
 
-							skinningMatrixes[b] = transMat * rotMat * scaleMat;
-							//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
+									//for (int frame = begin; frame >= end; frame--)
+									while (true)
+									{
+										int frame = ((begin - end) / 2) + end;
+
+										auto& currentFrame = frames[frame];
+										if (time >= currentFrame.timeStamp
+											&& (frame == size - 1 || time <= frames[frame + 1].timeStamp)
+											)
+										{
+											if (frame == size - 1)
+											{
+												//last frame reached
+												return FoundFrames{frame, frame, 0};
+											}
+											else
+											{
+												float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
+												float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+												return FoundFrames{frame, frame + 1, interpolation};
+											}
+										}
+										else //not found this time
+										{
+											if (begin <= end)
+											{
+												break;
+											}
+
+											if (time >= currentFrame.timeStamp)
+											{
+												end = frame;
+											}
+											else
+											{
+												begin = frame;
+											}
+										}
+
+									}
+
+									return FoundFrames{0,0,0.f}; //first frame
+								};
+
+								auto lerp = [](glm::vec3 a, glm::vec3 b, float x) -> glm::vec3
+								{
+									return a * (1.f - x) + (b * x);
+								};
+								
+								struct BonePositions
+								{
+									glm::quat rotation = {0.f,0.f,0.f,1.f};
+									glm::vec3 translation = {0.f,0.f,0.f};
+									glm::vec3 scale = {1.f,1.f,1.f};
+								};
+
+								auto getBonePositions = [&](gl3d::Animation& animation, float time)
+								{
+									if (!animation.keyFramesRot[b].empty())
+									{
+										auto foundFrames = searchFrame(animation.keyFramesRot[b], time);
+
+										rotation = glm::slerp(
+											animation.keyFramesRot[b][foundFrames.id1].rotation,
+											animation.keyFramesRot[b][foundFrames.id2].rotation,
+											foundFrames.interpolate);
+									}
+									else
+									{
+										//no key frames for this bone...
+										//rotMat = glm::toMat4(joint.rotation);
+
+										rotation = joint.rotation;
+									}
+
+									if (!animation.keyFramesTrans[b].empty())
+									{
+
+										auto foundFrames = searchFrame(animation.keyFramesTrans[b], time);
+
+										translation = lerp(
+											animation.keyFramesTrans[b][foundFrames.id1].translation,
+											animation.keyFramesTrans[b][foundFrames.id2].translation,
+											foundFrames.interpolate);
+
+									}
+									else
+									{
+										//no key frames for this bone...
+										//transMat = glm::translate(joint.trans);
+
+										translation = joint.trans;
+									}
+
+									if (!animation.keyFramesScale[b].empty())
+									{
+
+										auto foundFrames = searchFrame(animation.keyFramesScale[b], time);
+
+										scale = lerp(
+											animation.keyFramesScale[b][foundFrames.id1].scale,
+											animation.keyFramesScale[b][foundFrames.id2].scale,
+											foundFrames.interpolate);
+
+									}
+									else
+									{
+										//no key frames for this bone...
+										//scaleMat = glm::scale(joint.scale);
+
+										scale = joint.scale;
+									}
+
+									BonePositions positions = {rotation, translation, scale};
+									return positions;
+								};
+
+								auto positions = getBonePositions(animation, entity.totalTimePassed);
+
+								if (entity.animationTransition.remainintgTime > 0)
+								{
+									//we now perform a new interpolation to the new state
+									auto positions2 
+										= getBonePositions(entity.animations[entity.animationTransition.ToIndex],
+										entity.animationTransition.ToTime);
+									
+									float interpolate =  
+										(entity.animationTransition.totalTime - entity.animationTransition.remainintgTime)/
+										entity.animationTransition.totalTime;
+
+									positions.rotation = glm::slerp(positions.rotation, positions2.rotation, interpolate);
+									positions.translation = lerp(positions.translation, positions2.translation, interpolate);
+									positions.scale = lerp(positions.scale, positions2.scale, interpolate);
+
+								}
+
+								glm::mat4 rotMat(1.f);
+								glm::mat4 transMat(1.f);
+								glm::mat4 scaleMat(1.f);
+								rotMat = glm::toMat4(positions.rotation);
+								transMat = glm::translate(positions.translation);
+								scaleMat = glm::scale(positions.scale);
+
+								skinningMatrixes[b] = transMat * rotMat * scaleMat;
+								//skinningMatrixes[b] = i.joints[b].localBindTransform; //no animations
+
+							}
 
 						}
 
-					}
+						//check if the transation finished
+						if (entity.animationTransition.remainintgTime > 0)
+						{
 
-					//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
-					//std::vector<glm::mat4> appliedSkinningMatrixes;
-					std::vector<glm::mat4> appliedSkinningMatrixes;
-					appliedSkinningMatrixes.clear();
-					appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+							entity.animationTransition.remainintgTime -= deltaTime; //here we can apply animation speed if wanted
 
-					for (auto r : animation.root)
-					{
-						applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
-							r, glm::mat4(1.f));
-					}
-					
+							if (entity.animationTransition.remainintgTime < 0)
+							{
+								entity.totalTimePassed = entity.animationTransition.ToTime;
+								entity.animationIndex = entity.animationTransition.ToIndex;
+
+								std::cout << entity.totalTimePassed << "\n";
+							}
+
+						}
+
+						//skinningMatrixes[24] = skinningMatrixes[24] * glm::rotate(glm::radians(90.f), glm::vec3{ 1,0,0 });
+						//std::vector<glm::mat4> appliedSkinningMatrixes;
+
+						//calculate per bone matrix to be send to the gpu
+						appliedSkinningMatrixes.clear();
+						appliedSkinningMatrixes.resize(entity.joints.size(), glm::mat4(1.f));
+						for (auto r : animation.root)
+						{
+							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
+								r, glm::mat4(1.f));
+						}
+
 					#pragma region save animation data to the gpu
-					glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
-					glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
-						&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
+						glBindBuffer(GL_SHADER_STORAGE_BUFFER, entity.appliedSkinningMatricesBuffer);
+						glBufferData(GL_SHADER_STORAGE_BUFFER, appliedSkinningMatrixes.size() * sizeof(glm::mat4),
+							&appliedSkinningMatrixes[0], GL_STREAM_DRAW);
 					#pragma endregion
+
+					}
 
 				}
 
@@ -38657,7 +38804,8 @@ namespace gl3d
 					else
 					{
 						//send animation data
-						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
+							i.appliedSkinningMatricesBuffer);
 						potentialAnimations = true;
 					}
 
@@ -38787,7 +38935,8 @@ namespace gl3d
 				else
 				{
 					//send animation data
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
+						i.appliedSkinningMatricesBuffer);
 				}
 
 				for (auto& j : i.models)
@@ -39329,8 +39478,35 @@ namespace gl3d
 			}
 		#pragma endregion
 
+
+
+		#pragma region setup bindless textures
+
+			for (int i=0; i< internal.materials.size(); i++)
+			{
+				auto &textures = internal.materialTexturesData[i];
+
+				auto& material = internal.materials[i];
+
+				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
+
+				if (albedoData >= 0)
+				{
+					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
+				}
+				else
+				{
+					material.albedoSampler = 0;
+				}
+
+			}
+
+		#pragma endregion
+
+
+
 		
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.gBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
@@ -39360,7 +39536,8 @@ namespace gl3d
 				else
 				{
 					//send animation data
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
+						i.appliedSkinningMatricesBuffer);
 					potentialAnimations = true;
 				}
 
@@ -39371,22 +39548,12 @@ namespace gl3d
 				{
 					glUniformMatrix4fv(internal.lightShader.prePass.u_transform, 1, GL_FALSE, &modelViewProjMat[0][0]);
 				
-					if (!potentialAnimations)
-					{
-						glUniform1i(internal.lightShader.prePass.u_hasAnimations, false);
-					}
-					else
-					{
-						//send animation data
-						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, i.appliedSkinningMatricesBuffer);
-					}
-				
 				}
 
 				for (auto& j : i.models)
 				{
 					//frustum culling
-					if (frustumCulling && potentialAnimations && !j.hasBones)
+					if (frustumCulling && !potentialAnimations && !j.hasBones)
 					{
 
 						if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
@@ -39461,6 +39628,7 @@ namespace gl3d
 
 			if (zPrePass)
 			{
+				//undo some settings set by zPrePass
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			}
 		}
@@ -39468,7 +39636,6 @@ namespace gl3d
 
 
 		#pragma region stuff to be bound for rendering the geometry
-
 
 		internal.lightShader.geometryPassShader.bind();
 		internal.lightShader.getSubroutines();
@@ -39488,7 +39655,8 @@ namespace gl3d
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
 			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
 				, &internal.materials[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, internal.lightShader.materialBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
+				internal.lightShader.materialBlockBuffer);
 		}
 
 		GLsizei n;
@@ -39533,18 +39701,17 @@ namespace gl3d
 			glUniformMatrix4fv(internal.lightShader.u_modelTransform, 1, GL_FALSE, &transformMat[0][0]);
 			glUniformMatrix4fv(internal.lightShader.u_motelViewTransform, 1, GL_FALSE, &(worldToViewMatrix * transformMat)[0][0]);
 			
-
 			#pragma region send animation data
 			if (entity.animate())
 			{
-				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, entity.appliedSkinningMatricesBuffer);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
+					entity.appliedSkinningMatricesBuffer);
 			}
 			else
 			{
 				glUniform1i(internal.lightShader.u_hasAnimations, false);
 			}
 			#pragma endregion
-
 
 			bool changed = 1;
 			for (auto& i : entity.models)
@@ -39754,6 +39921,7 @@ namespace gl3d
 
 			glUseProgram(internal.ssao.shader.id);
 
+			//todo lazyness
 			glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
 				&internal.ssao.ssaoShaderUniformBlockData);
@@ -39770,11 +39938,11 @@ namespace gl3d
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.positionViewSpace]);
+			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
 			glUniform1i(internal.ssao.u_gPosition, 0);
 
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
 			glUniform1i(internal.ssao.u_gNormal, 1);
 
 			glActiveTexture(GL_TEXTURE2);
@@ -39810,19 +39978,19 @@ namespace gl3d
 
 		glUniform1i(internal.lightShader.light_u_positions, 0);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.position]);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.position]);
 
 		glUniform1i(internal.lightShader.light_u_normals, 1);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.normal]);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
 
 		glUniform1i(internal.lightShader.light_u_albedo, 2);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.albedo]);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.albedo]);
 
 		glUniform1i(internal.lightShader.light_u_materials, 3);
 		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.material]);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.material]);
 
 
 		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 4);
@@ -39839,7 +40007,7 @@ namespace gl3d
 
 		glUniform1i(internal.lightShader.light_u_emmisive, 7);
 		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, gBuffer.buffers[gBuffer.emissive]);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.emissive]);
 
 		glUniform1i(internal.lightShader.light_u_cascades, 8);
 		glActiveTexture(GL_TEXTURE8);
@@ -39853,6 +40021,17 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
 
+		glUniform1i(internal.lightShader.light_u_materialIndex, 11);
+		glActiveTexture(GL_TEXTURE11);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.materialIndex]);
+
+		glUniform1i(internal.lightShader.light_u_textureUV, 12);
+		glActiveTexture(GL_TEXTURE12);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureUV]);
+
+		glUniform1i(internal.lightShader.light_u_textureDerivates, 13);
+		glActiveTexture(GL_TEXTURE13);
+		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureDerivates]);
 
 		glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
 
@@ -39863,7 +40042,8 @@ namespace gl3d
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.pointLights.size() * sizeof(internal::GpuPointLight)
 				, &internal.pointLights[0], GL_STREAM_DRAW);
 		
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, internal.lightShader.pointLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::PointLightsBlockBinding,
+				internal.lightShader.pointLightsBlockBuffer);
 		
 		}
 		glUniform1i(internal.lightShader.light_u_pointLightCount, internal.pointLights.size());
@@ -39874,7 +40054,8 @@ namespace gl3d
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.directionalLights.size() * sizeof(internal::GpuDirectionalLight)
 				, &internal.directionalLights[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, internal.lightShader.directionalLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::DirectionalLightsBlockBinding,
+				internal.lightShader.directionalLightsBlockBuffer);
 
 		}
 		glUniform1i(internal.lightShader.light_u_directionalLightCount, internal.directionalLights.size());
@@ -39885,7 +40066,8 @@ namespace gl3d
 
 			glBufferData(GL_SHADER_STORAGE_BUFFER, internal.spotLights.size() * sizeof(internal::GpuSpotLight),
 				internal.spotLights.data(), GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, internal.lightShader.spotLightsBlockBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::SpotLightsBlockBinding,
+				internal.lightShader.spotLightsBlockBuffer);
 		}
 		glUniform1i(internal.lightShader.light_u_spotLightCount, internal.spotLights.size());
 
@@ -39918,6 +40100,7 @@ namespace gl3d
 		glDisable(GL_BLEND);
 
 	#pragma endregion
+
 
 		#pragma region filter bloom data
 
@@ -40244,10 +40427,18 @@ namespace gl3d
 
 			if (antiAlias.usingFXAA)
 			{
+				//if adaptive rez is on mabe resample first and then fxaa
+				
 				antiAlias.shader.bind();
 				glUniform1i(antiAlias.u_texture, 0);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, adaptiveResolution.texture);
+
+				//send data.
+				//todo lazyness
+				glBindBuffer(GL_UNIFORM_BUFFER, antiAlias.fxaaDataBuffer);
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(antiAlias.fxaaData), &antiAlias.fxaaData);
+
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
 			else
@@ -40304,7 +40495,7 @@ namespace gl3d
 		
 
 		//gbuffer
-		gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
+		internal.gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
 
 		//ssao
 		internal.ssao.resize(internal.adaptiveW, internal.adaptiveH);
@@ -40460,11 +40651,11 @@ namespace gl3d
 		glBindBuffer(GL_UNIFORM_BUFFER, ssaoUniformBlockBuffer);
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(SsaoShaderUniformBlockData),
 			&ssaoShaderUniformBlockData, GL_DYNAMIC_DRAW);
-		glBindBufferBase(GL_UNIFORM_BUFFER, 2, ssaoUniformBlockBuffer);
+		glBindBufferBase(GL_UNIFORM_BUFFER, internal::SSAODataBlockBinding, ssaoUniformBlockBuffer);
 		
 		u_SSAODATA = glGetUniformBlockIndex(shader.id, "u_SSAODATA");
-		glUniformBlockBinding(shader.id, u_SSAODATA, 2);
-
+		glUniformBlockBinding(shader.id, u_SSAODATA, internal::SSAODataBlockBinding);
+		
 		//blur
 		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag");
 		
@@ -40688,7 +40879,6 @@ namespace gl3d
 	}
 
 	//todo use the max w h to create it
-	//todo check if textures are invalid
 	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(GpuTexture roughness, 
 		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO, int &RMA_loadedTextures)
 	{
@@ -40870,13 +41060,21 @@ namespace gl3d
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
 			"shaders/aa/fxaa.frag");
-
 		u_texture = getUniform(shader.id, "u_texture");
+
+		u_FXAAData = glGetUniformBlockIndex(shader.id, "u_FXAAData");
+		glGenBuffers(1, &fxaaDataBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, fxaaDataBuffer);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(fxaaData), &fxaaData, GL_DYNAMIC_DRAW);
+
+		glUniformBlockBinding(shader.id, u_FXAAData, internal::FXAADataBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, internal::FXAADataBlockBinding, fxaaDataBuffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 		noAAshader.loadShaderProgramFromFile("shaders/drawQuads.vert",
 			"shaders/aa/noaa.frag");
-
 		noAAu_texture = getUniform(noAAshader.id, "u_texture");
+
 
 
 	}
@@ -41040,7 +41238,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::GBuffer::create(int w, int h)
+	void Renderer3D::InternalStruct::GBuffer::create(int w, int h)
 	{
 
 		glGenFramebuffers(1, &gBuffer);
@@ -41101,9 +41299,34 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, buffers[emissive], 0);
 
+		glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, 1, 1, 0, GL_RED_INTEGER, GL_SHORT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, buffers[materialIndex], 0);
+
+		glBindTexture(GL_TEXTURE_2D, buffers[textureUV]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, 1, 1, 0, GL_RG, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, GL_TEXTURE_2D, buffers[textureUV], 0);
+
+		glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT8, GL_TEXTURE_2D, buffers[textureDerivates], 0);
 
 		unsigned int attachments[bufferCount] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
-			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
+			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4,
+			GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7,
+			GL_COLOR_ATTACHMENT8};
 		glDrawBuffers(bufferCount, attachments);
 
 		glGenRenderbuffers(1, &depthBuffer);
@@ -41121,7 +41344,7 @@ namespace gl3d
 		resize(w, h);
 	}
 
-	void Renderer3D::GBuffer::resize(int w, int h)
+	void Renderer3D::InternalStruct::GBuffer::resize(int w, int h)
 	{
 		if (currentDimensions.x != w || currentDimensions.y != h)
 		{
@@ -41142,6 +41365,15 @@ namespace gl3d
 
 			glBindTexture(GL_TEXTURE_2D, buffers[emissive]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+
+			glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, w, h, 0, GL_RED_INTEGER, GL_SHORT, NULL);
+
+			glBindTexture(GL_TEXTURE_2D, buffers[textureUV]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, w, h, 0, GL_RG, GL_FLOAT, NULL);
+
+			glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);

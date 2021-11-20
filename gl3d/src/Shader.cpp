@@ -344,7 +344,6 @@ namespace gl3d
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
 		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
-		
 
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
 		glShaderStorageBlockBinding(geometryPassShader.id, materialBlockLocation, internal::MaterialBlockBinding);
@@ -373,6 +372,12 @@ namespace gl3d
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
 		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
 		light_u_pointShadows = getUniform(lightingPassShader.id, "u_pointShadows");
+		light_u_materialIndex = getUniform(lightingPassShader.id, "u_materialIndex");
+		light_u_textureUV = getUniform(lightingPassShader.id, "u_textureUV");
+		light_u_textureDerivates = getUniform(lightingPassShader.id, "u_textureDerivates");
+
+		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material");
+		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);
 
 	#pragma region uniform buffer
 
