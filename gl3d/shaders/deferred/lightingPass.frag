@@ -24,7 +24,7 @@ uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
 uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
-uniform sampler2D u_textureDerivates;
+uniform isampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
 
@@ -40,10 +40,13 @@ struct MaterialStruct
 	//float metallic;
 	//float ao; //one means full light
 
-	layout(bindless_sampler) sampler2D albedoSampler;
-	layout(bindless_sampler) sampler2D rmaSampler;
-	layout(bindless_sampler) sampler2D emmissiveSampler;
-	vec2 notUsed;
+	//layout(bindless_sampler) sampler2D albedoSampler;
+	//layout(bindless_sampler) sampler2D rmaSampler;
+	//layout(bindless_sampler) sampler2D emmissiveSampler;
+	//vec2 notUsed;
+
+	uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
+	uvec4 secondBIndlessSamplers; // xy emmissiveSampler, zw notUsed
 
 };
 readonly layout(std140) buffer u_material
@@ -606,6 +609,21 @@ float linStep(float v, float low, float high)
 //
 //}
 
+vec4 fromuShortToFloat(ivec4 a)
+{
+	vec4 ret = a;
+
+	//[0 65536] -> [0 1]
+	ret /= 65536;
+
+	//[0 1] -> [0 4]
+	ret *= 4.f;
+
+	//[0 4] -> [-2 2]
+	ret -= 2.f;
+
+	return ret;
+}
 
 
 void main()
@@ -617,21 +635,27 @@ void main()
 	//vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
-	vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
-	vec4 albedoAlpha;
+	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
+	vec4 albedoAlpha = fromuShortToFloat(sampledDerivatesInt);
 	
+	vec4 sampledDerivates;
+
 	if(materialIndex == 0)
 	{
+		//no material, no alpha component that is important
 		albedoAlpha = vec4(0,0,0,0);
 	}else
 	{
-		//if(mat[materialIndex-1].albedoSampler == 0)
-		//{
-		//	albedoAlpha.rgb = vec3(1,1,1);
-		//}else
+		uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
+
+		if(albedoSampler.x == 0 && albedoSampler.y == 0)
 		{
+			albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
+		}else
+		{
+
 			albedoAlpha = 
-				textureGrad(mat[materialIndex-1].albedoSampler, sampledUV.xy, 
+				textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 					sampledDerivates.xy, sampledDerivates.zw).rgba;
 				//texture(mat[materialIndex-1].albedoSampler, v_texCoords);
 			//albedoAlpha2 = mat[materialIndex-1].kd;
@@ -900,7 +924,6 @@ void main()
 	//float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
 
 	//gama correction and hdr is done in the post process step
-
 
 	a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
 	a_outBloom = vec4(emissive.rgb, 1);

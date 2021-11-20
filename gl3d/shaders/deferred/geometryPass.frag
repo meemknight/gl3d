@@ -190,6 +190,19 @@ subroutine (GetMaterialMapped) vec3 materialRMA()
 
 subroutine uniform GetMaterialMapped u_getMaterialMapped;
 
+int fromFloatTouShort(float a)
+{
+	//[-2 2] -> [0 4]
+	a += 2.f;
+
+	//[0 4] -> [0 1]
+	a /= 4.f;
+
+	//[0 1] -> [0 65536]
+	a *= 65536;
+
+	return int(a);
+}
 
 
 void main()
