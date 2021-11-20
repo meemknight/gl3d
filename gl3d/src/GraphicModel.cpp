@@ -873,6 +873,7 @@ namespace gl3d
 	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox)
 	{
 		skyBox = {};
+		constexpr int skyBoxSize = 128;
 
 		//render into the cubemap
 		{
@@ -880,13 +881,12 @@ namespace gl3d
 			glGenFramebuffers(1, &captureFBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 
-
 			glGenTextures(1, &skyBox.texture);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 			for (unsigned int i = 0; i < 6; ++i)
 			{
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, //todo 16 is probably too much
-					512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_R11F_G11F_B10F,
+					skyBoxSize, skyBoxSize, 0, GL_RGB, GL_FLOAT, nullptr);
 			}
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -903,7 +903,7 @@ namespace gl3d
 				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
 				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
 
-				glViewport(0, 0, 512, 512);
+				glViewport(0, 0, skyBoxSize, skyBoxSize);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 				glBindVertexArray(vertexArray);

@@ -11,20 +11,18 @@ layout(location = 1) out vec4 a_outBloom;
 noperspective in vec2 v_texCoords;
 
 
-uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
-uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
-uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
 uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
 uniform isampler2D u_textureDerivates;
+//uniform sampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
 
@@ -46,7 +44,9 @@ struct MaterialStruct
 	//vec2 notUsed;
 
 	uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
-	uvec4 secondBIndlessSamplers; // xy emmissiveSampler, zw notUsed
+	uvec2 secondBIndlessSamplers; // xy emmissiveSampler
+	int rmaLoaded;
+	int notUsed;
 
 };
 readonly layout(std140) buffer u_material
@@ -632,51 +632,110 @@ void main()
 		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
 
 	vec3 normal = texture(u_normals, v_texCoords).xyz;
-	//vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
-	vec4 albedoAlpha = fromuShortToFloat(sampledDerivatesInt);
+	vec4 sampledDerivates = fromuShortToFloat(sampledDerivatesInt);
+	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+
+	vec4 albedoAlpha = vec4(0,0,0,0);
+	vec3 emissive = vec3(0,0,0);
 	
-	vec4 sampledDerivates;
+	vec3 material;
+
+	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
 
 	if(materialIndex == 0)
 	{
 		//no material, no alpha component that is important
-		albedoAlpha = vec4(0,0,0,0);
-	}else
+		//discard ??
+		//discard;
+		a_outColor = vec4(0,0,0,0);
+		a_outBloom = vec4(0,0,0,1);
+		return;
+		//albedoAlpha = vec4(0,0,0,0);
+	}
+
 	{
 		uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
-
 		if(albedoSampler.x == 0 && albedoSampler.y == 0)
 		{
 			albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
 		}else
 		{
-
 			albedoAlpha = 
 				textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 					sampledDerivates.xy, sampledDerivates.zw).rgba;
-				//texture(mat[materialIndex-1].albedoSampler, v_texCoords);
-			//albedoAlpha2 = mat[materialIndex-1].kd;
 		}
 		albedoAlpha.a = 1;
 		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+
+
+		uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
+		if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
+		{
+			emissive.rgb = albedoAlpha.rgb;
+		}else
+		{
+			emissive = 
+				textureGrad(sampler2D(emmisiveSampler), sampledUV.xy, 
+					sampledDerivates.xy, sampledDerivates.zw).rgb;
+		}
+
+		emissive.rgb *= mat[materialIndex-1].rma.a;
+		emissive = pow(emissive , vec3(2.2)).rgb; //gamma corection
+		
+		uvec2 rmaSampler = mat[materialIndex-1].firstBIndlessSamplers.zw;
+		if(rmaSampler.x == 0 && rmaSampler.y == 0 && mat[materialIndex-1].rmaLoaded != 0)
+		{
+			material.r = mat[materialIndex-1].rma.r;
+			material.g = mat[materialIndex-1].rma.g;
+			material.b = mat[materialIndex-1].rma.b;
+		}
+		else
+		{
+			vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, 
+					sampledDerivates.xy, sampledDerivates.zw).rgb;
+
+			int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x8;
+			int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
+			int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+
+			if(roughnessPrezent != 0)
+			{
+				material.r = materialData.r;
+			}else
+			{
+				material.r = mat[materialIndex-1].rma.r;
+			}
+
+			if(metallicPrezent != 0)
+			{
+				material.g = materialData.g;
+			}else
+			{
+				material.g = mat[materialIndex-1].rma.g;
+			}
+
+			if(ambientPrezent != 0)
+			{
+				material.b = materialData.b;
+			}else
+			{
+				material.b = mat[materialIndex-1].rma.b;
+			}
+
+		}
+
 	}
 	
 
-	
-	vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
-
 	vec3 albedo = albedoAlpha.rgb;
-
 	albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
-	emissive  = pow(emissive , vec3(2.2)).rgb; //gamma corection
 
-
-	vec3 material = texture(u_materials, v_texCoords).xyz;
-
-
+	float roughness = clamp(material.r, 0.09, 0.99);
+	float metallic = clamp(material.g, 0.0, 0.98);
+	float ambientOcclution = material.b;
 
 	vec3 viewDir = normalize(u_eyePosition - pos);
 
@@ -687,9 +746,7 @@ void main()
 
 	vec3 Lo = vec3(0,0,0); //this is the accumulated light
 
-	float roughness = clamp(material.r, 0.09, 0.99);
-	float metallic = clamp(material.g, 0.0, 0.98);
-	float ambientOcclution = material.b;
+	
 
 	vec3 F0 = vec3(0.04); 
 	F0 = mix(F0, albedo.rgb, vec3(metallic));

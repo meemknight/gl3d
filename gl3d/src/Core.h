@@ -79,7 +79,8 @@ namespace gl3d
 		GLuint64 albedoSampler = 0;
 		GLuint64 rmaSampler = 0;
 		GLuint64 emmissiveSampler = 0;
-		glm::vec2 notUsed = {};
+		int rmaLoaded = {};
+		int notUsed;
 
 		MaterialValues setDefaultMaterial()
 		{

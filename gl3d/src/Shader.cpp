@@ -339,10 +339,8 @@ namespace gl3d
 		//eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		//skyBoxSamplerLocation = getUniform(textureSamplerLocation.id, "u_skybox");
 		//gamaLocation = getUniform(shader.id, "u_gama");
-		RMASamplerLocation = getUniform(geometryPassShader.id, "u_RMASampler");
 		//pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
-		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
@@ -357,18 +355,15 @@ namespace gl3d
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
 		lightingPassShader.bind();
 
-		light_u_albedo = getUniform(lightingPassShader.id, "u_albedo");
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals");
 		light_u_skyboxFiltered = getUniform(lightingPassShader.id, "u_skyboxFiltered");
 		light_u_positions = getUniform(lightingPassShader.id, "u_positions");
-		light_u_materials = getUniform(lightingPassShader.id, "u_materials");
 		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition");
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_directionalLightCount = getUniform(lightingPassShader.id, "u_directionalLightCount");
 		light_u_spotLightCount = getUniform(lightingPassShader.id, "u_spotLightCount");
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
-		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
 		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
 		light_u_pointShadows = getUniform(lightingPassShader.id, "u_pointShadows");
@@ -454,7 +449,6 @@ namespace gl3d
 		normalSubroutine_normalMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
-		
 		//
 		albedoSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"sampledAlbedo");
@@ -462,43 +456,12 @@ namespace gl3d
 		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"notSampledAlbedo");
 
-		//
-		emissiveSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"sampledEmmision");
-
-		emissiveSubroutine_notSampled= getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"notSampledEmmision");
-
-
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"getNormalMapFunc");
 
-		materialSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getMaterialMapped");
-
 		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getAlbedo");
-
-		getEmmisiveSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getEmmisiveFunc");
-
-		const char *materiaSubroutineFunctions[8] = { 
-			"materialNone",
-			"materialR",
-			"materialM",
-			"materialA",
-			"materialRM",
-			"materialRA",
-			"materialMA",
-			"materialRMA" };
-
-		for(int i=0; i<8; i++)
-		{
-			materialSubroutine_functions[i] = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				materiaSubroutineFunctions[i]);
-		}
-
 
 	}
 

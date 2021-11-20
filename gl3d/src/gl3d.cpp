@@ -185,7 +185,7 @@ namespace gl3d
 				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
 				if (textureData.pbrTexture.texture.id_ != 0)
 				{
-					textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+					textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 				}
 
 			}
@@ -210,7 +210,7 @@ namespace gl3d
 				GpuTexture tex;
 				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
 				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
-				textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+				textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 			}
 			else
@@ -248,7 +248,7 @@ namespace gl3d
 							t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
 							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
 
-							textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+							textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 							stbi_image_free(data);
 						}
@@ -347,20 +347,24 @@ namespace gl3d
 					int h = max(h1, h2, h3);
 
 					//calculate which function to use
-					if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
-					else
-					if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
-					else
-					if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
-					else
-					if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
-					else
-					if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
-					else
-					if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
-					else
-					if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
-					else { textureData.pbrTexture.RMA_loadedTextures = 0; }
+					//if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
+					//else
+					//if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
+					//else
+					//if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
+					//else
+					//if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
+					//else
+					//if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
+					//else
+					//if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
+					//else
+					//if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
+					//else { textureData.pbrTexture.RMA_loadedTextures = 0; }
+					textureData.pbrTexture.RMA_loadedTextures = 0;
+					if (data1) { textureData.pbrTexture.RMA_loadedTextures |= 0b100; }
+					if (data2) { textureData.pbrTexture.RMA_loadedTextures |= 0b010; }
+					if (data3) { textureData.pbrTexture.RMA_loadedTextures |= 0b001; }
 
 					if (textureData.pbrTexture.RMA_loadedTextures)
 					{
@@ -3879,7 +3883,6 @@ namespace gl3d
 				auto& material = internal.materials[i];
 
 				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
-
 				if (albedoData >= 0)
 				{
 					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
@@ -3888,14 +3891,34 @@ namespace gl3d
 				{
 					material.albedoSampler = 0;
 				}
+				
+				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
+				if (emmisiveData >= 0)
+				{
+					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
+				}
+				else
+				{
+					material.emmissiveSampler = 0;
+				}
+
+				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
+				if (materialData >= 0)
+				{
+					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
+					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
+				}
+				else
+				{
+					material.rmaSampler = 0;
+					material.rmaLoaded = 0;
+				}
 
 			}
 
 		#pragma endregion
 
 
-
-		
 		glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
@@ -4024,7 +4047,6 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-
 		#pragma region stuff to be bound for rendering the geometry
 
 		internal.lightShader.geometryPassShader.bind();
@@ -4035,9 +4057,6 @@ namespace gl3d
 		glUniform1i(internal.lightShader.textureSamplerLocation, 0);
 		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
-		glUniform1i(internal.lightShader.RMASamplerLocation, 3);
-		glUniform1i(internal.lightShader.u_emissiveTexture, 4);
-
 
 		//material buffer
 		if (internal.materials.size())
@@ -4166,37 +4185,6 @@ namespace gl3d
 					glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 				}
 
-				int emissiveTextureLoaded = 0;
-				GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
-				if (emissiveTextureData != nullptr && emissiveTextureData->id != 0)
-				{
-					emissiveTextureLoaded = 1;
-					glActiveTexture(GL_TEXTURE4);
-					glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
-				}
-
-
-				if (emissiveTextureLoaded)
-				{
-					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] !=
-						internal.lightShader.emissiveSubroutine_sampled)
-					{
-						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
-							internal.lightShader.emissiveSubroutine_sampled;
-						changed = 1;
-					}
-				}
-				else
-				{
-					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] != 
-						internal.lightShader.emissiveSubroutine_notSampled)
-					{
-						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
-							internal.lightShader.emissiveSubroutine_notSampled;
-						changed = 1;
-					}
-				}
-
 				if (normalLoaded && internal.lightShader.normalMap)
 				{
 					if (indices[internal.lightShader.normalSubroutineLocation] !=
@@ -4217,31 +4205,6 @@ namespace gl3d
 						changed = 1;
 					}
 				}
-
-				if (rmaLoaded)
-				{
-
-					if (indices[internal.lightShader.materialSubroutineLocation] != 
-						internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures])
-					{
-						indices[internal.lightShader.materialSubroutineLocation] = 
-							internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures];
-						changed = 1;
-					}
-
-				}
-				else
-				{
-					if (indices[internal.lightShader.materialSubroutineLocation] != 
-						internal.lightShader.materialSubroutine_functions[0])
-					{
-						indices[internal.lightShader.materialSubroutineLocation] = 
-							internal.lightShader.materialSubroutine_functions[0];
-						changed = 1;
-					}
-
-				}
-
 
 				if (albedoLoaded != 0)
 				{
@@ -4374,53 +4337,40 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
 
-		//glUniform1i(internal.lightShader.light_u_albedo, 2);
-		//glActiveTexture(GL_TEXTURE2);
-		//glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.albedo]);
-
-		glUniform1i(internal.lightShader.light_u_materials, 3);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.material]);
-
-
-		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 4);
-		glActiveTexture(GL_TEXTURE4);
+		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 2);
+		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.preFilteredMap);
 
-		glUniform1i(internal.lightShader.light_u_skyboxIradiance, 5);
-		glActiveTexture(GL_TEXTURE5);
+		glUniform1i(internal.lightShader.light_u_skyboxIradiance, 3);
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
 
-		glUniform1i(internal.lightShader.light_u_brdfTexture, 6);
-		glActiveTexture(GL_TEXTURE6);
+		glUniform1i(internal.lightShader.light_u_brdfTexture, 4);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, internal.lightShader.brdfTexture.id);
 
-		glUniform1i(internal.lightShader.light_u_emmisive, 7);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.emissive]);
-
-		glUniform1i(internal.lightShader.light_u_cascades, 8);
-		glActiveTexture(GL_TEXTURE8);
+		glUniform1i(internal.lightShader.light_u_cascades, 5);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, directionalShadows.cascadesTexture);
 
-		glUniform1i(internal.lightShader.light_u_spotShadows, 9);
-		glActiveTexture(GL_TEXTURE9);
+		glUniform1i(internal.lightShader.light_u_spotShadows, 6);
+		glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, spotShadows.shadowTextures);
 
-		glUniform1i(internal.lightShader.light_u_pointShadows, 10);
-		glActiveTexture(GL_TEXTURE10);
+		glUniform1i(internal.lightShader.light_u_pointShadows, 7);
+		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
 
-		glUniform1i(internal.lightShader.light_u_materialIndex, 11);
-		glActiveTexture(GL_TEXTURE11);
+		glUniform1i(internal.lightShader.light_u_materialIndex, 8);
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.materialIndex]);
 
-		glUniform1i(internal.lightShader.light_u_textureUV, 12);
-		glActiveTexture(GL_TEXTURE12);
+		glUniform1i(internal.lightShader.light_u_textureUV, 9);
+		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureUV]);
 
-		glUniform1i(internal.lightShader.light_u_textureDerivates, 13);
-		glActiveTexture(GL_TEXTURE13);
+		glUniform1i(internal.lightShader.light_u_textureDerivates, 10);
+		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureDerivates]);
 
 		glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -5277,20 +5227,24 @@ namespace gl3d
 		bool ambientLoaded = (ambientOcclusion.id != 0);
 
 		RMA_loadedTextures = 0;
-		if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
-		else
-		if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
-		else
-		if (roughnessLoaded && ambientLoaded) { RMA_loadedTextures = 5; }
-		else
-		if (roughnessLoaded && metallicLoaded) { RMA_loadedTextures = 4; }
-		else
-		if (ambientLoaded) { RMA_loadedTextures = 3; }
-		else
-		if (metallicLoaded) { RMA_loadedTextures = 2; }
-		else
-		if (roughnessLoaded) { RMA_loadedTextures = 1; }
-		else { RMA_loadedTextures = 0; }
+		//if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
+		//else
+		//if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
+		//else
+		//if (roughnessLoaded && ambientLoaded) { RMA_loadedTextures = 5; }
+		//else
+		//if (roughnessLoaded && metallicLoaded) { RMA_loadedTextures = 4; }
+		//else
+		//if (ambientLoaded) { RMA_loadedTextures = 3; }
+		//else
+		//if (metallicLoaded) { RMA_loadedTextures = 2; }
+		//else
+		//if (roughnessLoaded) { RMA_loadedTextures = 1; }
+		//else { RMA_loadedTextures = 0; }
+
+		if (roughnessLoaded) { RMA_loadedTextures |= 0b100; }
+		if (metallicLoaded) { RMA_loadedTextures |= 0b010; }
+		if (ambientLoaded) { RMA_loadedTextures |= 0b001; }
 
 		if (RMA_loadedTextures == 0) { return 0; }
 
@@ -5657,21 +5611,14 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, buffers[normal], 0);
 
-		//glBindTexture(GL_TEXTURE_2D, buffers[albedo]);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, buffers[albedo], 0);
-
-		glBindTexture(GL_TEXTURE_2D, buffers[material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, 1, 1, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, buffers[material], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, buffers[textureDerivates], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -5679,15 +5626,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, buffers[positionViewSpace], 0);
-
-		glBindTexture(GL_TEXTURE_2D, buffers[emissive]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, buffers[emissive], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, buffers[positionViewSpace], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, 1, 1, 0, GL_RED_INTEGER, GL_SHORT, NULL);
@@ -5695,7 +5634,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, buffers[materialIndex], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, buffers[materialIndex], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[textureUV]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, 1, 1, 0, GL_RG, GL_FLOAT, NULL);
@@ -5703,20 +5642,12 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, GL_TEXTURE_2D, buffers[textureUV], 0);
-
-		glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, 1, 1, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, buffers[textureDerivates], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, buffers[textureUV], 0);
 
 
 		unsigned int attachments[bufferCount] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
 			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4,
-			GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7};
+			GL_COLOR_ATTACHMENT5};
 		glDrawBuffers(bufferCount, attachments);
 
 		glGenRenderbuffers(1, &depthBuffer);
@@ -5744,17 +5675,8 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, buffers[normal]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-			//glBindTexture(GL_TEXTURE_2D, buffers[albedo]);
-			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-
-			glBindTexture(GL_TEXTURE_2D, buffers[material]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-
 			glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
-
-			glBindTexture(GL_TEXTURE_2D, buffers[emissive]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, w, h, 0, GL_RED_INTEGER, GL_SHORT, NULL);
@@ -5764,6 +5686,7 @@ namespace gl3d
 
 			glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, w, h, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
