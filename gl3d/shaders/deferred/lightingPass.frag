@@ -11,7 +11,7 @@ layout(location = 1) out vec4 a_outBloom;
 noperspective in vec2 v_texCoords;
 
 
-uniform sampler2D u_normals;
+uniform isampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
@@ -289,86 +289,118 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 	float shadow = 0.0;
 
 	bool fewSamples = false;
-	int kernelSize = 5;
+	int kernelHalf = 1;
+	int kernelSize = kernelHalf*2 + 1;
 	int kernelSize2 = kernelSize*kernelSize;
-	int kernelHalf = kernelSize/2;
 
-	float shadowValueAtCentre = 0;
-
-	//optimization
+	//standard implementation
 	if(true)
 	{
-		float offsetSize = kernelSize/2;
-		const int OFFSETS = 4;
-		vec2 offsets[OFFSETS] = 
-		{
-			vec2(offsetSize,offsetSize),
-			vec2(-offsetSize,offsetSize),
-			vec2(offsetSize,-offsetSize),
-			vec2(-offsetSize,-offsetSize),
-		};
+		float shadowValueAtCentre = 0;
 
-		fewSamples = true;
-		
-		float s1 = testShadowValue(shadowMap, projCoords.xy, 
-					currentDepth, bias, index); 
-		shadowValueAtCentre = s1;
-
-		for(int i=0;i<OFFSETS; i++)
+		//optimization
+		if(true)
 		{
-			float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, 
-					currentDepth, bias, index); 
-			if(s1 != s2)
+			float offsetSize = kernelSize/2;
+			const int OFFSETS = 4;
+			vec2 offsets[OFFSETS] = 
 			{
-				fewSamples = false;
-				break;
-			}	
-			s1 = s2;
+				vec2(offsetSize,offsetSize),
+				vec2(-offsetSize,offsetSize),
+				vec2(offsetSize,-offsetSize),
+				vec2(-offsetSize,-offsetSize),
+			};
+
+			fewSamples = true;
+			
+			float s1 = testShadowValue(shadowMap, projCoords.xy, 
+						currentDepth, bias, index); 
+			shadowValueAtCentre = s1;
+
+			for(int i=0;i<OFFSETS; i++)
+			{
+				float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, 
+						currentDepth, bias, index); 
+				if(s1 != s2)
+				{
+					fewSamples = false;
+					break;
+				}	
+				s1 = s2;
+			}
 		}
-	}
 
 
-	if(fewSamples)
-	{
+		if(fewSamples)
+		{
+			
+			shadow = shadowValueAtCentre;
+
+		}else
+		{
+
+			for(int y = -kernelHalf; y <= kernelHalf; ++y)
+			{
+				for(int x = -kernelHalf; x <= kernelHalf; ++x)
+				{
+					vec2 offset = vec2(x, y);
+
+					if(false)
+					{
+						int randomOffset1 = (x*kernelSize) + y;
+						int randomOffset2 = randomOffset1 + kernelSize2;
+						offset += vec2(randomNumbers[randomOffset1, randomOffset2]);
+					}
+					
+					if(false)
+					{
+						float u = (offset.x + kernelHalf)/float(kernelSize-1);
+						float v = (offset.y + kernelHalf)/float(kernelSize-1);
+						offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
+						offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
+					}
+
+					vec2 finalOffset = offset * texelSize;
+					//float newDepth = sqrt(currentDepth*currentDepth + finalOffset.x*finalOffset.x + finalOffset.y * finalOffset.y);
+
+					float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+						currentDepth, bias, index); 
+					
+					//float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
+					//	texelSize, currentDepth, bias); 
+					
+					shadow += s;
+				}    
+			}
+			shadow /= kernelSize2;
 		
-		shadow = shadowValueAtCentre;
-
+		}
 	}else
 	{
-
-		for(int y = -kernelHalf; y <= kernelHalf; ++y)
-		{
-			for(int x = -kernelHalf; x <= kernelHalf; ++x)
-			{
-				vec2 offset = vec2(x, y);
-
-				if(false)
-				{
-					int randomOffset1 = (x*kernelSize) + y;
-					int randomOffset2 = randomOffset1 + kernelSize2;
-					offset += vec2(randomNumbers[randomOffset1, randomOffset2]);
-				}
-				
-				if(false)
-				{
-					float u = (offset.x + kernelHalf+1)/float(kernelSize);
-					float v = (offset.x + kernelHalf+1)/float(kernelSize);
-					offset.x = sqrt(v) * cos(2*PI * u)* kernelSize / 2.f;
-					offset.y = sqrt(v) * sin(2*PI * u)* kernelSize / 2.f;
-				}
-
-				float s = testShadowValue(shadowMap, projCoords.xy + offset * texelSize, 
-					currentDepth, bias, index); 
-				
-				//float s = sampleShadowLinear(shadowMap, projCoords.xy + vec2(x, y) * offset,
-				//	texelSize, currentDepth, bias); 
-				
-				shadow += s;
-			}    
-		}
-		shadow /= kernelSize2;
 	
+		for(int y = 0; y < kernelSize; ++y)
+			{
+				for(int x = 0; x < kernelSize; ++x)
+				{
+					float u = x/float(kernelSize);
+					float v = y/float(kernelSize);
+					
+					vec2 offset;
+					offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
+					offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
+
+					vec2 finalOffset = offset * texelSize * 2;
+					//float newDepth = sqrt(currentDepth*currentDepth + finalOffset.x*finalOffset.x + finalOffset.y * finalOffset.y);
+
+					float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+						currentDepth, bias, index); 
+					shadow += s;
+				}
+			}
+
+		shadow /= kernelSize2;
 	}
+
 
 	
 	return clamp(shadow, 0, 1);
@@ -567,49 +599,8 @@ float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 
 }
 
-float linStep(float v, float low, float high)
-{
-	return clamp((v-low) / (high-low), 0.0, 1.0);
 
-};
-
-//https://www.youtube.com/watch?v=LGFDifcbsoQ&ab_channel=thebennybox
-//float varianceShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
-//{
-//	//transform to depth buffer coords
-//	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-//	projCoords = projCoords * 0.5 + 0.5;
-//
-//	// keep the shadow at 1.0 when outside or close to the far_plane region of the light's frustum.
-//	if(projCoords.z > 0.99)
-//		return 1.f;
-//	if(projCoords.z < 0)
-//		return 1.f;
-//	if(projCoords.x < 0 || projCoords.y < 0 || projCoords.x > 1 || projCoords.y > 1)
-//		return 1.f;
-//
-//
-//	vec2 sampled = texture(u_directionalShadow, projCoords.xy).rg; 
-//	float closestDepth = sampled.r; 
-//	float closestDepthSquared = sampled.g; 
-//	float currentDepth = projCoords.z;
-//
-//
-//	float bias = max(0.3 * (1.0 - dot(normal, -lightDir)), 0.09);
-//	//float bias = 0.0;
-//	
-//	//float shadow = step(currentDepth-bias, closestDepth);       
-//	float variance = max(closestDepthSquared - closestDepth*closestDepth, 0.00002);
-//
-//	float d = currentDepth - closestDepth; //distanceFromMean
-//	float pMax = linStep(variance / (variance+ d*d), bias, 1); 
-//
-//
-//	return min(max(d, pMax), 1.0);
-//
-//}
-
-vec4 fromuShortToFloat(ivec4 a)
+vec4 fromuShortToFloat2(ivec4 a)
 {
 	vec4 ret = a;
 
@@ -625,17 +616,34 @@ vec4 fromuShortToFloat(ivec4 a)
 	return ret;
 }
 
+vec3 fromuShortToFloat(ivec3 a)
+{
+	vec3 ret = a;
+
+	//[0 65536] -> [0 1]
+	ret /= 65536;
+
+	//[0 1] -> [0 2]
+	ret *= 2.f;
+
+	//[0 2] -> [-1 1]
+	ret -= 1.f;
+
+	return ret;
+}
+
+
 
 void main()
 {
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
 		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
 
-	vec3 normal = texture(u_normals, v_texCoords).xyz;
+	vec3 normal = normalize(fromuShortToFloat(texture(u_normals, v_texCoords).xyz));
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
-	vec4 sampledDerivates = fromuShortToFloat(sampledDerivatesInt);
+	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
 	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
 
 	vec4 albedoAlpha = vec4(0,0,0,0);

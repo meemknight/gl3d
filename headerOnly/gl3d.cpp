@@ -31318,6 +31318,39 @@ namespace gl3d
 
 	}
 
+	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alphaData, int chanels, int quality)
+	{
+		alphaData = 0;
+		if (chanels == 4)
+		{
+			for (int i = 0; i < w * h; i++)
+			{
+				if (((char*)data)[4 * i + 3] != UCHAR_MAX)
+				{
+					alphaData = 1;
+					break;
+				}
+			}
+
+			if (!alphaData)
+			{
+				//cut the last channel
+				int writePos = 0;
+				int readPos = 0;
+				for (int i = 0; i < w * h; i++)
+				{
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					readPos++;//skip alpha
+				}
+				chanels = 3;
+			}
+		}
+
+		loadTextureFromMemory(data, w, h, chanels, quality);
+
+	}
 	
 
 	int GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int quality, int channels)
@@ -31337,7 +31370,7 @@ namespace gl3d
 		else
 		{
 			//first look if there is alpha data in the file or if it is wanted at all
-			if(nrChannels != 4 && channels != 4) 
+			if(nrChannels != 4 || channels != 4) 
 			{
 				alphaData = 0;
 			}
@@ -32103,14 +32136,14 @@ tmpvar_7 = (((u_color1 +
 ((2.0 * u_g) * tmpvar_6)
 ), 1.5)) * u_color2)
 ) + (
-(((1.0 - abs(tmpvar_2.y)) * u_color2) * 4.0)
+((1.0 - abs(tmpvar_2.y)) * u_color2)
 * 
-pow (tmpvar_4, 12.0)
-)) + ((
 pow (tmpvar_4, 16.0)
-* u_color2) * 4.0));
-if ((tmpvar_3 < 0.01)) {
-fragColor = vec3(0.1, 0.9, 0.1);
+)) + (pow (tmpvar_4, 16.0) * u_color2));
+if ((tmpvar_3 < 0.02)) {
+float tmpvar_8;
+tmpvar_8 = min (max ((tmpvar_3 / 0.02), 0.0), 1.0);
+fragColor = mix (vec3(0.1, 0.2, 0.1), tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));
 } else {
 fragColor = tmpvar_7;
 };
@@ -32581,29 +32614,26 @@ discard;
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
 noperspective in vec2 v_texCoords;
-uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
-uniform sampler2D u_materials;
 uniform sampler2D u_brdfTexture;
-uniform sampler2D u_emmisive;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
 uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
-uniform sampler2D u_textureDerivates;
+uniform isampler2D u_textureDerivates;
 uniform vec3 u_eyePosition;
 struct MaterialStruct
 {
 vec4 kd;
 vec4 rma; //last component emmisive
-layout(bindless_sampler) sampler2D albedoSampler;
-layout(bindless_sampler) sampler2D rmaSampler;
-layout(bindless_sampler) sampler2D emmissiveSampler;
-vec2 notUsed;
+uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
+uvec2 secondBIndlessSamplers; // xy emmissiveSampler
+int rmaLoaded;
+int notUsed;
 };
 readonly layout(std140) buffer u_material
 {
@@ -32941,36 +32971,101 @@ float linStep(float v, float low, float high)
 {
 return clamp((v-low) / (high-low), 0.0, 1.0);
 };
+vec4 fromuShortToFloat(ivec4 a)
+{
+vec4 ret = a;
+ret /= 65536;
+ret *= 4.f;
+ret -= 2.f;
+return ret;
+}
 void main()
 {
 vec3 pos = texture(u_positions, v_texCoords).xyz;
 vec3 normal = texture(u_normals, v_texCoords).xyz;
-vec4 albedoAlpha = texture(u_albedo, v_texCoords).rgba;
 int materialIndex = texture(u_materialIndex, v_texCoords).r;
 vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
-vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
-vec4 albedoAlpha2;
+ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
+vec4 sampledDerivates = fromuShortToFloat(sampledDerivatesInt);
+vec4 albedoAlpha = vec4(0,0,0,0);
+vec3 emissive = vec3(0,0,0);
+vec3 material;
 if(materialIndex == 0)
 {
-albedoAlpha2 = vec4(0,0,0,0);
+a_outColor = vec4(0,0,0,0);
+a_outBloom = vec4(0,0,0,1);
+return;
+}
+{
+uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
+if(albedoSampler.x == 0 && albedoSampler.y == 0)
+{
+albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
 }else
 {
-albedoAlpha2 = 
-textureGrad(mat[materialIndex-1].albedoSampler, sampledUV.xy, 
+albedoAlpha = 
+textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 sampledDerivates.xy, sampledDerivates.zw).rgba;
-albedoAlpha2.a = 1;
 }
-vec3 emissive = texture(u_emmisive, v_texCoords).xyz;
+albedoAlpha.a = 1;
+albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
+if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
+{
+emissive.rgb = albedoAlpha.rgb;
+}else
+{
+emissive = 
+textureGrad(sampler2D(emmisiveSampler), sampledUV.xy, 
+sampledDerivates.xy, sampledDerivates.zw).rgb;
+}
+emissive.rgb *= mat[materialIndex-1].rma.a;
+emissive = pow(emissive , vec3(2.2)).rgb; //gamma corection
+uvec2 rmaSampler = mat[materialIndex-1].firstBIndlessSamplers.zw;
+if(rmaSampler.x == 0 && rmaSampler.y == 0 && mat[materialIndex-1].rmaLoaded != 0)
+{
+material.r = mat[materialIndex-1].rma.r;
+material.g = mat[materialIndex-1].rma.g;
+material.b = mat[materialIndex-1].rma.b;
+}
+else
+{
+vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, 
+sampledDerivates.xy, sampledDerivates.zw).rgb;
+int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x8;
+int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
+int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+if(roughnessPrezent != 0)
+{
+material.r = materialData.r;
+}else
+{
+material.r = mat[materialIndex-1].rma.r;
+}
+if(metallicPrezent != 0)
+{
+material.g = materialData.g;
+}else
+{
+material.g = mat[materialIndex-1].rma.g;
+}
+if(ambientPrezent != 0)
+{
+material.b = materialData.b;
+}else
+{
+material.b = mat[materialIndex-1].rma.b;
+}
+}
+}
 vec3 albedo = albedoAlpha.rgb;
 albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
-emissive  = pow(emissive , vec3(2.2)).rgb; //gamma corection
-vec3 material = texture(u_materials, v_texCoords).xyz;
-vec3 viewDir = normalize(u_eyePosition - pos);
-vec3 R = reflect(-viewDir, normal);	//reflected vector
-vec3 Lo = vec3(0,0,0); //this is the accumulated light
 float roughness = clamp(material.r, 0.09, 0.99);
 float metallic = clamp(material.g, 0.0, 0.98);
 float ambientOcclution = material.b;
+vec3 viewDir = normalize(u_eyePosition - pos);
+vec3 R = reflect(-viewDir, normal);	//reflected vector
+vec3 Lo = vec3(0,0,0); //this is the accumulated light
 vec3 F0 = vec3(0.04); 
 F0 = mix(F0, albedo.rgb, vec3(metallic));
 for(int i=0; i<u_pointLightCount;i++)
@@ -33112,9 +33207,8 @@ vec3 hdrCorrectedColor = color;
 hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha2.a);
+a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
 a_outBloom = vec4(emissive.rgb, 1);
-a_outColor.rgb = vec3(albedoAlpha2);
 })"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 430
@@ -33170,20 +33264,16 @@ v_texCoord = a_texCoord;
 #extension GL_ARB_bindless_texture: require
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
-layout(location = 3) out vec3 a_material;
-layout(location = 4) out vec3 a_posViewSpace;
-layout(location = 5) out vec3 a_emmisive;
-layout(location = 6) out int a_materialIndex;
-layout(location = 7) out vec4 a_textureUV;
-layout(location = 2) out vec4 a_textureDerivates;
+layout(location = 3) out vec3 a_posViewSpace;
+layout(location = 4) out int a_materialIndex;
+layout(location = 5) out vec4 a_textureUV;
+layout(location = 2) out ivec4 a_textureDerivates;
 in vec3 v_normals;
 in vec3 v_position;	//world space
 in vec2 v_texCoord;
 in vec3 v_positionViewSpace;
 uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
-uniform sampler2D u_RMASampler;
-uniform sampler2D u_emissiveTexture;
 uniform int u_materialIndex;
 struct MaterialStruct
 {
@@ -33223,16 +33313,6 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 return v;
 }
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
-subroutine vec3 GetEmmisiveFunc(vec3);
-subroutine (GetEmmisiveFunc) vec3 sampledEmmision(vec3 color)
-{
-return texture2D(u_emissiveTexture, v_texCoord).rgb * mat[u_materialIndex].rma.a;
-}
-subroutine (GetEmmisiveFunc) vec3 notSampledEmmision(vec3 color)
-{
-return color * mat[u_materialIndex].rma.a;
-}
-subroutine uniform GetEmmisiveFunc u_getEmmisiveFunc;
 subroutine vec4 GetAlbedoFunc();
 subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
 {
@@ -33249,67 +33329,28 @@ c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
 return c;
 }
 subroutine uniform GetAlbedoFunc u_getAlbedo;
-subroutine vec3 GetMaterialMapped();
-subroutine (GetMaterialMapped) vec3 materialNone()
+int fromFloatTouShort(float a)
 {
-return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
+a += 2.f;
+a /= 4.f;
+a *= 65536;
+return int(a);
 }
-subroutine (GetMaterialMapped) vec3 materialR()
-{
-float r = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(r, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialM()
-{
-float m = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(mat[u_materialIndex].rma.x, m, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialA()
-{
-float a = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, a);
-}
-subroutine (GetMaterialMapped) vec3 materialRM()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
-return vec3(v.x, v.y, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialRA()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
-return vec3(v.x, mat[u_materialIndex].rma.y, v.y);
-}
-subroutine (GetMaterialMapped) vec3 materialMA()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
-return vec3(mat[u_materialIndex].rma.x, v.x, v.y);
-}
-subroutine (GetMaterialMapped) vec3 materialRMA()
-{
-return texture2D(u_RMASampler, v_texCoord).rgb;
-}
-subroutine uniform GetMaterialMapped u_getMaterialMapped;
 void main()
 {
 vec4 color  = u_getAlbedo(); //texture color
 if(color.a < 0.1)discard;
-vec3 sampledMaterial = u_getMaterialMapped();
-float roughnessSampled = sampledMaterial.r;
-float metallicSampled = sampledMaterial.g;
-float sampledAo = sampledMaterial.b;
 vec3 noMappedNorals = normalize(v_normals);
 vec3 normal = getNormalMapFunc(noMappedNorals);
 a_pos = v_position;
 a_normal = normalize(normal);
-a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 a_posViewSpace = v_positionViewSpace;
 a_materialIndex = u_materialIndex+1;
 a_textureUV.xy = v_texCoord.xy;
-a_textureDerivates.x = dFdx(v_texCoord.x);
-a_textureDerivates.y = dFdy(v_texCoord.x);
-a_textureDerivates.z = dFdx(v_texCoord.y);
-a_textureDerivates.w = dFdy(v_texCoord.y);
-a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
+a_textureDerivates.x = fromFloatTouShort(dFdx(v_texCoord.x));
+a_textureDerivates.y = fromFloatTouShort(dFdy(v_texCoord.x));
+a_textureDerivates.z = fromFloatTouShort(dFdx(v_texCoord.y));
+a_textureDerivates.w = fromFloatTouShort(dFdy(v_texCoord.y));
 })"},
 
       std::pair<std::string, const char*>{"noaa.frag", R"(#version 150
@@ -34110,10 +34151,8 @@ outColor = tmpvar_1;
 		//eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		//skyBoxSamplerLocation = getUniform(textureSamplerLocation.id, "u_skybox");
 		//gamaLocation = getUniform(shader.id, "u_gama");
-		RMASamplerLocation = getUniform(geometryPassShader.id, "u_RMASampler");
 		//pointLightCountLocation = getUniform(shader.id, "u_pointLightCount");
 		materialIndexLocation = getUniform(geometryPassShader.id, "u_materialIndex");
-		u_emissiveTexture = getUniform(geometryPassShader.id, "u_emissiveTexture");
 		//pointLightBufferLocation = getUniform(shader.id, "u_pointLights");
 
 		materialBlockLocation = getStorageBlockIndex(geometryPassShader.id, "u_material");
@@ -34128,18 +34167,15 @@ outColor = tmpvar_1;
 		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag");
 		lightingPassShader.bind();
 
-		light_u_albedo = getUniform(lightingPassShader.id, "u_albedo");
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals");
 		light_u_skyboxFiltered = getUniform(lightingPassShader.id, "u_skyboxFiltered");
 		light_u_positions = getUniform(lightingPassShader.id, "u_positions");
-		light_u_materials = getUniform(lightingPassShader.id, "u_materials");
 		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition");
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount");
 		light_u_directionalLightCount = getUniform(lightingPassShader.id, "u_directionalLightCount");
 		light_u_spotLightCount = getUniform(lightingPassShader.id, "u_spotLightCount");
 		light_u_skyboxIradiance = getUniform(lightingPassShader.id, "u_skyboxIradiance");
 		light_u_brdfTexture = getUniform(lightingPassShader.id, "u_brdfTexture");
-		light_u_emmisive = getUniform(lightingPassShader.id, "u_emmisive");
 		light_u_cascades = getUniform(lightingPassShader.id, "u_cascades");
 		light_u_spotShadows = getUniform(lightingPassShader.id, "u_spotShadows");
 		light_u_pointShadows = getUniform(lightingPassShader.id, "u_pointShadows");
@@ -34225,7 +34261,6 @@ outColor = tmpvar_1;
 		normalSubroutine_normalMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
-		
 		//
 		albedoSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"sampledAlbedo");
@@ -34233,43 +34268,12 @@ outColor = tmpvar_1;
 		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"notSampledAlbedo");
 
-		//
-		emissiveSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"sampledEmmision");
-
-		emissiveSubroutine_notSampled= getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"notSampledEmmision");
-
-
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"getNormalMapFunc");
 
-		materialSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getMaterialMapped");
-
 		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"u_getAlbedo");
-
-		getEmmisiveSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getEmmisiveFunc");
-
-		const char *materiaSubroutineFunctions[8] = { 
-			"materialNone",
-			"materialR",
-			"materialM",
-			"materialA",
-			"materialRM",
-			"materialRA",
-			"materialMA",
-			"materialRMA" };
-
-		for(int i=0; i<8; i++)
-		{
-			materialSubroutine_functions[i] = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				materiaSubroutineFunctions[i]);
-		}
-
 
 	}
 
@@ -35341,6 +35345,7 @@ namespace gl3d
 	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox)
 	{
 		skyBox = {};
+		constexpr int skyBoxSize = 128;
 
 		//render into the cubemap
 		{
@@ -35348,13 +35353,12 @@ namespace gl3d
 			glGenFramebuffers(1, &captureFBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 
-
 			glGenTextures(1, &skyBox.texture);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 			for (unsigned int i = 0; i < 6; ++i)
 			{
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, //todo 16 is probably too much
-					512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_R11F_G11F_B10F,
+					skyBoxSize, skyBoxSize, 0, GL_RGB, GL_FLOAT, nullptr);
 			}
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -35371,7 +35375,7 @@ namespace gl3d
 				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
 				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
 
-				glViewport(0, 0, 512, 512);
+				glViewport(0, 0, skyBoxSize, skyBoxSize);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
 				glBindVertexArray(vertexArray);
@@ -35750,7 +35754,7 @@ namespace gl3d
 
 			if (!mat.loadedDiffuse.data.empty())
 			{
-				textureData.albedoTexture = renderer.loadTextureFromMemory(mat.loadedDiffuse);
+				textureData.albedoTexture = renderer.loadTextureFromMemory(mat.loadedDiffuse); 
 
 			}
 			else
@@ -35795,7 +35799,7 @@ namespace gl3d
 				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
 				if (textureData.pbrTexture.texture.id_ != 0)
 				{
-					textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+					textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 				}
 
 			}
@@ -35820,7 +35824,7 @@ namespace gl3d
 				GpuTexture tex;
 				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
 				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
-				textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+				textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 			}
 			else
@@ -35858,7 +35862,7 @@ namespace gl3d
 							t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
 							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
 
-							textureData.pbrTexture.RMA_loadedTextures = 7; //all textures loaded
+							textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 							stbi_image_free(data);
 						}
@@ -35957,20 +35961,24 @@ namespace gl3d
 					int h = max(h1, h2, h3);
 
 					//calculate which function to use
-					if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
-					else
-					if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
-					else
-					if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
-					else
-					if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
-					else
-					if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
-					else
-					if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
-					else
-					if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
-					else { textureData.pbrTexture.RMA_loadedTextures = 0; }
+					//if (data1 && data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 7; }
+					//else
+					//if (data2 && data3) { textureData.pbrTexture.RMA_loadedTextures = 6; }
+					//else
+					//if (data1 && data3) { textureData.pbrTexture.RMA_loadedTextures = 5; }
+					//else
+					//if (data1 && data2) { textureData.pbrTexture.RMA_loadedTextures = 4; }
+					//else
+					//if (data3) { textureData.pbrTexture.RMA_loadedTextures = 3; }
+					//else
+					//if (data2) { textureData.pbrTexture.RMA_loadedTextures = 2; }
+					//else
+					//if (data1) { textureData.pbrTexture.RMA_loadedTextures = 1; }
+					//else { textureData.pbrTexture.RMA_loadedTextures = 0; }
+					textureData.pbrTexture.RMA_loadedTextures = 0;
+					if (data1) { textureData.pbrTexture.RMA_loadedTextures |= 0b100; }
+					if (data2) { textureData.pbrTexture.RMA_loadedTextures |= 0b010; }
+					if (data3) { textureData.pbrTexture.RMA_loadedTextures |= 0b001; }
 
 					if (textureData.pbrTexture.RMA_loadedTextures)
 					{
@@ -36263,8 +36271,8 @@ namespace gl3d
 		}
 
 		GpuTexture tex;
-		int alphaExists = 1; 
-		tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
+		int alphaExists = 0; 
+		tex.loadTextureFromMemoryAndCheckAlpha((void *)t.data.data(), t.w, t.h, alphaExists, t.components);
 
 		return createIntenralTexture(tex, alphaExists);
 
@@ -39489,7 +39497,6 @@ namespace gl3d
 				auto& material = internal.materials[i];
 
 				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
-
 				if (albedoData >= 0)
 				{
 					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
@@ -39498,14 +39505,34 @@ namespace gl3d
 				{
 					material.albedoSampler = 0;
 				}
+				
+				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
+				if (emmisiveData >= 0)
+				{
+					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
+				}
+				else
+				{
+					material.emmissiveSampler = 0;
+				}
+
+				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
+				if (materialData >= 0)
+				{
+					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
+					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
+				}
+				else
+				{
+					material.rmaSampler = 0;
+					material.rmaLoaded = 0;
+				}
 
 			}
 
 		#pragma endregion
 
 
-
-		
 		glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
@@ -39634,7 +39661,6 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-
 		#pragma region stuff to be bound for rendering the geometry
 
 		internal.lightShader.geometryPassShader.bind();
@@ -39645,9 +39671,6 @@ namespace gl3d
 		glUniform1i(internal.lightShader.textureSamplerLocation, 0);
 		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
-		glUniform1i(internal.lightShader.RMASamplerLocation, 3);
-		glUniform1i(internal.lightShader.u_emissiveTexture, 4);
-
 
 		//material buffer
 		if (internal.materials.size())
@@ -39776,37 +39799,6 @@ namespace gl3d
 					glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 				}
 
-				int emissiveTextureLoaded = 0;
-				GpuTexture* emissiveTextureData = this->getTextureData(textureData.emissiveTexture);
-				if (emissiveTextureData != nullptr && emissiveTextureData->id != 0)
-				{
-					emissiveTextureLoaded = 1;
-					glActiveTexture(GL_TEXTURE4);
-					glBindTexture(GL_TEXTURE_2D, emissiveTextureData->id);
-				}
-
-
-				if (emissiveTextureLoaded)
-				{
-					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] !=
-						internal.lightShader.emissiveSubroutine_sampled)
-					{
-						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
-							internal.lightShader.emissiveSubroutine_sampled;
-						changed = 1;
-					}
-				}
-				else
-				{
-					if (indices[internal.lightShader.getEmmisiveSubroutineLocation] != 
-						internal.lightShader.emissiveSubroutine_notSampled)
-					{
-						indices[internal.lightShader.getEmmisiveSubroutineLocation] = 
-							internal.lightShader.emissiveSubroutine_notSampled;
-						changed = 1;
-					}
-				}
-
 				if (normalLoaded && internal.lightShader.normalMap)
 				{
 					if (indices[internal.lightShader.normalSubroutineLocation] !=
@@ -39827,31 +39819,6 @@ namespace gl3d
 						changed = 1;
 					}
 				}
-
-				if (rmaLoaded)
-				{
-
-					if (indices[internal.lightShader.materialSubroutineLocation] != 
-						internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures])
-					{
-						indices[internal.lightShader.materialSubroutineLocation] = 
-							internal.lightShader.materialSubroutine_functions[textureData.pbrTexture.RMA_loadedTextures];
-						changed = 1;
-					}
-
-				}
-				else
-				{
-					if (indices[internal.lightShader.materialSubroutineLocation] != 
-						internal.lightShader.materialSubroutine_functions[0])
-					{
-						indices[internal.lightShader.materialSubroutineLocation] = 
-							internal.lightShader.materialSubroutine_functions[0];
-						changed = 1;
-					}
-
-				}
-
 
 				if (albedoLoaded != 0)
 				{
@@ -39984,53 +39951,40 @@ namespace gl3d
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
 
-		glUniform1i(internal.lightShader.light_u_albedo, 2);
+		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 2);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.albedo]);
-
-		glUniform1i(internal.lightShader.light_u_materials, 3);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.material]);
-
-
-		glUniform1i(internal.lightShader.light_u_skyboxFiltered, 4);
-		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.preFilteredMap);
 
-		glUniform1i(internal.lightShader.light_u_skyboxIradiance, 5);
-		glActiveTexture(GL_TEXTURE5);
+		glUniform1i(internal.lightShader.light_u_skyboxIradiance, 3);
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
 
-		glUniform1i(internal.lightShader.light_u_brdfTexture, 6);
-		glActiveTexture(GL_TEXTURE6);
+		glUniform1i(internal.lightShader.light_u_brdfTexture, 4);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, internal.lightShader.brdfTexture.id);
 
-		glUniform1i(internal.lightShader.light_u_emmisive, 7);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.emissive]);
-
-		glUniform1i(internal.lightShader.light_u_cascades, 8);
-		glActiveTexture(GL_TEXTURE8);
+		glUniform1i(internal.lightShader.light_u_cascades, 5);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, directionalShadows.cascadesTexture);
 
-		glUniform1i(internal.lightShader.light_u_spotShadows, 9);
-		glActiveTexture(GL_TEXTURE9);
+		glUniform1i(internal.lightShader.light_u_spotShadows, 6);
+		glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, spotShadows.shadowTextures);
 
-		glUniform1i(internal.lightShader.light_u_pointShadows, 10);
-		glActiveTexture(GL_TEXTURE10);
+		glUniform1i(internal.lightShader.light_u_pointShadows, 7);
+		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
 
-		glUniform1i(internal.lightShader.light_u_materialIndex, 11);
-		glActiveTexture(GL_TEXTURE11);
+		glUniform1i(internal.lightShader.light_u_materialIndex, 8);
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.materialIndex]);
 
-		glUniform1i(internal.lightShader.light_u_textureUV, 12);
-		glActiveTexture(GL_TEXTURE12);
+		glUniform1i(internal.lightShader.light_u_textureUV, 9);
+		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureUV]);
 
-		glUniform1i(internal.lightShader.light_u_textureDerivates, 13);
-		glActiveTexture(GL_TEXTURE13);
+		glUniform1i(internal.lightShader.light_u_textureDerivates, 10);
+		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureDerivates]);
 
 		glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
@@ -40887,20 +40841,24 @@ namespace gl3d
 		bool ambientLoaded = (ambientOcclusion.id != 0);
 
 		RMA_loadedTextures = 0;
-		if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
-		else
-		if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
-		else
-		if (roughnessLoaded && ambientLoaded) { RMA_loadedTextures = 5; }
-		else
-		if (roughnessLoaded && metallicLoaded) { RMA_loadedTextures = 4; }
-		else
-		if (ambientLoaded) { RMA_loadedTextures = 3; }
-		else
-		if (metallicLoaded) { RMA_loadedTextures = 2; }
-		else
-		if (roughnessLoaded) { RMA_loadedTextures = 1; }
-		else { RMA_loadedTextures = 0; }
+		//if (roughnessLoaded && metallicLoaded && ambientLoaded) { RMA_loadedTextures = 7; }
+		//else
+		//if (metallicLoaded && ambientLoaded) { RMA_loadedTextures = 6; }
+		//else
+		//if (roughnessLoaded && ambientLoaded) { RMA_loadedTextures = 5; }
+		//else
+		//if (roughnessLoaded && metallicLoaded) { RMA_loadedTextures = 4; }
+		//else
+		//if (ambientLoaded) { RMA_loadedTextures = 3; }
+		//else
+		//if (metallicLoaded) { RMA_loadedTextures = 2; }
+		//else
+		//if (roughnessLoaded) { RMA_loadedTextures = 1; }
+		//else { RMA_loadedTextures = 0; }
+
+		if (roughnessLoaded) { RMA_loadedTextures |= 0b100; }
+		if (metallicLoaded) { RMA_loadedTextures |= 0b010; }
+		if (ambientLoaded) { RMA_loadedTextures |= 0b001; }
 
 		if (RMA_loadedTextures == 0) { return 0; }
 
@@ -41267,21 +41225,14 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, buffers[normal], 0);
 
-		glBindTexture(GL_TEXTURE_2D, buffers[albedo]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, 1, 1, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, buffers[albedo], 0);
-
-		glBindTexture(GL_TEXTURE_2D, buffers[material]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, buffers[material], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, buffers[textureDerivates], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -41289,15 +41240,7 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, buffers[positionViewSpace], 0);
-
-		glBindTexture(GL_TEXTURE_2D, buffers[emissive]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, buffers[emissive], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, buffers[positionViewSpace], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, 1, 1, 0, GL_RED_INTEGER, GL_SHORT, NULL);
@@ -41305,28 +41248,20 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_2D, buffers[materialIndex], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, buffers[materialIndex], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[textureUV]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, 1, 1, 0, GL_RG, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, 1, 1, 0, GL_RG, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT7, GL_TEXTURE_2D, buffers[textureUV], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, buffers[textureUV], 0);
 
-		glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT8, GL_TEXTURE_2D, buffers[textureDerivates], 0);
 
 		unsigned int attachments[bufferCount] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
 			GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4,
-			GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7,
-			GL_COLOR_ATTACHMENT8};
+			GL_COLOR_ATTACHMENT5};
 		glDrawBuffers(bufferCount, attachments);
 
 		glGenRenderbuffers(1, &depthBuffer);
@@ -41354,26 +41289,18 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, buffers[normal]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-			glBindTexture(GL_TEXTURE_2D, buffers[albedo]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-
-			glBindTexture(GL_TEXTURE_2D, buffers[material]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-
 			glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
-
-			glBindTexture(GL_TEXTURE_2D, buffers[emissive]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[materialIndex]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R16I, w, h, 0, GL_RED_INTEGER, GL_SHORT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[textureUV]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, w, h, 0, GL_RG, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, w, h, 0, GL_RG, GL_FLOAT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[textureDerivates]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, w, h, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);

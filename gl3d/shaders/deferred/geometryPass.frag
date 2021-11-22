@@ -5,7 +5,7 @@
 #extension GL_ARB_bindless_texture: require
 
 layout(location = 0) out vec3 a_pos;
-layout(location = 1) out vec3 a_normal;
+layout(location = 1) out ivec3 a_normal;
 //layout(location = 2) out vec4 a_outColor;
 //layout(location = 3) out vec3 a_material;
 layout(location = 3) out vec3 a_posViewSpace;
@@ -123,7 +123,7 @@ subroutine uniform GetAlbedoFunc u_getAlbedo;
 
 
 
-int fromFloatTouShort(float a)
+int fromFloat2TouShort(float a)
 {
 	//[-2 2] -> [0 4]
 	a += 2.f;
@@ -138,6 +138,22 @@ int fromFloatTouShort(float a)
 }
 
 
+ivec3 fromFloatTouShort(vec3 a)
+{
+	//[-1 1] -> [0 2]
+	a += 1.f;
+
+	//[0 2] -> [0 1]
+	a /= 2.f;
+
+	//[0 1] -> [0 65536]
+	a *= 65536;
+
+	return ivec3(a);
+}
+
+
+
 void main()
 {
 
@@ -148,16 +164,20 @@ void main()
 	vec3 normal = getNormalMapFunc(noMappedNorals);
 	//normal = noMappedNorals; //(option) remove normal mapping
 
+
+	normal = normalize(normal);
+	a_normal = fromFloatTouShort(normal);
+
+
 	a_pos = v_position;
-	a_normal = normalize(normal);
 	//a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 	a_posViewSpace = v_positionViewSpace;
 	a_materialIndex = u_materialIndex+1;
 	a_textureUV.xy = v_texCoord.xy;
-	a_textureDerivates.x = fromFloatTouShort(dFdx(v_texCoord.x));
-	a_textureDerivates.y = fromFloatTouShort(dFdy(v_texCoord.x));
-	a_textureDerivates.z = fromFloatTouShort(dFdx(v_texCoord.y));
-	a_textureDerivates.w = fromFloatTouShort(dFdy(v_texCoord.y));
+	a_textureDerivates.x = fromFloat2TouShort(dFdx(v_texCoord.x));
+	a_textureDerivates.y = fromFloat2TouShort(dFdy(v_texCoord.x));
+	a_textureDerivates.z = fromFloat2TouShort(dFdx(v_texCoord.y));
+	a_textureDerivates.w = fromFloat2TouShort(dFdy(v_texCoord.y));
 	//a_emmisive = a_outColor.rgb * mat[u_materialIndex].rma.a;
 
 	//a_emmisive = texture2D(u_emissiveTexture, v_texCoord).rgb;

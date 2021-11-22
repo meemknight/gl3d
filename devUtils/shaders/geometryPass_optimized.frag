@@ -7,12 +7,12 @@
 layout(location = 0) out vec3 a_pos;
 layout(location = 1) out vec3 a_normal;
 //layout(location = 2) out vec4 a_outColor;
-layout(location = 3) out vec3 a_material;
-layout(location = 4) out vec3 a_posViewSpace;
-layout(location = 5) out vec3 a_emmisive;
-layout(location = 6) out int a_materialIndex;
-layout(location = 7) out vec4 a_textureUV;
-layout(location = 2) out vec4 a_textureDerivates;
+//layout(location = 3) out vec3 a_material;
+layout(location = 3) out vec3 a_posViewSpace;
+layout(location = 4) out int a_materialIndex;
+layout(location = 5) out vec4 a_textureUV;
+layout(location = 2) out ivec4 a_textureDerivates;
+//layout(location = 2) out vec4 a_textureDerivates;
 
 in vec3 v_normals;
 in vec3 v_position;	//world space
@@ -22,8 +22,6 @@ in vec3 v_positionViewSpace;
 uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 
-uniform sampler2D u_RMASampler;
-uniform sampler2D u_emissiveTexture;
 uniform int u_materialIndex;
 
 
@@ -92,22 +90,6 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
 
 
-
-subroutine vec3 GetEmmisiveFunc(vec3);
-subroutine (GetEmmisiveFunc) vec3 sampledEmmision(vec3 color)
-{
-	return texture2D(u_emissiveTexture, v_texCoord).rgb * mat[u_materialIndex].rma.a;
-}
-
-subroutine (GetEmmisiveFunc) vec3 notSampledEmmision(vec3 color)
-{
-	return color * mat[u_materialIndex].rma.a;
-}
-
-subroutine uniform GetEmmisiveFunc u_getEmmisiveFunc;
-
-
-
 //albedo
 subroutine vec4 GetAlbedoFunc();
 
@@ -140,56 +122,20 @@ subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
 subroutine uniform GetAlbedoFunc u_getAlbedo;
 
 
-subroutine vec3 GetMaterialMapped();
 
-subroutine (GetMaterialMapped) vec3 materialNone()
+int fromFloatTouShort(float a)
 {
-	return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
+	//[-2 2] -> [0 4]
+	a += 2.f;
+
+	//[0 4] -> [0 1]
+	a /= 4.f;
+
+	//[0 1] -> [0 65536]
+	a *= 65536;
+
+	return int(a);
 }
-
-subroutine (GetMaterialMapped) vec3 materialR()
-{
-	float r = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(r, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
-}
-
-subroutine (GetMaterialMapped) vec3 materialM()
-{
-	float m = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(mat[u_materialIndex].rma.x, m, mat[u_materialIndex].rma.z);
-}
-
-subroutine (GetMaterialMapped) vec3 materialA()
-{
-	float a = texture2D(u_RMASampler, v_texCoord).r;
-	return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, a);
-}
-
-subroutine (GetMaterialMapped) vec3 materialRM()
-{
-	vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
-	return vec3(v.x, v.y, mat[u_materialIndex].rma.z);
-}
-
-subroutine (GetMaterialMapped) vec3 materialRA()
-{
-	vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
-	return vec3(v.x, mat[u_materialIndex].rma.y, v.y);
-}
-
-subroutine (GetMaterialMapped) vec3 materialMA()
-{
-	vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
-	return vec3(mat[u_materialIndex].rma.x, v.x, v.y);
-}
-
-subroutine (GetMaterialMapped) vec3 materialRMA()
-{
-	return texture2D(u_RMASampler, v_texCoord).rgb;
-}
-
-subroutine uniform GetMaterialMapped u_getMaterialMapped;
-
 
 
 void main()
@@ -198,32 +144,22 @@ void main()
 	vec4 color  = u_getAlbedo(); //texture color
 	if(color.a < 0.1)discard;
 
-
-	vec3 sampledMaterial = u_getMaterialMapped();
-	float roughnessSampled = sampledMaterial.r;
-	float metallicSampled = sampledMaterial.g;
-	float sampledAo = sampledMaterial.b;
-
-
 	vec3 noMappedNorals = normalize(v_normals);
 	vec3 normal = getNormalMapFunc(noMappedNorals);
 	//normal = noMappedNorals; //(option) remove normal mapping
 
-
 	a_pos = v_position;
 	a_normal = normalize(normal);
 	//a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
-	a_material = vec3(roughnessSampled, metallicSampled, sampledAo);
 	a_posViewSpace = v_positionViewSpace;
 	a_materialIndex = u_materialIndex+1;
 	a_textureUV.xy = v_texCoord.xy;
-	a_textureDerivates.x = dFdx(v_texCoord.x);
-	a_textureDerivates.y = dFdy(v_texCoord.x);
-	a_textureDerivates.z = dFdx(v_texCoord.y);
-	a_textureDerivates.w = dFdy(v_texCoord.y);
+	a_textureDerivates.x = fromFloatTouShort(dFdx(v_texCoord.x));
+	a_textureDerivates.y = fromFloatTouShort(dFdy(v_texCoord.x));
+	a_textureDerivates.z = fromFloatTouShort(dFdx(v_texCoord.y));
+	a_textureDerivates.w = fromFloatTouShort(dFdy(v_texCoord.y));
 	//a_emmisive = a_outColor.rgb * mat[u_materialIndex].rma.a;
 
 	//a_emmisive = texture2D(u_emissiveTexture, v_texCoord).rgb;
-	a_emmisive = u_getEmmisiveFunc(a_outColor.rgb);
 
 }

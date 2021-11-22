@@ -22,7 +22,9 @@ namespace gl3d
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
-		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromMemoryAndCheckAlpha
+			(void *data, int w, int h, int &alphaData, int chanels = 4, int quality = maxQuality);
 
 		//one if there is alpha data
 		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);

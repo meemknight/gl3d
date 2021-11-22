@@ -11,11 +11,11 @@ namespace gl3d
 
 	void GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
 	{
-
+	
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
 		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, channels);
-
+	
 		if (!data)
 		{
 			//todo err messages
@@ -27,46 +27,79 @@ namespace gl3d
 			loadTextureFromMemory(data, w, h, channels, quality);
 			stbi_image_free(data);
 		}
-
-
+	
+	
 	}
-
+	
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
-
+	
 		gl3dAssertComment(chanels == 1 || chanels == 3 || chanels == 4, "invalid chanel number");
-
+	
 		GLenum format = GL_RGBA;
 		GLenum internalFormat = GL_RGBA8;
-
+	
 		if(chanels == 3)
 		{
 			format = GL_RGB;
 			internalFormat = GL_RGB8;
-
+	
 		}else if(chanels == 1)
 		{
 			format = GL_RED;
 			internalFormat = GL_R8;
 		}
-
+	
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
-
+	
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, w, h, 0, format, GL_UNSIGNED_BYTE, data);
-
+	
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		
 		if (quality < 0)
 			return;
-
+	
 		setTextureQuality(quality);
 		glGenerateMipmap(GL_TEXTURE_2D);
-
+	
 	}
 
+	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alphaData, int chanels, int quality)
+	{
+		alphaData = 0;
+		if (chanels == 4)
+		{
+			for (int i = 0; i < w * h; i++)
+			{
+				if (((char*)data)[4 * i + 3] != UCHAR_MAX)
+				{
+					alphaData = 1;
+					break;
+				}
+			}
+
+			if (!alphaData)
+			{
+				//cut the last channel
+				int writePos = 0;
+				int readPos = 0;
+				for (int i = 0; i < w * h; i++)
+				{
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					((char*)data)[writePos++] = ((char*)data)[readPos++];
+					readPos++;//skip alpha
+				}
+				chanels = 3;
+			}
+		}
+
+		loadTextureFromMemory(data, w, h, chanels, quality);
+
+	}
 	
 
 	int GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int quality, int channels)
@@ -86,7 +119,7 @@ namespace gl3d
 		else
 		{
 			//first look if there is alpha data in the file or if it is wanted at all
-			if(nrChannels != 4 && channels != 4) 
+			if(nrChannels != 4 || channels != 4) 
 			{
 				alphaData = 0;
 			}
@@ -107,7 +140,6 @@ namespace gl3d
 			{
 				int writePos = 0;
 				int readPos = 0;
-
 				for (int i = 0; i < w * h; i++)
 				{
 					data[writePos++] = data[readPos++];

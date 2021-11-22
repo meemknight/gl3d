@@ -31,14 +31,14 @@ void main ()
       ((2.0 * u_g) * tmpvar_6)
     ), 1.5)) * u_color2)
   ) + (
-    (((1.0 - abs(tmpvar_2.y)) * u_color2) * 4.0)
+    ((1.0 - abs(tmpvar_2.y)) * u_color2)
    * 
-    pow (tmpvar_4, 12.0)
-  )) + ((
     pow (tmpvar_4, 16.0)
-   * u_color2) * 4.0));
-  if ((tmpvar_3 < 0.01)) {
-    fragColor = vec3(0.1, 0.9, 0.1);
+  )) + (pow (tmpvar_4, 16.0) * u_color2));
+  if ((tmpvar_3 < 0.02)) {
+    float tmpvar_8;
+    tmpvar_8 = min (max ((tmpvar_3 / 0.02), 0.0), 1.0);
+    fragColor = mix (vec3(0.1, 0.2, 0.1), tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));
   } else {
     fragColor = tmpvar_7;
   };

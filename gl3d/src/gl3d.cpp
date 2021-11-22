@@ -140,7 +140,7 @@ namespace gl3d
 
 			if (!mat.loadedDiffuse.data.empty())
 			{
-				textureData.albedoTexture = renderer.loadTextureFromMemory(mat.loadedDiffuse);
+				textureData.albedoTexture = renderer.loadTextureFromMemory(mat.loadedDiffuse); 
 
 			}
 			else
@@ -243,9 +243,20 @@ namespace gl3d
 									data[(i + j * w) * 4 + 2] = A;
 								}
 
+							//remove alpha component
+							int writePos = 0;
+							int readPos = 0;
+							for (int i = 0; i < w * h; i++)
+							{
+								data[writePos++] = data[readPos++];
+								data[writePos++] = data[readPos++];
+								data[writePos++] = data[readPos++];
+								readPos++;//skip alpha
+							}
+
 							//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 							GpuTexture t;
-							t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
+							t.loadTextureFromMemory(data, w, h, 3, rmaQuality);
 							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
 
 							textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
@@ -657,8 +668,8 @@ namespace gl3d
 		}
 
 		GpuTexture tex;
-		int alphaExists = 1; 
-		tex.loadTextureFromMemory((void *)t.data.data(), t.w, t.h, t.components); //todo refactor and add check alpha
+		int alphaExists = 0; 
+		tex.loadTextureFromMemoryAndCheckAlpha((void *)t.data.data(), t.w, t.h, alphaExists, t.components);
 
 		return createIntenralTexture(tex, alphaExists);
 
@@ -3873,7 +3884,6 @@ namespace gl3d
 		#pragma endregion
 
 
-
 		#pragma region setup bindless textures
 
 			for (int i=0; i< internal.materials.size(); i++)
@@ -4161,12 +4171,12 @@ namespace gl3d
 				int albedoLoaded = 0;
 				int normalLoaded = 0;
 
-				GpuTexture* albedoTextureData = this->getTextureData(textureData.albedoTexture);
-				if (albedoTextureData != nullptr)
+				auto albedoTextureData = internal.getTextureIndex(textureData.albedoTexture);
+				if (albedoTextureData >= 0 && internal.loadedTextures[albedoTextureData].flags) //alpha exists
 				{
 					albedoLoaded = 1;
 					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, albedoTextureData->id);
+					glBindTexture(GL_TEXTURE_2D, internal.loadedTextures[albedoTextureData].texture.id);
 				}
 
 				GpuTexture* normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
@@ -5604,7 +5614,8 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffers[position], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[normal]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16UI, 1, 1, 0, GL_RGB_INTEGER, GL_UNSIGNED_SHORT, NULL);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -5673,7 +5684,8 @@ namespace gl3d
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[normal]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16UI, w, h, 0, GL_RGB_INTEGER, GL_UNSIGNED_SHORT, NULL);
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);

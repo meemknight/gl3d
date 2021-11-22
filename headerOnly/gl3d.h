@@ -89,7 +89,8 @@ namespace gl3d
 		GLuint64 albedoSampler = 0;
 		GLuint64 rmaSampler = 0;
 		GLuint64 emmissiveSampler = 0;
-		glm::vec2 notUsed = {};
+		int rmaLoaded = {};
+		int notUsed;
 
 		MaterialValues setDefaultMaterial()
 		{
@@ -33679,7 +33680,9 @@ namespace gl3d
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
-		void loadTextureFromMemory(void *data, int w, int h, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
+		void loadTextureFromMemoryAndCheckAlpha
+			(void *data, int w, int h, int &alphaData, int chanels = 4, int quality = maxQuality);
 
 		//one if there is alpha data
 		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);
@@ -33791,24 +33794,19 @@ namespace gl3d
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
 		GLint gamaLocation = -1;
-		GLint RMASamplerLocation = -1;
-		GLint u_emissiveTexture = -1;
 		GLint pointLightCountLocation = -1;
 		GLint pointLightBufferLocation = -1;
 		GLint materialIndexLocation = -1;
 
-		GLint light_u_albedo = -1;
 		GLint light_u_normals = -1;
 		GLint light_u_skyboxFiltered = -1;
 		GLint light_u_positions = -1;
-		GLint light_u_materials = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
 		GLint light_u_spotLightCount = -1;
 		GLint light_u_skyboxIradiance = -1;
 		GLint light_u_brdfTexture = -1;
-		GLint light_u_emmisive = -1;
 		GLint light_u_cascades = -1;
 		GLint light_u_spotShadows = -1;
 		GLint light_u_pointShadows = -1;
@@ -33833,21 +33831,14 @@ namespace gl3d
 		GLuint spotLightsBlockLocation = GL_INVALID_INDEX;
 		GLuint spotLightsBlockBuffer = 0;
 
-
 		GLint normalSubroutineLocation = -1;
-		GLint materialSubroutineLocation = -1;
 		GLint getAlbedoSubroutineLocation = -1;
-		GLint getEmmisiveSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
 		
 		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
 		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
-		
-		GLuint emissiveSubroutine_sampled = GL_INVALID_INDEX;
-		GLuint emissiveSubroutine_notSampled = GL_INVALID_INDEX;
-
 		
 		GLuint materialSubroutine_functions[8] = {
 			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
@@ -34803,13 +34794,14 @@ namespace gl3d
 				{
 					position = 0,
 					normal,
-					albedo,
-					material,
+					textureDerivates,
+					//albedo,
+					//material,
 					positionViewSpace,
-					emissive,
+					//emissive,
 					materialIndex,
 					textureUV,
-					textureDerivates,
+					//textureDerivates,
 					bufferCount,
 				};
 
