@@ -10,6 +10,7 @@
 #pragma warning( disable : 26812)
 #endif
 
+
 namespace gl3d
 {
 	

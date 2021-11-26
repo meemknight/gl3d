@@ -10,7 +10,6 @@ layout(location = 1) out vec4 a_outBloom;
 
 noperspective in vec2 v_texCoords;
 
-
 uniform isampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
@@ -164,6 +163,11 @@ float attenuationFunctionNotClamped(float x, float r, float p)
 //this gets the amount of specular light reflected
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
+	//GGX/Trowbridge-Reitz
+	//			 a^2
+	// ------------------------
+	// PI ((N*H)^2 (a^2-1)+1)^2
+
 	float a      = roughness*roughness;
 	float a2     = a*a;
 	float NdotH  = max(dot(N, H), 0.0);
@@ -177,13 +181,15 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	float r = (roughness + 1.0);
-	float k = (r*r) / 8.0;
+	//float r = (roughness + 1.0);
+	//float k = (r*r) / 8.0;			//disney
+
+	float k = roughness*roughness / 2;
 
 	float num   = NdotV;
 	float denom = NdotV * (1.0 - k) + k;
 	
-	return num / denom;
+	return num / max(denom, 0.0000001);
 }
  
 //oclude light that is hidded begind small geometry roughnesses
@@ -209,6 +215,70 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }   
 
+vec3 fSpecular(vec3 normal, vec3 halfwayVec, vec3 viewDir, 
+vec3 lightDirection, float dotNVclamped, float roughness, vec3 F)
+{
+	//fCook-Torrance
+	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
+	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
+	float denominator = 4.0 * dotNVclamped  
+		* max(dot(normal, lightDirection), 0.0);
+	vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
+
+	return specular;
+}
+
+vec3 fDiffuse(vec3 color)
+{
+	//fLambert
+	return color.rgb / PI;
+}
+
+vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
+{
+	float a = roughness;
+	float a2 = a*a;
+
+	float cosi = max(dot(L, N), 0);
+	float cosr = max(dot(V, N), 0);
+	float sini = sqrt(1-cosi*cosi);
+	float sinr = sqrt(1-cosr*cosr);
+	float tani = sini/cosi;
+	float tanr = sinr/cosr;
+
+	float A = 1 - 0.5 * a2/(a2 + 0.33);
+	float B = 0.45*a2/(a2+0.09);
+	
+	float sinAlpha = max(sini, sinr);
+	float tanBeta = min(tani, tanr);
+
+	return color.rgb * (A + (B* max(0, dot(L,reflect(V,N))) * sinAlpha * tanBeta  )) / PI;
+}
+
+//https://mimosa-pudica.net/improved-oren-nayar.html
+
+vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
+{
+	float a = roughness;
+	float a2 = a*a;
+	//vec3 A = 1.f/PI * (1 - 0.5 * a2/(a2 + 0.33) + 0.17*color*a2/(a2+0.13));
+	//float B = 0.45*a2/(a2+0.09);
+
+	float A = 1.0/(PI+(PI/2.0-2/3.0)*a);
+	float B = PI/(PI+(PI/2.0-2/3.0)*a);
+
+	float s = dot(L,N) - dot(N,L)*dot(N,V);
+
+	float t;
+	if(s <= 0)
+		t = 1;
+	else
+		t = max(dot(N,L), dot(N,V));
+
+	return color * (A + B * s/t);
+}
+
+
 vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
 	in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
 {
@@ -219,29 +289,23 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 
 	vec3 halfwayVec = normalize(lightDirection + viewDir);
 	
-	//float dist = length(lightPosition - worldPosition);
-	//float attenuation = 1.0 / pow(dist,2);
-	float attenuation = 1; //(option) remove light attenuation
-	vec3 radiance = lightColor * attenuation; //here the first component is the light color
+	vec3 radiance = lightColor; //here the first component is the light color
 	
 	vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 
-	float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-	float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
-
-	float denominator = 4.0 * dotNVclamped  
-		* max(dot(normal, lightDirection), 0.0);
-	vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
+	vec3 specular = fSpecular(normal, halfwayVec, viewDir, lightDirection, dotNVclamped, roughness, F);
 
 	vec3 kS = F; //this is the specular contribution
 	vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
 	kD *= 1.0 - metallic;	//metallic surfaces are darker
 	
+	vec3 diffuse = fDiffuse(color.rgb);
+	//vec3 diffuse = fDiffuseOrenNayar(color.rgb, roughness, lightDirection, viewDir, normal);
+	//vec3 diffuse = fDiffuseOrenNayar2(color.rgb, roughness, lightDirection, viewDir, normal);
 	
 	float NdotL = max(dot(normal, lightDirection), 0.0);        
-	vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;
+	return (kD * diffuse + specular) * radiance * NdotL;
 
-	return Lo;
 }
 
 float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth, float bias, int index)
@@ -272,6 +336,34 @@ float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth,
 //	return mix(mixA, mixB, fracPart.x);
 //}
 
+//https://developer.download.nvidia.com/cg/sincos.html
+void sincos(float a, out float s, out float c)
+{
+	s = sin(a);
+	c = cos(a);
+}
+
+//https://www.gamedev.net/tutorials/programming/graphics/contact-hardening-soft-shadows-made-fast-r4906/
+vec2 vogelDiskSample(int sampleIndex, int samplesCount, float phi)
+{
+  float GoldenAngle = 2.4f;
+
+  float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);
+  float theta = sampleIndex * GoldenAngle + phi;
+
+  float sine, cosine;
+  sincos(theta, sine, cosine);
+  
+  return vec2(r * cosine, r * sine);
+}
+
+//https://www.gamedev.net/tutorials/programming/graphics/contact-hardening-soft-shadows-made-fast-r4906/
+float InterleavedGradientNoise(vec2 position_screen)
+{
+  vec3 magic = vec3(0.06711056f, 0.00583715f, 52.9829189f);
+  return fract(magic.z * fract(dot(position_screen, magic.xy)));
+}
+
 float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadowMap, int index)
 {
 
@@ -293,13 +385,18 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 	int kernelSize = kernelHalf*2 + 1;
 	int kernelSize2 = kernelSize*kernelSize;
 
+	//float receiverDepth = currentDepth;
+	//float averageBlockerDepth = texture(sampler2DArray(shadowMap), vec3(projCoords.xy, index)).r;
+	//float penumbraSize = 4.f * (receiverDepth - averageBlockerDepth) / averageBlockerDepth;
+	float penumbraSize = 1.f;
+
 	//standard implementation
-	if(true)
+	if(false)
 	{
 		float shadowValueAtCentre = 0;
 
 		//optimization
-		if(true)
+		if(false)
 		{
 			float offsetSize = kernelSize/2;
 			const int OFFSETS = 4;
@@ -344,7 +441,7 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 				for(int x = -kernelHalf; x <= kernelHalf; ++x)
 				{
 					vec2 offset = vec2(x, y);
-
+			
 					if(false)
 					{
 						int randomOffset1 = (x*kernelSize) + y;
@@ -359,10 +456,10 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 						offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
 						offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
 					}
-
-					vec2 finalOffset = offset * texelSize;
+			
+					vec2 finalOffset = offset * texelSize * penumbraSize;
 					//float newDepth = sqrt(currentDepth*currentDepth + finalOffset.x*finalOffset.x + finalOffset.y * finalOffset.y);
-
+			
 					float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
 						currentDepth, bias, index); 
 					
@@ -373,35 +470,71 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 				}    
 			}
 			shadow /= kernelSize2;
-		
+
+
+			// texture(map, vec4(coords, index, currentDepth-bias)).r;
+
+			//for(int y = -kernelHalf; y <= kernelHalf; ++y)
+			//{
+			//	for(int x = -kernelHalf; x <= kernelHalf; ++x)
+			//	{
+			//		vec2 offset = vec2(x, y);
+			//		vec2 finalOffset = offset * texelSize * 2;
+			//
+			//		vec4 shadowGather = 
+			//			textureGather(shadowMap, vec3(projCoords.xy+finalOffset,
+			//				index), currentDepth-bias); 
+			//
+			//		shadow += shadowGather.r;
+			//		shadow += shadowGather.g;
+			//		shadow += shadowGather.b;
+			//		shadow += shadowGather.a;
+			//
+			//	}
+			//}
+			//
+			//shadow /= 4*kernelSize2;
+			
+
 		}
 	}else
 	{
 	
-		for(int y = 0; y < kernelSize; ++y)
+		int sampleSize = 9;
+		int checkSampleSize = 5;
+
+		float noise = InterleavedGradientNoise(v_texCoords) * 2 * PI;
+
+		for(int i=sampleSize-1; i>=sampleSize-checkSampleSize; i--)
+		{
+			vec2 offset = vogelDiskSample(i, sampleSize, noise);
+			vec2 finalOffset = offset * texelSize;
+			
+			float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+				currentDepth, bias, index);
+			shadow += s;
+		}
+
+		//optimization
+		if(true && (shadow == 0 || shadow == checkSampleSize))
+		{
+			shadow /= checkSampleSize;
+		}else
+		{
+			for(int i=sampleSize-checkSampleSize-1; i>=0; i--)
 			{
-				for(int x = 0; x < kernelSize; ++x)
-				{
-					float u = x/float(kernelSize);
-					float v = y/float(kernelSize);
-					
-					vec2 offset;
-					offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
-					offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
-
-					vec2 finalOffset = offset * texelSize * 2;
-					//float newDepth = sqrt(currentDepth*currentDepth + finalOffset.x*finalOffset.x + finalOffset.y * finalOffset.y);
-
-					float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
-						currentDepth, bias, index); 
-					shadow += s;
-				}
+				vec2 offset = vogelDiskSample(i, sampleSize, noise);
+				vec2 finalOffset = offset * texelSize;
+				
+				float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+					currentDepth, bias, index);
+				shadow += s;
 			}
 
-		shadow /= kernelSize2;
+			shadow /= sampleSize;
+		}
+
 	}
-
-
 	
 	return clamp(shadow, 0, 1);
 }
