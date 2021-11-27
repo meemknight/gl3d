@@ -19,7 +19,6 @@ in vec3 v_position;	//world space
 in vec2 v_texCoord;
 in vec3 v_positionViewSpace;
 
-uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 
 uniform int u_materialIndex;
@@ -37,10 +36,10 @@ struct MaterialStruct
 	//float metallic;
 	//float ao; //one means full light
 
-	layout(bindless_sampler) sampler2D albedoSampler;
-	layout(bindless_sampler) sampler2D rmaSampler;
-	layout(bindless_sampler) sampler2D emmissiveSampler;
-	vec2 notUsed;
+	uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
+	uvec2 secondBIndlessSamplers; // xy emmissiveSampler
+	int rmaLoaded;
+	int notUsed;
 
 };
 
@@ -90,39 +89,6 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
 
 
-//albedo
-subroutine vec4 GetAlbedoFunc();
-
-subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
-{
-	vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-		if(color.w <= 0.1)
-			discard;
-
-	//color.rgb = pow(color.rgb , vec3(2.2,2.2,2.2)).rgb; //gamma corection
-	//color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
-	//color.rgb = pow(color.rgb, vec3(1.0/2.2)); //back to gama space 
-
-	 //(option) multiply texture by kd, this is a simplified version of the above code
-	color.rgb *= pow( vec3(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b), vec3(1.0/2.2) );
-
-
-	return color;
-}
-
-subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
-{
-	vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
-
-	c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
-
-	return c;
-}
-
-subroutine uniform GetAlbedoFunc u_getAlbedo;
-
-
-
 int fromFloat2TouShort(float a)
 {
 	//[-2 2] -> [0 4]
@@ -157,8 +123,20 @@ ivec3 fromFloatTouShort(vec3 a)
 void main()
 {
 
-	vec4 color  = u_getAlbedo(); //texture color
-	if(color.a < 0.1)discard;
+	//vec4 color  = u_getAlbedo(); //texture color
+	//if(color.a < 0.1)discard;
+
+	uvec2 albedoSampler = mat[u_materialIndex].firstBIndlessSamplers.xy;
+		if(albedoSampler.x == 0 && albedoSampler.y == 0)
+		{
+			//no albedo data
+		}else
+		{
+			float alphaData = texture2D(sampler2D(albedoSampler), v_texCoord).a;
+			if(alphaData*255 < 1)
+				discard;
+		}
+
 
 	vec3 noMappedNorals = normalize(v_normals);
 	vec3 normal = getNormalMapFunc(noMappedNorals);

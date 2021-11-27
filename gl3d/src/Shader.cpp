@@ -334,7 +334,6 @@ namespace gl3d
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
 		u_motelViewTransform = getUniform(geometryPassShader.id, "u_motelViewTransform");
 		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
-		textureSamplerLocation = getUniform(geometryPassShader.id, "u_albedoSampler");
 		normalMapSamplerLocation = getUniform(geometryPassShader.id, "u_normalSampler");
 		//eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		//skyBoxSamplerLocation = getUniform(textureSamplerLocation.id, "u_skybox");
@@ -449,20 +448,10 @@ namespace gl3d
 		normalSubroutine_normalMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
-		//
-		albedoSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				"sampledAlbedo");
-
-		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				"notSampledAlbedo");
-
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"getNormalMapFunc");
-
-		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getAlbedo");
-
+		
 	}
 
 };

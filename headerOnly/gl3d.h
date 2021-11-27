@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-20
+//built on 2021-11-27
 ////////////////////////////////////////////////
 
 
@@ -22,6 +22,14 @@
 
 #undef min
 #undef max
+
+#define GL3D_ADD_FLAG(NAME, SETNAME, VALUE)							\
+		bool NAME() {return (flags & ((unsigned char)1 << VALUE) );}	\
+		void SETNAME(bool s)										\
+		{	if (s) { flags = flags | ((unsigned char)1 << VALUE); }	\
+			else { flags = flags & ~((unsigned char)1 << VALUE); }	\
+		}
+
 
 namespace gl3d
 {
@@ -33660,6 +33668,7 @@ namespace objl
 #include <GL/glew.h>
 #include <glm/vec2.hpp>
 
+
 namespace gl3d
 {
 
@@ -33682,10 +33691,11 @@ namespace gl3d
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
-			(void *data, int w, int h, int &alphaData, int chanels = 4, int quality = maxQuality);
+			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
 
 		//one if there is alpha data
-		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);
+		void loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
+			int quality = maxQuality, int channels = 4);
 
 		void clear();
 
@@ -33701,7 +33711,12 @@ namespace gl3d
 		{
 			GpuTextureWithFlags() = default;
 			GpuTexture texture;
-			unsigned int flags = 0; //just alpha exist rn //todo add flag for components number
+
+			unsigned int flags = {};
+
+			GL3D_ADD_FLAG(alphaComponent, setAlphaComponent, 0);	//has alpha
+			GL3D_ADD_FLAG(alphaWithData, setAlphaWithData, 1);		//will contribute to transparency else just discard fragments with alpha 0
+
 		};
 	};
 
@@ -33789,7 +33804,6 @@ namespace gl3d
 		GLint u_modelTransform = -1;
 		GLint u_motelViewTransform = -1;
 		GLint normalShaderLightposLocation = -1;
-		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
@@ -33832,13 +33846,9 @@ namespace gl3d
 		GLuint spotLightsBlockBuffer = 0;
 
 		GLint normalSubroutineLocation = -1;
-		GLint getAlbedoSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
-		
-		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
-		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
 		
 		GLuint materialSubroutine_functions[8] = {
 			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,
@@ -34016,12 +34026,6 @@ namespace gl3d
 
 
 
-#define GL3D_ADD_FLAG(NAME, SETNAME, VALUE)							\
-		bool NAME() {return (flags & ((unsigned char)1 << VALUE) );}	\
-		void SETNAME(bool s)										\
-		{	if (s) { flags = flags | ((unsigned char)1 << VALUE); }	\
-			else { flags = flags & ~((unsigned char)1 << VALUE); }	\
-		}
 
 namespace gl3d
 {
@@ -34300,7 +34304,6 @@ namespace gl3d
 
 };
 
-#undef GL3D_ADD_FLAG
 
 #pragma endregion
 
@@ -34408,8 +34411,8 @@ namespace gl3d
 		GpuTexture* getTextureData(Texture& t);
 
 		//internal
-		Texture createIntenralTexture(GpuTexture t, int alphaData, const std::string &name = "");
-		Texture createIntenralTexture(GLuint id_, int alphaData, const std::string &name = "");
+		Texture createIntenralTexture(GpuTexture t, int alphaData, int alphaValues, const std::string &name = "");
+		Texture createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
 			Texture& ambientOcclusion);

@@ -189,7 +189,7 @@ namespace gl3d
 					textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 				}
 
-			}
+			}//else //todo just add else
 
 			if (!mat.loadedORM.data.empty())
 			{
@@ -210,7 +210,7 @@ namespace gl3d
 
 				GpuTexture tex;
 				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
-				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
+				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0, 0);
 				textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 			}
@@ -224,7 +224,7 @@ namespace gl3d
 
 					{
 						data = stbi_load(std::string(path + mat.map_ORM).c_str(),
-							&w, &h, 0, 4);
+							&w, &h, 0, 3);
 						if (!data)
 						{
 							std::cout << "err loading " << std::string(path + mat.map_ORM) << "\n";
@@ -235,30 +235,18 @@ namespace gl3d
 							for (int j = 0; j < h; j++)
 								for (int i = 0; i < w; i++)
 								{
-									unsigned char R = data[(i + j * w) * 4 + 1];
-									unsigned char M = data[(i + j * w) * 4 + 2];
-									unsigned char A = data[(i + j * w) * 4 + 0];
+									unsigned char R = data[(i + j * w) * 3 + 1];
+									unsigned char M = data[(i + j * w) * 3 + 2];
+									unsigned char A = data[(i + j * w) * 3 + 0];
 
-									data[(i + j * w) * 4 + 0] = R;
-									data[(i + j * w) * 4 + 1] = M;
-									data[(i + j * w) * 4 + 2] = A;
+									data[(i + j * w) * 3 + 0] = R;
+									data[(i + j * w) * 3 + 1] = M;
+									data[(i + j * w) * 3 + 2] = A;
 								}
 
-							//remove alpha component
-							int writePos = 0;
-							int readPos = 0;
-							for (int i = 0; i < w * h; i++)
-							{
-								data[writePos++] = data[readPos++];
-								data[writePos++] = data[readPos++];
-								data[writePos++] = data[readPos++];
-								readPos++;//skip alpha
-							}
-
-							//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 							GpuTexture t;
 							t.loadTextureFromMemory(data, w, h, 3, rmaQuality);
-							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 
 							textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
@@ -310,7 +298,7 @@ namespace gl3d
 
 					if (textureData.pbrTexture.RMA_loadedTextures != 0)
 					{
-						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 					}
 					else
 					{
@@ -438,7 +426,7 @@ namespace gl3d
 
 						GpuTexture t;
 						t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 
 						stbi_image_free(data1);
 						stbi_image_free(data2);
@@ -655,9 +643,11 @@ namespace gl3d
 		}
 
 		GpuTexture t;
-		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
+		int alphaExists;
+		int alphaData; 
+		t.loadTextureFromFileAndCheckAlpha(path.c_str(), alphaExists, alphaData);
 
-		return createIntenralTexture(t.id, alphaExists, path);
+		return createIntenralTexture(t.id, alphaExists, alphaData, path);
 
 	}
 
@@ -670,9 +660,10 @@ namespace gl3d
 
 		GpuTexture tex;
 		int alphaExists = 0; 
+		int alphaWithData = 0;
 		tex.loadTextureFromMemoryAndCheckAlpha((void *)t.data.data(), t.w, t.h, alphaExists, t.components);
 
-		return createIntenralTexture(tex, alphaExists);
+		return createIntenralTexture(tex, alphaExists, alphaWithData);
 
 	}
 
@@ -737,7 +728,7 @@ namespace gl3d
 		return &data->texture;
 	}
 
-	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, const std::string& name)
+	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, int alphaValues, const std::string& name)
 	{
 		//if t is null return an empty texture
 		if (t.id == 0)
@@ -749,7 +740,8 @@ namespace gl3d
 
 		internal::GpuTextureWithFlags text;
 		text.texture = t;
-		text.flags= alphaData;
+		text.setAlphaExists(alphaData);
+		text.setAlphaWithData(alphaValues);
 
 		auto handle = glGetTextureHandleARB(t.id);
 		glMakeTextureHandleResidentARB(handle);
@@ -763,11 +755,11 @@ namespace gl3d
 	}
 
 	//this takes an id and adds the texture to the internal system
-	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, const std::string &name)
+	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name)
 	{
 		GpuTexture t;
 		t.id = id_;
-		return createIntenralTexture(t, alphaData, name);
+		return createIntenralTexture(t, alphaData, alphaValues, name);
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
@@ -781,7 +773,7 @@ namespace gl3d
 			{ getTextureOpenglId(metallic) },
 			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures);
 
-		ret.texture = this->createIntenralTexture(t, 0);
+		ret.texture = this->createIntenralTexture(t, 0, 0);
 
 		return ret;
 	}
@@ -3238,9 +3230,20 @@ namespace gl3d
 						}
 
 						auto m = internal.getMaterialIndex(j.material);
-
+						int alphaExists = 0;
 						if (m < 0)
 						{
+							auto& mData = internal.materialTexturesData[m];
+							auto albedoTextureIndex = internal.getTextureIndex(mData.albedoTexture);
+							if (albedoTextureIndex >= 0)
+							{
+								alphaExists = internal.loadedTextures[albedoTextureIndex].alphaExists();
+							}
+						}
+
+						if (!alphaExists)
+						{
+
 							glUniform1i(internal.lightShader.prePass.u_hasTexture, 0);
 						}
 						else
@@ -3281,127 +3284,139 @@ namespace gl3d
 			};
 			
 			auto renderModelsPointShadows = [&](int lightIndex, int shadowCastIndex, bool filter = 0, bool onlyStatic = 0)
-		{
-			glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, shadowCastIndex);
-
-			glm::mat4 shadowProj = glm::perspective(glm::radians(90.f), 1.f, 0.1f,
-				internal.pointLights[lightIndex].dist);
-			glm::vec3 lightPos = internal.pointLights[lightIndex].position;
-
-			std::vector<glm::mat4> shadowTransforms;
-			shadowTransforms.reserve(6);
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-			shadowTransforms.push_back(shadowProj *
-				glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-
-			glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_shadowMatrices, 6, GL_FALSE,
-				&(*shadowTransforms.data())[0][0]);
-
-			glUniform3fv(internal.lightShader.pointShadowShader.u_lightPos, 1,
-				&lightPos[0]);
-
-			glUniform1f(internal.lightShader.pointShadowShader.u_farPlane,
-				internal.pointLights[lightIndex].dist);
-
-			//render shadow of the models
-			for (auto& i : internal.cpuEntities)
 			{
+				glUniform1i(internal.lightShader.pointShadowShader.u_lightIndex, shadowCastIndex);
 
-				if (!i.isVisible() || !i.castShadows())
-				{
-					continue;
-				}
+				glm::mat4 shadowProj = glm::perspective(glm::radians(90.f), 1.f, 0.1f,
+					internal.pointLights[lightIndex].dist);
+				glm::vec3 lightPos = internal.pointLights[lightIndex].position;
 
-				if (filter)
+				std::vector<glm::mat4> shadowTransforms;
+				shadowTransforms.reserve(6);
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+				shadowTransforms.push_back(shadowProj *
+					glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+
+				glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_shadowMatrices, 6, GL_FALSE,
+					&(*shadowTransforms.data())[0][0]);
+
+				glUniform3fv(internal.lightShader.pointShadowShader.u_lightPos, 1,
+					&lightPos[0]);
+
+				glUniform1f(internal.lightShader.pointShadowShader.u_farPlane,
+					internal.pointLights[lightIndex].dist);
+
+				//render shadow of the models
+				for (auto& i : internal.cpuEntities)
 				{
-					if (onlyStatic != i.isStatic())
+
+					if (!i.isVisible() || !i.castShadows())
 					{
 						continue;
 					}
-				}
 
-				auto transformMat = i.transform.getTransformMatrix();
-
-				glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_transform, 1, GL_FALSE,
-					&transformMat[0][0]);
-
-				if (!i.canBeAnimated() || !i.animate())
-				{
-					glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
-				}
-				else
-				{
-					//send animation data
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
-						i.appliedSkinningMatricesBuffer);
-				}
-
-				for (auto& j : i.models)
-				{
-
-					if (i.canBeAnimated() && i.animate())
+					if (filter)
 					{
-						if (j.hasBones)
+						if (onlyStatic != i.isStatic())
 						{
-							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, true);
-						}
-						else
-						{
-							glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+							continue;
 						}
 					}
 
-					auto m = internal.getMaterialIndex(j.material);
+					auto transformMat = i.transform.getTransformMatrix();
 
-					if (m < 0)
+					glUniformMatrix4fv(internal.lightShader.pointShadowShader.u_transform, 1, GL_FALSE,
+						&transformMat[0][0]);
+
+					if (!i.canBeAnimated() || !i.animate())
 					{
-						glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 0);
+						glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
 					}
 					else
 					{
+						//send animation data
+						glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::JointsTransformBlockBinding,
+							i.appliedSkinningMatricesBuffer);
+					}
 
-						auto t = internal.materialTexturesData[m];
-						auto tId = internal.getTextureIndex(t.albedoTexture);
+					for (auto& j : i.models)
+					{
 
-						if (tId < 0)
+						if (i.canBeAnimated() && i.animate())
+						{
+							if (j.hasBones)
+							{
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, true);
+							}
+							else
+							{
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasAnimations, false);
+							}
+						}
+
+						auto m = internal.getMaterialIndex(j.material);
+						int alphaExists = 0;
+
+						if (m >= 0)
+						{
+							auto& mData = internal.materialTexturesData[m];
+							auto albedoTextureIndex = internal.getTextureIndex(mData.albedoTexture);
+							if (albedoTextureIndex >= 0)
+							{
+								alphaExists = internal.loadedTextures[albedoTextureIndex].alphaExists();
+							}
+						}
+						
+
+						if (!alphaExists)
 						{
 							glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 0);
 						}
 						else
 						{
-							auto texture = internal.loadedTextures[tId];
 
-							glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 1);
-							glUniform1i(internal.lightShader.pointShadowShader.u_albedoSampler, 0);
+							auto t = internal.materialTexturesData[m];
+							auto tId = internal.getTextureIndex(t.albedoTexture);
 
-							glActiveTexture(GL_TEXTURE0);
-							glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							if (tId < 0)
+							{
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 0);
+							}
+							else
+							{
+								auto texture = internal.loadedTextures[tId];
+
+								glUniform1i(internal.lightShader.pointShadowShader.u_hasTexture, 1);
+								glUniform1i(internal.lightShader.pointShadowShader.u_albedoSampler, 0);
+
+								glActiveTexture(GL_TEXTURE0);
+								glBindTexture(GL_TEXTURE_2D, texture.texture.id);
+							}
+						}
+
+						glBindVertexArray(j.vertexArray);
+
+						if (j.indexBuffer)
+						{
+							glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
+						}
+						else
+						{
+							glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
 						}
 					}
 
-					glBindVertexArray(j.vertexArray);
-
-					if (j.indexBuffer)
-					{
-						glDrawElements(GL_TRIANGLES, j.primitiveCount, GL_UNSIGNED_INT, 0);
-					}
-					else
-					{
-						glDrawArrays(GL_TRIANGLES, 0, j.primitiveCount);
-					}
 				}
-
-			}
-		};
+			};
 
 			if (internal.pointLights.size())
 		{
@@ -4065,7 +4080,6 @@ namespace gl3d
 
 		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
 		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(internal.lightShader.textureSamplerLocation, 0);
 		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
 
@@ -4173,7 +4187,7 @@ namespace gl3d
 				int normalLoaded = 0;
 
 				auto albedoTextureData = internal.getTextureIndex(textureData.albedoTexture);
-				if (albedoTextureData >= 0 && internal.loadedTextures[albedoTextureData].flags) //alpha exists
+				if (albedoTextureData >= 0 && internal.loadedTextures[albedoTextureData].alphaExists())
 				{
 					albedoLoaded = 1;
 					glActiveTexture(GL_TEXTURE0);
@@ -4216,26 +4230,6 @@ namespace gl3d
 						changed = 1;
 					}
 				}
-
-				if (albedoLoaded != 0)
-				{
-					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
-						internal.lightShader.albedoSubroutine_sampled)
-					{
-						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
-							internal.lightShader.albedoSubroutine_sampled;
-						changed = 1;
-					}
-				}
-				else
-					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
-						internal.lightShader.albedoSubroutine_notSampled)
-					{
-						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
-							internal.lightShader.albedoSubroutine_notSampled;
-						changed = 1;
-					}
-
 
 				if (changed)
 				{

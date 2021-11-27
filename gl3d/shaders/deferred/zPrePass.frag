@@ -10,8 +10,8 @@ void main()
 {
 	if(u_hasTexture != 0)
 	{
-		vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-			if(color.w <= 0.1)
+		float alphaData = texture2D(u_albedoSampler, v_texCoord).a;
+			if(alphaData*255 < 1)
 				discard;
 	}
 }

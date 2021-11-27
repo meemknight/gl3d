@@ -67,21 +67,33 @@ namespace gl3d
 	
 	}
 
-	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alphaData, int chanels, int quality)
+	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alpha, int& alphaWithData,
+		int chanels, int quality)
 	{
-		alphaData = 0;
+		alpha = 0;
+		alphaWithData = 0;
+
 		if (chanels == 4)
 		{
 			for (int i = 0; i < w * h; i++)
 			{
 				if (((char*)data)[4 * i + 3] != UCHAR_MAX)
 				{
-					alphaData = 1;
+					alpha = 1;
+				}
+
+				if (((char*)data)[4 * i + 3] != 0 && ((char*)data)[4 * i + 3] != UCHAR_MAX)
+				{
+					alphaWithData = 1;
+				}
+
+				if (alpha && alphaWithData)
+				{
 					break;
 				}
 			}
 
-			if (!alphaData)
+			if (!alpha)
 			{
 				//cut the last channel
 				int writePos = 0;
@@ -102,13 +114,14 @@ namespace gl3d
 	}
 	
 
-	int GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int quality, int channels)
+	void GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData, int quality, int channels)
 	{
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
 		unsigned char* data = stbi_load(file, &w, &h, &nrChannels, channels);
 
-		int alphaData = 0;
+		alpha = 0;
+		alphaData = 0;
 
 		if (!data)
 		{
@@ -121,22 +134,31 @@ namespace gl3d
 			//first look if there is alpha data in the file or if it is wanted at all
 			if(nrChannels != 4 || channels != 4) 
 			{
-				alphaData = 0;
+				alpha = 0;
 			}
 			else
 			{
 				for (int i = 0; i < w * h; i++)
 				{
-					if (data[4 * i + 3] != UCHAR_MAX)
+					if (((char*)data)[4 * i + 3] != UCHAR_MAX)
+					{
+						alpha = 1;
+					}
+
+					if (((char*)data)[4 * i + 3] != 0 && ((char*)data)[4 * i + 3] != UCHAR_MAX)
 					{
 						alphaData = 1;
+					}
+
+					if (alpha && alphaData)
+					{
 						break;
 					}
 				}
 			}
 
 			// if there is no alpha channel in file clamp channels to max 3
-			if (!alphaData && channels == 4)
+			if (!alpha && channels == 4)
 			{
 				int writePos = 0;
 				int readPos = 0;
@@ -156,7 +178,6 @@ namespace gl3d
 			stbi_image_free(data);
 		}
 
-		return alphaData;
 	}
 
 	void GpuTexture::clear()

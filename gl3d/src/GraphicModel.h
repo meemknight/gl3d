@@ -11,12 +11,6 @@
 #include "Texture.h"
 #include "Core.h"
 
-#define GL3D_ADD_FLAG(NAME, SETNAME, VALUE)							\
-		bool NAME() {return (flags & ((unsigned char)1 << VALUE) );}	\
-		void SETNAME(bool s)										\
-		{	if (s) { flags = flags | ((unsigned char)1 << VALUE); }	\
-			else { flags = flags & ~((unsigned char)1 << VALUE); }	\
-		}
 
 namespace gl3d
 {
@@ -295,4 +289,3 @@ namespace gl3d
 
 };
 
-#undef GL3D_ADD_FLAG

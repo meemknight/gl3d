@@ -71,7 +71,6 @@ namespace gl3d
 		GLint u_modelTransform = -1;
 		GLint u_motelViewTransform = -1;
 		GLint normalShaderLightposLocation = -1;
-		GLint textureSamplerLocation = -1; 
 		GLint normalMapSamplerLocation = -1;
 		GLint eyePositionLocation = -1;
 		GLint skyBoxSamplerLocation = -1;
@@ -114,13 +113,9 @@ namespace gl3d
 		GLuint spotLightsBlockBuffer = 0;
 
 		GLint normalSubroutineLocation = -1;
-		GLint getAlbedoSubroutineLocation = -1;
 
 		GLuint normalSubroutine_noMap = GL_INVALID_INDEX;
 		GLuint normalSubroutine_normalMap = GL_INVALID_INDEX;
-		
-		GLuint albedoSubroutine_sampled = GL_INVALID_INDEX;
-		GLuint albedoSubroutine_notSampled = GL_INVALID_INDEX;
 		
 		GLuint materialSubroutine_functions[8] = {
 			GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX, GL_INVALID_INDEX,

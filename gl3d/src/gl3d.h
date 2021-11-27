@@ -97,8 +97,8 @@ namespace gl3d
 		GpuTexture* getTextureData(Texture& t);
 
 		//internal
-		Texture createIntenralTexture(GpuTexture t, int alphaData, const std::string &name = "");
-		Texture createIntenralTexture(GLuint id_, int alphaData, const std::string &name = "");
+		Texture createIntenralTexture(GpuTexture t, int alphaData, int alphaValues, const std::string &name = "");
+		Texture createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
 			Texture& ambientOcclusion);

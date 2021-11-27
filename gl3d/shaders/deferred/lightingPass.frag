@@ -502,13 +502,14 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 	
 		int sampleSize = 9;
 		int checkSampleSize = 5;
+		float size = 1.5;
 
 		float noise = InterleavedGradientNoise(v_texCoords) * 2 * PI;
 
 		for(int i=sampleSize-1; i>=sampleSize-checkSampleSize; i--)
 		{
 			vec2 offset = vogelDiskSample(i, sampleSize, noise);
-			vec2 finalOffset = offset * texelSize;
+			vec2 finalOffset = offset * texelSize * size;
 			
 			float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
 				currentDepth, bias, index);
@@ -524,7 +525,7 @@ float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadow
 			for(int i=sampleSize-checkSampleSize-1; i>=0; i--)
 			{
 				vec2 offset = vogelDiskSample(i, sampleSize, noise);
-				vec2 finalOffset = offset * texelSize;
+				vec2 finalOffset = offset * texelSize * size;
 				
 				float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
 					currentDepth, bias, index);
@@ -838,9 +839,9 @@ void main()
 			vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, 
 					sampledDerivates.xy, sampledDerivates.zw).rgb;
 
-			int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x8;
-			int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
-			int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+			int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
+			int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+			int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x1;
 
 			if(roughnessPrezent != 0)
 			{

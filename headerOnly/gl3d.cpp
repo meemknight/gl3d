@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-20
+//built on 2021-11-27
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31262,11 +31262,11 @@ namespace gl3d
 
 	void GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
 	{
-
+	
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
 		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, channels);
-
+	
 		if (!data)
 		{
 			//todo err messages
@@ -31278,61 +31278,73 @@ namespace gl3d
 			loadTextureFromMemory(data, w, h, channels, quality);
 			stbi_image_free(data);
 		}
-
-
+	
+	
 	}
-
+	
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
 		int quality)
 	{
-
+	
 		gl3dAssertComment(chanels == 1 || chanels == 3 || chanels == 4, "invalid chanel number");
-
+	
 		GLenum format = GL_RGBA;
 		GLenum internalFormat = GL_RGBA8;
-
+	
 		if(chanels == 3)
 		{
 			format = GL_RGB;
 			internalFormat = GL_RGB8;
-
+	
 		}else if(chanels == 1)
 		{
 			format = GL_RED;
 			internalFormat = GL_R8;
 		}
-
+	
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
-
+	
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, w, h, 0, format, GL_UNSIGNED_BYTE, data);
-
+	
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		
 		if (quality < 0)
 			return;
-
+	
 		setTextureQuality(quality);
 		glGenerateMipmap(GL_TEXTURE_2D);
-
+	
 	}
 
-	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alphaData, int chanels, int quality)
+	void GpuTexture::loadTextureFromMemoryAndCheckAlpha(void* data, int w, int h, int& alpha, int& alphaWithData,
+		int chanels, int quality)
 	{
-		alphaData = 0;
+		alpha = 0;
+		alphaWithData = 0;
+
 		if (chanels == 4)
 		{
 			for (int i = 0; i < w * h; i++)
 			{
 				if (((char*)data)[4 * i + 3] != UCHAR_MAX)
 				{
-					alphaData = 1;
+					alpha = 1;
+				}
+
+				if (((char*)data)[4 * i + 3] != 0 && ((char*)data)[4 * i + 3] != UCHAR_MAX)
+				{
+					alphaWithData = 1;
+				}
+
+				if (alpha && alphaWithData)
+				{
 					break;
 				}
 			}
 
-			if (!alphaData)
+			if (!alpha)
 			{
 				//cut the last channel
 				int writePos = 0;
@@ -31353,13 +31365,14 @@ namespace gl3d
 	}
 	
 
-	int GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int quality, int channels)
+	void GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData, int quality, int channels)
 	{
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
 		unsigned char* data = stbi_load(file, &w, &h, &nrChannels, channels);
 
-		int alphaData = 0;
+		alpha = 0;
+		alphaData = 0;
 
 		if (!data)
 		{
@@ -31372,26 +31385,34 @@ namespace gl3d
 			//first look if there is alpha data in the file or if it is wanted at all
 			if(nrChannels != 4 || channels != 4) 
 			{
-				alphaData = 0;
+				alpha = 0;
 			}
 			else
 			{
 				for (int i = 0; i < w * h; i++)
 				{
-					if (data[4 * i + 3] != UCHAR_MAX)
+					if (((char*)data)[4 * i + 3] != UCHAR_MAX)
+					{
+						alpha = 1;
+					}
+
+					if (((char*)data)[4 * i + 3] != 0 && ((char*)data)[4 * i + 3] != UCHAR_MAX)
 					{
 						alphaData = 1;
+					}
+
+					if (alpha && alphaData)
+					{
 						break;
 					}
 				}
 			}
 
 			// if there is no alpha channel in file clamp channels to max 3
-			if (!alphaData && channels == 4)
+			if (!alpha && channels == 4)
 			{
 				int writePos = 0;
 				int readPos = 0;
-
 				for (int i = 0; i < w * h; i++)
 				{
 					data[writePos++] = data[readPos++];
@@ -31408,7 +31429,6 @@ namespace gl3d
 			stbi_image_free(data);
 		}
 
-		return alphaData;
 	}
 
 	void GpuTexture::clear()
@@ -32614,7 +32634,7 @@ discard;
 layout(location = 0) out vec4 a_outColor;
 layout(location = 1) out vec4 a_outBloom;
 noperspective in vec2 v_texCoords;
-uniform sampler2D u_normals;
+uniform isampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
 uniform sampler2D u_positions;
@@ -32734,11 +32754,10 @@ return  a2 / max(denom, 0.0000001);
 }
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-float r = (roughness + 1.0);
-float k = (r*r) / 8.0;
+float k = roughness*roughness / 2;
 float num   = NdotV;
 float denom = NdotV * (1.0 - k) + k;
-return num / denom;
+return num / max(denom, 0.0000001);
 }
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
@@ -32756,29 +32775,87 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
 return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }   
-vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
-in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
+vec3 fSpecular(vec3 normal, vec3 halfwayVec, vec3 viewDir, 
+vec3 lightDirection, float dotNVclamped, float roughness, vec3 F)
 {
-float dotNVclamped = clamp(dot(normal, viewDir), 0.0, 0.99);
-vec3 halfwayVec = normalize(lightDirection + viewDir);
-float attenuation = 1; //(option) remove light attenuation
-vec3 radiance = lightColor * attenuation; //here the first component is the light color
-vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
 float NDF = DistributionGGX(normal, halfwayVec, roughness);       
 float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
 float denominator = 4.0 * dotNVclamped  
 * max(dot(normal, lightDirection), 0.0);
 vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
+return specular;
+}
+vec3 fDiffuse(vec3 color)
+{
+return color.rgb / PI;
+}
+vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
+{
+float a = roughness;
+float a2 = a*a;
+float cosi = max(dot(L, N), 0);
+float cosr = max(dot(V, N), 0);
+float sini = sqrt(1-cosi*cosi);
+float sinr = sqrt(1-cosr*cosr);
+float tani = sini/cosi;
+float tanr = sinr/cosr;
+float A = 1 - 0.5 * a2/(a2 + 0.33);
+float B = 0.45*a2/(a2+0.09);
+float sinAlpha = max(sini, sinr);
+float tanBeta = min(tani, tanr);
+return color.rgb * (A + (B* max(0, dot(L,reflect(V,N))) * sinAlpha * tanBeta  )) / PI;
+}
+vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
+{
+float a = roughness;
+float a2 = a*a;
+float A = 1.0/(PI+(PI/2.0-2/3.0)*a);
+float B = PI/(PI+(PI/2.0-2/3.0)*a);
+float s = dot(L,N) - dot(N,L)*dot(N,V);
+float t;
+if(s <= 0)
+t = 1;
+else
+t = max(dot(N,L), dot(N,V));
+return color * (A + B * s/t);
+}
+vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
+in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
+{
+float dotNVclamped = clamp(dot(normal, viewDir), 0.0, 0.99);
+vec3 halfwayVec = normalize(lightDirection + viewDir);
+vec3 radiance = lightColor; //here the first component is the light color
+vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
+vec3 specular = fSpecular(normal, halfwayVec, viewDir, lightDirection, dotNVclamped, roughness, F);
 vec3 kS = F; //this is the specular contribution
 vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
 kD *= 1.0 - metallic;	//metallic surfaces are darker
+vec3 diffuse = fDiffuse(color.rgb);
 float NdotL = max(dot(normal, lightDirection), 0.0);        
-vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;
-return Lo;
+return (kD * diffuse + specular) * radiance * NdotL;
 }
 float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth, float bias, int index)
 {
 return texture(map, vec4(coords, index, currentDepth-bias)).r;
+}
+void sincos(float a, out float s, out float c)
+{
+s = sin(a);
+c = cos(a);
+}
+vec2 vogelDiskSample(int sampleIndex, int samplesCount, float phi)
+{
+float GoldenAngle = 2.4f;
+float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);
+float theta = sampleIndex * GoldenAngle + phi;
+float sine, cosine;
+sincos(theta, sine, cosine);
+return vec2(r * cosine, r * sine);
+}
+float InterleavedGradientNoise(vec2 position_screen)
+{
+vec3 magic = vec3(0.06711056f, 0.00583715f, 52.9829189f);
+return fract(magic.z * fract(dot(position_screen, magic.xy)));
 }
 float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadowMap, int index)
 {
@@ -32788,11 +32865,14 @@ float currentDepth = projCoords.z;
 vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
 float shadow = 0.0;
 bool fewSamples = false;
-int kernelSize = 5;
+int kernelHalf = 1;
+int kernelSize = kernelHalf*2 + 1;
 int kernelSize2 = kernelSize*kernelSize;
-int kernelHalf = kernelSize/2;
+float penumbraSize = 1.f;
+if(false)
+{
 float shadowValueAtCentre = 0;
-if(true)
+if(false)
 {
 float offsetSize = kernelSize/2;
 const int OFFSETS = 4;
@@ -32837,17 +32917,48 @@ offset += vec2(randomNumbers[randomOffset1, randomOffset2]);
 }
 if(false)
 {
-float u = (offset.x + kernelHalf+1)/float(kernelSize);
-float v = (offset.x + kernelHalf+1)/float(kernelSize);
-offset.x = sqrt(v) * cos(2*PI * u)* kernelSize / 2.f;
-offset.y = sqrt(v) * sin(2*PI * u)* kernelSize / 2.f;
+float u = (offset.x + kernelHalf)/float(kernelSize-1);
+float v = (offset.y + kernelHalf)/float(kernelSize-1);
+offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
+offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
 }
-float s = testShadowValue(shadowMap, projCoords.xy + offset * texelSize, 
+vec2 finalOffset = offset * texelSize * penumbraSize;
+float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
 currentDepth, bias, index); 
 shadow += s;
 }    
 }
 shadow /= kernelSize2;
+}
+}else
+{
+int sampleSize = 9;
+int checkSampleSize = 5;
+float size = 1.5;
+float noise = InterleavedGradientNoise(v_texCoords) * 2 * PI;
+for(int i=sampleSize-1; i>=sampleSize-checkSampleSize; i--)
+{
+vec2 offset = vogelDiskSample(i, sampleSize, noise);
+vec2 finalOffset = offset * texelSize * size;
+float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+currentDepth, bias, index);
+shadow += s;
+}
+if(true && (shadow == 0 || shadow == checkSampleSize))
+{
+shadow /= checkSampleSize;
+}else
+{
+for(int i=sampleSize-checkSampleSize-1; i>=0; i--)
+{
+vec2 offset = vogelDiskSample(i, sampleSize, noise);
+vec2 finalOffset = offset * texelSize * size;
+float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
+currentDepth, bias, index);
+shadow += s;
+}
+shadow /= sampleSize;
+}
 }
 return clamp(shadow, 0, 1);
 }
@@ -32967,11 +33078,7 @@ thirdProjCoords.y += 2.f / 3.f;
 return shadowCalculationLinear(thirdProjCoords, normal, lightDir, u_cascades, index);
 }
 }
-float linStep(float v, float low, float high)
-{
-return clamp((v-low) / (high-low), 0.0, 1.0);
-};
-vec4 fromuShortToFloat(ivec4 a)
+vec4 fromuShortToFloat2(ivec4 a)
 {
 vec4 ret = a;
 ret /= 65536;
@@ -32979,14 +33086,22 @@ ret *= 4.f;
 ret -= 2.f;
 return ret;
 }
+vec3 fromuShortToFloat(ivec3 a)
+{
+vec3 ret = a;
+ret /= 65536;
+ret *= 2.f;
+ret -= 1.f;
+return ret;
+}
 void main()
 {
 vec3 pos = texture(u_positions, v_texCoords).xyz;
-vec3 normal = texture(u_normals, v_texCoords).xyz;
+vec3 normal = normalize(fromuShortToFloat(texture(u_normals, v_texCoords).xyz));
 int materialIndex = texture(u_materialIndex, v_texCoords).r;
 vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
-vec4 sampledDerivates = fromuShortToFloat(sampledDerivatesInt);
+vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
 vec4 albedoAlpha = vec4(0,0,0,0);
 vec3 emissive = vec3(0,0,0);
 vec3 material;
@@ -33032,9 +33147,9 @@ else
 {
 vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, 
 sampledDerivates.xy, sampledDerivates.zw).rgb;
-int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x8;
-int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
-int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
+int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
+int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x1;
 if(roughnessPrezent != 0)
 {
 material.r = materialData.r;
@@ -33263,7 +33378,7 @@ v_texCoord = a_texCoord;
 #pragma debug(on)
 #extension GL_ARB_bindless_texture: require
 layout(location = 0) out vec3 a_pos;
-layout(location = 1) out vec3 a_normal;
+layout(location = 1) out ivec3 a_normal;
 layout(location = 3) out vec3 a_posViewSpace;
 layout(location = 4) out int a_materialIndex;
 layout(location = 5) out vec4 a_textureUV;
@@ -33272,17 +33387,16 @@ in vec3 v_normals;
 in vec3 v_position;	//world space
 in vec2 v_texCoord;
 in vec3 v_positionViewSpace;
-uniform sampler2D u_albedoSampler;
 uniform sampler2D u_normalSampler;
 uniform int u_materialIndex;
 struct MaterialStruct
 {
 vec4 kd;
 vec4 rma; //last component emmisive
-layout(bindless_sampler) sampler2D albedoSampler;
-layout(bindless_sampler) sampler2D rmaSampler;
-layout(bindless_sampler) sampler2D emmissiveSampler;
-vec2 notUsed;
+uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
+uvec2 secondBIndlessSamplers; // xy emmissiveSampler
+int rmaLoaded;
+int notUsed;
 };
 readonly layout(std140) buffer u_material
 {
@@ -33313,44 +33427,43 @@ subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
 return v;
 }
 subroutine uniform GetNormalMapFunc getNormalMapFunc;
-subroutine vec4 GetAlbedoFunc();
-subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
-{
-vec4 color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-if(color.w <= 0.1)
-discard;
-color.rgb *= pow( vec3(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b), vec3(1.0/2.2) );
-return color;
-}
-subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
-{
-vec4 c = vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
-c.rgb = pow(c.rgb , vec3(1/2.2)).rgb;
-return c;
-}
-subroutine uniform GetAlbedoFunc u_getAlbedo;
-int fromFloatTouShort(float a)
+int fromFloat2TouShort(float a)
 {
 a += 2.f;
 a /= 4.f;
 a *= 65536;
 return int(a);
 }
+ivec3 fromFloatTouShort(vec3 a)
+{
+a += 1.f;
+a /= 2.f;
+a *= 65536;
+return ivec3(a);
+}
 void main()
 {
-vec4 color  = u_getAlbedo(); //texture color
-if(color.a < 0.1)discard;
+uvec2 albedoSampler = mat[u_materialIndex].firstBIndlessSamplers.xy;
+if(albedoSampler.x == 0 && albedoSampler.y == 0)
+{
+}else
+{
+float alphaData = texture2D(sampler2D(albedoSampler), v_texCoord).a;
+if(alphaData < 0.1)
+discard;
+}
 vec3 noMappedNorals = normalize(v_normals);
 vec3 normal = getNormalMapFunc(noMappedNorals);
+normal = normalize(normal);
+a_normal = fromFloatTouShort(normal);
 a_pos = v_position;
-a_normal = normalize(normal);
 a_posViewSpace = v_positionViewSpace;
 a_materialIndex = u_materialIndex+1;
 a_textureUV.xy = v_texCoord.xy;
-a_textureDerivates.x = fromFloatTouShort(dFdx(v_texCoord.x));
-a_textureDerivates.y = fromFloatTouShort(dFdy(v_texCoord.x));
-a_textureDerivates.z = fromFloatTouShort(dFdx(v_texCoord.y));
-a_textureDerivates.w = fromFloatTouShort(dFdy(v_texCoord.y));
+a_textureDerivates.x = fromFloat2TouShort(dFdx(v_texCoord.x));
+a_textureDerivates.y = fromFloat2TouShort(dFdy(v_texCoord.x));
+a_textureDerivates.z = fromFloat2TouShort(dFdx(v_texCoord.y));
+a_textureDerivates.w = fromFloat2TouShort(dFdy(v_texCoord.y));
 })"},
 
       std::pair<std::string, const char*>{"noaa.frag", R"(#version 150
@@ -34146,7 +34259,6 @@ outColor = tmpvar_1;
 		u_modelTransform = getUniform(geometryPassShader.id, "u_modelTransform");
 		u_motelViewTransform = getUniform(geometryPassShader.id, "u_motelViewTransform");
 		//normalShaderLightposLocation = getUniform(shader.id, "u_lightPosition");
-		textureSamplerLocation = getUniform(geometryPassShader.id, "u_albedoSampler");
 		normalMapSamplerLocation = getUniform(geometryPassShader.id, "u_normalSampler");
 		//eyePositionLocation = getUniform(shader.id, "u_eyePosition");
 		//skyBoxSamplerLocation = getUniform(textureSamplerLocation.id, "u_skybox");
@@ -34261,20 +34373,10 @@ outColor = tmpvar_1;
 		normalSubroutine_normalMap = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
 				"normalMapped");
 
-		//
-		albedoSubroutine_sampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				"sampledAlbedo");
-
-		albedoSubroutine_notSampled = getUniformSubroutineIndex(geometryPassShader.id, GL_FRAGMENT_SHADER,
-				"notSampledAlbedo");
-
 		//	
 		normalSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
 			"getNormalMapFunc");
-
-		getAlbedoSubroutineLocation = getUniformSubroutine(geometryPassShader.id, GL_FRAGMENT_SHADER,
-			"u_getAlbedo");
-
+		
 	}
 
 };
@@ -35624,6 +35726,7 @@ namespace gl3d
 #pragma warning( disable : 26812)
 #endif
 
+
 namespace gl3d
 {
 	
@@ -35802,7 +35905,7 @@ namespace gl3d
 					textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 				}
 
-			}
+			}//else //todo just add else
 
 			if (!mat.loadedORM.data.empty())
 			{
@@ -35823,7 +35926,7 @@ namespace gl3d
 
 				GpuTexture tex;
 				tex.loadTextureFromMemory(t.data.data(), t.w, t.h, 3, rmaQuality);
-				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0);
+				textureData.pbrTexture.texture = renderer.createIntenralTexture(tex, 0, 0);
 				textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
 			}
@@ -35837,7 +35940,7 @@ namespace gl3d
 
 					{
 						data = stbi_load(std::string(path + mat.map_ORM).c_str(),
-							&w, &h, 0, 4);
+							&w, &h, 0, 3);
 						if (!data)
 						{
 							std::cout << "err loading " << std::string(path + mat.map_ORM) << "\n";
@@ -35848,19 +35951,18 @@ namespace gl3d
 							for (int j = 0; j < h; j++)
 								for (int i = 0; i < w; i++)
 								{
-									unsigned char R = data[(i + j * w) * 4 + 1];
-									unsigned char M = data[(i + j * w) * 4 + 2];
-									unsigned char A = data[(i + j * w) * 4 + 0];
+									unsigned char R = data[(i + j * w) * 3 + 1];
+									unsigned char M = data[(i + j * w) * 3 + 2];
+									unsigned char A = data[(i + j * w) * 3 + 0];
 
-									data[(i + j * w) * 4 + 0] = R;
-									data[(i + j * w) * 4 + 1] = M;
-									data[(i + j * w) * 4 + 2] = A;
+									data[(i + j * w) * 3 + 0] = R;
+									data[(i + j * w) * 3 + 1] = M;
+									data[(i + j * w) * 3 + 2] = A;
 								}
 
-							//gm.RMA_Texture.loadTextureFromMemory(data, w, h, 4, rmaQuality);
 							GpuTexture t;
-							t.loadTextureFromMemory(data, w, h, 4, rmaQuality); //todo 3 channels
-							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+							t.loadTextureFromMemory(data, w, h, 3, rmaQuality);
+							textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 
 							textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 
@@ -35912,7 +36014,7 @@ namespace gl3d
 
 					if (textureData.pbrTexture.RMA_loadedTextures != 0)
 					{
-						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 					}
 					else
 					{
@@ -36040,7 +36142,7 @@ namespace gl3d
 
 						GpuTexture t;
 						t.loadTextureFromMemory(finalData, w, h, 4, rmaQuality);
-						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0);
+						textureData.pbrTexture.texture = renderer.createIntenralTexture(t, 0, 0);
 
 						stbi_image_free(data1);
 						stbi_image_free(data2);
@@ -36257,9 +36359,11 @@ namespace gl3d
 		}
 
 		GpuTexture t;
-		int alphaExists = t.loadTextureFromFileAndCheckAlpha(path.c_str());
+		int alphaExists;
+		int alphaData; 
+		t.loadTextureFromFileAndCheckAlpha(path.c_str(), alphaExists, alphaData);
 
-		return createIntenralTexture(t.id, alphaExists, path);
+		return createIntenralTexture(t.id, alphaExists, alphaData, path);
 
 	}
 
@@ -36272,9 +36376,10 @@ namespace gl3d
 
 		GpuTexture tex;
 		int alphaExists = 0; 
+		int alphaWithData = 0;
 		tex.loadTextureFromMemoryAndCheckAlpha((void *)t.data.data(), t.w, t.h, alphaExists, t.components);
 
-		return createIntenralTexture(tex, alphaExists);
+		return createIntenralTexture(tex, alphaExists, alphaWithData);
 
 	}
 
@@ -36339,7 +36444,7 @@ namespace gl3d
 		return &data->texture;
 	}
 
-	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, const std::string& name)
+	Texture Renderer3D::createIntenralTexture(GpuTexture t, int alphaData, int alphaValues, const std::string& name)
 	{
 		//if t is null return an empty texture
 		if (t.id == 0)
@@ -36351,7 +36456,8 @@ namespace gl3d
 
 		internal::GpuTextureWithFlags text;
 		text.texture = t;
-		text.flags= alphaData;
+		text.setAlphaComponent(alphaData);
+		text.setAlphaWithData(alphaValues);
 
 		auto handle = glGetTextureHandleARB(t.id);
 		glMakeTextureHandleResidentARB(handle);
@@ -36365,11 +36471,11 @@ namespace gl3d
 	}
 
 	//this takes an id and adds the texture to the internal system
-	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, const std::string &name)
+	Texture Renderer3D::createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name)
 	{
 		GpuTexture t;
 		t.id = id_;
-		return createIntenralTexture(t, alphaData, name);
+		return createIntenralTexture(t, alphaData, alphaValues, name);
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
@@ -36383,7 +36489,7 @@ namespace gl3d
 			{ getTextureOpenglId(metallic) },
 			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures);
 
-		ret.texture = this->createIntenralTexture(t, 0);
+		ret.texture = this->createIntenralTexture(t, 0, 0);
 
 		return ret;
 	}
@@ -39487,7 +39593,6 @@ namespace gl3d
 		#pragma endregion
 
 
-
 		#pragma region setup bindless textures
 
 			for (int i=0; i< internal.materials.size(); i++)
@@ -39668,7 +39773,6 @@ namespace gl3d
 
 		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
 		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(internal.lightShader.textureSamplerLocation, 0);
 		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
 		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
 
@@ -39775,12 +39879,12 @@ namespace gl3d
 				int albedoLoaded = 0;
 				int normalLoaded = 0;
 
-				GpuTexture* albedoTextureData = this->getTextureData(textureData.albedoTexture);
-				if (albedoTextureData != nullptr)
+				auto albedoTextureData = internal.getTextureIndex(textureData.albedoTexture);
+				if (albedoTextureData >= 0 && internal.loadedTextures[albedoTextureData].flags) //alpha exists
 				{
 					albedoLoaded = 1;
 					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, albedoTextureData->id);
+					glBindTexture(GL_TEXTURE_2D, internal.loadedTextures[albedoTextureData].texture.id);
 				}
 
 				GpuTexture* normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
@@ -39819,26 +39923,6 @@ namespace gl3d
 						changed = 1;
 					}
 				}
-
-				if (albedoLoaded != 0)
-				{
-					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
-						internal.lightShader.albedoSubroutine_sampled)
-					{
-						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
-							internal.lightShader.albedoSubroutine_sampled;
-						changed = 1;
-					}
-				}
-				else
-					if (indices[internal.lightShader.getAlbedoSubroutineLocation] != 
-						internal.lightShader.albedoSubroutine_notSampled)
-					{
-						indices[internal.lightShader.getAlbedoSubroutineLocation] = 
-							internal.lightShader.albedoSubroutine_notSampled;
-						changed = 1;
-					}
-
 
 				if (changed)
 				{
@@ -41218,7 +41302,8 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, buffers[position], 0);
 
 		glBindTexture(GL_TEXTURE_2D, buffers[normal]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16UI, 1, 1, 0, GL_RGB_INTEGER, GL_UNSIGNED_SHORT, NULL);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -41287,7 +41372,8 @@ namespace gl3d
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[normal]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16UI, w, h, 0, GL_RGB_INTEGER, GL_UNSIGNED_SHORT, NULL);
+			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, buffers[positionViewSpace]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);

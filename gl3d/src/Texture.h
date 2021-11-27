@@ -1,6 +1,7 @@
 #pragma once
 #include <GL/glew.h>
 #include <glm/vec2.hpp>
+#include "Core.h"
 
 namespace gl3d
 {
@@ -24,10 +25,11 @@ namespace gl3d
 		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
-			(void *data, int w, int h, int &alphaData, int chanels = 4, int quality = maxQuality);
+			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
 
 		//one if there is alpha data
-		int loadTextureFromFileAndCheckAlpha(const char* file, int quality = maxQuality, int channels = 4);
+		void loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
+			int quality = maxQuality, int channels = 4);
 
 		void clear();
 
@@ -43,7 +45,12 @@ namespace gl3d
 		{
 			GpuTextureWithFlags() = default;
 			GpuTexture texture;
-			unsigned int flags = 0; //just alpha exist rn //todo add flag for components number
+
+			unsigned int flags = {};
+
+			GL3D_ADD_FLAG(alphaExists, setAlphaExists, 0);	//has alpha
+			GL3D_ADD_FLAG(alphaWithData, setAlphaWithData, 1);		//will contribute to transparency else just discard fragments with alpha 0
+
 		};
 	};
 
