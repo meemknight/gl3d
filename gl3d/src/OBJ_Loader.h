@@ -203,7 +203,7 @@ namespace objl
 		// Ambient Color
 		Vector3 Ka;
 		// Diffuse Color
-		Vector3 Kd = Vector3{ 1,1,1 };
+		glm::vec4 Kd = glm::vec4{ 1,1,1,1 };
 		// Specular Color
 		//Vector3 Ks;
 		// Specular Exponent
@@ -621,10 +621,11 @@ namespace objl
 				auto &mat = model.materials[i];
 
 				LoadedMaterials[i].name = mat.name;
-
-				LoadedMaterials[i].Kd.X = mat.pbrMetallicRoughness.baseColorFactor[0];
-				LoadedMaterials[i].Kd.Y = mat.pbrMetallicRoughness.baseColorFactor[1];
-				LoadedMaterials[i].Kd.Z = mat.pbrMetallicRoughness.baseColorFactor[2];
+				
+				LoadedMaterials[i].Kd.x = mat.pbrMetallicRoughness.baseColorFactor[0];
+				LoadedMaterials[i].Kd.y = mat.pbrMetallicRoughness.baseColorFactor[1];
+				LoadedMaterials[i].Kd.z = mat.pbrMetallicRoughness.baseColorFactor[2];
+				LoadedMaterials[i].Kd.w = mat.pbrMetallicRoughness.baseColorFactor[3];
 
 				LoadedMaterials[i].metallic = mat.pbrMetallicRoughness.metallicFactor;
 				LoadedMaterials[i].roughness = mat.pbrMetallicRoughness.roughnessFactor;
@@ -1805,12 +1806,18 @@ namespace objl
 					std::vector<std::string> temp;
 					algorithm::split2(algorithm::tail(curline), temp, ' ');
 
-					if (temp.size() != 3)
+					if (temp.size() != 3 && temp.size() != 4)
 						continue;
 
-					tempMaterial.Kd.X = std::stof(temp[0]);
-					tempMaterial.Kd.Y = std::stof(temp[1]);
-					tempMaterial.Kd.Z = std::stof(temp[2]);
+					if (temp.size() == 3)
+					{
+						temp.push_back("1.f");
+					}
+
+					tempMaterial.Kd.x = std::stof(temp[0]);
+					tempMaterial.Kd.y = std::stof(temp[1]);
+					tempMaterial.Kd.z = std::stof(temp[2]);
+					tempMaterial.Kd.w = std::stof(temp[3]);
 				}
 				else
 				// Specular Color

@@ -413,11 +413,14 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
+	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
+	auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj");
 	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
 	auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
+	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
 	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
@@ -427,7 +430,7 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/planeta.glb");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto sphereModel = renderer.loadModel("resources/birb.glb");
-	auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
@@ -1214,7 +1217,7 @@ int main()
 					//ImGui::Text("Max boundary %f, %f, %f", modelData.maxBoundary.x, modelData.maxBoundary.y, modelData.maxBoundary.z);
 					ImGui::Text("Object material");
 					ImGui::Text(name.c_str());
-					ImGui::ColorEdit3("difuse", &materialData.kd[0]);
+					ImGui::ColorEdit4("difuse", &materialData.kd[0]);
 					ImGui::SliderFloat("emmisive", &materialData.emmisive, 0, 1);
 					ImGui::SliderFloat("roughness", &materialData.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);

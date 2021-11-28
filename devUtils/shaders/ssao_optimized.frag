@@ -5,7 +5,7 @@ out float fragColor;
 noperspective in highp vec2 v_texCoords;
 
 uniform sampler2D u_gPosition;
-uniform sampler2D u_gNormal;
+uniform isampler2D u_gNormal;
 uniform sampler2D u_texNoise;
 
 uniform vec3 samples[64];
@@ -23,6 +23,24 @@ layout(std140) uniform u_SSAODATA
 
 }ssaoDATA;
 
+vec3 fromuShortToFloat(ivec3 a)
+{
+	vec3 ret = a;
+
+	//[0 65536] -> [0 1]
+	ret /= 65536;
+
+	//[0 1] -> [0 2]
+	ret *= 2.f;
+
+	//[0 2] -> [-1 1]
+	ret -= 1.f;
+
+	return normalize(ret);
+}
+
+
+
 void main()
 {
 	vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
@@ -32,7 +50,7 @@ void main()
 	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
 	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
 	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
-		normalize(texture(u_gNormal, v_texCoords).xyz));
+		fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz));
 	vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
 
 	vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));

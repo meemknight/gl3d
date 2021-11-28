@@ -75,7 +75,7 @@ namespace gl3d
 	//note this is the gpu material
 	struct MaterialValues
 	{
-		glm::vec4 kd = glm::vec4(1); //w component not used //rename to albedo or color
+		glm::vec4 kd = glm::vec4(1);
 		
 		//rma
 		float roughness = 0.5f;

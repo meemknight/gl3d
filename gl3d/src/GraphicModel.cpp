@@ -598,7 +598,6 @@ namespace gl3d
 							0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data
 				);
 
-
 				stbi_image_free(data);
 			}
 			else

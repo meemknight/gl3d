@@ -24,6 +24,7 @@ uniform isampler2D u_textureDerivates;
 //uniform sampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
+uniform int u_transparentPass;
 
 struct MaterialStruct
 {
@@ -763,7 +764,7 @@ vec3 fromuShortToFloat(ivec3 a)
 	//[0 2] -> [-1 1]
 	ret -= 1.f;
 
-	return ret;
+	return normalize(ret);
 }
 
 
@@ -773,7 +774,7 @@ void main()
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
 		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
 
-	vec3 normal = normalize(fromuShortToFloat(texture(u_normals, v_texCoords).xyz));
+	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
@@ -792,9 +793,16 @@ void main()
 		//no material, no alpha component that is important
 		//discard ??
 		//discard;
-		a_outColor = vec4(0,0,0,0);
-		a_outBloom = vec4(0,0,0,1);
-		return;
+		if(u_transparentPass != 0)
+		{
+			discard;
+		}else
+		{
+			a_outColor = vec4(0,0,0,0);
+			a_outBloom = vec4(0,0,0,1);
+			return;
+		}
+		
 		//albedoAlpha = vec4(0,0,0,0);
 	}
 
@@ -802,16 +810,16 @@ void main()
 		uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
 		if(albedoSampler.x == 0 && albedoSampler.y == 0)
 		{
-			albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
+			albedoAlpha.rgba = vec4(1,1,1,1); //multiply after with color;
 		}else
 		{
 			albedoAlpha = 
 				textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 					sampledDerivates.xy, sampledDerivates.zw).rgba;
 		}
-		albedoAlpha.a = 1;
-		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
 
+		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+		albedoAlpha.a *= mat[materialIndex-1].kd.a;
 
 		uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
 		if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
@@ -1124,8 +1132,17 @@ void main()
 
 	//gama correction and hdr is done in the post process step
 
-	a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
-	a_outBloom = vec4(emissive.rgb, 1);
+	if(u_transparentPass != 0)
+	{
+		a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
+		a_outBloom = vec4(emissive.rgb, albedoAlpha.a);
+	}else
+	{
+		a_outColor = vec4(color.rgb + emissive.rgb, 1);
+		a_outBloom = vec4(emissive.rgb, 1);
+	}
+
+	
 
 	//a_outColor.rgb = vec3(albedoAlpha);
 	//a_outColor.rgb =  material.bbb;

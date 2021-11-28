@@ -94,7 +94,8 @@ namespace gl3d
 		GLint light_u_materialIndex = -1;
 		GLint light_u_textureUV = -1;
 		GLint light_u_textureDerivates = -1;
-		
+		GLint light_u_transparentPass = -1;
+
 		
 		GLint light_materialBlockLocation = GL_INVALID_INDEX;
 

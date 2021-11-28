@@ -1,0 +1,34 @@
+# Blender MTL File: 'None'
+# Material Count: 3
+
+newmtl Glass.001
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.110689 0.014859 0.000000 0.5
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Sticker
+Ns 3.457755
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\Vlad\\AppData\\Local\\Temp\\gltfimg-1p_5gqli\\jack-daniels-no_7.jpg
+
+newmtl Sticker_1
+Ns 430.111096
+Ka 0.413223 0.413223 0.413223
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:\\Users\\Vlad\\AppData\\Local\\Temp\\gltfimg-vqmevvx1\\Sticker_1.png

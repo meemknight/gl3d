@@ -763,7 +763,7 @@ vec3 fromuShortToFloat(ivec3 a)
 	//[0 2] -> [-1 1]
 	ret -= 1.f;
 
-	return ret;
+	return normalize(ret);
 }
 
 
@@ -773,7 +773,7 @@ void main()
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
 		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
 
-	vec3 normal = normalize(fromuShortToFloat(texture(u_normals, v_texCoords).xyz));
+	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;

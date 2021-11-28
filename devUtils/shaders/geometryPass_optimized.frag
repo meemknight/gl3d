@@ -133,7 +133,7 @@ void main()
 		}else
 		{
 			float alphaData = texture2D(sampler2D(albedoSampler), v_texCoord).a;
-			if(alphaData < 0.1)
+			if(alphaData*255 < 1)
 				discard;
 		}
 

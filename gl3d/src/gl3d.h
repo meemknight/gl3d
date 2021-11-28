@@ -57,7 +57,7 @@ namespace gl3d
 
 	#pragma region material
 		
-		Material createMaterial(glm::vec3 kd = glm::vec3(1), 
+		Material createMaterial(glm::vec4 kd = glm::vec4(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
 			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
