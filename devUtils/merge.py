@@ -160,12 +160,19 @@ for i in cppFiles:
                 if(shaderSource[index].startswith("//")):
                     shaderSource[index] = ""    
                 shaderSource[index].replace("#pragma debug(on)", "")
+                found = shaderSource[index].find("//")
+                if found >= 0:
+                    shaderSource[index] = shaderSource[index][0:found]
+                
+                if(len(shaderSource[index]) != 0):
+                    shaderSource[index] = "\"" + shaderSource[index] + "\""
 
             shaderSource = list(filter(None, shaderSource))
 
             shaderSource = '\n'.join(shaderSource)
 
-            newContent.insert(foundLineNr, "      std::pair<std::string, const char*>{\""+noOptimizedName+"\", R\"(" + shaderSource +  ")\"},\n")
+            #newContent.insert(foundLineNr, "      std::pair<std::string, const char*>{\""+noOptimizedName+"\", R\"(" + shaderSource +  ")\"},\n")
+            newContent.insert(foundLineNr, "      std::pair<std::string, const char*>{\""+noOptimizedName+"\", " + shaderSource +  "},\n")
             shaderFile.close()
 
         newContent.insert(0, "#define GL3D_LOAD_SHADERS_FROM_HEADER_ONLY")

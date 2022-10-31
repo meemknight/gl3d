@@ -31733,2275 +31733,2275 @@ namespace gl3d
 
 		//std::pair< std::string, const char*>{"name", "value"}
 		//#pragma shaderSources
-      std::pair<std::string, const char*>{"ssao.frag", R"(#version 330 core
-out float fragColor;
-noperspective in highp vec2 v_texCoords;
-uniform sampler2D u_gPosition;
-uniform isampler2D u_gNormal;
-uniform sampler2D u_texNoise;
-uniform vec3 samples[64];
-uniform mat4 u_projection; // camera projection matrix
-uniform mat4 u_view; // camera view matrix
-const int kernelSize = 64;
-layout(std140) uniform u_SSAODATA
-{
-float radius;
-float bias;
-int samplesTestSize; // should be less than kernelSize
-}ssaoDATA;
-vec3 fromuShortToFloat(ivec3 a)
-{
-vec3 ret = a;
-ret /= 65536;
-ret *= 2.f;
-ret -= 1.f;
-return normalize(ret);
-}
-void main()
-{
-vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; //smaller rez
-vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
-vec2 noisePos = v_texCoords * noiseScale;
-vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
-vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
-fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz));
-vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
-vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));
-vec3 bitangent = cross(normal, tangent);
-mat3 TBN       = mat3(tangent, bitangent, normal); 
-float occlusion = 0.0;
-int begin = int((kernelSize - ssaoDATA.samplesTestSize) * abs(randomVec.x));
-for(int i = begin; i < begin + ssaoDATA.samplesTestSize; ++i)
-{
-vec3 samplePos = TBN * samples[i]; // from tangent to view-space
-samplePos = fragPos + samplePos * ssaoDATA.radius; 
-vec4 offset = vec4(samplePos, 1.0);
-offset = u_projection * offset; // from view to clip-space
-offset.xyz /= offset.w; // perspective divide
-offset.xyz = offset.xyz * 0.5 + 0.5; // transform to range 0.0 - 1.0
-{
-float sampleDepth = texture(u_gPosition, offset.xy).z; // get depth value of kernel sample
-float rangeCheck = smoothstep(0.0, 1.0, ssaoDATA.radius / abs(fragPos.z - sampleDepth));
-occlusion += (sampleDepth >= samplePos.z + ssaoDATA.bias ? 1.0 : 0.0) * rangeCheck;
-}
-}  
-occlusion = 1.0 - (occlusion / kernelSize);
-fragColor = occlusion;
-})"},
+      std::pair<std::string, const char*>{"ssao.frag", "#version 330 core"
+"out float fragColor;"
+"noperspective in highp vec2 v_texCoords;"
+"uniform sampler2D u_gPosition;"
+"uniform isampler2D u_gNormal;"
+"uniform sampler2D u_texNoise;"
+"uniform vec3 samples[64];"
+"uniform mat4 u_projection; "
+"uniform mat4 u_view; "
+"const int kernelSize = 64;"
+"layout(std140) uniform u_SSAODATA"
+"{"
+"float radius;"
+"float bias;"
+"int samplesTestSize; "
+"}ssaoDATA;"
+"vec3 fromuShortToFloat(ivec3 a)"
+"{"
+"vec3 ret = a;"
+"ret /= 65536;"
+"ret *= 2.f;"
+"ret -= 1.f;"
+"return normalize(ret);"
+"}"
+"void main()"
+"{"
+"vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; "
+"vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);"
+"vec2 noisePos = v_texCoords * noiseScale;"
+"vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;"
+"vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * "
+"fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz));"
+"vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; "
+"vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));"
+"vec3 bitangent = cross(normal, tangent);"
+"mat3 TBN       = mat3(tangent, bitangent, normal); "
+"float occlusion = 0.0;"
+"int begin = int((kernelSize - ssaoDATA.samplesTestSize) * abs(randomVec.x));"
+"for(int i = begin; i < begin + ssaoDATA.samplesTestSize; ++i)"
+"{"
+"vec3 samplePos = TBN * samples[i]; "
+"samplePos = fragPos + samplePos * ssaoDATA.radius; "
+"vec4 offset = vec4(samplePos, 1.0);"
+"offset = u_projection * offset; "
+"offset.xyz /= offset.w; "
+"offset.xyz = offset.xyz * 0.5 + 0.5; "
+"{"
+"float sampleDepth = texture(u_gPosition, offset.xy).z; "
+"float rangeCheck = smoothstep(0.0, 1.0, ssaoDATA.radius / abs(fragPos.z - sampleDepth));"
+"occlusion += (sampleDepth >= samplePos.z + ssaoDATA.bias ? 1.0 : 0.0) * rangeCheck;"
+"}"
+"}  "
+"occlusion = 1.0 - (occlusion / kernelSize);"
+"fragColor = occlusion;"
+"}"},
 
-      std::pair<std::string, const char*>{"blur.frag", R"(#version 150
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_ssaoInput;
-out float fragColor;
-void main ()
-{
-float result_1;
-vec2 texelSize_2;
-texelSize_2 = (1.0/(vec2(textureSize (u_ssaoInput, 0))));
-vec2 tmpvar_3;
-tmpvar_3 = (vec2(-2.0, -2.0) * texelSize_2);
-vec2 P_4;
-P_4 = (v_texCoords + tmpvar_3);
-result_1 = textureLod (u_ssaoInput, P_4, 0.0).x;
-vec2 tmpvar_5;
-tmpvar_5 = (vec2(-1.0, -2.0) * texelSize_2);
-vec2 P_6;
-P_6 = (v_texCoords + tmpvar_5);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_6, 0.0).x);
-vec2 tmpvar_7;
-tmpvar_7 = (vec2(0.0, -2.0) * texelSize_2);
-vec2 P_8;
-P_8 = (v_texCoords + tmpvar_7);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_8, 0.0).x);
-vec2 tmpvar_9;
-tmpvar_9 = (vec2(1.0, -2.0) * texelSize_2);
-vec2 P_10;
-P_10 = (v_texCoords + tmpvar_9);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_10, 0.0).x);
-vec2 tmpvar_11;
-tmpvar_11 = (vec2(-2.0, -1.0) * texelSize_2);
-vec2 P_12;
-P_12 = (v_texCoords + tmpvar_11);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_12, 0.0).x);
-vec2 tmpvar_13;
-tmpvar_13 = -(texelSize_2);
-vec2 P_14;
-P_14 = (v_texCoords + tmpvar_13);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_14, 0.0).x);
-vec2 tmpvar_15;
-tmpvar_15 = (vec2(0.0, -1.0) * texelSize_2);
-vec2 P_16;
-P_16 = (v_texCoords + tmpvar_15);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_16, 0.0).x);
-vec2 tmpvar_17;
-tmpvar_17 = (vec2(1.0, -1.0) * texelSize_2);
-vec2 P_18;
-P_18 = (v_texCoords + tmpvar_17);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_18, 0.0).x);
-vec2 tmpvar_19;
-tmpvar_19 = (vec2(-2.0, 0.0) * texelSize_2);
-vec2 P_20;
-P_20 = (v_texCoords + tmpvar_19);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_20, 0.0).x);
-vec2 tmpvar_21;
-tmpvar_21 = (vec2(-1.0, 0.0) * texelSize_2);
-vec2 P_22;
-P_22 = (v_texCoords + tmpvar_21);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_22, 0.0).x);
-result_1 = (result_1 + textureLod (u_ssaoInput, v_texCoords, 0.0).x);
-vec2 tmpvar_23;
-tmpvar_23 = (vec2(1.0, 0.0) * texelSize_2);
-vec2 P_24;
-P_24 = (v_texCoords + tmpvar_23);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_24, 0.0).x);
-vec2 tmpvar_25;
-tmpvar_25 = (vec2(-2.0, 1.0) * texelSize_2);
-vec2 P_26;
-P_26 = (v_texCoords + tmpvar_25);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_26, 0.0).x);
-vec2 tmpvar_27;
-tmpvar_27 = (vec2(-1.0, 1.0) * texelSize_2);
-vec2 P_28;
-P_28 = (v_texCoords + tmpvar_27);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_28, 0.0).x);
-vec2 tmpvar_29;
-tmpvar_29 = (vec2(0.0, 1.0) * texelSize_2);
-vec2 P_30;
-P_30 = (v_texCoords + tmpvar_29);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_30, 0.0).x);
-vec2 P_31;
-P_31 = (v_texCoords + texelSize_2);
-result_1 = (result_1 + textureLod (u_ssaoInput, P_31, 0.0).x);
-fragColor = (result_1 / 16.0);
-})"},
+      std::pair<std::string, const char*>{"blur.frag", "#version 150"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_ssaoInput;"
+"out float fragColor;"
+"void main ()"
+"{"
+"float result_1;"
+"vec2 texelSize_2;"
+"texelSize_2 = (1.0/(vec2(textureSize (u_ssaoInput, 0))));"
+"vec2 tmpvar_3;"
+"tmpvar_3 = (vec2(-2.0, -2.0) * texelSize_2);"
+"vec2 P_4;"
+"P_4 = (v_texCoords + tmpvar_3);"
+"result_1 = textureLod (u_ssaoInput, P_4, 0.0).x;"
+"vec2 tmpvar_5;"
+"tmpvar_5 = (vec2(-1.0, -2.0) * texelSize_2);"
+"vec2 P_6;"
+"P_6 = (v_texCoords + tmpvar_5);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_6, 0.0).x);"
+"vec2 tmpvar_7;"
+"tmpvar_7 = (vec2(0.0, -2.0) * texelSize_2);"
+"vec2 P_8;"
+"P_8 = (v_texCoords + tmpvar_7);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_8, 0.0).x);"
+"vec2 tmpvar_9;"
+"tmpvar_9 = (vec2(1.0, -2.0) * texelSize_2);"
+"vec2 P_10;"
+"P_10 = (v_texCoords + tmpvar_9);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_10, 0.0).x);"
+"vec2 tmpvar_11;"
+"tmpvar_11 = (vec2(-2.0, -1.0) * texelSize_2);"
+"vec2 P_12;"
+"P_12 = (v_texCoords + tmpvar_11);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_12, 0.0).x);"
+"vec2 tmpvar_13;"
+"tmpvar_13 = -(texelSize_2);"
+"vec2 P_14;"
+"P_14 = (v_texCoords + tmpvar_13);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_14, 0.0).x);"
+"vec2 tmpvar_15;"
+"tmpvar_15 = (vec2(0.0, -1.0) * texelSize_2);"
+"vec2 P_16;"
+"P_16 = (v_texCoords + tmpvar_15);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_16, 0.0).x);"
+"vec2 tmpvar_17;"
+"tmpvar_17 = (vec2(1.0, -1.0) * texelSize_2);"
+"vec2 P_18;"
+"P_18 = (v_texCoords + tmpvar_17);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_18, 0.0).x);"
+"vec2 tmpvar_19;"
+"tmpvar_19 = (vec2(-2.0, 0.0) * texelSize_2);"
+"vec2 P_20;"
+"P_20 = (v_texCoords + tmpvar_19);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_20, 0.0).x);"
+"vec2 tmpvar_21;"
+"tmpvar_21 = (vec2(-1.0, 0.0) * texelSize_2);"
+"vec2 P_22;"
+"P_22 = (v_texCoords + tmpvar_21);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_22, 0.0).x);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, v_texCoords, 0.0).x);"
+"vec2 tmpvar_23;"
+"tmpvar_23 = (vec2(1.0, 0.0) * texelSize_2);"
+"vec2 P_24;"
+"P_24 = (v_texCoords + tmpvar_23);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_24, 0.0).x);"
+"vec2 tmpvar_25;"
+"tmpvar_25 = (vec2(-2.0, 1.0) * texelSize_2);"
+"vec2 P_26;"
+"P_26 = (v_texCoords + tmpvar_25);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_26, 0.0).x);"
+"vec2 tmpvar_27;"
+"tmpvar_27 = (vec2(-1.0, 1.0) * texelSize_2);"
+"vec2 P_28;"
+"P_28 = (v_texCoords + tmpvar_27);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_28, 0.0).x);"
+"vec2 tmpvar_29;"
+"tmpvar_29 = (vec2(0.0, 1.0) * texelSize_2);"
+"vec2 P_30;"
+"P_30 = (v_texCoords + tmpvar_29);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_30, 0.0).x);"
+"vec2 P_31;"
+"P_31 = (v_texCoords + texelSize_2);"
+"result_1 = (result_1 + textureLod (u_ssaoInput, P_31, 0.0).x);"
+"fragColor = (result_1 / 16.0);"
+"}"},
 
-      std::pair<std::string, const char*>{"skyBox.vert", R"(#version 330
-#pragma debug(on)
-layout (location = 0) in vec3 aPos;
-out vec3 v_texCoords;
-uniform mat4 u_viewProjection;
-void main()
-{
-v_texCoords = aPos;
-vec4 pos = u_viewProjection * vec4(aPos, 1.0);
-gl_Position = pos.xyww;
-}  )"},
+      std::pair<std::string, const char*>{"skyBox.vert", "#version 330"
+"#pragma debug(on)"
+"layout (location = 0) in vec3 aPos;"
+"out vec3 v_texCoords;"
+"uniform mat4 u_viewProjection;"
+"void main()"
+"{"
+"v_texCoords = aPos;"
+"vec4 pos = u_viewProjection * vec4(aPos, 1.0);"
+"gl_Position = pos.xyww;"
+"}  "},
 
-      std::pair<std::string, const char*>{"skyBox.frag", R"(#version 150
-out vec4 a_outColor;
-in vec3 v_texCoords;
-uniform samplerCube u_skybox;
-uniform vec3 u_ambient;
-uniform int u_skyBoxPresent;
-void main ()
-{
-vec3 tmpvar_1;
-tmpvar_1 = pow (u_ambient, vec3(2.2, 2.2, 2.2));
-if ((u_skyBoxPresent != 0)) {
-vec4 tmpvar_2;
-tmpvar_2 = textureLod (u_skybox, v_texCoords, 2.0);
-a_outColor.w = tmpvar_2.w;
-a_outColor.xyz = (tmpvar_2.xyz * tmpvar_1);
-} else {
-a_outColor.xyz = tmpvar_1;
-};
-})"},
+      std::pair<std::string, const char*>{"skyBox.frag", "#version 150"
+"out vec4 a_outColor;"
+"in vec3 v_texCoords;"
+"uniform samplerCube u_skybox;"
+"uniform vec3 u_ambient;"
+"uniform int u_skyBoxPresent;"
+"void main ()"
+"{"
+"vec3 tmpvar_1;"
+"tmpvar_1 = pow (u_ambient, vec3(2.2, 2.2, 2.2));"
+"if ((u_skyBoxPresent != 0)) {"
+"vec4 tmpvar_2;"
+"tmpvar_2 = textureLod (u_skybox, v_texCoords, 2.0);"
+"a_outColor.w = tmpvar_2.w;"
+"a_outColor.xyz = (tmpvar_2.xyz * tmpvar_1);"
+"} else {"
+"a_outColor.xyz = tmpvar_1;"
+"};"
+"}"},
 
-      std::pair<std::string, const char*>{"preFilterSpecular.frag", R"(#version 150
-out vec4 FragColor;
-in vec3 v_localPos;
-uniform samplerCube u_environmentMap;
-uniform float u_roughness;
-uniform uint u_sampleCount;
-void main ()
-{
-float resolution_2;
-float totalWeight_3;
-vec3 prefilteredColor_4;
-vec3 V_5;
-vec3 N_6;
-vec3 tmpvar_7;
-tmpvar_7 = normalize(v_localPos);
-N_6 = tmpvar_7;
-V_5 = tmpvar_7;
-prefilteredColor_4 = vec3(0.0, 0.0, 0.0);
-totalWeight_3 = 0.0;
-resolution_2 = float(textureSize (u_environmentMap, 0).x);
-for (uint i_1 = uint(0); i_1 < u_sampleCount; i_1++) {
-float tmpvar_8;
-uint bits_9;
-bits_9 = ((i_1 << 16u) | (i_1 >> 16u));
-bits_9 = (((bits_9 & 1431655765u) << 1u) | ((bits_9 & 2863311530u) >> 1u));
-bits_9 = (((bits_9 & 858993459u) << 2u) | ((bits_9 & 3435973836u) >> 2u));
-bits_9 = (((bits_9 & 252645135u) << 4u) | ((bits_9 & 4042322160u) >> 4u));
-bits_9 = (((bits_9 & 16711935u) << 8u) | ((bits_9 & 4278255360u) >> 8u));
-tmpvar_8 = (float(bits_9) * 2.328306e-10);
-vec2 tmpvar_10;
-tmpvar_10.x = (float(i_1) / float(u_sampleCount));
-tmpvar_10.y = tmpvar_8;
-vec3 H_11;
-float tmpvar_12;
-tmpvar_12 = (u_roughness * u_roughness);
-float tmpvar_13;
-tmpvar_13 = (6.283185 * tmpvar_10.x);
-float tmpvar_14;
-tmpvar_14 = sqrt(((1.0 - tmpvar_8) / (1.0 + 
-(((tmpvar_12 * tmpvar_12) - 1.0) * tmpvar_8)
-)));
-float tmpvar_15;
-tmpvar_15 = sqrt((1.0 - (tmpvar_14 * tmpvar_14)));
-H_11.x = (cos(tmpvar_13) * tmpvar_15);
-H_11.y = (sin(tmpvar_13) * tmpvar_15);
-H_11.z = tmpvar_14;
-float tmpvar_16;
-tmpvar_16 = abs(N_6.z);
-vec3 tmpvar_17;
-if ((tmpvar_16 < 0.999)) {
-tmpvar_17 = vec3(0.0, 0.0, 1.0);
-} else {
-tmpvar_17 = vec3(1.0, 0.0, 0.0);
-};
-vec3 tmpvar_18;
-tmpvar_18 = normalize(((tmpvar_17.yzx * N_6.zxy) - (tmpvar_17.zxy * N_6.yzx)));
-vec3 tmpvar_19;
-tmpvar_19 = normalize(((
-(tmpvar_18 * H_11.x)
-+ 
-(((N_6.yzx * tmpvar_18.zxy) - (N_6.zxy * tmpvar_18.yzx)) * H_11.y)
-) + (N_6 * tmpvar_14)));
-vec3 tmpvar_20;
-tmpvar_20 = normalize(((
-(2.0 * dot (V_5, tmpvar_19))
-* tmpvar_19) - V_5));
-float tmpvar_21;
-tmpvar_21 = max (dot (N_6, tmpvar_20), 0.0);
-if ((tmpvar_21 > 0.0)) {
-float tmpvar_22;
-tmpvar_22 = (u_roughness * u_roughness);
-float tmpvar_23;
-tmpvar_23 = (tmpvar_22 * tmpvar_22);
-float tmpvar_24;
-tmpvar_24 = max (dot (N_6, tmpvar_19), 0.0);
-float tmpvar_25;
-tmpvar_25 = (((tmpvar_24 * tmpvar_24) * (tmpvar_23 - 1.0)) + 1.0);
-float tmpvar_26;
-tmpvar_26 = (12.56637 / ((6.0 * resolution_2) * resolution_2));
-float tmpvar_27;
-tmpvar_27 = (1.0/(((
-float(u_sampleCount)
-* 
-((((tmpvar_23 / 
-((3.141593 * tmpvar_25) * tmpvar_25)
-) * max (
-dot (N_6, tmpvar_19)
-, 0.0)) / (4.0 * max (
-dot (tmpvar_19, V_5)
-, 0.0))) + 0.0001)
-) + 0.0001)));
-float tmpvar_28;
-if ((u_roughness == 0.0)) {
-tmpvar_28 = 0.0;
-} else {
-tmpvar_28 = (0.5 * log2((tmpvar_27 / tmpvar_26)));
-};
-prefilteredColor_4 = (prefilteredColor_4 + (textureLod (u_environmentMap, tmpvar_20, tmpvar_28).xyz * tmpvar_21));
-totalWeight_3 = (totalWeight_3 + tmpvar_21);
-};
-};
-prefilteredColor_4 = (prefilteredColor_4 / totalWeight_3);
-vec4 tmpvar_29;
-tmpvar_29.w = 1.0;
-tmpvar_29.xyz = prefilteredColor_4;
-FragColor = tmpvar_29;
-})"},
+      std::pair<std::string, const char*>{"preFilterSpecular.frag", "#version 150"
+"out vec4 FragColor;"
+"in vec3 v_localPos;"
+"uniform samplerCube u_environmentMap;"
+"uniform float u_roughness;"
+"uniform uint u_sampleCount;"
+"void main ()"
+"{"
+"float resolution_2;"
+"float totalWeight_3;"
+"vec3 prefilteredColor_4;"
+"vec3 V_5;"
+"vec3 N_6;"
+"vec3 tmpvar_7;"
+"tmpvar_7 = normalize(v_localPos);"
+"N_6 = tmpvar_7;"
+"V_5 = tmpvar_7;"
+"prefilteredColor_4 = vec3(0.0, 0.0, 0.0);"
+"totalWeight_3 = 0.0;"
+"resolution_2 = float(textureSize (u_environmentMap, 0).x);"
+"for (uint i_1 = uint(0); i_1 < u_sampleCount; i_1++) {"
+"float tmpvar_8;"
+"uint bits_9;"
+"bits_9 = ((i_1 << 16u) | (i_1 >> 16u));"
+"bits_9 = (((bits_9 & 1431655765u) << 1u) | ((bits_9 & 2863311530u) >> 1u));"
+"bits_9 = (((bits_9 & 858993459u) << 2u) | ((bits_9 & 3435973836u) >> 2u));"
+"bits_9 = (((bits_9 & 252645135u) << 4u) | ((bits_9 & 4042322160u) >> 4u));"
+"bits_9 = (((bits_9 & 16711935u) << 8u) | ((bits_9 & 4278255360u) >> 8u));"
+"tmpvar_8 = (float(bits_9) * 2.328306e-10);"
+"vec2 tmpvar_10;"
+"tmpvar_10.x = (float(i_1) / float(u_sampleCount));"
+"tmpvar_10.y = tmpvar_8;"
+"vec3 H_11;"
+"float tmpvar_12;"
+"tmpvar_12 = (u_roughness * u_roughness);"
+"float tmpvar_13;"
+"tmpvar_13 = (6.283185 * tmpvar_10.x);"
+"float tmpvar_14;"
+"tmpvar_14 = sqrt(((1.0 - tmpvar_8) / (1.0 + "
+"(((tmpvar_12 * tmpvar_12) - 1.0) * tmpvar_8)"
+")));"
+"float tmpvar_15;"
+"tmpvar_15 = sqrt((1.0 - (tmpvar_14 * tmpvar_14)));"
+"H_11.x = (cos(tmpvar_13) * tmpvar_15);"
+"H_11.y = (sin(tmpvar_13) * tmpvar_15);"
+"H_11.z = tmpvar_14;"
+"float tmpvar_16;"
+"tmpvar_16 = abs(N_6.z);"
+"vec3 tmpvar_17;"
+"if ((tmpvar_16 < 0.999)) {"
+"tmpvar_17 = vec3(0.0, 0.0, 1.0);"
+"} else {"
+"tmpvar_17 = vec3(1.0, 0.0, 0.0);"
+"};"
+"vec3 tmpvar_18;"
+"tmpvar_18 = normalize(((tmpvar_17.yzx * N_6.zxy) - (tmpvar_17.zxy * N_6.yzx)));"
+"vec3 tmpvar_19;"
+"tmpvar_19 = normalize((("
+"(tmpvar_18 * H_11.x)"
+"+ "
+"(((N_6.yzx * tmpvar_18.zxy) - (N_6.zxy * tmpvar_18.yzx)) * H_11.y)"
+") + (N_6 * tmpvar_14)));"
+"vec3 tmpvar_20;"
+"tmpvar_20 = normalize((("
+"(2.0 * dot (V_5, tmpvar_19))"
+"* tmpvar_19) - V_5));"
+"float tmpvar_21;"
+"tmpvar_21 = max (dot (N_6, tmpvar_20), 0.0);"
+"if ((tmpvar_21 > 0.0)) {"
+"float tmpvar_22;"
+"tmpvar_22 = (u_roughness * u_roughness);"
+"float tmpvar_23;"
+"tmpvar_23 = (tmpvar_22 * tmpvar_22);"
+"float tmpvar_24;"
+"tmpvar_24 = max (dot (N_6, tmpvar_19), 0.0);"
+"float tmpvar_25;"
+"tmpvar_25 = (((tmpvar_24 * tmpvar_24) * (tmpvar_23 - 1.0)) + 1.0);"
+"float tmpvar_26;"
+"tmpvar_26 = (12.56637 / ((6.0 * resolution_2) * resolution_2));"
+"float tmpvar_27;"
+"tmpvar_27 = (1.0/((("
+"float(u_sampleCount)"
+"* "
+"((((tmpvar_23 / "
+"((3.141593 * tmpvar_25) * tmpvar_25)"
+") * max ("
+"dot (N_6, tmpvar_19)"
+", 0.0)) / (4.0 * max ("
+"dot (tmpvar_19, V_5)"
+", 0.0))) + 0.0001)"
+") + 0.0001)));"
+"float tmpvar_28;"
+"if ((u_roughness == 0.0)) {"
+"tmpvar_28 = 0.0;"
+"} else {"
+"tmpvar_28 = (0.5 * log2((tmpvar_27 / tmpvar_26)));"
+"};"
+"prefilteredColor_4 = (prefilteredColor_4 + (textureLod (u_environmentMap, tmpvar_20, tmpvar_28).xyz * tmpvar_21));"
+"totalWeight_3 = (totalWeight_3 + tmpvar_21);"
+"};"
+"};"
+"prefilteredColor_4 = (prefilteredColor_4 / totalWeight_3);"
+"vec4 tmpvar_29;"
+"tmpvar_29.w = 1.0;"
+"tmpvar_29.xyz = prefilteredColor_4;"
+"FragColor = tmpvar_29;"
+"}"},
 
-      std::pair<std::string, const char*>{"hdrToCubeMap.vert", R"(#version 330
-#pragma debug(on)
-layout (location = 0) in vec3 aPos;
-out vec3 v_localPos;
-uniform mat4 u_viewProjection;
-void main()
-{
-v_localPos = aPos;
-gl_Position = u_viewProjection * vec4(aPos, 1.0);
-}  )"},
+      std::pair<std::string, const char*>{"hdrToCubeMap.vert", "#version 330"
+"#pragma debug(on)"
+"layout (location = 0) in vec3 aPos;"
+"out vec3 v_localPos;"
+"uniform mat4 u_viewProjection;"
+"void main()"
+"{"
+"v_localPos = aPos;"
+"gl_Position = u_viewProjection * vec4(aPos, 1.0);"
+"}  "},
 
-      std::pair<std::string, const char*>{"hdrToCubeMap.frag", R"(#version 150
-out vec4 FragColor;
-in vec3 v_localPos;
-uniform sampler2D u_equirectangularMap;
-void main ()
-{
-vec3 tmpvar_1;
-tmpvar_1 = normalize(v_localPos);
-vec2 uv_2;
-float tmpvar_3;
-float tmpvar_4;
-tmpvar_4 = (min (abs(
-(tmpvar_1.z / tmpvar_1.x)
-), 1.0) / max (abs(
-(tmpvar_1.z / tmpvar_1.x)
-), 1.0));
-float tmpvar_5;
-tmpvar_5 = (tmpvar_4 * tmpvar_4);
-tmpvar_5 = (((
-((((
-((((-0.01213232 * tmpvar_5) + 0.05368138) * tmpvar_5) - 0.1173503)
-* tmpvar_5) + 0.1938925) * tmpvar_5) - 0.3326756)
-* tmpvar_5) + 0.9999793) * tmpvar_4);
-tmpvar_5 = (tmpvar_5 + (float(
-(abs((tmpvar_1.z / tmpvar_1.x)) > 1.0)
-) * (
-(tmpvar_5 * -2.0)
-+ 1.570796)));
-tmpvar_3 = (tmpvar_5 * sign((tmpvar_1.z / tmpvar_1.x)));
-if ((abs(tmpvar_1.x) > (1e-8 * abs(tmpvar_1.z)))) {
-if ((tmpvar_1.x < 0.0)) {
-if ((tmpvar_1.z >= 0.0)) {
-tmpvar_3 += 3.141593;
-} else {
-tmpvar_3 = (tmpvar_3 - 3.141593);
-};
-};
-} else {
-tmpvar_3 = (sign(tmpvar_1.z) * 1.570796);
-};
-vec2 tmpvar_6;
-tmpvar_6.x = tmpvar_3;
-tmpvar_6.y = (sign(tmpvar_1.y) * (1.570796 - (
-sqrt((1.0 - abs(tmpvar_1.y)))
-* 
-(1.570796 + (abs(tmpvar_1.y) * (-0.2146018 + (
-abs(tmpvar_1.y)
-* 
-(0.08656672 + (abs(tmpvar_1.y) * -0.03102955))
-))))
-)));
-uv_2 = (tmpvar_6 * vec2(0.1591, 0.3183));
-uv_2 = (uv_2 + 0.5);
-vec4 tmpvar_7;
-tmpvar_7.w = 1.0;
-tmpvar_7.xyz = texture (u_equirectangularMap, uv_2).xyz;
-FragColor = tmpvar_7;
-})"},
+      std::pair<std::string, const char*>{"hdrToCubeMap.frag", "#version 150"
+"out vec4 FragColor;"
+"in vec3 v_localPos;"
+"uniform sampler2D u_equirectangularMap;"
+"void main ()"
+"{"
+"vec3 tmpvar_1;"
+"tmpvar_1 = normalize(v_localPos);"
+"vec2 uv_2;"
+"float tmpvar_3;"
+"float tmpvar_4;"
+"tmpvar_4 = (min (abs("
+"(tmpvar_1.z / tmpvar_1.x)"
+"), 1.0) / max (abs("
+"(tmpvar_1.z / tmpvar_1.x)"
+"), 1.0));"
+"float tmpvar_5;"
+"tmpvar_5 = (tmpvar_4 * tmpvar_4);"
+"tmpvar_5 = ((("
+"(((("
+"((((-0.01213232 * tmpvar_5) + 0.05368138) * tmpvar_5) - 0.1173503)"
+"* tmpvar_5) + 0.1938925) * tmpvar_5) - 0.3326756)"
+"* tmpvar_5) + 0.9999793) * tmpvar_4);"
+"tmpvar_5 = (tmpvar_5 + (float("
+"(abs((tmpvar_1.z / tmpvar_1.x)) > 1.0)"
+") * ("
+"(tmpvar_5 * -2.0)"
+"+ 1.570796)));"
+"tmpvar_3 = (tmpvar_5 * sign((tmpvar_1.z / tmpvar_1.x)));"
+"if ((abs(tmpvar_1.x) > (1e-8 * abs(tmpvar_1.z)))) {"
+"if ((tmpvar_1.x < 0.0)) {"
+"if ((tmpvar_1.z >= 0.0)) {"
+"tmpvar_3 += 3.141593;"
+"} else {"
+"tmpvar_3 = (tmpvar_3 - 3.141593);"
+"};"
+"};"
+"} else {"
+"tmpvar_3 = (sign(tmpvar_1.z) * 1.570796);"
+"};"
+"vec2 tmpvar_6;"
+"tmpvar_6.x = tmpvar_3;"
+"tmpvar_6.y = (sign(tmpvar_1.y) * (1.570796 - ("
+"sqrt((1.0 - abs(tmpvar_1.y)))"
+"* "
+"(1.570796 + (abs(tmpvar_1.y) * (-0.2146018 + ("
+"abs(tmpvar_1.y)"
+"* "
+"(0.08656672 + (abs(tmpvar_1.y) * -0.03102955))"
+"))))"
+")));"
+"uv_2 = (tmpvar_6 * vec2(0.1591, 0.3183));"
+"uv_2 = (uv_2 + 0.5);"
+"vec4 tmpvar_7;"
+"tmpvar_7.w = 1.0;"
+"tmpvar_7.xyz = texture (u_equirectangularMap, uv_2).xyz;"
+"FragColor = tmpvar_7;"
+"}"},
 
-      std::pair<std::string, const char*>{"convolute.frag", R"(#version 150
-out vec4 fragColor;
-in vec3 v_localPos;
-uniform samplerCube u_environmentMap;
-uniform float u_sampleQuality;
-void main ()
-{
-float nrSamples_2;
-float sampleDelta_3;
-vec3 right_4;
-vec3 up_5;
-vec3 irradiance_6;
-vec3 normal_7;
-vec3 tmpvar_8;
-tmpvar_8 = normalize(v_localPos);
-normal_7 = tmpvar_8;
-irradiance_6 = vec3(0.0, 0.0, 0.0);
-vec3 tmpvar_9;
-tmpvar_9 = normalize(((vec3(1.0, 0.0, 0.0) * tmpvar_8.zxy) - (vec3(0.0, 0.0, 1.0) * tmpvar_8.yzx)));
-right_4 = tmpvar_9;
-up_5 = normalize(((tmpvar_8.yzx * tmpvar_9.zxy) - (tmpvar_8.zxy * tmpvar_9.yzx)));
-sampleDelta_3 = u_sampleQuality;
-nrSamples_2 = 0.0;
-for (float phi_1 = 0.0; phi_1 < 6.283185; phi_1 = (phi_1 + sampleDelta_3)) {
-for (float theta_10 = 0.0; theta_10 < 1.570796; theta_10 = (theta_10 + sampleDelta_3)) {
-float tmpvar_11;
-tmpvar_11 = cos(theta_10);
-vec3 tmpvar_12;
-tmpvar_12.x = (sin(theta_10) * cos(phi_1));
-tmpvar_12.y = (sin(theta_10) * sin(phi_1));
-tmpvar_12.z = tmpvar_11;
-irradiance_6 = (irradiance_6 + ((texture (u_environmentMap, 
-(((tmpvar_12.x * right_4) + (tmpvar_12.y * up_5)) + (tmpvar_11 * normal_7))
-).xyz * 
-cos(theta_10)
-) * sin(theta_10)));
-nrSamples_2 += 1.0;
-};
-};
-irradiance_6 = (irradiance_6 * (3.141593 / nrSamples_2));
-vec4 tmpvar_13;
-tmpvar_13.w = 1.0;
-tmpvar_13.xyz = irradiance_6;
-fragColor = tmpvar_13;
-})"},
+      std::pair<std::string, const char*>{"convolute.frag", "#version 150"
+"out vec4 fragColor;"
+"in vec3 v_localPos;"
+"uniform samplerCube u_environmentMap;"
+"uniform float u_sampleQuality;"
+"void main ()"
+"{"
+"float nrSamples_2;"
+"float sampleDelta_3;"
+"vec3 right_4;"
+"vec3 up_5;"
+"vec3 irradiance_6;"
+"vec3 normal_7;"
+"vec3 tmpvar_8;"
+"tmpvar_8 = normalize(v_localPos);"
+"normal_7 = tmpvar_8;"
+"irradiance_6 = vec3(0.0, 0.0, 0.0);"
+"vec3 tmpvar_9;"
+"tmpvar_9 = normalize(((vec3(1.0, 0.0, 0.0) * tmpvar_8.zxy) - (vec3(0.0, 0.0, 1.0) * tmpvar_8.yzx)));"
+"right_4 = tmpvar_9;"
+"up_5 = normalize(((tmpvar_8.yzx * tmpvar_9.zxy) - (tmpvar_8.zxy * tmpvar_9.yzx)));"
+"sampleDelta_3 = u_sampleQuality;"
+"nrSamples_2 = 0.0;"
+"for (float phi_1 = 0.0; phi_1 < 6.283185; phi_1 = (phi_1 + sampleDelta_3)) {"
+"for (float theta_10 = 0.0; theta_10 < 1.570796; theta_10 = (theta_10 + sampleDelta_3)) {"
+"float tmpvar_11;"
+"tmpvar_11 = cos(theta_10);"
+"vec3 tmpvar_12;"
+"tmpvar_12.x = (sin(theta_10) * cos(phi_1));"
+"tmpvar_12.y = (sin(theta_10) * sin(phi_1));"
+"tmpvar_12.z = tmpvar_11;"
+"irradiance_6 = (irradiance_6 + ((texture (u_environmentMap, "
+"(((tmpvar_12.x * right_4) + (tmpvar_12.y * up_5)) + (tmpvar_11 * normal_7))"
+").xyz * "
+"cos(theta_10)"
+") * sin(theta_10)));"
+"nrSamples_2 += 1.0;"
+"};"
+"};"
+"irradiance_6 = (irradiance_6 * (3.141593 / nrSamples_2));"
+"vec4 tmpvar_13;"
+"tmpvar_13.w = 1.0;"
+"tmpvar_13.xyz = irradiance_6;"
+"fragColor = tmpvar_13;"
+"}"},
 
-      std::pair<std::string, const char*>{"atmosphericScattering.frag", R"(#version 150
-uniform vec3 u_lightPos;
-uniform vec3 u_color1;
-uniform vec3 u_color2;
-uniform float u_g;
-in vec3 v_localPos;
-out vec3 fragColor;
-void main ()
-{
-vec3 tmpvar_1;
-tmpvar_1 = normalize(v_localPos);
-vec3 tmpvar_2;
-tmpvar_2 = normalize(u_lightPos);
-float tmpvar_3;
-tmpvar_3 = max (tmpvar_1.y, 0.0);
-float tmpvar_4;
-tmpvar_4 = (1.0 - tmpvar_3);
-float tmpvar_5;
-tmpvar_5 = (u_g * u_g);
-float tmpvar_6;
-tmpvar_6 = dot (tmpvar_2, tmpvar_1);
-vec3 tmpvar_7;
-tmpvar_7 = (((u_color1 + 
-((((1.5 * 
-((1.0 - tmpvar_5) / (2.0 + tmpvar_5))
-) * (1.0 + 
-(tmpvar_6 * tmpvar_6)
-)) / pow ((
-(1.0 + tmpvar_5)
-- 
-((2.0 * u_g) * tmpvar_6)
-), 1.5)) * u_color2)
-) + (
-((1.0 - abs(tmpvar_2.y)) * u_color2)
-* 
-pow (tmpvar_4, 16.0)
-)) + (pow (tmpvar_4, 16.0) * u_color2));
-if ((tmpvar_3 < 0.02)) {
-float tmpvar_8;
-tmpvar_8 = min (max ((tmpvar_3 / 0.02), 0.0), 1.0);
-fragColor = mix (vec3(0.1, 0.2, 0.1), tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));
-} else {
-fragColor = tmpvar_7;
-};
-})"},
+      std::pair<std::string, const char*>{"atmosphericScattering.frag", "#version 150"
+"uniform vec3 u_lightPos;"
+"uniform vec3 u_color1;"
+"uniform vec3 u_color2;"
+"uniform float u_g;"
+"in vec3 v_localPos;"
+"out vec3 fragColor;"
+"void main ()"
+"{"
+"vec3 tmpvar_1;"
+"tmpvar_1 = normalize(v_localPos);"
+"vec3 tmpvar_2;"
+"tmpvar_2 = normalize(u_lightPos);"
+"float tmpvar_3;"
+"tmpvar_3 = max (tmpvar_1.y, 0.0);"
+"float tmpvar_4;"
+"tmpvar_4 = (1.0 - tmpvar_3);"
+"float tmpvar_5;"
+"tmpvar_5 = (u_g * u_g);"
+"float tmpvar_6;"
+"tmpvar_6 = dot (tmpvar_2, tmpvar_1);"
+"vec3 tmpvar_7;"
+"tmpvar_7 = (((u_color1 + "
+"((((1.5 * "
+"((1.0 - tmpvar_5) / (2.0 + tmpvar_5))"
+") * (1.0 + "
+"(tmpvar_6 * tmpvar_6)"
+")) / pow (("
+"(1.0 + tmpvar_5)"
+"- "
+"((2.0 * u_g) * tmpvar_6)"
+"), 1.5)) * u_color2)"
+") + ("
+"((1.0 - abs(tmpvar_2.y)) * u_color2)"
+"* "
+"pow (tmpvar_4, 16.0)"
+")) + (pow (tmpvar_4, 16.0) * u_color2));"
+"if ((tmpvar_3 < 0.02)) {"
+"float tmpvar_8;"
+"tmpvar_8 = min (max ((tmpvar_3 / 0.02), 0.0), 1.0);"
+"fragColor = mix (vec3(0.1, 0.2, 0.1), tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));"
+"} else {"
+"fragColor = tmpvar_7;"
+"};"
+"}"},
 
-      std::pair<std::string, const char*>{"varienceShadowMap.frag", R"(#version 150
-uniform sampler2D u_albedoSampler;
-uniform int u_hasTexture;
-in vec2 v_texCoord;
-out vec2 outColor;
-void main ()
-{
-if ((u_hasTexture != 0)) {
-vec4 tmpvar_1;
-tmpvar_1 = texture (u_albedoSampler, v_texCoord);
-if ((tmpvar_1.w <= 0.1)) {
-discard;
-};
-};
-vec2 tmpvar_2;
-tmpvar_2.x = gl_FragCoord.z;
-tmpvar_2.y = (gl_FragCoord.z * gl_FragCoord.z);
-outColor = tmpvar_2;
-})"},
+      std::pair<std::string, const char*>{"varienceShadowMap.frag", "#version 150"
+"uniform sampler2D u_albedoSampler;"
+"uniform int u_hasTexture;"
+"in vec2 v_texCoord;"
+"out vec2 outColor;"
+"void main ()"
+"{"
+"if ((u_hasTexture != 0)) {"
+"vec4 tmpvar_1;"
+"tmpvar_1 = texture (u_albedoSampler, v_texCoord);"
+"if ((tmpvar_1.w <= 0.1)) {"
+"discard;"
+"};"
+"};"
+"vec2 tmpvar_2;"
+"tmpvar_2.x = gl_FragCoord.z;"
+"tmpvar_2.y = (gl_FragCoord.z * gl_FragCoord.z);"
+"outColor = tmpvar_2;"
+"}"},
 
-      std::pair<std::string, const char*>{"pointShadow.vert", R"(#version 430
-#pragma debug(on)
-layout(location = 0) in vec3 a_positions;
-layout(location = 1) in vec3 a_normals; //todo comment out
-layout(location = 2) in vec2 a_texCoord;
-layout(location = 3) in ivec4 a_jointsId;
-layout(location = 4) in vec4 a_weights;
-uniform mat4 u_transform; //full model view projection or just model for point shadows
-readonly restrict layout(std140) buffer u_jointTransforms
-{
-mat4 jointTransforms[];
-};
-uniform int u_hasAnimations;
-out vec2 v_texCoord;
-void main()
-{
-vec4 totalLocalPos = vec4(0.f);
-if(u_hasAnimations != 0)
-{
-for(int i=0; i<4; i++)
-{
-if(a_jointsId[i] < 0){break;}
-mat4 jointTransform = jointTransforms[a_jointsId[i]];
-vec4 posePosition = jointTransform * vec4(a_positions, 1);
-totalLocalPos += posePosition * a_weights[i];
-}
-}else
-{
-totalLocalPos = vec4(a_positions, 1.f);
-}
-gl_Position = u_transform * totalLocalPos;
-v_texCoord = a_texCoord;
-} )"},
+      std::pair<std::string, const char*>{"pointShadow.vert", "#version 430"
+"#pragma debug(on)"
+"layout(location = 0) in vec3 a_positions;"
+"layout(location = 1) in vec3 a_normals; "
+"layout(location = 2) in vec2 a_texCoord;"
+"layout(location = 3) in ivec4 a_jointsId;"
+"layout(location = 4) in vec4 a_weights;"
+"uniform mat4 u_transform; "
+"readonly restrict layout(std140) buffer u_jointTransforms"
+"{"
+"mat4 jointTransforms[];"
+"};"
+"uniform int u_hasAnimations;"
+"out vec2 v_texCoord;"
+"void main()"
+"{"
+"vec4 totalLocalPos = vec4(0.f);"
+"if(u_hasAnimations != 0)"
+"{"
+"for(int i=0; i<4; i++)"
+"{"
+"if(a_jointsId[i] < 0){break;}"
+"mat4 jointTransform = jointTransforms[a_jointsId[i]];"
+"vec4 posePosition = jointTransform * vec4(a_positions, 1);"
+"totalLocalPos += posePosition * a_weights[i];"
+"}"
+"}else"
+"{"
+"totalLocalPos = vec4(a_positions, 1.f);"
+"}"
+"gl_Position = u_transform * totalLocalPos;"
+"v_texCoord = a_texCoord;"
+"} "},
 
-      std::pair<std::string, const char*>{"pointShadow.geom", R"(#version 330 core
-layout (triangles) in;
-layout (triangle_strip, max_vertices=18) out;
-uniform mat4 u_shadowMatrices[6];
-uniform int u_lightIndex;
-out vec4 v_fragPos; // FragPos from GS (output per emitvertex)
-out vec2 v_finalTexCoord;
-in vec2 v_texCoord[3];
-void main()
-{
-for(int face = 0; face < 6; ++face)
-{
-gl_Layer = face + u_lightIndex * 6; // built-in variable that specifies to which face we render.
-for(int i = 0; i < 3; ++i) // for each triangle vertex
-{
-v_fragPos = gl_in[i].gl_Position;
-v_finalTexCoord = v_texCoord[i];
-gl_Position = u_shadowMatrices[face] * v_fragPos;
-EmitVertex();
-}    
-EndPrimitive();
-}
-}  )"},
+      std::pair<std::string, const char*>{"pointShadow.geom", "#version 330 core"
+"layout (triangles) in;"
+"layout (triangle_strip, max_vertices=18) out;"
+"uniform mat4 u_shadowMatrices[6];"
+"uniform int u_lightIndex;"
+"out vec4 v_fragPos; "
+"out vec2 v_finalTexCoord;"
+"in vec2 v_texCoord[3];"
+"void main()"
+"{"
+"for(int face = 0; face < 6; ++face)"
+"{"
+"gl_Layer = face + u_lightIndex * 6; "
+"for(int i = 0; i < 3; ++i) "
+"{"
+"v_fragPos = gl_in[i].gl_Position;"
+"v_finalTexCoord = v_texCoord[i];"
+"gl_Position = u_shadowMatrices[face] * v_fragPos;"
+"EmitVertex();"
+"}    "
+"EndPrimitive();"
+"}"
+"}  "},
 
-      std::pair<std::string, const char*>{"pointShadow.frag", R"(#version 150
-uniform sampler2D u_albedoSampler;
-uniform int u_hasTexture;
-uniform vec3 u_lightPos;
-uniform float u_farPlane;
-in vec4 v_fragPos;
-in vec2 v_finalTexCoord;
-void main ()
-{
-if ((u_hasTexture != 0)) {
-vec4 tmpvar_1;
-tmpvar_1 = texture (u_albedoSampler, v_finalTexCoord);
-if (((tmpvar_1.w * 255.0) < 1.0)) {
-discard;
-};
-};
-vec3 x_2;
-x_2 = (v_fragPos.xyz - u_lightPos);
-gl_FragDepth = (sqrt(dot (x_2, x_2)) / u_farPlane);
-})"},
+      std::pair<std::string, const char*>{"pointShadow.frag", "#version 150"
+"uniform sampler2D u_albedoSampler;"
+"uniform int u_hasTexture;"
+"uniform vec3 u_lightPos;"
+"uniform float u_farPlane;"
+"in vec4 v_fragPos;"
+"in vec2 v_finalTexCoord;"
+"void main ()"
+"{"
+"if ((u_hasTexture != 0)) {"
+"vec4 tmpvar_1;"
+"tmpvar_1 = texture (u_albedoSampler, v_finalTexCoord);"
+"if (((tmpvar_1.w * 255.0) < 1.0)) {"
+"discard;"
+"};"
+"};"
+"vec3 x_2;"
+"x_2 = (v_fragPos.xyz - u_lightPos);"
+"gl_FragDepth = (sqrt(dot (x_2, x_2)) / u_farPlane);"
+"}"},
 
-      std::pair<std::string, const char*>{"postProcess.frag", R"(#version 150
-out vec4 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_colorTexture;
-uniform sampler2D u_bloomTexture;
-uniform sampler2D u_bloomNotBluredTexture;
-uniform float u_bloomIntensity;
-uniform float u_exposure;
-uniform int u_useSSAO;
-uniform float u_ssaoExponent;
-uniform sampler2D u_ssao;
-void main ()
-{
-float ssaof_1;
-vec4 tmpvar_2;
-tmpvar_2 = texture (u_colorTexture, v_texCoords);
-ssaof_1 = 1.0;
-if ((u_useSSAO != 0)) {
-ssaof_1 = pow (texture (u_ssao, v_texCoords).x, u_ssaoExponent);
-} else {
-ssaof_1 = 1.0;
-};
-a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));
-vec3 color_3;
-color_3 = (a_color.xyz * u_exposure);
-mat3 tmpvar_4;
-tmpvar_4[0].x = 0.59719;
-tmpvar_4[1].x = 0.35458;
-tmpvar_4[2].x = 0.04823;
-tmpvar_4[0].y = 0.076;
-tmpvar_4[1].y = 0.90834;
-tmpvar_4[2].y = 0.01566;
-tmpvar_4[0].z = 0.0284;
-tmpvar_4[1].z = 0.13383;
-tmpvar_4[2].z = 0.83777;
-color_3 = (tmpvar_4 * color_3);
-mat3 tmpvar_5;
-tmpvar_5[0].x = 1.60475;
-tmpvar_5[1].x = -0.53108;
-tmpvar_5[2].x = -0.07367;
-tmpvar_5[0].y = -0.10208;
-tmpvar_5[1].y = 1.10813;
-tmpvar_5[2].y = -0.00605;
-tmpvar_5[0].z = -0.00327;
-tmpvar_5[1].z = -0.07276;
-tmpvar_5[2].z = 1.07602;
-color_3 = (tmpvar_5 * ((
-(color_3 * (color_3 + 0.0245786))
-- 9.0537e-5) / (
-(color_3 * ((0.983729 * color_3) + 0.432951))
-+ 0.238081)));
-vec3 tmpvar_6;
-tmpvar_6 = clamp (color_3, 0.0, 1.0);
-color_3 = tmpvar_6;
-a_color.xyz = pow (tmpvar_6, vec3(0.4545454, 0.4545454, 0.4545454));
-a_color.w = tmpvar_2.w;
-})"},
+      std::pair<std::string, const char*>{"postProcess.frag", "#version 150"
+"out vec4 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_colorTexture;"
+"uniform sampler2D u_bloomTexture;"
+"uniform sampler2D u_bloomNotBluredTexture;"
+"uniform float u_bloomIntensity;"
+"uniform float u_exposure;"
+"uniform int u_useSSAO;"
+"uniform float u_ssaoExponent;"
+"uniform sampler2D u_ssao;"
+"void main ()"
+"{"
+"float ssaof_1;"
+"vec4 tmpvar_2;"
+"tmpvar_2 = texture (u_colorTexture, v_texCoords);"
+"ssaof_1 = 1.0;"
+"if ((u_useSSAO != 0)) {"
+"ssaof_1 = pow (texture (u_ssao, v_texCoords).x, u_ssaoExponent);"
+"} else {"
+"ssaof_1 = 1.0;"
+"};"
+"a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));"
+"vec3 color_3;"
+"color_3 = (a_color.xyz * u_exposure);"
+"mat3 tmpvar_4;"
+"tmpvar_4[0].x = 0.59719;"
+"tmpvar_4[1].x = 0.35458;"
+"tmpvar_4[2].x = 0.04823;"
+"tmpvar_4[0].y = 0.076;"
+"tmpvar_4[1].y = 0.90834;"
+"tmpvar_4[2].y = 0.01566;"
+"tmpvar_4[0].z = 0.0284;"
+"tmpvar_4[1].z = 0.13383;"
+"tmpvar_4[2].z = 0.83777;"
+"color_3 = (tmpvar_4 * color_3);"
+"mat3 tmpvar_5;"
+"tmpvar_5[0].x = 1.60475;"
+"tmpvar_5[1].x = -0.53108;"
+"tmpvar_5[2].x = -0.07367;"
+"tmpvar_5[0].y = -0.10208;"
+"tmpvar_5[1].y = 1.10813;"
+"tmpvar_5[2].y = -0.00605;"
+"tmpvar_5[0].z = -0.00327;"
+"tmpvar_5[1].z = -0.07276;"
+"tmpvar_5[2].z = 1.07602;"
+"color_3 = (tmpvar_5 * (("
+"(color_3 * (color_3 + 0.0245786))"
+"- 9.0537e-5) / ("
+"(color_3 * ((0.983729 * color_3) + 0.432951))"
+"+ 0.238081)));"
+"vec3 tmpvar_6;"
+"tmpvar_6 = clamp (color_3, 0.0, 1.0);"
+"color_3 = tmpvar_6;"
+"a_color.xyz = pow (tmpvar_6, vec3(0.4545454, 0.4545454, 0.4545454));"
+"a_color.w = tmpvar_2.w;"
+"}"},
 
-      std::pair<std::string, const char*>{"gausianBlur.frag", R"(#version 150
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_toBlurcolorInput;
-out vec3 fragColor;
-uniform bool u_horizontal;
-uniform int u_mip;
-uniform vec2 u_texel;
-void main ()
-{
-vec3 result_1;
-result_1 = (textureLod (u_toBlurcolorInput, v_texCoords, float(u_mip)).xyz * 0.227027);
-if (u_horizontal) {
-vec2 tmpvar_2;
-tmpvar_2.y = 0.0;
-float tmpvar_3;
-tmpvar_3 = u_texel.x;
-tmpvar_2.x = tmpvar_3;
-float tmpvar_4;
-tmpvar_4 = float(u_mip);
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_2), tmpvar_4).xyz * 0.1945946));
-vec2 tmpvar_5;
-tmpvar_5.y = 0.0;
-tmpvar_5.x = tmpvar_3;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_5), tmpvar_4).xyz * 0.1945946));
-vec2 tmpvar_6;
-tmpvar_6.y = 0.0;
-float tmpvar_7;
-tmpvar_7 = (u_texel.x * 2.0);
-tmpvar_6.x = tmpvar_7;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_6), tmpvar_4).xyz * 0.1216216));
-vec2 tmpvar_8;
-tmpvar_8.y = 0.0;
-tmpvar_8.x = tmpvar_7;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_8), tmpvar_4).xyz * 0.1216216));
-vec2 tmpvar_9;
-tmpvar_9.y = 0.0;
-float tmpvar_10;
-tmpvar_10 = (u_texel.x * 3.0);
-tmpvar_9.x = tmpvar_10;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_9), tmpvar_4).xyz * 0.054054));
-vec2 tmpvar_11;
-tmpvar_11.y = 0.0;
-tmpvar_11.x = tmpvar_10;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_11), tmpvar_4).xyz * 0.054054));
-vec2 tmpvar_12;
-tmpvar_12.y = 0.0;
-float tmpvar_13;
-tmpvar_13 = (u_texel.x * 4.0);
-tmpvar_12.x = tmpvar_13;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_12), tmpvar_4).xyz * 0.016216));
-vec2 tmpvar_14;
-tmpvar_14.y = 0.0;
-tmpvar_14.x = tmpvar_13;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_14), tmpvar_4).xyz * 0.016216));
-} else {
-vec2 tmpvar_15;
-tmpvar_15.x = 0.0;
-float tmpvar_16;
-tmpvar_16 = u_texel.y;
-tmpvar_15.y = tmpvar_16;
-float tmpvar_17;
-tmpvar_17 = float(u_mip);
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_15), tmpvar_17).xyz * 0.1945946));
-vec2 tmpvar_18;
-tmpvar_18.x = 0.0;
-tmpvar_18.y = tmpvar_16;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_18), tmpvar_17).xyz * 0.1945946));
-vec2 tmpvar_19;
-tmpvar_19.x = 0.0;
-float tmpvar_20;
-tmpvar_20 = (u_texel.y * 2.0);
-tmpvar_19.y = tmpvar_20;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_19), tmpvar_17).xyz * 0.1216216));
-vec2 tmpvar_21;
-tmpvar_21.x = 0.0;
-tmpvar_21.y = tmpvar_20;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_21), tmpvar_17).xyz * 0.1216216));
-vec2 tmpvar_22;
-tmpvar_22.x = 0.0;
-float tmpvar_23;
-tmpvar_23 = (u_texel.y * 3.0);
-tmpvar_22.y = tmpvar_23;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_22), tmpvar_17).xyz * 0.054054));
-vec2 tmpvar_24;
-tmpvar_24.x = 0.0;
-tmpvar_24.y = tmpvar_23;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_24), tmpvar_17).xyz * 0.054054));
-vec2 tmpvar_25;
-tmpvar_25.x = 0.0;
-float tmpvar_26;
-tmpvar_26 = (u_texel.y * 4.0);
-tmpvar_25.y = tmpvar_26;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_25), tmpvar_17).xyz * 0.016216));
-vec2 tmpvar_27;
-tmpvar_27.x = 0.0;
-tmpvar_27.y = tmpvar_26;
-result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_27), tmpvar_17).xyz * 0.016216));
-};
-fragColor = result_1;
-})"},
+      std::pair<std::string, const char*>{"gausianBlur.frag", "#version 150"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_toBlurcolorInput;"
+"out vec3 fragColor;"
+"uniform bool u_horizontal;"
+"uniform int u_mip;"
+"uniform vec2 u_texel;"
+"void main ()"
+"{"
+"vec3 result_1;"
+"result_1 = (textureLod (u_toBlurcolorInput, v_texCoords, float(u_mip)).xyz * 0.227027);"
+"if (u_horizontal) {"
+"vec2 tmpvar_2;"
+"tmpvar_2.y = 0.0;"
+"float tmpvar_3;"
+"tmpvar_3 = u_texel.x;"
+"tmpvar_2.x = tmpvar_3;"
+"float tmpvar_4;"
+"tmpvar_4 = float(u_mip);"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_2), tmpvar_4).xyz * 0.1945946));"
+"vec2 tmpvar_5;"
+"tmpvar_5.y = 0.0;"
+"tmpvar_5.x = tmpvar_3;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_5), tmpvar_4).xyz * 0.1945946));"
+"vec2 tmpvar_6;"
+"tmpvar_6.y = 0.0;"
+"float tmpvar_7;"
+"tmpvar_7 = (u_texel.x * 2.0);"
+"tmpvar_6.x = tmpvar_7;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_6), tmpvar_4).xyz * 0.1216216));"
+"vec2 tmpvar_8;"
+"tmpvar_8.y = 0.0;"
+"tmpvar_8.x = tmpvar_7;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_8), tmpvar_4).xyz * 0.1216216));"
+"vec2 tmpvar_9;"
+"tmpvar_9.y = 0.0;"
+"float tmpvar_10;"
+"tmpvar_10 = (u_texel.x * 3.0);"
+"tmpvar_9.x = tmpvar_10;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_9), tmpvar_4).xyz * 0.054054));"
+"vec2 tmpvar_11;"
+"tmpvar_11.y = 0.0;"
+"tmpvar_11.x = tmpvar_10;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_11), tmpvar_4).xyz * 0.054054));"
+"vec2 tmpvar_12;"
+"tmpvar_12.y = 0.0;"
+"float tmpvar_13;"
+"tmpvar_13 = (u_texel.x * 4.0);"
+"tmpvar_12.x = tmpvar_13;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_12), tmpvar_4).xyz * 0.016216));"
+"vec2 tmpvar_14;"
+"tmpvar_14.y = 0.0;"
+"tmpvar_14.x = tmpvar_13;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_14), tmpvar_4).xyz * 0.016216));"
+"} else {"
+"vec2 tmpvar_15;"
+"tmpvar_15.x = 0.0;"
+"float tmpvar_16;"
+"tmpvar_16 = u_texel.y;"
+"tmpvar_15.y = tmpvar_16;"
+"float tmpvar_17;"
+"tmpvar_17 = float(u_mip);"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_15), tmpvar_17).xyz * 0.1945946));"
+"vec2 tmpvar_18;"
+"tmpvar_18.x = 0.0;"
+"tmpvar_18.y = tmpvar_16;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_18), tmpvar_17).xyz * 0.1945946));"
+"vec2 tmpvar_19;"
+"tmpvar_19.x = 0.0;"
+"float tmpvar_20;"
+"tmpvar_20 = (u_texel.y * 2.0);"
+"tmpvar_19.y = tmpvar_20;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_19), tmpvar_17).xyz * 0.1216216));"
+"vec2 tmpvar_21;"
+"tmpvar_21.x = 0.0;"
+"tmpvar_21.y = tmpvar_20;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_21), tmpvar_17).xyz * 0.1216216));"
+"vec2 tmpvar_22;"
+"tmpvar_22.x = 0.0;"
+"float tmpvar_23;"
+"tmpvar_23 = (u_texel.y * 3.0);"
+"tmpvar_22.y = tmpvar_23;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_22), tmpvar_17).xyz * 0.054054));"
+"vec2 tmpvar_24;"
+"tmpvar_24.x = 0.0;"
+"tmpvar_24.y = tmpvar_23;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_24), tmpvar_17).xyz * 0.054054));"
+"vec2 tmpvar_25;"
+"tmpvar_25.x = 0.0;"
+"float tmpvar_26;"
+"tmpvar_26 = (u_texel.y * 4.0);"
+"tmpvar_25.y = tmpvar_26;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords + tmpvar_25), tmpvar_17).xyz * 0.016216));"
+"vec2 tmpvar_27;"
+"tmpvar_27.x = 0.0;"
+"tmpvar_27.y = tmpvar_26;"
+"result_1 = (result_1 + (textureLod (u_toBlurcolorInput, (v_texCoords - tmpvar_27), tmpvar_17).xyz * 0.016216));"
+"};"
+"fragColor = result_1;"
+"}"},
 
-      std::pair<std::string, const char*>{"filterDown.frag", R"(#version 150
-out vec3 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-uniform int u_mip;
-void main ()
-{
-vec2 tmpvar_1;
-tmpvar_1 = (1.0/(vec2(textureSize (u_texture, u_mip))));
-vec2 tmpvar_2;
-tmpvar_2 = (tmpvar_1 * 2.0);
-float tmpvar_3;
-tmpvar_3 = float(u_mip);
-vec4 tmpvar_4;
-tmpvar_4 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(0.0, 1.0))), tmpvar_3);
-vec4 tmpvar_5;
-tmpvar_5 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(-1.0, 0.0))), tmpvar_3);
-vec4 tmpvar_6;
-tmpvar_6 = textureLod (u_texture, v_texCoords, tmpvar_3);
-vec4 tmpvar_7;
-tmpvar_7 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(1.0, 0.0))), tmpvar_3);
-vec4 tmpvar_8;
-tmpvar_8 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(0.0, -1.0))), tmpvar_3);
-a_color = (((
-((0.125 * ((textureLod (u_texture, 
-(v_texCoords + (tmpvar_1 * vec2(-1.0, 1.0)))
-, tmpvar_3).xyz + textureLod (u_texture, 
-(v_texCoords + tmpvar_1)
-, tmpvar_3).xyz) + (textureLod (u_texture, 
-(v_texCoords + (tmpvar_1 * vec2(1.0, -1.0)))
-, tmpvar_3).xyz + textureLod (u_texture, 
-(v_texCoords - tmpvar_1)
-, tmpvar_3).xyz))) + (0.03125 * ((textureLod (u_texture, 
-(v_texCoords + (tmpvar_2 * vec2(-1.0, 1.0)))
-, tmpvar_3).xyz + tmpvar_4.xyz) + (tmpvar_5.xyz + tmpvar_6.xyz))))
-+ 
-(0.03125 * ((textureLod (u_texture, (v_texCoords + tmpvar_2), tmpvar_3).xyz + tmpvar_4.xyz) + (tmpvar_7.xyz + tmpvar_6.xyz)))
-) + (0.03125 * 
-((textureLod (u_texture, (v_texCoords - tmpvar_2), tmpvar_3).xyz + tmpvar_8.xyz) + (tmpvar_5.xyz + tmpvar_6.xyz))
-)) + (0.03125 * (
-(textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(1.0, -1.0))), tmpvar_3).xyz + tmpvar_8.xyz)
-+ 
-(tmpvar_7.xyz + tmpvar_6.xyz)
-)));
-})"},
+      std::pair<std::string, const char*>{"filterDown.frag", "#version 150"
+"out vec3 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"uniform int u_mip;"
+"void main ()"
+"{"
+"vec2 tmpvar_1;"
+"tmpvar_1 = (1.0/(vec2(textureSize (u_texture, u_mip))));"
+"vec2 tmpvar_2;"
+"tmpvar_2 = (tmpvar_1 * 2.0);"
+"float tmpvar_3;"
+"tmpvar_3 = float(u_mip);"
+"vec4 tmpvar_4;"
+"tmpvar_4 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(0.0, 1.0))), tmpvar_3);"
+"vec4 tmpvar_5;"
+"tmpvar_5 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(-1.0, 0.0))), tmpvar_3);"
+"vec4 tmpvar_6;"
+"tmpvar_6 = textureLod (u_texture, v_texCoords, tmpvar_3);"
+"vec4 tmpvar_7;"
+"tmpvar_7 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(1.0, 0.0))), tmpvar_3);"
+"vec4 tmpvar_8;"
+"tmpvar_8 = textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(0.0, -1.0))), tmpvar_3);"
+"a_color = ((("
+"((0.125 * ((textureLod (u_texture, "
+"(v_texCoords + (tmpvar_1 * vec2(-1.0, 1.0)))"
+", tmpvar_3).xyz + textureLod (u_texture, "
+"(v_texCoords + tmpvar_1)"
+", tmpvar_3).xyz) + (textureLod (u_texture, "
+"(v_texCoords + (tmpvar_1 * vec2(1.0, -1.0)))"
+", tmpvar_3).xyz + textureLod (u_texture, "
+"(v_texCoords - tmpvar_1)"
+", tmpvar_3).xyz))) + (0.03125 * ((textureLod (u_texture, "
+"(v_texCoords + (tmpvar_2 * vec2(-1.0, 1.0)))"
+", tmpvar_3).xyz + tmpvar_4.xyz) + (tmpvar_5.xyz + tmpvar_6.xyz))))"
+"+ "
+"(0.03125 * ((textureLod (u_texture, (v_texCoords + tmpvar_2), tmpvar_3).xyz + tmpvar_4.xyz) + (tmpvar_7.xyz + tmpvar_6.xyz)))"
+") + (0.03125 * "
+"((textureLod (u_texture, (v_texCoords - tmpvar_2), tmpvar_3).xyz + tmpvar_8.xyz) + (tmpvar_5.xyz + tmpvar_6.xyz))"
+")) + (0.03125 * ("
+"(textureLod (u_texture, (v_texCoords + (tmpvar_2 * vec2(1.0, -1.0))), tmpvar_3).xyz + tmpvar_8.xyz)"
+"+ "
+"(tmpvar_7.xyz + tmpvar_6.xyz)"
+")));"
+"}"},
 
-      std::pair<std::string, const char*>{"filter.frag", R"(#version 150
-out vec4 a_outBloom;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-uniform float u_exposure;
-uniform float u_tresshold;
-void main ()
-{
-vec3 color_1;
-color_1 = (texture (u_texture, v_texCoords).xyz * u_exposure);
-mat3 tmpvar_2;
-tmpvar_2[0].x = 0.59719;
-tmpvar_2[1].x = 0.35458;
-tmpvar_2[2].x = 0.04823;
-tmpvar_2[0].y = 0.076;
-tmpvar_2[1].y = 0.90834;
-tmpvar_2[2].y = 0.01566;
-tmpvar_2[0].z = 0.0284;
-tmpvar_2[1].z = 0.13383;
-tmpvar_2[2].z = 0.83777;
-color_1 = (tmpvar_2 * color_1);
-mat3 tmpvar_3;
-tmpvar_3[0].x = 1.60475;
-tmpvar_3[1].x = -0.53108;
-tmpvar_3[2].x = -0.07367;
-tmpvar_3[0].y = -0.10208;
-tmpvar_3[1].y = 1.10813;
-tmpvar_3[2].y = -0.00605;
-tmpvar_3[0].z = -0.00327;
-tmpvar_3[1].z = -0.07276;
-tmpvar_3[2].z = 1.07602;
-color_1 = (tmpvar_3 * ((
-(color_1 * (color_1 + 0.0245786))
-- 9.0537e-5) / (
-(color_1 * ((0.983729 * color_1) + 0.432951))
-+ 0.238081)));
-vec3 tmpvar_4;
-tmpvar_4 = clamp (color_1, 0.0, 1.0);
-color_1 = tmpvar_4;
-float tmpvar_5;
-tmpvar_5 = dot (tmpvar_4, vec3(0.2126, 0.7152, 0.0722));
-if ((tmpvar_5 > u_tresshold)) {
-vec4 tmpvar_6;
-tmpvar_6.w = 1.0;
-tmpvar_6.xyz = tmpvar_4;
-a_outBloom = tmpvar_6;
-} else {
-a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);
-};
-a_outBloom = clamp (a_outBloom, 0.0, 1000.0);
-})"},
+      std::pair<std::string, const char*>{"filter.frag", "#version 150"
+"out vec4 a_outBloom;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"uniform float u_exposure;"
+"uniform float u_tresshold;"
+"void main ()"
+"{"
+"vec3 color_1;"
+"color_1 = (texture (u_texture, v_texCoords).xyz * u_exposure);"
+"mat3 tmpvar_2;"
+"tmpvar_2[0].x = 0.59719;"
+"tmpvar_2[1].x = 0.35458;"
+"tmpvar_2[2].x = 0.04823;"
+"tmpvar_2[0].y = 0.076;"
+"tmpvar_2[1].y = 0.90834;"
+"tmpvar_2[2].y = 0.01566;"
+"tmpvar_2[0].z = 0.0284;"
+"tmpvar_2[1].z = 0.13383;"
+"tmpvar_2[2].z = 0.83777;"
+"color_1 = (tmpvar_2 * color_1);"
+"mat3 tmpvar_3;"
+"tmpvar_3[0].x = 1.60475;"
+"tmpvar_3[1].x = -0.53108;"
+"tmpvar_3[2].x = -0.07367;"
+"tmpvar_3[0].y = -0.10208;"
+"tmpvar_3[1].y = 1.10813;"
+"tmpvar_3[2].y = -0.00605;"
+"tmpvar_3[0].z = -0.00327;"
+"tmpvar_3[1].z = -0.07276;"
+"tmpvar_3[2].z = 1.07602;"
+"color_1 = (tmpvar_3 * (("
+"(color_1 * (color_1 + 0.0245786))"
+"- 9.0537e-5) / ("
+"(color_1 * ((0.983729 * color_1) + 0.432951))"
+"+ 0.238081)));"
+"vec3 tmpvar_4;"
+"tmpvar_4 = clamp (color_1, 0.0, 1.0);"
+"color_1 = tmpvar_4;"
+"float tmpvar_5;"
+"tmpvar_5 = dot (tmpvar_4, vec3(0.2126, 0.7152, 0.0722));"
+"if ((tmpvar_5 > u_tresshold)) {"
+"vec4 tmpvar_6;"
+"tmpvar_6.w = 1.0;"
+"tmpvar_6.xyz = tmpvar_4;"
+"a_outBloom = tmpvar_6;"
+"} else {"
+"a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);"
+"};"
+"a_outBloom = clamp (a_outBloom, 0.0, 1000.0);"
+"}"},
 
-      std::pair<std::string, const char*>{"addMipsBlur.frag", R"(#version 150
-out vec3 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-uniform int u_mip;
-void main ()
-{
-vec2 tmpvar_1;
-tmpvar_1 = (1.0/(vec2(textureSize (u_texture, u_mip))));
-float tmpvar_2;
-tmpvar_2 = float(u_mip);
-a_color = textureLod (u_texture, (v_texCoords + (tmpvar_1 * vec2(-1.0, 1.0))), tmpvar_2).xyz;
-a_color = (a_color + (textureLod (u_texture, (v_texCoords + 
-(tmpvar_1 * vec2(0.0, 1.0))
-), tmpvar_2).xyz * 2.0));
-a_color = (a_color + textureLod (u_texture, (v_texCoords + tmpvar_1), tmpvar_2).xyz);
-a_color = (a_color + (textureLod (u_texture, (v_texCoords + 
-(tmpvar_1 * vec2(-1.0, 0.0))
-), tmpvar_2).xyz * 2.0));
-a_color = (a_color + (textureLod (u_texture, v_texCoords, tmpvar_2).xyz * 4.0));
-a_color = (a_color + (textureLod (u_texture, (v_texCoords + 
-(tmpvar_1 * vec2(1.0, 0.0))
-), tmpvar_2).xyz * 2.0));
-a_color = (a_color + textureLod (u_texture, (v_texCoords - tmpvar_1), tmpvar_2).xyz);
-a_color = (a_color + (textureLod (u_texture, (v_texCoords + 
-(tmpvar_1 * vec2(0.0, -1.0))
-), tmpvar_2).xyz * 2.0));
-a_color = (a_color + textureLod (u_texture, (v_texCoords + (tmpvar_1 * vec2(1.0, -1.0))), tmpvar_2).xyz);
-a_color = (a_color / 16.0);
-})"},
+      std::pair<std::string, const char*>{"addMipsBlur.frag", "#version 150"
+"out vec3 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"uniform int u_mip;"
+"void main ()"
+"{"
+"vec2 tmpvar_1;"
+"tmpvar_1 = (1.0/(vec2(textureSize (u_texture, u_mip))));"
+"float tmpvar_2;"
+"tmpvar_2 = float(u_mip);"
+"a_color = textureLod (u_texture, (v_texCoords + (tmpvar_1 * vec2(-1.0, 1.0))), tmpvar_2).xyz;"
+"a_color = (a_color + (textureLod (u_texture, (v_texCoords + "
+"(tmpvar_1 * vec2(0.0, 1.0))"
+"), tmpvar_2).xyz * 2.0));"
+"a_color = (a_color + textureLod (u_texture, (v_texCoords + tmpvar_1), tmpvar_2).xyz);"
+"a_color = (a_color + (textureLod (u_texture, (v_texCoords + "
+"(tmpvar_1 * vec2(-1.0, 0.0))"
+"), tmpvar_2).xyz * 2.0));"
+"a_color = (a_color + (textureLod (u_texture, v_texCoords, tmpvar_2).xyz * 4.0));"
+"a_color = (a_color + (textureLod (u_texture, (v_texCoords + "
+"(tmpvar_1 * vec2(1.0, 0.0))"
+"), tmpvar_2).xyz * 2.0));"
+"a_color = (a_color + textureLod (u_texture, (v_texCoords - tmpvar_1), tmpvar_2).xyz);"
+"a_color = (a_color + (textureLod (u_texture, (v_texCoords + "
+"(tmpvar_1 * vec2(0.0, -1.0))"
+"), tmpvar_2).xyz * 2.0));"
+"a_color = (a_color + textureLod (u_texture, (v_texCoords + (tmpvar_1 * vec2(1.0, -1.0))), tmpvar_2).xyz);"
+"a_color = (a_color / 16.0);"
+"}"},
 
-      std::pair<std::string, const char*>{"addMips.frag", R"(#version 150
-out vec3 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-uniform int u_mip;
-void main ()
-{
-a_color = textureLod (u_texture, v_texCoords, float(u_mip)).xyz;
-})"},
+      std::pair<std::string, const char*>{"addMips.frag", "#version 150"
+"out vec3 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"uniform int u_mip;"
+"void main ()"
+"{"
+"a_color = textureLod (u_texture, v_texCoords, float(u_mip)).xyz;"
+"}"},
 
-      std::pair<std::string, const char*>{"mergePBRmat.frag", R"(#version 430 core
-noperspective in vec2 v_texCoords;
-out vec4 fragColor;
-layout(binding = 0) uniform sampler2D u_roughness;
-layout(binding = 1) uniform sampler2D u_metallic;
-layout(binding = 2) uniform sampler2D u_ambient;
-void main()
-{
-float metallic = texture(u_metallic, v_texCoords).r;
-float roughness = texture(u_roughness, v_texCoords).r;
-float ambient = texture(u_ambient, v_texCoords).r;
-fragColor = vec4(roughness, metallic, ambient, 1);
-})"},
+      std::pair<std::string, const char*>{"mergePBRmat.frag", "#version 430 core"
+"noperspective in vec2 v_texCoords;"
+"out vec4 fragColor;"
+"layout(binding = 0) uniform sampler2D u_roughness;"
+"layout(binding = 1) uniform sampler2D u_metallic;"
+"layout(binding = 2) uniform sampler2D u_ambient;"
+"void main()"
+"{"
+"float metallic = texture(u_metallic, v_texCoords).r;"
+"float roughness = texture(u_roughness, v_texCoords).r;"
+"float ambient = texture(u_ambient, v_texCoords).r;"
+"fragColor = vec4(roughness, metallic, ambient, 1);"
+"}"},
 
-      std::pair<std::string, const char*>{"zPrePass.vert", R"(#version 430
-#pragma debug(on)
-layout(location = 0) in vec3 a_positions;
-layout(location = 2) in vec2 a_texCoord;
-layout(location = 3) in ivec4 a_jointsId;
-layout(location = 4) in vec4 a_weights;
-uniform mat4 u_transform; //full model view projection
-readonly restrict layout(std140) buffer u_jointTransforms
-{
-mat4 jointTransforms[];
-};
-uniform int u_hasAnimations;
-out vec2 v_texCoord;
-void main()
-{
-vec4 totalLocalPos = vec4(0.f);
-if(u_hasAnimations != 0)
-{
-for(int i=0; i<4; i++)
-{
-if(a_jointsId[i] < 0){break;}
-mat4 jointTransform = jointTransforms[a_jointsId[i]];
-vec4 posePosition = jointTransform * vec4(a_positions, 1);
-totalLocalPos += posePosition * a_weights[i];
-}
-}else
-{
-totalLocalPos = vec4(a_positions, 1.f);
-}
-gl_Position = u_transform * totalLocalPos;
-v_texCoord = a_texCoord;
-})"},
+      std::pair<std::string, const char*>{"zPrePass.vert", "#version 430"
+"#pragma debug(on)"
+"layout(location = 0) in vec3 a_positions;"
+"layout(location = 2) in vec2 a_texCoord;"
+"layout(location = 3) in ivec4 a_jointsId;"
+"layout(location = 4) in vec4 a_weights;"
+"uniform mat4 u_transform; "
+"readonly restrict layout(std140) buffer u_jointTransforms"
+"{"
+"mat4 jointTransforms[];"
+"};"
+"uniform int u_hasAnimations;"
+"out vec2 v_texCoord;"
+"void main()"
+"{"
+"vec4 totalLocalPos = vec4(0.f);"
+"if(u_hasAnimations != 0)"
+"{"
+"for(int i=0; i<4; i++)"
+"{"
+"if(a_jointsId[i] < 0){break;}"
+"mat4 jointTransform = jointTransforms[a_jointsId[i]];"
+"vec4 posePosition = jointTransform * vec4(a_positions, 1);"
+"totalLocalPos += posePosition * a_weights[i];"
+"}"
+"}else"
+"{"
+"totalLocalPos = vec4(a_positions, 1.f);"
+"}"
+"gl_Position = u_transform * totalLocalPos;"
+"v_texCoord = a_texCoord;"
+"}"},
 
-      std::pair<std::string, const char*>{"zPrePass.frag", R"(#version 150
-uniform sampler2D u_albedoSampler;
-uniform int u_hasTexture;
-in vec2 v_texCoord;
-void main ()
-{
-if ((u_hasTexture != 0)) {
-vec4 tmpvar_1;
-tmpvar_1 = texture (u_albedoSampler, v_texCoord);
-if (((tmpvar_1.w * 255.0) < 1.0)) {
-discard;
-};
-};
-})"},
+      std::pair<std::string, const char*>{"zPrePass.frag", "#version 150"
+"uniform sampler2D u_albedoSampler;"
+"uniform int u_hasTexture;"
+"in vec2 v_texCoord;"
+"void main ()"
+"{"
+"if ((u_hasTexture != 0)) {"
+"vec4 tmpvar_1;"
+"tmpvar_1 = texture (u_albedoSampler, v_texCoord);"
+"if (((tmpvar_1.w * 255.0) < 1.0)) {"
+"discard;"
+"};"
+"};"
+"}"},
 
-      std::pair<std::string, const char*>{"lightingPass.frag", R"(#version 430 core
-#pragma debug(on)
-#extension GL_ARB_bindless_texture: require
-layout(location = 0) out vec4 a_outColor;
-layout(location = 1) out vec4 a_outBloom;
-noperspective in vec2 v_texCoords;
-uniform isampler2D u_normals;
-uniform samplerCube u_skyboxFiltered;
-uniform samplerCube u_skyboxIradiance;
-uniform sampler2D u_positions;
-uniform sampler2D u_brdfTexture;
-uniform sampler2DArrayShadow u_cascades;
-uniform sampler2DArrayShadow u_spotShadows;
-uniform samplerCubeArrayShadow u_pointShadows;
-uniform isampler2D u_materialIndex;
-uniform sampler2D u_textureUV;
-uniform isampler2D u_textureDerivates;
-uniform vec3 u_eyePosition;
-uniform int u_transparentPass;
-struct MaterialStruct
-{
-vec4 kd;
-vec4 rma; //last component emmisive
-uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
-uvec2 secondBIndlessSamplers; // xy emmissiveSampler
-int rmaLoaded;
-int notUsed;
-};
-readonly layout(std140) buffer u_material
-{
-MaterialStruct mat[];
-};
-layout (std140) uniform u_lightPassData
-{
-vec4 ambientColor;
-float bloomTresshold;
-int lightSubScater;
-float exposure;
-int skyBoxPresent;
-}lightPassData;
-struct PointLight
-{
-vec3 positions; 
-float dist;
-vec3 color;
-float attenuation;
-int castShadowsIndex;
-float hardness;
-int castShadows;
-int changedThisFrame;
-};
-readonly restrict layout(std140) buffer u_pointLights
-{
-PointLight light[];
-};
-uniform int u_pointLightCount;
-struct DirectionalLight
-{
-vec3 direction; 
-int castShadowsIndex;
-int changedThisFrame; //not used here
-int castShadows;
-int notUsed1;
-int notUsed2;
-vec4 color;		//w is a hardness exponent
-mat4 firstLightSpaceMatrix;
-mat4 secondLightSpaceMatrix;
-mat4 thirdLightSpaceMatrix;
-};
-readonly restrict layout(std140) buffer u_directionalLights
-{
-DirectionalLight dLight[];
-};
-uniform int u_directionalLightCount;
-struct SpotLight
-{
-vec4 position; //w = cos(half angle)
-vec4 direction; //w dist
-vec4 color; //w attenuation
-float hardness;
-int shadowIndex;
-int castShadows;		
-int changedThisFrame; //not used in the gpu
-float near;
-float far;
-float notUsed1;
-float notUsed2;
-mat4 lightSpaceMatrix;
-};
-readonly restrict layout(std140) buffer u_spotLights
-{
-SpotLight spotLights[];
-};
-uniform int u_spotLightCount;
-const float PI = 3.14159265359;
-const float randomNumbers[100] = float[100](
-0.05535,	0.22262,	0.93768,	0.80063,	0.40089,	0.49459,	0.44997,	0.27060,	0.58789,	0.61765,
-0.87949,	0.38913,	0.23154,	0.27249,	0.93448,	0.71567,	0.26940,	0.32226,	0.73918,	0.30905,
-0.98754,	0.82585,	0.84031,	0.60059,	0.56027,	0.10819,	0.55848,	0.95612,	0.88034,	0.94950,
-0.53892,	0.86421,	0.84131,	0.39158,	0.25861,	0.10192,	0.19673,	0.25165,	0.68675,	0.79157,
-0.94730,	0.36948,	0.27978,	0.66377,	0.38935,	0.93795,	0.83168,	0.01452,	0.51242,	0.12272,
-0.61045,	0.34752,	0.13781,	0.92361,	0.73422,	0.31213,	0.55513,	0.81074,	0.56166,	0.31797,
-0.09507,	0.50049,	0.44248,	0.38244,	0.58468,	0.32327,	0.61830,	0.67908,	0.16011,	0.82861,
-0.36502,	0.12052,	0.28872,	0.73448,	0.51443,	0.99355,	0.75244,	0.22432,	0.95501,	0.90914,
-0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,
-0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505
-);
-float attenuationFunctionNotClamped(float x, float r, float p)
-{
-float p4 = p*p*p*p;
-float power = pow(x/r, p4);
-float rez = (1-power);
-rez = rez * rez;
-return rez;
-}
-float DistributionGGX(vec3 N, vec3 H, float roughness)
-{
-float a      = roughness*roughness;
-float a2     = a*a;
-float NdotH  = max(dot(N, H), 0.0);
-float NdotH2 = NdotH*NdotH;
-float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-denom = PI * denom * denom;
-return  a2 / max(denom, 0.0000001);
-}
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
-float k = roughness*roughness / 2;
-float num   = NdotV;
-float denom = NdotV * (1.0 - k) + k;
-return num / max(denom, 0.0000001);
-}
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
-float NdotV = max(dot(N, V), 0.0);
-float NdotL = max(dot(N, L), 0.0);
-float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-return ggx1 * ggx2;
-}
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
-{
-return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
-}
-vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
-{
-return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
-}   
-vec3 fSpecular(vec3 normal, vec3 halfwayVec, vec3 viewDir, 
-vec3 lightDirection, float dotNVclamped, float roughness, vec3 F)
-{
-float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
-float denominator = 4.0 * dotNVclamped  
-* max(dot(normal, lightDirection), 0.0);
-vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
-return specular;
-}
-vec3 fDiffuse(vec3 color)
-{
-return color.rgb / PI;
-}
-vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
-{
-float a = roughness;
-float a2 = a*a;
-float cosi = max(dot(L, N), 0);
-float cosr = max(dot(V, N), 0);
-float sini = sqrt(1-cosi*cosi);
-float sinr = sqrt(1-cosr*cosr);
-float tani = sini/cosi;
-float tanr = sinr/cosr;
-float A = 1 - 0.5 * a2/(a2 + 0.33);
-float B = 0.45*a2/(a2+0.09);
-float sinAlpha = max(sini, sinr);
-float tanBeta = min(tani, tanr);
-return color.rgb * (A + (B* max(0, dot(L,reflect(V,N))) * sinAlpha * tanBeta  )) / PI;
-}
-vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
-{
-float a = roughness;
-float a2 = a*a;
-float A = 1.0/(PI+(PI/2.0-2/3.0)*a);
-float B = PI/(PI+(PI/2.0-2/3.0)*a);
-float s = dot(L,N) - dot(N,L)*dot(N,V);
-float t;
-if(s <= 0)
-t = 1;
-else
-t = max(dot(N,L), dot(N,V));
-return color * (A + B * s/t);
-}
-vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,
-in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)
-{
-float dotNVclamped = clamp(dot(normal, viewDir), 0.0, 0.99);
-vec3 halfwayVec = normalize(lightDirection + viewDir);
-vec3 radiance = lightColor; //here the first component is the light color
-vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
-vec3 specular = fSpecular(normal, halfwayVec, viewDir, lightDirection, dotNVclamped, roughness, F);
-vec3 kS = F; //this is the specular contribution
-vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
-kD *= 1.0 - metallic;	//metallic surfaces are darker
-vec3 diffuse = fDiffuse(color.rgb);
-float NdotL = max(dot(normal, lightDirection), 0.0);        
-return (kD * diffuse + specular) * radiance * NdotL;
-}
-float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth, float bias, int index)
-{
-return texture(map, vec4(coords, index, currentDepth-bias)).r;
-}
-void sincos(float a, out float s, out float c)
-{
-s = sin(a);
-c = cos(a);
-}
-vec2 vogelDiskSample(int sampleIndex, int samplesCount, float phi)
-{
-float GoldenAngle = 2.4f;
-float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);
-float theta = sampleIndex * GoldenAngle + phi;
-float sine, cosine;
-sincos(theta, sine, cosine);
-return vec2(r * cosine, r * sine);
-}
-float InterleavedGradientNoise(vec2 position_screen)
-{
-vec3 magic = vec3(0.06711056f, 0.00583715f, 52.9829189f);
-return fract(magic.z * fract(dot(position_screen, magic.xy)));
-}
-float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadowMap, int index)
-{
-if(projCoords.z > 0.99995)
-return 1.f;
-float currentDepth = projCoords.z;
-vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
-float shadow = 0.0;
-bool fewSamples = false;
-int kernelHalf = 1;
-int kernelSize = kernelHalf*2 + 1;
-int kernelSize2 = kernelSize*kernelSize;
-float penumbraSize = 1.f;
-if(false)
-{
-float shadowValueAtCentre = 0;
-if(false)
-{
-float offsetSize = kernelSize/2;
-const int OFFSETS = 4;
-vec2 offsets[OFFSETS] = 
-{
-vec2(offsetSize,offsetSize),
-vec2(-offsetSize,offsetSize),
-vec2(offsetSize,-offsetSize),
-vec2(-offsetSize,-offsetSize),
-};
-fewSamples = true;
-float s1 = testShadowValue(shadowMap, projCoords.xy, 
-currentDepth, bias, index); 
-shadowValueAtCentre = s1;
-for(int i=0;i<OFFSETS; i++)
-{
-float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, 
-currentDepth, bias, index); 
-if(s1 != s2)
-{
-fewSamples = false;
-break;
-}	
-s1 = s2;
-}
-}
-if(fewSamples)
-{
-shadow = shadowValueAtCentre;
-}else
-{
-for(int y = -kernelHalf; y <= kernelHalf; ++y)
-{
-for(int x = -kernelHalf; x <= kernelHalf; ++x)
-{
-vec2 offset = vec2(x, y);
-if(false)
-{
-int randomOffset1 = (x*kernelSize) + y;
-int randomOffset2 = randomOffset1 + kernelSize2;
-offset += vec2(randomNumbers[randomOffset1, randomOffset2]);
-}
-if(false)
-{
-float u = (offset.x + kernelHalf)/float(kernelSize-1);
-float v = (offset.y + kernelHalf)/float(kernelSize-1);
-offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;
-offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;
-}
-vec2 finalOffset = offset * texelSize * penumbraSize;
-float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
-currentDepth, bias, index); 
-shadow += s;
-}    
-}
-shadow /= kernelSize2;
-}
-}else
-{
-int sampleSize = 9;
-int checkSampleSize = 5;
-float size = 1.5;
-float noise = InterleavedGradientNoise(v_texCoords) * 2 * PI;
-for(int i=sampleSize-1; i>=sampleSize-checkSampleSize; i--)
-{
-vec2 offset = vogelDiskSample(i, sampleSize, noise);
-vec2 finalOffset = offset * texelSize * size;
-float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
-currentDepth, bias, index);
-shadow += s;
-}
-if(true && (shadow == 0 || shadow == checkSampleSize))
-{
-shadow /= checkSampleSize;
-}else
-{
-for(int i=sampleSize-checkSampleSize-1; i>=0; i--)
-{
-vec2 offset = vogelDiskSample(i, sampleSize, noise);
-vec2 finalOffset = offset * texelSize * size;
-float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, 
-currentDepth, bias, index);
-shadow += s;
-}
-shadow /= sampleSize;
-}
-}
-return clamp(shadow, 0, 1);
-}
-float shadowCalculationLinear(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)
-{
-float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);
-return shadowCalculation(projCoords, bias, shadowMap, index);
-}
-float linearizeDepth(float depth, float near, float far)
-{
-float z = depth * 2.0 - 1.0; // Back to NDC 
-return (2.0 * near * far) / (far + near - z * (far - near));
-}
-float nonLinearDepth(float depth, float near, float far)
-{
-return ((1.f/depth) - (1.f/near)) / ((1.f/far) - (1.f/near));
-}
-float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir,
-sampler2DArrayShadow shadowMap, int index, float near, float far)
-{
-float bias = max((0.01f) * (1.0 - dot(normal, -lightDir)), 0.001f);
-float currentDepth = projCoords.z;
-float liniarizedDepth = linearizeDepth(currentDepth, near, far);
-liniarizedDepth += bias;
-float biasedLogDepth = nonLinearDepth(liniarizedDepth, near, far);
-bias = biasedLogDepth - currentDepth;
-bias += 0.00003f;
-return shadowCalculation(projCoords, bias, shadowMap, index);
-}
-vec3 getProjCoords(in mat4 matrix, in vec3 pos)
-{
-vec4 p = matrix * vec4(pos,1);
-vec3 r = p .xyz / p .w;
-r = r * 0.5 + 0.5;
-return r;
-}
-void generateTangentSpace(in vec3 v, out vec3 outUp, out vec3 outRight)
-{
-vec3 up = vec3(0.f, 1.f, 0.f);
-if (v == up)
-{
-outRight = vec3(1, 0, 0);
-}
-else
-{
-outRight = normalize(cross(v, up));
-}
-outUp = normalize(cross(outRight, v));
-}
-float pointShadowCalculation(vec3 pos, vec3 normal, int index)
-{	
-vec3 fragToLight = pos - light[index].positions; 
-vec3 lightDir = normalize(fragToLight);
-float bias = max((60.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);
-float shadow  = 0.0;
-vec3 tangent;
-vec3 coTangent;
-generateTangentSpace(lightDir, tangent, coTangent);
-float texel = 1.f / textureSize(u_pointShadows, 0).x;
-int kernel = 5;
-int kernelHalf = kernel/2;
-for(int y = -kernelHalf; y<=kernelHalf; y++)
-{
-for(int x = -kernelHalf; x<=kernelHalf; x++)
-{
-vec3 fragToLight = pos - light[index].positions; 			
-fragToLight += 6*x * texel * tangent;
-fragToLight += 6*y * texel * coTangent;
-float currentDepth = length(fragToLight);  
-float value = texture(u_pointShadows, 
-vec4(fragToLight, light[index].castShadowsIndex),
-(currentDepth-bias)/light[index].dist ).r; 
-shadow += value;
-}
-}
-if(shadow <3)
-{
-shadow = 0;
-}
-shadow /= (kernel * kernel);
-shadow = clamp(shadow, 0, 1);
-return shadow;
-}
-float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
-{
-vec3 firstProjCoords = getProjCoords(dLight[index].firstLightSpaceMatrix, pos);
-vec3 secondProjCoords = getProjCoords(dLight[index].secondLightSpaceMatrix, pos);
-vec3 thirdProjCoords = getProjCoords(dLight[index].thirdLightSpaceMatrix, pos);
-if(
-firstProjCoords.x < 0.98 &&
-firstProjCoords.x > 0.01 &&
-firstProjCoords.y < 0.98 &&
-firstProjCoords.y > 0.01 &&
-firstProjCoords.z < 0.98 &&
-firstProjCoords.z > 0
-)
-{
-firstProjCoords.y /= 3.f;
-return shadowCalculationLinear(firstProjCoords, normal, lightDir, u_cascades, index);
-}else 
-if(
-secondProjCoords.x > 0 &&
-secondProjCoords.x < 1 &&
-secondProjCoords.y > 0 &&
-secondProjCoords.y < 1 &&
-secondProjCoords.z < 0.98
-)
-{
-secondProjCoords.y /= 3.f;
-secondProjCoords.y += 1.f / 3.f;
-return shadowCalculationLinear(secondProjCoords, normal, lightDir, u_cascades, index);
-}
-else
-{
-thirdProjCoords.y /= 3.f;
-thirdProjCoords.y += 2.f / 3.f;
-return shadowCalculationLinear(thirdProjCoords, normal, lightDir, u_cascades, index);
-}
-}
-vec4 fromuShortToFloat2(ivec4 a)
-{
-vec4 ret = a;
-ret /= 65536;
-ret *= 4.f;
-ret -= 2.f;
-return ret;
-}
-vec3 fromuShortToFloat(ivec3 a)
-{
-vec3 ret = a;
-ret /= 65536;
-ret *= 2.f;
-ret -= 1.f;
-return normalize(ret);
-}
-void main()
-{
-vec3 pos = texture(u_positions, v_texCoords).xyz;
-vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
-int materialIndex = texture(u_materialIndex, v_texCoords).r;
-vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
-ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
-vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
-vec4 albedoAlpha = vec4(0,0,0,0);
-vec3 emissive = vec3(0,0,0);
-vec3 material;
-if(materialIndex == 0)
-{
-if(u_transparentPass != 0)
-{
-discard;
-}else
-{
-a_outColor = vec4(0,0,0,0);
-a_outBloom = vec4(0,0,0,1);
-return;
-}
-}
-{
-uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
-if(albedoSampler.x == 0 && albedoSampler.y == 0)
-{
-albedoAlpha.rgba = vec4(1,1,1,1); //multiply after with color;
-}else
-{
-albedoAlpha = 
-textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
-sampledDerivates.xy, sampledDerivates.zw).rgba;
-}
-albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
-albedoAlpha.a *= mat[materialIndex-1].kd.a;
-uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
-if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
-{
-emissive.rgb = albedoAlpha.rgb;
-}else
-{
-emissive = 
-textureGrad(sampler2D(emmisiveSampler), sampledUV.xy, 
-sampledDerivates.xy, sampledDerivates.zw).rgb;
-}
-emissive.rgb *= mat[materialIndex-1].rma.a;
-emissive = pow(emissive , vec3(2.2)).rgb; //gamma corection
-uvec2 rmaSampler = mat[materialIndex-1].firstBIndlessSamplers.zw;
-if(rmaSampler.x == 0 && rmaSampler.y == 0 && mat[materialIndex-1].rmaLoaded != 0)
-{
-material.r = mat[materialIndex-1].rma.r;
-material.g = mat[materialIndex-1].rma.g;
-material.b = mat[materialIndex-1].rma.b;
-}
-else
-{
-vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, 
-sampledDerivates.xy, sampledDerivates.zw).rgb;
-int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x4;
-int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x2;
-int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x1;
-if(roughnessPrezent != 0)
-{
-material.r = materialData.r;
-}else
-{
-material.r = mat[materialIndex-1].rma.r;
-}
-if(metallicPrezent != 0)
-{
-material.g = materialData.g;
-}else
-{
-material.g = mat[materialIndex-1].rma.g;
-}
-if(ambientPrezent != 0)
-{
-material.b = materialData.b;
-}else
-{
-material.b = mat[materialIndex-1].rma.b;
-}
-}
-}
-vec3 albedo = albedoAlpha.rgb;
-albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
-float roughness = clamp(material.r, 0.09, 0.99);
-float metallic = clamp(material.g, 0.0, 0.98);
-float ambientOcclution = material.b;
-vec3 viewDir = normalize(u_eyePosition - pos);
-vec3 R = reflect(-viewDir, normal);	//reflected vector
-vec3 Lo = vec3(0,0,0); //this is the accumulated light
-vec3 F0 = vec3(0.04); 
-F0 = mix(F0, albedo.rgb, vec3(metallic));
-for(int i=0; i<u_pointLightCount;i++)
-{
-vec3 lightPosition = light[i].positions.xyz;
-vec3 lightColor = light[i].color.rgb;
-vec3 lightDirection = normalize(lightPosition - pos);
-float currentDist = distance(lightPosition, pos);
-if(currentDist >= light[i].dist)
-{
-continue;
-}
-float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	
-float shadow = 1.f;
-if(light[i].castShadows != 0)
-{
-shadow = pointShadowCalculation(pos, normal, i);
-shadow = pow(shadow, light[i].hardness);
-}
-Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, 
-pos, viewDir, albedo, normal, F0) * attenuation * shadow;
-}
-for(int i=0; i<u_directionalLightCount; i++)
-{
-vec3 lightDirection = dLight[i].direction.xyz;
-vec3 lightColor = dLight[i].color.rgb;
-float shadow = 1;
-if(dLight[i].castShadows != 0)
-{	
-int castShadowInd = dLight[i].castShadowsIndex;
-shadow = cascadedShadowCalculation(pos, normal, lightDirection, castShadowInd);
-shadow = pow(shadow, dLight[i].color.w);
-}
-Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
-pos, viewDir, albedo, normal, F0) * shadow;
-}
-for(int i=0; i<u_spotLightCount; i++)
-{
-vec3 lightPosition = spotLights[i].position.xyz;
-vec3 lightColor = spotLights[i].color.rgb;
-vec3 spotLightDirection = spotLights[i].direction.xyz;
-vec3 lightDirection = -normalize(lightPosition - pos);
-float angle = spotLights[i].position.w;
-float dist = spotLights[i].direction.w;
-float at = spotLights[i].color.w;
-float dotAngle = dot(normalize(vec3(pos - lightPosition)), spotLightDirection);
-float currentDist = distance(lightPosition, pos);
-if(currentDist >= dist)
-{
-continue;
-}
-if(dotAngle > angle && dotAngle > 0)
-{
-float attenuation = attenuationFunctionNotClamped(currentDist, dist, at);
-float smoothingVal = 0.01; //
-float innerAngle = angle + smoothingVal;
-float smoothing = clamp((dotAngle-angle)/smoothingVal,0.0,1.0);
-vec3 shadowProjCoords = getProjCoords(spotLights[i].lightSpaceMatrix, pos);
-float shadow = 1;
-if(spotLights[i].castShadows != 0)
-{
-shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, 
-u_spotShadows, spotLights[i].shadowIndex, spotLights[i].near, spotLights[i].far);
-shadow = pow(shadow, spotLights[i].hardness);
-}
-smoothing = pow(smoothing, spotLights[i].hardness);
-Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, 
-pos, viewDir, albedo, normal, F0) * smoothing * attenuation * shadow;
-}
-}
-vec3 ambient;
-vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));
-if(lightPassData.skyBoxPresent != 0)
-{
-vec3 N = normal;
-vec3 V = viewDir;
-float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
-vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
-vec3 kS = F;
-vec3 irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
-const float MAX_REFLECTION_LOD = 4.0;
-vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
-vec2 brdfVec = vec2(dotNVClamped, roughness);
-vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-if(lightPassData.lightSubScater == 0)
-{
-vec3 kD = 1.0 - kS;
-kD *= 1.0 - metallic;
-vec3 diffuse = irradiance * albedo;
-vec3 specular = radiance * (F * brdf.x + brdf.y);
-ambient = (kD * diffuse + specular);
-}else
-{
-vec3 FssEss = kS * brdf.x + brdf.y;
-float Ess = brdf.x + brdf.y;
-float Ems = 1-Ess;
-vec3 Favg = F0 + (1-F0)/21;
-vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
-vec3 Edss = 1 - (FssEss + Fms * Ems);
-vec3 kD = albedo * Edss;
-ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
-}
-vec3 occlusionData = ambientOcclution * gammaAmbient;
-ambient *= occlusionData;
-}else
-{
-vec3 N = normal;
-vec3 V = viewDir;
-float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
-vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
-vec3 kS = F;
-vec3 irradiance = gammaAmbient ; //this color is coming directly at the object
-vec3 radiance = gammaAmbient ;
-vec2 brdfVec = vec2(dotNVClamped, roughness);
-vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-if(lightPassData.lightSubScater == 0)
-{
-vec3 kD = 1.0 - kS;
-kD *= 1.0 - metallic;
-vec3 diffuse = irradiance * albedo;
-vec3 specular = radiance * (F * brdf.x + brdf.y);
-ambient = (kD * diffuse + specular);
-}else
-{
-vec3 FssEss = kS * brdf.x + brdf.y;
-float Ess = brdf.x + brdf.y;
-float Ems = 1-Ess;
-vec3 Favg = F0 + (1-F0)/21;
-vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
-vec3 Edss = 1 - (FssEss + Fms * Ems);
-vec3 kD = albedo * Edss;
-ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
-}
-vec3 occlusionData = vec3(ambientOcclution);
-ambient *= occlusionData;
-}
-vec3 color = Lo + ambient; 
-vec3 hdrCorrectedColor = color;
-hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
-hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
-float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-if(u_transparentPass != 0)
-{
-a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
-a_outBloom = vec4(emissive.rgb, albedoAlpha.a);
-}else
-{
-a_outColor = vec4(color.rgb + emissive.rgb, 1);
-a_outBloom = vec4(emissive.rgb, 1);
-}
-})"},
+      std::pair<std::string, const char*>{"lightingPass.frag", "#version 430 core"
+"#pragma debug(on)"
+"#extension GL_ARB_bindless_texture: require"
+"layout(location = 0) out vec4 a_outColor;"
+"layout(location = 1) out vec4 a_outBloom;"
+"noperspective in vec2 v_texCoords;"
+"uniform isampler2D u_normals;"
+"uniform samplerCube u_skyboxFiltered;"
+"uniform samplerCube u_skyboxIradiance;"
+"uniform sampler2D u_positions;"
+"uniform sampler2D u_brdfTexture;"
+"uniform sampler2DArrayShadow u_cascades;"
+"uniform sampler2DArrayShadow u_spotShadows;"
+"uniform samplerCubeArrayShadow u_pointShadows;"
+"uniform isampler2D u_materialIndex;"
+"uniform sampler2D u_textureUV;"
+"uniform isampler2D u_textureDerivates;"
+"uniform vec3 u_eyePosition;"
+"uniform int u_transparentPass;"
+"struct MaterialStruct"
+"{"
+"vec4 kd;"
+"vec4 rma; "
+"uvec4 firstBIndlessSamplers;  "
+"uvec2 secondBIndlessSamplers; "
+"int rmaLoaded;"
+"int notUsed;"
+"};"
+"readonly layout(std140) buffer u_material"
+"{"
+"MaterialStruct mat[];"
+"};"
+"layout (std140) uniform u_lightPassData"
+"{"
+"vec4 ambientColor;"
+"float bloomTresshold;"
+"int lightSubScater;"
+"float exposure;"
+"int skyBoxPresent;"
+"}lightPassData;"
+"struct PointLight"
+"{"
+"vec3 positions; "
+"float dist;"
+"vec3 color;"
+"float attenuation;"
+"int castShadowsIndex;"
+"float hardness;"
+"int castShadows;"
+"int changedThisFrame;"
+"};"
+"readonly restrict layout(std140) buffer u_pointLights"
+"{"
+"PointLight light[];"
+"};"
+"uniform int u_pointLightCount;"
+"struct DirectionalLight"
+"{"
+"vec3 direction; "
+"int castShadowsIndex;"
+"int changedThisFrame; "
+"int castShadows;"
+"int notUsed1;"
+"int notUsed2;"
+"vec4 color;		"
+"mat4 firstLightSpaceMatrix;"
+"mat4 secondLightSpaceMatrix;"
+"mat4 thirdLightSpaceMatrix;"
+"};"
+"readonly restrict layout(std140) buffer u_directionalLights"
+"{"
+"DirectionalLight dLight[];"
+"};"
+"uniform int u_directionalLightCount;"
+"struct SpotLight"
+"{"
+"vec4 position; "
+"vec4 direction; "
+"vec4 color; "
+"float hardness;"
+"int shadowIndex;"
+"int castShadows;		"
+"int changedThisFrame; "
+"float near;"
+"float far;"
+"float notUsed1;"
+"float notUsed2;"
+"mat4 lightSpaceMatrix;"
+"};"
+"readonly restrict layout(std140) buffer u_spotLights"
+"{"
+"SpotLight spotLights[];"
+"};"
+"uniform int u_spotLightCount;"
+"const float PI = 3.14159265359;"
+"const float randomNumbers[100] = float[100]("
+"0.05535,	0.22262,	0.93768,	0.80063,	0.40089,	0.49459,	0.44997,	0.27060,	0.58789,	0.61765,"
+"0.87949,	0.38913,	0.23154,	0.27249,	0.93448,	0.71567,	0.26940,	0.32226,	0.73918,	0.30905,"
+"0.98754,	0.82585,	0.84031,	0.60059,	0.56027,	0.10819,	0.55848,	0.95612,	0.88034,	0.94950,"
+"0.53892,	0.86421,	0.84131,	0.39158,	0.25861,	0.10192,	0.19673,	0.25165,	0.68675,	0.79157,"
+"0.94730,	0.36948,	0.27978,	0.66377,	0.38935,	0.93795,	0.83168,	0.01452,	0.51242,	0.12272,"
+"0.61045,	0.34752,	0.13781,	0.92361,	0.73422,	0.31213,	0.55513,	0.81074,	0.56166,	0.31797,"
+"0.09507,	0.50049,	0.44248,	0.38244,	0.58468,	0.32327,	0.61830,	0.67908,	0.16011,	0.82861,"
+"0.36502,	0.12052,	0.28872,	0.73448,	0.51443,	0.99355,	0.75244,	0.22432,	0.95501,	0.90914,"
+"0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,"
+"0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505"
+");"
+"float attenuationFunctionNotClamped(float x, float r, float p)"
+"{"
+"float p4 = p*p*p*p;"
+"float power = pow(x/r, p4);"
+"float rez = (1-power);"
+"rez = rez * rez;"
+"return rez;"
+"}"
+"float DistributionGGX(vec3 N, vec3 H, float roughness)"
+"{"
+"float a      = roughness*roughness;"
+"float a2     = a*a;"
+"float NdotH  = max(dot(N, H), 0.0);"
+"float NdotH2 = NdotH*NdotH;"
+"float denom = (NdotH2 * (a2 - 1.0) + 1.0);"
+"denom = PI * denom * denom;"
+"return  a2 / max(denom, 0.0000001);"
+"}"
+"float GeometrySchlickGGX(float NdotV, float roughness)"
+"{"
+"float k = roughness*roughness / 2;"
+"float num   = NdotV;"
+"float denom = NdotV * (1.0 - k) + k;"
+"return num / max(denom, 0.0000001);"
+"}"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)"
+"{"
+"float NdotV = max(dot(N, V), 0.0);"
+"float NdotL = max(dot(N, L), 0.0);"
+"float ggx2  = GeometrySchlickGGX(NdotV, roughness);"
+"float ggx1  = GeometrySchlickGGX(NdotL, roughness);"
+"return ggx1 * ggx2;"
+"}"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0)"
+"{"
+"return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);"
+"}"
+"vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)"
+"{"
+"return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);"
+"}   "
+"vec3 fSpecular(vec3 normal, vec3 halfwayVec, vec3 viewDir, "
+"vec3 lightDirection, float dotNVclamped, float roughness, vec3 F)"
+"{"
+"float NDF = DistributionGGX(normal, halfwayVec, roughness);       "
+"float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   "
+"float denominator = 4.0 * dotNVclamped  "
+"* max(dot(normal, lightDirection), 0.0);"
+"vec3 specular     = (NDF * G * F) / max(denominator, 0.001);"
+"return specular;"
+"}"
+"vec3 fDiffuse(vec3 color)"
+"{"
+"return color.rgb / PI;"
+"}"
+"vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)"
+"{"
+"float a = roughness;"
+"float a2 = a*a;"
+"float cosi = max(dot(L, N), 0);"
+"float cosr = max(dot(V, N), 0);"
+"float sini = sqrt(1-cosi*cosi);"
+"float sinr = sqrt(1-cosr*cosr);"
+"float tani = sini/cosi;"
+"float tanr = sinr/cosr;"
+"float A = 1 - 0.5 * a2/(a2 + 0.33);"
+"float B = 0.45*a2/(a2+0.09);"
+"float sinAlpha = max(sini, sinr);"
+"float tanBeta = min(tani, tanr);"
+"return color.rgb * (A + (B* max(0, dot(L,reflect(V,N))) * sinAlpha * tanBeta  )) / PI;"
+"}"
+"vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)"
+"{"
+"float a = roughness;"
+"float a2 = a*a;"
+"float A = 1.0/(PI+(PI/2.0-2/3.0)*a);"
+"float B = PI/(PI+(PI/2.0-2/3.0)*a);"
+"float s = dot(L,N) - dot(N,L)*dot(N,V);"
+"float t;"
+"if(s <= 0)"
+"t = 1;"
+"else"
+"t = max(dot(N,L), dot(N,V));"
+"return color * (A + B * s/t);"
+"}"
+"vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughness, in vec3 lightColor, in vec3 worldPosition,"
+"in vec3 viewDir, in vec3 color, in vec3 normal, in vec3 F0)"
+"{"
+"float dotNVclamped = clamp(dot(normal, viewDir), 0.0, 0.99);"
+"vec3 halfwayVec = normalize(lightDirection + viewDir);"
+"vec3 radiance = lightColor; "
+"vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);"
+"vec3 specular = fSpecular(normal, halfwayVec, viewDir, lightDirection, dotNVclamped, roughness, F);"
+"vec3 kS = F; "
+"vec3 kD = vec3(1.0) - kS; "
+"kD *= 1.0 - metallic;	"
+"vec3 diffuse = fDiffuse(color.rgb);"
+"float NdotL = max(dot(normal, lightDirection), 0.0);        "
+"return (kD * diffuse + specular) * radiance * NdotL;"
+"}"
+"float testShadowValue(sampler2DArrayShadow map, vec2 coords, float currentDepth, float bias, int index)"
+"{"
+"return texture(map, vec4(coords, index, currentDepth-bias)).r;"
+"}"
+"void sincos(float a, out float s, out float c)"
+"{"
+"s = sin(a);"
+"c = cos(a);"
+"}"
+"vec2 vogelDiskSample(int sampleIndex, int samplesCount, float phi)"
+"{"
+"float GoldenAngle = 2.4f;"
+"float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);"
+"float theta = sampleIndex * GoldenAngle + phi;"
+"float sine, cosine;"
+"sincos(theta, sine, cosine);"
+"return vec2(r * cosine, r * sine);"
+"}"
+"float InterleavedGradientNoise(vec2 position_screen)"
+"{"
+"vec3 magic = vec3(0.06711056f, 0.00583715f, 52.9829189f);"
+"return fract(magic.z * fract(dot(position_screen, magic.xy)));"
+"}"
+"float shadowCalculation(vec3 projCoords, float bias, sampler2DArrayShadow shadowMap, int index)"
+"{"
+"if(projCoords.z > 0.99995)"
+"return 1.f;"
+"float currentDepth = projCoords.z;"
+"vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;"
+"float shadow = 0.0;"
+"bool fewSamples = false;"
+"int kernelHalf = 1;"
+"int kernelSize = kernelHalf*2 + 1;"
+"int kernelSize2 = kernelSize*kernelSize;"
+"float penumbraSize = 1.f;"
+"if(false)"
+"{"
+"float shadowValueAtCentre = 0;"
+"if(false)"
+"{"
+"float offsetSize = kernelSize/2;"
+"const int OFFSETS = 4;"
+"vec2 offsets[OFFSETS] = "
+"{"
+"vec2(offsetSize,offsetSize),"
+"vec2(-offsetSize,offsetSize),"
+"vec2(offsetSize,-offsetSize),"
+"vec2(-offsetSize,-offsetSize),"
+"};"
+"fewSamples = true;"
+"float s1 = testShadowValue(shadowMap, projCoords.xy, "
+"currentDepth, bias, index); "
+"shadowValueAtCentre = s1;"
+"for(int i=0;i<OFFSETS; i++)"
+"{"
+"float s2 = testShadowValue(shadowMap, projCoords.xy + offsets[i] * texelSize * 2, "
+"currentDepth, bias, index); "
+"if(s1 != s2)"
+"{"
+"fewSamples = false;"
+"break;"
+"}	"
+"s1 = s2;"
+"}"
+"}"
+"if(fewSamples)"
+"{"
+"shadow = shadowValueAtCentre;"
+"}else"
+"{"
+"for(int y = -kernelHalf; y <= kernelHalf; ++y)"
+"{"
+"for(int x = -kernelHalf; x <= kernelHalf; ++x)"
+"{"
+"vec2 offset = vec2(x, y);"
+"if(false)"
+"{"
+"int randomOffset1 = (x*kernelSize) + y;"
+"int randomOffset2 = randomOffset1 + kernelSize2;"
+"offset += vec2(randomNumbers[randomOffset1, randomOffset2]);"
+"}"
+"if(false)"
+"{"
+"float u = (offset.x + kernelHalf)/float(kernelSize-1);"
+"float v = (offset.y + kernelHalf)/float(kernelSize-1);"
+"offset.x = sqrt(v) * cos(2*PI * u)* kernelHalf;"
+"offset.y = sqrt(v) * sin(2*PI * u)* kernelHalf;"
+"}"
+"vec2 finalOffset = offset * texelSize * penumbraSize;"
+"float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, "
+"currentDepth, bias, index); "
+"shadow += s;"
+"}    "
+"}"
+"shadow /= kernelSize2;"
+"}"
+"}else"
+"{"
+"int sampleSize = 9;"
+"int checkSampleSize = 5;"
+"float size = 1.5;"
+"float noise = InterleavedGradientNoise(v_texCoords) * 2 * PI;"
+"for(int i=sampleSize-1; i>=sampleSize-checkSampleSize; i--)"
+"{"
+"vec2 offset = vogelDiskSample(i, sampleSize, noise);"
+"vec2 finalOffset = offset * texelSize * size;"
+"float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, "
+"currentDepth, bias, index);"
+"shadow += s;"
+"}"
+"if(true && (shadow == 0 || shadow == checkSampleSize))"
+"{"
+"shadow /= checkSampleSize;"
+"}else"
+"{"
+"for(int i=sampleSize-checkSampleSize-1; i>=0; i--)"
+"{"
+"vec2 offset = vogelDiskSample(i, sampleSize, noise);"
+"vec2 finalOffset = offset * texelSize * size;"
+"float s = testShadowValue(shadowMap, projCoords.xy + finalOffset, "
+"currentDepth, bias, index);"
+"shadow += s;"
+"}"
+"shadow /= sampleSize;"
+"}"
+"}"
+"return clamp(shadow, 0, 1);"
+"}"
+"float shadowCalculationLinear(vec3 projCoords, vec3 normal, vec3 lightDir, sampler2DArrayShadow shadowMap, int index)"
+"{"
+"float bias = max((10.f/1024.f) * (1.0 - dot(normal, -lightDir)), 3.f/1024.f);"
+"return shadowCalculation(projCoords, bias, shadowMap, index);"
+"}"
+"float linearizeDepth(float depth, float near, float far)"
+"{"
+"float z = depth * 2.0 - 1.0; "
+"return (2.0 * near * far) / (far + near - z * (far - near));"
+"}"
+"float nonLinearDepth(float depth, float near, float far)"
+"{"
+"return ((1.f/depth) - (1.f/near)) / ((1.f/far) - (1.f/near));"
+"}"
+"float shadowCalculationLogaritmic(vec3 projCoords, vec3 normal, vec3 lightDir,"
+"sampler2DArrayShadow shadowMap, int index, float near, float far)"
+"{"
+"float bias = max((0.01f) * (1.0 - dot(normal, -lightDir)), 0.001f);"
+"float currentDepth = projCoords.z;"
+"float liniarizedDepth = linearizeDepth(currentDepth, near, far);"
+"liniarizedDepth += bias;"
+"float biasedLogDepth = nonLinearDepth(liniarizedDepth, near, far);"
+"bias = biasedLogDepth - currentDepth;"
+"bias += 0.00003f;"
+"return shadowCalculation(projCoords, bias, shadowMap, index);"
+"}"
+"vec3 getProjCoords(in mat4 matrix, in vec3 pos)"
+"{"
+"vec4 p = matrix * vec4(pos,1);"
+"vec3 r = p .xyz / p .w;"
+"r = r * 0.5 + 0.5;"
+"return r;"
+"}"
+"void generateTangentSpace(in vec3 v, out vec3 outUp, out vec3 outRight)"
+"{"
+"vec3 up = vec3(0.f, 1.f, 0.f);"
+"if (v == up)"
+"{"
+"outRight = vec3(1, 0, 0);"
+"}"
+"else"
+"{"
+"outRight = normalize(cross(v, up));"
+"}"
+"outUp = normalize(cross(outRight, v));"
+"}"
+"float pointShadowCalculation(vec3 pos, vec3 normal, int index)"
+"{	"
+"vec3 fragToLight = pos - light[index].positions; "
+"vec3 lightDir = normalize(fragToLight);"
+"float bias = max((60.f/512.f) * (1.0 - dot(normal, -lightDir)), 35.f/512.f);"
+"float shadow  = 0.0;"
+"vec3 tangent;"
+"vec3 coTangent;"
+"generateTangentSpace(lightDir, tangent, coTangent);"
+"float texel = 1.f / textureSize(u_pointShadows, 0).x;"
+"int kernel = 5;"
+"int kernelHalf = kernel/2;"
+"for(int y = -kernelHalf; y<=kernelHalf; y++)"
+"{"
+"for(int x = -kernelHalf; x<=kernelHalf; x++)"
+"{"
+"vec3 fragToLight = pos - light[index].positions; 			"
+"fragToLight += 6*x * texel * tangent;"
+"fragToLight += 6*y * texel * coTangent;"
+"float currentDepth = length(fragToLight);  "
+"float value = texture(u_pointShadows, "
+"vec4(fragToLight, light[index].castShadowsIndex),"
+"(currentDepth-bias)/light[index].dist ).r; "
+"shadow += value;"
+"}"
+"}"
+"if(shadow <3)"
+"{"
+"shadow = 0;"
+"}"
+"shadow /= (kernel * kernel);"
+"shadow = clamp(shadow, 0, 1);"
+"return shadow;"
+"}"
+"float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)"
+"{"
+"vec3 firstProjCoords = getProjCoords(dLight[index].firstLightSpaceMatrix, pos);"
+"vec3 secondProjCoords = getProjCoords(dLight[index].secondLightSpaceMatrix, pos);"
+"vec3 thirdProjCoords = getProjCoords(dLight[index].thirdLightSpaceMatrix, pos);"
+"if("
+"firstProjCoords.x < 0.98 &&"
+"firstProjCoords.x > 0.01 &&"
+"firstProjCoords.y < 0.98 &&"
+"firstProjCoords.y > 0.01 &&"
+"firstProjCoords.z < 0.98 &&"
+"firstProjCoords.z > 0"
+")"
+"{"
+"firstProjCoords.y /= 3.f;"
+"return shadowCalculationLinear(firstProjCoords, normal, lightDir, u_cascades, index);"
+"}else "
+"if("
+"secondProjCoords.x > 0 &&"
+"secondProjCoords.x < 1 &&"
+"secondProjCoords.y > 0 &&"
+"secondProjCoords.y < 1 &&"
+"secondProjCoords.z < 0.98"
+")"
+"{"
+"secondProjCoords.y /= 3.f;"
+"secondProjCoords.y += 1.f / 3.f;"
+"return shadowCalculationLinear(secondProjCoords, normal, lightDir, u_cascades, index);"
+"}"
+"else"
+"{"
+"thirdProjCoords.y /= 3.f;"
+"thirdProjCoords.y += 2.f / 3.f;"
+"return shadowCalculationLinear(thirdProjCoords, normal, lightDir, u_cascades, index);"
+"}"
+"}"
+"vec4 fromuShortToFloat2(ivec4 a)"
+"{"
+"vec4 ret = a;"
+"ret /= 65536;"
+"ret *= 4.f;"
+"ret -= 2.f;"
+"return ret;"
+"}"
+"vec3 fromuShortToFloat(ivec3 a)"
+"{"
+"vec3 ret = a;"
+"ret /= 65536;"
+"ret *= 2.f;"
+"ret -= 1.f;"
+"return normalize(ret);"
+"}"
+"void main()"
+"{"
+"vec3 pos = texture(u_positions, v_texCoords).xyz;"
+"vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);"
+"int materialIndex = texture(u_materialIndex, v_texCoords).r;"
+"vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;"
+"ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;"
+"vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);"
+"vec4 albedoAlpha = vec4(0,0,0,0);"
+"vec3 emissive = vec3(0,0,0);"
+"vec3 material;"
+"if(materialIndex == 0)"
+"{"
+"if(u_transparentPass != 0)"
+"{"
+"discard;"
+"}else"
+"{"
+"a_outColor = vec4(0,0,0,0);"
+"a_outBloom = vec4(0,0,0,1);"
+"return;"
+"}"
+"}"
+"{"
+"uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;"
+"if(albedoSampler.x == 0 && albedoSampler.y == 0)"
+"{"
+"albedoAlpha.rgba = vec4(1,1,1,1); "
+"}else"
+"{"
+"albedoAlpha = "
+"textureGrad(sampler2D(albedoSampler), sampledUV.xy, "
+"sampledDerivates.xy, sampledDerivates.zw).rgba;"
+"}"
+"albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );"
+"albedoAlpha.a *= mat[materialIndex-1].kd.a;"
+"uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;"
+"if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)"
+"{"
+"emissive.rgb = albedoAlpha.rgb;"
+"}else"
+"{"
+"emissive = "
+"textureGrad(sampler2D(emmisiveSampler), sampledUV.xy, "
+"sampledDerivates.xy, sampledDerivates.zw).rgb;"
+"}"
+"emissive.rgb *= mat[materialIndex-1].rma.a;"
+"emissive = pow(emissive , vec3(2.2)).rgb; "
+"uvec2 rmaSampler = mat[materialIndex-1].firstBIndlessSamplers.zw;"
+"if(rmaSampler.x == 0 && rmaSampler.y == 0 && mat[materialIndex-1].rmaLoaded != 0)"
+"{"
+"material.r = mat[materialIndex-1].rma.r;"
+"material.g = mat[materialIndex-1].rma.g;"
+"material.b = mat[materialIndex-1].rma.b;"
+"}"
+"else"
+"{"
+"vec3 materialData = textureGrad(sampler2D(rmaSampler), sampledUV.xy, "
+"sampledDerivates.xy, sampledDerivates.zw).rgb;"
+"int roughnessPrezent = mat[materialIndex-1].rmaLoaded & 0x4;"
+"int metallicPrezent = mat[materialIndex-1].rmaLoaded & 0x2;"
+"int ambientPrezent = mat[materialIndex-1].rmaLoaded & 0x1;"
+"if(roughnessPrezent != 0)"
+"{"
+"material.r = materialData.r;"
+"}else"
+"{"
+"material.r = mat[materialIndex-1].rma.r;"
+"}"
+"if(metallicPrezent != 0)"
+"{"
+"material.g = materialData.g;"
+"}else"
+"{"
+"material.g = mat[materialIndex-1].rma.g;"
+"}"
+"if(ambientPrezent != 0)"
+"{"
+"material.b = materialData.b;"
+"}else"
+"{"
+"material.b = mat[materialIndex-1].rma.b;"
+"}"
+"}"
+"}"
+"vec3 albedo = albedoAlpha.rgb;"
+"albedo  = pow(albedo , vec3(2.2)).rgb; "
+"float roughness = clamp(material.r, 0.09, 0.99);"
+"float metallic = clamp(material.g, 0.0, 0.98);"
+"float ambientOcclution = material.b;"
+"vec3 viewDir = normalize(u_eyePosition - pos);"
+"vec3 R = reflect(-viewDir, normal);	"
+"vec3 Lo = vec3(0,0,0); "
+"vec3 F0 = vec3(0.04); "
+"F0 = mix(F0, albedo.rgb, vec3(metallic));"
+"for(int i=0; i<u_pointLightCount;i++)"
+"{"
+"vec3 lightPosition = light[i].positions.xyz;"
+"vec3 lightColor = light[i].color.rgb;"
+"vec3 lightDirection = normalize(lightPosition - pos);"
+"float currentDist = distance(lightPosition, pos);"
+"if(currentDist >= light[i].dist)"
+"{"
+"continue;"
+"}"
+"float attenuation = attenuationFunctionNotClamped(currentDist, light[i].dist, light[i].attenuation);	"
+"float shadow = 1.f;"
+"if(light[i].castShadows != 0)"
+"{"
+"shadow = pointShadowCalculation(pos, normal, i);"
+"shadow = pow(shadow, light[i].hardness);"
+"}"
+"Lo += computePointLightSource(lightDirection, metallic, roughness, lightColor, "
+"pos, viewDir, albedo, normal, F0) * attenuation * shadow;"
+"}"
+"for(int i=0; i<u_directionalLightCount; i++)"
+"{"
+"vec3 lightDirection = dLight[i].direction.xyz;"
+"vec3 lightColor = dLight[i].color.rgb;"
+"float shadow = 1;"
+"if(dLight[i].castShadows != 0)"
+"{	"
+"int castShadowInd = dLight[i].castShadowsIndex;"
+"shadow = cascadedShadowCalculation(pos, normal, lightDirection, castShadowInd);"
+"shadow = pow(shadow, dLight[i].color.w);"
+"}"
+"Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, "
+"pos, viewDir, albedo, normal, F0) * shadow;"
+"}"
+"for(int i=0; i<u_spotLightCount; i++)"
+"{"
+"vec3 lightPosition = spotLights[i].position.xyz;"
+"vec3 lightColor = spotLights[i].color.rgb;"
+"vec3 spotLightDirection = spotLights[i].direction.xyz;"
+"vec3 lightDirection = -normalize(lightPosition - pos);"
+"float angle = spotLights[i].position.w;"
+"float dist = spotLights[i].direction.w;"
+"float at = spotLights[i].color.w;"
+"float dotAngle = dot(normalize(vec3(pos - lightPosition)), spotLightDirection);"
+"float currentDist = distance(lightPosition, pos);"
+"if(currentDist >= dist)"
+"{"
+"continue;"
+"}"
+"if(dotAngle > angle && dotAngle > 0)"
+"{"
+"float attenuation = attenuationFunctionNotClamped(currentDist, dist, at);"
+"float smoothingVal = 0.01; "
+"float innerAngle = angle + smoothingVal;"
+"float smoothing = clamp((dotAngle-angle)/smoothingVal,0.0,1.0);"
+"vec3 shadowProjCoords = getProjCoords(spotLights[i].lightSpaceMatrix, pos);"
+"float shadow = 1;"
+"if(spotLights[i].castShadows != 0)"
+"{"
+"shadow = shadowCalculationLogaritmic(shadowProjCoords, normal, lightDirection, "
+"u_spotShadows, spotLights[i].shadowIndex, spotLights[i].near, spotLights[i].far);"
+"shadow = pow(shadow, spotLights[i].hardness);"
+"}"
+"smoothing = pow(smoothing, spotLights[i].hardness);"
+"Lo += computePointLightSource(-lightDirection, metallic, roughness, lightColor, "
+"pos, viewDir, albedo, normal, F0) * smoothing * attenuation * shadow;"
+"}"
+"}"
+"vec3 ambient;"
+"vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));"
+"if(lightPassData.skyBoxPresent != 0)"
+"{"
+"vec3 N = normal;"
+"vec3 V = viewDir;"
+"float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);"
+"vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);"
+"vec3 kS = F;"
+"vec3 irradiance = texture(u_skyboxIradiance, N).rgb; "
+"const float MAX_REFLECTION_LOD = 4.0;"
+"vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;"
+"vec2 brdfVec = vec2(dotNVClamped, roughness);"
+"vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;"
+"if(lightPassData.lightSubScater == 0)"
+"{"
+"vec3 kD = 1.0 - kS;"
+"kD *= 1.0 - metallic;"
+"vec3 diffuse = irradiance * albedo;"
+"vec3 specular = radiance * (F * brdf.x + brdf.y);"
+"ambient = (kD * diffuse + specular);"
+"}else"
+"{"
+"vec3 FssEss = kS * brdf.x + brdf.y;"
+"float Ess = brdf.x + brdf.y;"
+"float Ems = 1-Ess;"
+"vec3 Favg = F0 + (1-F0)/21;"
+"vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);"
+"vec3 Edss = 1 - (FssEss + Fms * Ems);"
+"vec3 kD = albedo * Edss;"
+"ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;"
+"}"
+"vec3 occlusionData = ambientOcclution * gammaAmbient;"
+"ambient *= occlusionData;"
+"}else"
+"{"
+"vec3 N = normal;"
+"vec3 V = viewDir;"
+"float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);"
+"vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);"
+"vec3 kS = F;"
+"vec3 irradiance = gammaAmbient ; "
+"vec3 radiance = gammaAmbient ;"
+"vec2 brdfVec = vec2(dotNVClamped, roughness);"
+"vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;"
+"if(lightPassData.lightSubScater == 0)"
+"{"
+"vec3 kD = 1.0 - kS;"
+"kD *= 1.0 - metallic;"
+"vec3 diffuse = irradiance * albedo;"
+"vec3 specular = radiance * (F * brdf.x + brdf.y);"
+"ambient = (kD * diffuse + specular);"
+"}else"
+"{"
+"vec3 FssEss = kS * brdf.x + brdf.y;"
+"float Ess = brdf.x + brdf.y;"
+"float Ems = 1-Ess;"
+"vec3 Favg = F0 + (1-F0)/21;"
+"vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);"
+"vec3 Edss = 1 - (FssEss + Fms * Ems);"
+"vec3 kD = albedo * Edss;"
+"ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;"
+"}"
+"vec3 occlusionData = vec3(ambientOcclution);"
+"ambient *= occlusionData;"
+"}"
+"vec3 color = Lo + ambient; "
+"vec3 hdrCorrectedColor = color;"
+"hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);"
+"hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));"
+"float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	"
+"if(u_transparentPass != 0)"
+"{"
+"a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);"
+"a_outBloom = vec4(emissive.rgb, albedoAlpha.a);"
+"}else"
+"{"
+"a_outColor = vec4(color.rgb + emissive.rgb, 1);"
+"a_outBloom = vec4(emissive.rgb, 1);"
+"}"
+"}"},
 
-      std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 430
-#pragma debug(on)
-layout(location = 0) in vec3 a_positions;
-layout(location = 1) in vec3 a_normals;
-layout(location = 2) in vec2 a_texCoord;
-layout(location = 3) in ivec4 a_jointsId;
-layout(location = 4) in vec4 a_weights;
-uniform mat4 u_transform; //full model view projection
-uniform mat4 u_modelTransform; //just model to world
-uniform mat4 u_motelViewTransform; //model to world to view
-out vec3 v_normals;
-out vec3 v_position;
-out vec2 v_texCoord;
-out vec3 v_positionViewSpace;
-readonly restrict layout(std140) buffer u_jointTransforms
-{
-mat4 jointTransforms[];
-};
-uniform int u_hasAnimations;
-void main()
-{
-vec4 totalLocalPos = vec4(0.f);
-vec4 totalNorm = vec4(0.f);
-if(u_hasAnimations != 0)
-{
-for(int i=0; i<4; i++)
-{
-if(a_jointsId[i] < 0){break;}
-mat4 jointTransform = jointTransforms[a_jointsId[i]];
-vec4 posePosition = jointTransform * vec4(a_positions, 1);
-totalLocalPos += posePosition * a_weights[i];
-vec3 worldNormal = mat3(transpose(inverse(mat3(jointTransform)))) * a_normals.xyz;// jointTransform * vec4(a_normals, 1);
-totalNorm.xyz += worldNormal.xyz * a_weights[i];
-}
-totalNorm.xyz = normalize(totalNorm.xyz);
-}else
-{
-totalLocalPos = vec4(a_positions, 1.f);
-totalNorm = vec4(a_normals, 1);
-}
-v_positionViewSpace = vec3(u_motelViewTransform * totalLocalPos);
-gl_Position = u_transform * totalLocalPos;
-v_position = (u_modelTransform * totalLocalPos).xyz;
-v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * totalNorm.xyz;  //non uniform scale
-v_normals = normalize(v_normals);
-v_texCoord = a_texCoord;
-})"},
+      std::pair<std::string, const char*>{"geometryPass.vert", "#version 430"
+"#pragma debug(on)"
+"layout(location = 0) in vec3 a_positions;"
+"layout(location = 1) in vec3 a_normals;"
+"layout(location = 2) in vec2 a_texCoord;"
+"layout(location = 3) in ivec4 a_jointsId;"
+"layout(location = 4) in vec4 a_weights;"
+"uniform mat4 u_transform; "
+"uniform mat4 u_modelTransform; "
+"uniform mat4 u_motelViewTransform; "
+"out vec3 v_normals;"
+"out vec3 v_position;"
+"out vec2 v_texCoord;"
+"out vec3 v_positionViewSpace;"
+"readonly restrict layout(std140) buffer u_jointTransforms"
+"{"
+"mat4 jointTransforms[];"
+"};"
+"uniform int u_hasAnimations;"
+"void main()"
+"{"
+"vec4 totalLocalPos = vec4(0.f);"
+"vec4 totalNorm = vec4(0.f);"
+"if(u_hasAnimations != 0)"
+"{"
+"for(int i=0; i<4; i++)"
+"{"
+"if(a_jointsId[i] < 0){break;}"
+"mat4 jointTransform = jointTransforms[a_jointsId[i]];"
+"vec4 posePosition = jointTransform * vec4(a_positions, 1);"
+"totalLocalPos += posePosition * a_weights[i];"
+"vec3 worldNormal = mat3(transpose(inverse(mat3(jointTransform)))) * a_normals.xyz;"
+"totalNorm.xyz += worldNormal.xyz * a_weights[i];"
+"}"
+"totalNorm.xyz = normalize(totalNorm.xyz);"
+"}else"
+"{"
+"totalLocalPos = vec4(a_positions, 1.f);"
+"totalNorm = vec4(a_normals, 1);"
+"}"
+"v_positionViewSpace = vec3(u_motelViewTransform * totalLocalPos);"
+"gl_Position = u_transform * totalLocalPos;"
+"v_position = (u_modelTransform * totalLocalPos).xyz;"
+"v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * totalNorm.xyz;  "
+"v_normals = normalize(v_normals);"
+"v_texCoord = a_texCoord;"
+"}"},
 
-      std::pair<std::string, const char*>{"geometryPass.frag", R"(#version 430
-#pragma debug(on)
-#extension GL_ARB_bindless_texture: require
-layout(location = 0) out vec3 a_pos;
-layout(location = 1) out ivec3 a_normal;
-layout(location = 3) out vec3 a_posViewSpace;
-layout(location = 4) out int a_materialIndex;
-layout(location = 5) out vec4 a_textureUV;
-layout(location = 2) out ivec4 a_textureDerivates;
-in vec3 v_normals;
-in vec3 v_position;	//world space
-in vec2 v_texCoord;
-in vec3 v_positionViewSpace;
-uniform sampler2D u_normalSampler;
-uniform int u_materialIndex;
-struct MaterialStruct
-{
-vec4 kd;
-vec4 rma; //last component emmisive
-uvec4 firstBIndlessSamplers;  // xy albedoSampler,  zw rmaSampler
-uvec2 secondBIndlessSamplers; // xy emmissiveSampler
-int rmaLoaded;
-int notUsed;
-};
-readonly layout(std140) buffer u_material
-{
-MaterialStruct mat[];
-};
-float PI = 3.14159265359;
-mat3x3 NormalToRotation(in vec3 normal)
-{
-vec3 tangent0 = cross(normal, vec3(1, 0, 0));
-if (dot(tangent0, tangent0) < 0.001)
-tangent0 = cross(normal, vec3(0, 1, 0));
-tangent0 = normalize(tangent0);
-vec3 tangent1 = normalize(cross(normal, tangent0));
-return mat3x3(tangent0,tangent1,normal);
-}
-subroutine vec3 GetNormalMapFunc(vec3);
-subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
-{
-vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
-normal = normalize(2*normal - 1.f);
-mat3 rotMat = NormalToRotation(v);
-normal = rotMat * normal;
-normal = normalize(normal);
-return normal;
-}
-subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
-{
-return v;
-}
-subroutine uniform GetNormalMapFunc getNormalMapFunc;
-int fromFloat2TouShort(float a)
-{
-a += 2.f;
-a /= 4.f;
-a *= 65536;
-return int(a);
-}
-ivec3 fromFloatTouShort(vec3 a)
-{
-a += 1.f;
-a /= 2.f;
-a *= 65536;
-return ivec3(a);
-}
-void main()
-{
-uvec2 albedoSampler = mat[u_materialIndex].firstBIndlessSamplers.xy;
-if(albedoSampler.x == 0 && albedoSampler.y == 0)
-{
-}else
-{
-float alphaData = texture2D(sampler2D(albedoSampler), v_texCoord).a;
-if(alphaData*255 < 1)
-discard;
-}
-vec3 noMappedNorals = normalize(v_normals);
-vec3 normal = getNormalMapFunc(noMappedNorals);
-normal = normalize(normal);
-a_normal = fromFloatTouShort(normal);
-a_pos = v_position;
-a_posViewSpace = v_positionViewSpace;
-a_materialIndex = u_materialIndex+1;
-a_textureUV.xy = v_texCoord.xy;
-a_textureDerivates.x = fromFloat2TouShort(dFdx(v_texCoord.x));
-a_textureDerivates.y = fromFloat2TouShort(dFdy(v_texCoord.x));
-a_textureDerivates.z = fromFloat2TouShort(dFdx(v_texCoord.y));
-a_textureDerivates.w = fromFloat2TouShort(dFdy(v_texCoord.y));
-})"},
+      std::pair<std::string, const char*>{"geometryPass.frag", "#version 430"
+"#pragma debug(on)"
+"#extension GL_ARB_bindless_texture: require"
+"layout(location = 0) out vec3 a_pos;"
+"layout(location = 1) out ivec3 a_normal;"
+"layout(location = 3) out vec3 a_posViewSpace;"
+"layout(location = 4) out int a_materialIndex;"
+"layout(location = 5) out vec4 a_textureUV;"
+"layout(location = 2) out ivec4 a_textureDerivates;"
+"in vec3 v_normals;"
+"in vec3 v_position;	"
+"in vec2 v_texCoord;"
+"in vec3 v_positionViewSpace;"
+"uniform sampler2D u_normalSampler;"
+"uniform int u_materialIndex;"
+"struct MaterialStruct"
+"{"
+"vec4 kd;"
+"vec4 rma; "
+"uvec4 firstBIndlessSamplers;  "
+"uvec2 secondBIndlessSamplers; "
+"int rmaLoaded;"
+"int notUsed;"
+"};"
+"readonly layout(std140) buffer u_material"
+"{"
+"MaterialStruct mat[];"
+"};"
+"float PI = 3.14159265359;"
+"mat3x3 NormalToRotation(in vec3 normal)"
+"{"
+"vec3 tangent0 = cross(normal, vec3(1, 0, 0));"
+"if (dot(tangent0, tangent0) < 0.001)"
+"tangent0 = cross(normal, vec3(0, 1, 0));"
+"tangent0 = normalize(tangent0);"
+"vec3 tangent1 = normalize(cross(normal, tangent0));"
+"return mat3x3(tangent0,tangent1,normal);"
+"}"
+"subroutine vec3 GetNormalMapFunc(vec3);"
+"subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)"
+"{"
+"vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;"
+"normal = normalize(2*normal - 1.f);"
+"mat3 rotMat = NormalToRotation(v);"
+"normal = rotMat * normal;"
+"normal = normalize(normal);"
+"return normal;"
+"}"
+"subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)"
+"{"
+"return v;"
+"}"
+"subroutine uniform GetNormalMapFunc getNormalMapFunc;"
+"int fromFloat2TouShort(float a)"
+"{"
+"a += 2.f;"
+"a /= 4.f;"
+"a *= 65536;"
+"return int(a);"
+"}"
+"ivec3 fromFloatTouShort(vec3 a)"
+"{"
+"a += 1.f;"
+"a /= 2.f;"
+"a *= 65536;"
+"return ivec3(a);"
+"}"
+"void main()"
+"{"
+"uvec2 albedoSampler = mat[u_materialIndex].firstBIndlessSamplers.xy;"
+"if(albedoSampler.x == 0 && albedoSampler.y == 0)"
+"{"
+"}else"
+"{"
+"float alphaData = texture2D(sampler2D(albedoSampler), v_texCoord).a;"
+"if(alphaData*255 < 1)"
+"discard;"
+"}"
+"vec3 noMappedNorals = normalize(v_normals);"
+"vec3 normal = getNormalMapFunc(noMappedNorals);"
+"normal = normalize(normal);"
+"a_normal = fromFloatTouShort(normal);"
+"a_pos = v_position;"
+"a_posViewSpace = v_positionViewSpace;"
+"a_materialIndex = u_materialIndex+1;"
+"a_textureUV.xy = v_texCoord.xy;"
+"a_textureDerivates.x = fromFloat2TouShort(dFdx(v_texCoord.x));"
+"a_textureDerivates.y = fromFloat2TouShort(dFdy(v_texCoord.x));"
+"a_textureDerivates.z = fromFloat2TouShort(dFdx(v_texCoord.y));"
+"a_textureDerivates.w = fromFloat2TouShort(dFdy(v_texCoord.y));"
+"}"},
 
-      std::pair<std::string, const char*>{"noaa.frag", R"(#version 150
-out vec4 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-void main ()
-{
-vec4 tmpvar_1;
-tmpvar_1.w = 1.0;
-tmpvar_1.xyz = texture (u_texture, v_texCoords).xyz;
-a_color = tmpvar_1;
-})"},
+      std::pair<std::string, const char*>{"noaa.frag", "#version 150"
+"out vec4 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"void main ()"
+"{"
+"vec4 tmpvar_1;"
+"tmpvar_1.w = 1.0;"
+"tmpvar_1.xyz = texture (u_texture, v_texCoords).xyz;"
+"a_color = tmpvar_1;"
+"}"},
 
-      std::pair<std::string, const char*>{"fxaa.frag", R"(#version 330 core
-out vec4 a_color;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_texture;
-float luminance(in vec3 color)
-{
-return dot(color, vec3(0.299, 0.587, 0.114));
-}
-float lumaSqr(in vec3 color)
-{
-return sqrt(luminance(color));
-}
-vec3 getTexture(in vec2 offset)
-{
-return texture2D(u_texture, v_texCoords + offset).rgb;
-}
-float quality(int i)
-{
-const int SIZE = 8;
-const int FIRST_SAMPLES_COUNT = 5;
-const float r[SIZE] = float[SIZE](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 6.0, 7.0);
-if(i < FIRST_SAMPLES_COUNT)
-{
-return 1;
-}else if(i >= FIRST_SAMPLES_COUNT + SIZE)
-{
-return 8;
-}else return r[i-FIRST_SAMPLES_COUNT];
-}
-/*
-default values example
-float edgeMinTreshold = 0.028;
-float edgeDarkTreshold = 0.125;
-int ITERATIONS = 12;
-float quaityMultiplier = 0.8;
-float SUBPIXEL_QUALITY = 0.95;
-*/
-layout(std140) uniform u_FXAAData
-{
-float edgeMinTreshold;
-float edgeDarkTreshold;
-int ITERATIONS;
-float quaityMultiplier;
-float SUBPIXEL_QUALITY;
-}fxaaData;
-void main()
-{
-vec3 colorCenter = getTexture(vec2(0,0)).rgb;
-float lumaCenter = lumaSqr(colorCenter);
-float lumaDown = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(0,-1)).rgb);
-float lumaUp = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(0,1)).rgb);
-float lumaLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,0)).rgb);
-float lumaRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,0)).rgb);
-float lumaMin = min(lumaCenter,min(min(lumaDown,lumaUp),min(lumaLeft,lumaRight)));
-float lumaMax = max(lumaCenter,max(max(lumaDown,lumaUp),max(lumaLeft,lumaRight)));
-float lumaRange = lumaMax - lumaMin;
-if(lumaRange < max(fxaaData.edgeMinTreshold,lumaMax*fxaaData.edgeDarkTreshold))
-{
-a_color = vec4(colorCenter, 1);
-return;
-}
-float lumaDownLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,-1)).rgb);
-float lumaUpRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,1)).rgb);
-float lumaUpLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,1)).rgb);
-float lumaDownRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,-1)).rgb);
-float lumaDownUp = lumaDown + lumaUp;
-float lumaLeftRight = lumaLeft + lumaRight;
-float lumaLeftCorners = lumaDownLeft + lumaUpLeft;
-float lumaDownCorners = lumaDownLeft + lumaDownRight;
-float lumaRightCorners = lumaDownRight + lumaUpRight;
-float lumaUpCorners = lumaUpRight + lumaUpLeft;
-float edgeHorizontal =  abs(-2.0 * lumaLeft + lumaLeftCorners)  + abs(-2.0 * lumaCenter + lumaDownUp ) * 2.0    + abs(-2.0 * lumaRight + lumaRightCorners);
-float edgeVertical =    abs(-2.0 * lumaUp + lumaUpCorners)      + abs(-2.0 * lumaCenter + lumaLeftRight) * 2.0  + abs(-2.0 * lumaDown + lumaDownCorners);
-bool isHorizontal = (edgeHorizontal >= edgeVertical);
-float luma1 = isHorizontal ? lumaDown : lumaLeft;
-float luma2 = isHorizontal ? lumaUp : lumaRight;
-float gradient1 = luma1 - lumaCenter;
-float gradient2 = luma2 - lumaCenter;
-bool is1Steepest = abs(gradient1) >= abs(gradient2);
-float gradientScaled = 0.25*max(abs(gradient1),abs(gradient2));
-vec2 inverseScreenSize = 1.f/textureSize(u_texture, 0);
-float stepLength = isHorizontal ? inverseScreenSize.y : inverseScreenSize.x;
-float lumaLocalAverage = 0.0;
-if(is1Steepest)
-{
-stepLength = - stepLength;
-lumaLocalAverage = 0.5*(luma1 + lumaCenter);
-} 
-else
-{
-lumaLocalAverage = 0.5*(luma2 + lumaCenter);
-}
-vec2 currentUv = v_texCoords;
-if(isHorizontal)
-{
-currentUv.y += stepLength * 0.5;
-} else 
-{
-currentUv.x += stepLength * 0.5;
-}
-vec2 offset = isHorizontal ? vec2(inverseScreenSize.x,0.0) : vec2(0.0,inverseScreenSize.y);
-vec2 uv1 = currentUv - offset;
-vec2 uv2 = currentUv + offset;
-float lumaEnd1 = lumaSqr(texture(u_texture,uv1).rgb);
-float lumaEnd2 = lumaSqr(texture(u_texture,uv2).rgb);
-lumaEnd1 -= lumaLocalAverage;
-lumaEnd2 -= lumaLocalAverage;
-bool reached1 = abs(lumaEnd1) >= gradientScaled;
-bool reached2 = abs(lumaEnd2) >= gradientScaled;
-bool reachedBoth = reached1 && reached2;
-if(!reached1){
-uv1 -= offset;
-}
-if(!reached2){
-uv2 += offset;
-}   
-if(!reachedBoth)
-{
-for(int i = 0; i < fxaaData.ITERATIONS; i++)
-{
-if(!reached1){
-lumaEnd1 = lumaSqr(texture(u_texture, uv1).rgb);
-lumaEnd1 = lumaEnd1 - lumaLocalAverage;
-}
-if(!reached2){
-lumaEnd2 = lumaSqr(texture(u_texture, uv2).rgb);
-lumaEnd2 = lumaEnd2 - lumaLocalAverage;
-}
-reached1 = abs(lumaEnd1) >= gradientScaled;
-reached2 = abs(lumaEnd2) >= gradientScaled;
-reachedBoth = reached1 && reached2;
-if(!reached1)
-{
-uv1 -= offset * quality(i) * fxaaData.quaityMultiplier;
-}
-if(!reached2)
-{
-uv2 += offset * quality(i) * fxaaData.quaityMultiplier;
-}
-if(reachedBoth){ break;}
-}
-}
-float distance1 = isHorizontal ? (v_texCoords.x - uv1.x) : (v_texCoords.y - uv1.y);
-float distance2 = isHorizontal ? (uv2.x - v_texCoords.x) : (uv2.y - v_texCoords.y);
-bool isDirection1 = distance1 < distance2;
-float distanceFinal = min(distance1, distance2);
-float edgeThickness = (distance1 + distance2);
-float pixelOffset = - distanceFinal / edgeThickness + 0.5;
-bool isLumaCenterSmaller = lumaCenter < lumaLocalAverage;
-bool correctVariation = ((isDirection1 ? lumaEnd1 : lumaEnd2) < 0.0) != isLumaCenterSmaller;
-float finalOffset = correctVariation ? pixelOffset : 0.0;
-float lumaAverage = (1.0/12.0) * (2.0 * (lumaDownUp + lumaLeftRight) + lumaLeftCorners + lumaRightCorners);
-float subPixelOffset1 = clamp(abs(lumaAverage - lumaCenter)/lumaRange,0.0,1.0);
-float subPixelOffset2 = (-2.0 * subPixelOffset1 + 3.0) * subPixelOffset1 * subPixelOffset1;
-float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * fxaaData.SUBPIXEL_QUALITY;
-finalOffset = max(finalOffset,subPixelOffsetFinal);
-vec2 finalUv = v_texCoords;
-if(isHorizontal){
-finalUv.y += finalOffset * stepLength;
-} else {
-finalUv.x += finalOffset * stepLength;
-}
-vec3 finalColor = texture(u_texture, finalUv).rgb;
-a_color = vec4(finalColor, 1);
-})"},
+      std::pair<std::string, const char*>{"fxaa.frag", "#version 330 core"
+"out vec4 a_color;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_texture;"
+"float luminance(in vec3 color)"
+"{"
+"return dot(color, vec3(0.299, 0.587, 0.114));"
+"}"
+"float lumaSqr(in vec3 color)"
+"{"
+"return sqrt(luminance(color));"
+"}"
+"vec3 getTexture(in vec2 offset)"
+"{"
+"return texture2D(u_texture, v_texCoords + offset).rgb;"
+"}"
+"float quality(int i)"
+"{"
+"const int SIZE = 8;"
+"const int FIRST_SAMPLES_COUNT = 5;"
+"const float r[SIZE] = float[SIZE](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 6.0, 7.0);"
+"if(i < FIRST_SAMPLES_COUNT)"
+"{"
+"return 1;"
+"}else if(i >= FIRST_SAMPLES_COUNT + SIZE)"
+"{"
+"return 8;"
+"}else return r[i-FIRST_SAMPLES_COUNT];"
+"}"
+"/*"
+"default values example"
+"float edgeMinTreshold = 0.028;"
+"float edgeDarkTreshold = 0.125;"
+"int ITERATIONS = 12;"
+"float quaityMultiplier = 0.8;"
+"float SUBPIXEL_QUALITY = 0.95;"
+"*/"
+"layout(std140) uniform u_FXAAData"
+"{"
+"float edgeMinTreshold;"
+"float edgeDarkTreshold;"
+"int ITERATIONS;"
+"float quaityMultiplier;"
+"float SUBPIXEL_QUALITY;"
+"}fxaaData;"
+"void main()"
+"{"
+"vec3 colorCenter = getTexture(vec2(0,0)).rgb;"
+"float lumaCenter = lumaSqr(colorCenter);"
+"float lumaDown = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(0,-1)).rgb);"
+"float lumaUp = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(0,1)).rgb);"
+"float lumaLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,0)).rgb);"
+"float lumaRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,0)).rgb);"
+"float lumaMin = min(lumaCenter,min(min(lumaDown,lumaUp),min(lumaLeft,lumaRight)));"
+"float lumaMax = max(lumaCenter,max(max(lumaDown,lumaUp),max(lumaLeft,lumaRight)));"
+"float lumaRange = lumaMax - lumaMin;"
+"if(lumaRange < max(fxaaData.edgeMinTreshold,lumaMax*fxaaData.edgeDarkTreshold))"
+"{"
+"a_color = vec4(colorCenter, 1);"
+"return;"
+"}"
+"float lumaDownLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,-1)).rgb);"
+"float lumaUpRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,1)).rgb);"
+"float lumaUpLeft = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(-1,1)).rgb);"
+"float lumaDownRight = lumaSqr(textureOffset(u_texture,v_texCoords,ivec2(1,-1)).rgb);"
+"float lumaDownUp = lumaDown + lumaUp;"
+"float lumaLeftRight = lumaLeft + lumaRight;"
+"float lumaLeftCorners = lumaDownLeft + lumaUpLeft;"
+"float lumaDownCorners = lumaDownLeft + lumaDownRight;"
+"float lumaRightCorners = lumaDownRight + lumaUpRight;"
+"float lumaUpCorners = lumaUpRight + lumaUpLeft;"
+"float edgeHorizontal =  abs(-2.0 * lumaLeft + lumaLeftCorners)  + abs(-2.0 * lumaCenter + lumaDownUp ) * 2.0    + abs(-2.0 * lumaRight + lumaRightCorners);"
+"float edgeVertical =    abs(-2.0 * lumaUp + lumaUpCorners)      + abs(-2.0 * lumaCenter + lumaLeftRight) * 2.0  + abs(-2.0 * lumaDown + lumaDownCorners);"
+"bool isHorizontal = (edgeHorizontal >= edgeVertical);"
+"float luma1 = isHorizontal ? lumaDown : lumaLeft;"
+"float luma2 = isHorizontal ? lumaUp : lumaRight;"
+"float gradient1 = luma1 - lumaCenter;"
+"float gradient2 = luma2 - lumaCenter;"
+"bool is1Steepest = abs(gradient1) >= abs(gradient2);"
+"float gradientScaled = 0.25*max(abs(gradient1),abs(gradient2));"
+"vec2 inverseScreenSize = 1.f/textureSize(u_texture, 0);"
+"float stepLength = isHorizontal ? inverseScreenSize.y : inverseScreenSize.x;"
+"float lumaLocalAverage = 0.0;"
+"if(is1Steepest)"
+"{"
+"stepLength = - stepLength;"
+"lumaLocalAverage = 0.5*(luma1 + lumaCenter);"
+"} "
+"else"
+"{"
+"lumaLocalAverage = 0.5*(luma2 + lumaCenter);"
+"}"
+"vec2 currentUv = v_texCoords;"
+"if(isHorizontal)"
+"{"
+"currentUv.y += stepLength * 0.5;"
+"} else "
+"{"
+"currentUv.x += stepLength * 0.5;"
+"}"
+"vec2 offset = isHorizontal ? vec2(inverseScreenSize.x,0.0) : vec2(0.0,inverseScreenSize.y);"
+"vec2 uv1 = currentUv - offset;"
+"vec2 uv2 = currentUv + offset;"
+"float lumaEnd1 = lumaSqr(texture(u_texture,uv1).rgb);"
+"float lumaEnd2 = lumaSqr(texture(u_texture,uv2).rgb);"
+"lumaEnd1 -= lumaLocalAverage;"
+"lumaEnd2 -= lumaLocalAverage;"
+"bool reached1 = abs(lumaEnd1) >= gradientScaled;"
+"bool reached2 = abs(lumaEnd2) >= gradientScaled;"
+"bool reachedBoth = reached1 && reached2;"
+"if(!reached1){"
+"uv1 -= offset;"
+"}"
+"if(!reached2){"
+"uv2 += offset;"
+"}   "
+"if(!reachedBoth)"
+"{"
+"for(int i = 0; i < fxaaData.ITERATIONS; i++)"
+"{"
+"if(!reached1){"
+"lumaEnd1 = lumaSqr(texture(u_texture, uv1).rgb);"
+"lumaEnd1 = lumaEnd1 - lumaLocalAverage;"
+"}"
+"if(!reached2){"
+"lumaEnd2 = lumaSqr(texture(u_texture, uv2).rgb);"
+"lumaEnd2 = lumaEnd2 - lumaLocalAverage;"
+"}"
+"reached1 = abs(lumaEnd1) >= gradientScaled;"
+"reached2 = abs(lumaEnd2) >= gradientScaled;"
+"reachedBoth = reached1 && reached2;"
+"if(!reached1)"
+"{"
+"uv1 -= offset * quality(i) * fxaaData.quaityMultiplier;"
+"}"
+"if(!reached2)"
+"{"
+"uv2 += offset * quality(i) * fxaaData.quaityMultiplier;"
+"}"
+"if(reachedBoth){ break;}"
+"}"
+"}"
+"float distance1 = isHorizontal ? (v_texCoords.x - uv1.x) : (v_texCoords.y - uv1.y);"
+"float distance2 = isHorizontal ? (uv2.x - v_texCoords.x) : (uv2.y - v_texCoords.y);"
+"bool isDirection1 = distance1 < distance2;"
+"float distanceFinal = min(distance1, distance2);"
+"float edgeThickness = (distance1 + distance2);"
+"float pixelOffset = - distanceFinal / edgeThickness + 0.5;"
+"bool isLumaCenterSmaller = lumaCenter < lumaLocalAverage;"
+"bool correctVariation = ((isDirection1 ? lumaEnd1 : lumaEnd2) < 0.0) != isLumaCenterSmaller;"
+"float finalOffset = correctVariation ? pixelOffset : 0.0;"
+"float lumaAverage = (1.0/12.0) * (2.0 * (lumaDownUp + lumaLeftRight) + lumaLeftCorners + lumaRightCorners);"
+"float subPixelOffset1 = clamp(abs(lumaAverage - lumaCenter)/lumaRange,0.0,1.0);"
+"float subPixelOffset2 = (-2.0 * subPixelOffset1 + 3.0) * subPixelOffset1 * subPixelOffset1;"
+"float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * fxaaData.SUBPIXEL_QUALITY;"
+"finalOffset = max(finalOffset,subPixelOffsetFinal);"
+"vec2 finalUv = v_texCoords;"
+"if(isHorizontal){"
+"finalUv.y += finalOffset * stepLength;"
+"} else {"
+"finalUv.x += finalOffset * stepLength;"
+"}"
+"vec3 finalColor = texture(u_texture, finalUv).rgb;"
+"a_color = vec4(finalColor, 1);"
+"}"},
 
-      std::pair<std::string, const char*>{"stencil.vert", R"(#version 330
-#pragma debug(on)
-in layout(location = 0) vec3 a_positions;
-in layout(location = 1) vec3 a_normals;
-uniform mat4 u_transform;
-uniform mat4 u_modelTransform;
-out vec3 v_normals;
-out vec3 v_position;
-void main()
-{
-gl_Position = u_transform * vec4(a_positions, 1.f);
-v_position = (u_modelTransform * vec4(a_positions,1)).xyz;
-v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
-v_normals = normalize(v_normals);
-})"},
+      std::pair<std::string, const char*>{"stencil.vert", "#version 330"
+"#pragma debug(on)"
+"in layout(location = 0) vec3 a_positions;"
+"in layout(location = 1) vec3 a_normals;"
+"uniform mat4 u_transform;"
+"uniform mat4 u_modelTransform;"
+"out vec3 v_normals;"
+"out vec3 v_position;"
+"void main()"
+"{"
+"gl_Position = u_transform * vec4(a_positions, 1.f);"
+"v_position = (u_modelTransform * vec4(a_positions,1)).xyz;"
+"v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  "
+"v_normals = normalize(v_normals);"
+"}"},
 
-      std::pair<std::string, const char*>{"stencil.frag", R"(#pragma once)"},
+      std::pair<std::string, const char*>{"stencil.frag", "#pragma once"},
 
-      std::pair<std::string, const char*>{"showNormals.vert", R"(#version 330
-#pragma debug(on)
-in layout(location = 0) vec3 a_positions;
-in layout(location = 1) vec3 a_normals;
-uniform mat4 u_modelTransform; //just model view
-out vec3 v_normals;
-void main()
-{
-gl_Position = u_modelTransform * vec4(a_positions, 1);
-v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
-v_normals = normalize(v_normals);
-})"},
+      std::pair<std::string, const char*>{"showNormals.vert", "#version 330"
+"#pragma debug(on)"
+"in layout(location = 0) vec3 a_positions;"
+"in layout(location = 1) vec3 a_normals;"
+"uniform mat4 u_modelTransform; "
+"out vec3 v_normals;"
+"void main()"
+"{"
+"gl_Position = u_modelTransform * vec4(a_positions, 1);"
+"v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  "
+"v_normals = normalize(v_normals);"
+"}"},
 
-      std::pair<std::string, const char*>{"showNormals.geom", R"(#version 330 core
-layout (triangles) in;
-layout (line_strip, max_vertices = 6) out;
-in vec3 v_normals[];
-uniform float u_size = 0.5;
-uniform mat4 u_projection; //projection matrix
-void emitNormal(int index)
-{
-gl_Position = u_projection * gl_in[index].gl_Position;
-EmitVertex();
-gl_Position = u_projection * (gl_in[index].gl_Position + vec4(v_normals[index],0) * u_size);
-EmitVertex();
-EndPrimitive();
-}
-void main()
-{
-emitNormal(0);
-emitNormal(1);
-emitNormal(2);
-})"},
+      std::pair<std::string, const char*>{"showNormals.geom", "#version 330 core"
+"layout (triangles) in;"
+"layout (line_strip, max_vertices = 6) out;"
+"in vec3 v_normals[];"
+"uniform float u_size = 0.5;"
+"uniform mat4 u_projection; "
+"void emitNormal(int index)"
+"{"
+"gl_Position = u_projection * gl_in[index].gl_Position;"
+"EmitVertex();"
+"gl_Position = u_projection * (gl_in[index].gl_Position + vec4(v_normals[index],0) * u_size);"
+"EmitVertex();"
+"EndPrimitive();"
+"}"
+"void main()"
+"{"
+"emitNormal(0);"
+"emitNormal(1);"
+"emitNormal(2);"
+"}"},
 
-      std::pair<std::string, const char*>{"showNormals.frag", R"(#version 150
-out vec4 a_outColor;
-uniform vec3 u_color = vec3(0.7, 0.7, 0.1);
-void main ()
-{
-vec4 tmpvar_1;
-tmpvar_1.w = 1.0;
-tmpvar_1.xyz = u_color;
-a_outColor = tmpvar_1;
-})"},
+      std::pair<std::string, const char*>{"showNormals.frag", "#version 150"
+"out vec4 a_outColor;"
+"uniform vec3 u_color = vec3(0.7, 0.7, 0.1);"
+"void main ()"
+"{"
+"vec4 tmpvar_1;"
+"tmpvar_1.w = 1.0;"
+"tmpvar_1.xyz = u_color;"
+"a_outColor = tmpvar_1;"
+"}"},
 
-      std::pair<std::string, const char*>{"normals.vert", R"(#version 330
-#pragma debug(on)
-in layout(location = 0) vec3 a_positions;
-in layout(location = 1) vec3 a_normals;
-in layout(location = 2) vec2 a_texCoord;
-uniform mat4 u_transform; //full model view projection
-uniform mat4 u_modelTransform; //just model view
-out vec3 v_normals;
-out vec3 v_position;
-out vec2 v_texCoord;
-void main()
-{
-gl_Position = u_transform * vec4(a_positions, 1.f);
-v_position = (u_modelTransform * vec4(a_positions,1)).xyz;
-v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  //non uniform scale
-v_normals = normalize(v_normals);
-v_texCoord = a_texCoord;
-})"},
+      std::pair<std::string, const char*>{"normals.vert", "#version 330"
+"#pragma debug(on)"
+"in layout(location = 0) vec3 a_positions;"
+"in layout(location = 1) vec3 a_normals;"
+"in layout(location = 2) vec2 a_texCoord;"
+"uniform mat4 u_transform; "
+"uniform mat4 u_modelTransform; "
+"out vec3 v_normals;"
+"out vec3 v_position;"
+"out vec2 v_texCoord;"
+"void main()"
+"{"
+"gl_Position = u_transform * vec4(a_positions, 1.f);"
+"v_position = (u_modelTransform * vec4(a_positions,1)).xyz;"
+"v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * a_normals;  "
+"v_normals = normalize(v_normals);"
+"v_texCoord = a_texCoord;"
+"}"},
 
-      std::pair<std::string, const char*>{"normals.frag", R"(#version 430
-#pragma debug(on)
-#extension GL_NV_shadow_samplers_cube : enable
-out layout(location = 0) vec4 a_outColor;
-in vec3 v_normals;
-in vec3 v_position;	//world space
-in vec2 v_texCoord;
-uniform vec3 u_eyePosition;
-uniform sampler2D u_albedoSampler;
-uniform sampler2D u_normalSampler;
-uniform samplerCube u_skybox;
-uniform float u_gama;
-uniform sampler2D u_RMASampler;
-uniform int u_materialIndex;
-struct Pointlight
-{
-vec3 positions; // w component not used
-float dist;
-vec3 color; // w component not used
-float strength;
-};
-readonly layout(std140) buffer u_pointLights
-{
-Pointlight light[];
-};
-uniform int u_pointLightCount;
-struct MaterialStruct
-{
-vec4 kd;
-vec4 rma;
-};
-readonly layout(std140) buffer u_material
-{
-MaterialStruct mat[];
-};
-vec3 normal; //the normal of the object (can be normal mapped or not)
-vec3 noMappedNorals; //this is the original non normal mapped normal
-vec3 viewDir;
-float difuseTest;  // used to check if object is in the light
-vec4 color; //texture color
-float PI = 3.14159265359;
-mat3x3 NormalToRotation(in vec3 normal)
-{
-vec3 tangent0 = cross(normal, vec3(1, 0, 0));
-if (dot(tangent0, tangent0) < 0.001)
-tangent0 = cross(normal, vec3(0, 1, 0));
-tangent0 = normalize(tangent0);
-vec3 tangent1 = normalize(cross(normal, tangent0));
-return mat3x3(tangent0,tangent1,normal);
-}
-subroutine vec3 GetNormalMapFunc(vec3);
-subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)
-{
-vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;
-normal = normalize(2*normal - 1.f);
-mat3 rotMat = NormalToRotation(v);
-normal = rotMat * normal;
-normal = normalize(normal);
-return normal;
-}
-subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)
-{
-return v;
-}
-subroutine uniform GetNormalMapFunc getNormalMapFunc;
-subroutine vec4 GetAlbedoFunc();
-subroutine (GetAlbedoFunc) vec4 sampledAlbedo()
-{
-color = texture2D(u_albedoSampler, v_texCoord).xyzw;
-if(color.w <= 0.1)
-discard;
-color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; //gamma corection
-color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); //(option) multiply texture by kd
-return color;
-}
-subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()
-{
-return vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	
-}
-subroutine uniform GetAlbedoFunc u_getAlbedo;
-subroutine vec3 GetMaterialMapped();
-subroutine (GetMaterialMapped) vec3 materialNone()
-{
-return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialR()
-{
-float r = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(r, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialM()
-{
-float m = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(mat[u_materialIndex].rma.x, m, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialA()
-{
-float a = texture2D(u_RMASampler, v_texCoord).r;
-return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, a);
-}
-subroutine (GetMaterialMapped) vec3 materialRM()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).rg;
-return vec3(v.x, v.y, mat[u_materialIndex].rma.z);
-}
-subroutine (GetMaterialMapped) vec3 materialRA()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).rb;
-return vec3(v.x, mat[u_materialIndex].rma.y, v.y);
-}
-subroutine (GetMaterialMapped) vec3 materialMA()
-{
-vec2 v = texture2D(u_RMASampler, v_texCoord).gb;
-return vec3(mat[u_materialIndex].rma.x, v.x, v.y);
-}
-subroutine (GetMaterialMapped) vec3 materialRMA()
-{
-return texture2D(u_RMASampler, v_texCoord).rgb;
-}
-subroutine uniform GetMaterialMapped u_getMaterialMapped;
-float DistributionGGX(vec3 N, vec3 H, float roughness)
-{
-float a      = roughness*roughness;
-float a2     = a*a;
-float NdotH  = max(dot(N, H), 0.0);
-float NdotH2 = NdotH*NdotH;
-float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-denom = PI * denom * denom;
-return  a2 / max(denom, 0.0000001);
-}
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
-float r = (roughness + 1.0);
-float k = (r*r) / 8.0;
-float num   = NdotV;
-float denom = NdotV * (1.0 - k) + k;
-return num / denom;
-}
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
-float NdotV = max(dot(N, V), 0.0);
-float NdotL = max(dot(N, L), 0.0);
-float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-return ggx1 * ggx2;
-}
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
-{
-return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
-}
-vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor)
-{
-vec3 lightDirection = normalize(lightPosition - v_position);
-vec3 halfwayVec = normalize(lightDirection + viewDir);
-float dist = length(lightPosition - v_position);
-float attenuation = 1.0 / pow(dist,2);
-attenuation = 1; //(option) remove light attenuation
-vec3 radiance = lightColor * attenuation; //here the first component is the light color
-vec3 F0 = vec3(0.04); 
-F0 = mix(F0, color.rgb, metallic);	//here color is albedo, metalic surfaces use albdeo
-vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);
-float NDF = DistributionGGX(normal, halfwayVec, roughness);       
-float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   
-float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  
-* max(dot(normal, lightDirection), 0.0);
-vec3 specular     = (NDF * G * F) / max(denominator, 0.001);
-vec3 kS = F; //this is the specular contribution
-vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
-kD *= 1.0 - metallic;	//metallic surfaces are darker
-float NdotL = max(dot(normal, lightDirection), 0.0);        
-vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;
-return Lo;
-}
-void main()
-{
-vec3 sampledMaterial = u_getMaterialMapped();
-float roughnessSampled = sampledMaterial.r;
-roughnessSampled = max(0.50,roughnessSampled);
-float metallicSampled = sampledMaterial.g;
-float sampledAo = sampledMaterial.b;
-{	//general data
-color = u_getAlbedo();
-noMappedNorals = normalize(v_normals);
-normal = getNormalMapFunc(noMappedNorals);
-viewDir = u_eyePosition - v_position;
-viewDir = normalize(viewDir); //v
-}
-vec3 I = normalize(v_position - u_eyePosition); //looking direction (towards eye)
-vec3 R = reflect(I, normal);	//reflected vector
-vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		//this is the reflected color
-vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; //this color is coming directly to the object
-vec3 Lo = vec3(0,0,0); //this is the accumulated light
-for(int i=0; i<u_pointLightCount;i++)
-{
-vec3 lightPosition = light[i].positions.xyz;
-vec3 lightColor = light[i].color.rgb;
-Lo += computePointLightSource(lightPosition, metallicSampled, roughnessSampled, lightColor);
-}
-vec3 ambient = vec3(0.03) * color.rgb * sampledAo; //this value is made up
-vec3 color   = Lo + ambient; 
-float exposure = 1;
-color = vec3(1.0) - exp(-color  * exposure);
-color = pow(color, vec3(1.0/2.2));
-a_outColor = clamp(vec4(color.rgb,1), 0, 1);
-})"},
+      std::pair<std::string, const char*>{"normals.frag", "#version 430"
+"#pragma debug(on)"
+"#extension GL_NV_shadow_samplers_cube : enable"
+"out layout(location = 0) vec4 a_outColor;"
+"in vec3 v_normals;"
+"in vec3 v_position;	"
+"in vec2 v_texCoord;"
+"uniform vec3 u_eyePosition;"
+"uniform sampler2D u_albedoSampler;"
+"uniform sampler2D u_normalSampler;"
+"uniform samplerCube u_skybox;"
+"uniform float u_gama;"
+"uniform sampler2D u_RMASampler;"
+"uniform int u_materialIndex;"
+"struct Pointlight"
+"{"
+"vec3 positions; "
+"float dist;"
+"vec3 color; "
+"float strength;"
+"};"
+"readonly layout(std140) buffer u_pointLights"
+"{"
+"Pointlight light[];"
+"};"
+"uniform int u_pointLightCount;"
+"struct MaterialStruct"
+"{"
+"vec4 kd;"
+"vec4 rma;"
+"};"
+"readonly layout(std140) buffer u_material"
+"{"
+"MaterialStruct mat[];"
+"};"
+"vec3 normal; "
+"vec3 noMappedNorals; "
+"vec3 viewDir;"
+"float difuseTest;  "
+"vec4 color; "
+"float PI = 3.14159265359;"
+"mat3x3 NormalToRotation(in vec3 normal)"
+"{"
+"vec3 tangent0 = cross(normal, vec3(1, 0, 0));"
+"if (dot(tangent0, tangent0) < 0.001)"
+"tangent0 = cross(normal, vec3(0, 1, 0));"
+"tangent0 = normalize(tangent0);"
+"vec3 tangent1 = normalize(cross(normal, tangent0));"
+"return mat3x3(tangent0,tangent1,normal);"
+"}"
+"subroutine vec3 GetNormalMapFunc(vec3);"
+"subroutine (GetNormalMapFunc) vec3 normalMapped(vec3 v)"
+"{"
+"vec3 normal = texture2D(u_normalSampler, v_texCoord).rgb;"
+"normal = normalize(2*normal - 1.f);"
+"mat3 rotMat = NormalToRotation(v);"
+"normal = rotMat * normal;"
+"normal = normalize(normal);"
+"return normal;"
+"}"
+"subroutine (GetNormalMapFunc) vec3 noNormalMapped(vec3 v)"
+"{"
+"return v;"
+"}"
+"subroutine uniform GetNormalMapFunc getNormalMapFunc;"
+"subroutine vec4 GetAlbedoFunc();"
+"subroutine (GetAlbedoFunc) vec4 sampledAlbedo()"
+"{"
+"color = texture2D(u_albedoSampler, v_texCoord).xyzw;"
+"if(color.w <= 0.1)"
+"discard;"
+"color.rgb = pow(color.rgb, vec3(2.2,2.2,2.2)).rgb; "
+"color *= vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1); "
+"return color;"
+"}"
+"subroutine (GetAlbedoFunc) vec4 notSampledAlbedo()"
+"{"
+"return vec4(mat[u_materialIndex].kd.r, mat[u_materialIndex].kd.g, mat[u_materialIndex].kd.b, 1);	"
+"}"
+"subroutine uniform GetAlbedoFunc u_getAlbedo;"
+"subroutine vec3 GetMaterialMapped();"
+"subroutine (GetMaterialMapped) vec3 materialNone()"
+"{"
+"return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialR()"
+"{"
+"float r = texture2D(u_RMASampler, v_texCoord).r;"
+"return vec3(r, mat[u_materialIndex].rma.y, mat[u_materialIndex].rma.z);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialM()"
+"{"
+"float m = texture2D(u_RMASampler, v_texCoord).r;"
+"return vec3(mat[u_materialIndex].rma.x, m, mat[u_materialIndex].rma.z);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialA()"
+"{"
+"float a = texture2D(u_RMASampler, v_texCoord).r;"
+"return vec3(mat[u_materialIndex].rma.x, mat[u_materialIndex].rma.y, a);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialRM()"
+"{"
+"vec2 v = texture2D(u_RMASampler, v_texCoord).rg;"
+"return vec3(v.x, v.y, mat[u_materialIndex].rma.z);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialRA()"
+"{"
+"vec2 v = texture2D(u_RMASampler, v_texCoord).rb;"
+"return vec3(v.x, mat[u_materialIndex].rma.y, v.y);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialMA()"
+"{"
+"vec2 v = texture2D(u_RMASampler, v_texCoord).gb;"
+"return vec3(mat[u_materialIndex].rma.x, v.x, v.y);"
+"}"
+"subroutine (GetMaterialMapped) vec3 materialRMA()"
+"{"
+"return texture2D(u_RMASampler, v_texCoord).rgb;"
+"}"
+"subroutine uniform GetMaterialMapped u_getMaterialMapped;"
+"float DistributionGGX(vec3 N, vec3 H, float roughness)"
+"{"
+"float a      = roughness*roughness;"
+"float a2     = a*a;"
+"float NdotH  = max(dot(N, H), 0.0);"
+"float NdotH2 = NdotH*NdotH;"
+"float denom = (NdotH2 * (a2 - 1.0) + 1.0);"
+"denom = PI * denom * denom;"
+"return  a2 / max(denom, 0.0000001);"
+"}"
+"float GeometrySchlickGGX(float NdotV, float roughness)"
+"{"
+"float r = (roughness + 1.0);"
+"float k = (r*r) / 8.0;"
+"float num   = NdotV;"
+"float denom = NdotV * (1.0 - k) + k;"
+"return num / denom;"
+"}"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)"
+"{"
+"float NdotV = max(dot(N, V), 0.0);"
+"float NdotL = max(dot(N, L), 0.0);"
+"float ggx2  = GeometrySchlickGGX(NdotV, roughness);"
+"float ggx1  = GeometrySchlickGGX(NdotL, roughness);"
+"return ggx1 * ggx2;"
+"}"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0)"
+"{"
+"return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);"
+"}"
+"vec3 computePointLightSource(vec3 lightPosition, float metallic, float roughness, in vec3 lightColor)"
+"{"
+"vec3 lightDirection = normalize(lightPosition - v_position);"
+"vec3 halfwayVec = normalize(lightDirection + viewDir);"
+"float dist = length(lightPosition - v_position);"
+"float attenuation = 1.0 / pow(dist,2);"
+"attenuation = 1; "
+"vec3 radiance = lightColor * attenuation; "
+"vec3 F0 = vec3(0.04); "
+"F0 = mix(F0, color.rgb, metallic);	"
+"vec3 F  = fresnelSchlick(max(dot(halfwayVec, viewDir), 0.0), F0);"
+"float NDF = DistributionGGX(normal, halfwayVec, roughness);       "
+"float G   = GeometrySmith(normal, viewDir, lightDirection, roughness);   "
+"float denominator = 4.0 * max(dot(normal, viewDir), 0.0)  "
+"* max(dot(normal, lightDirection), 0.0);"
+"vec3 specular     = (NDF * G * F) / max(denominator, 0.001);"
+"vec3 kS = F; "
+"vec3 kD = vec3(1.0) - kS; "
+"kD *= 1.0 - metallic;	"
+"float NdotL = max(dot(normal, lightDirection), 0.0);        "
+"vec3 Lo = (kD * color.rgb / PI + specular) * radiance * NdotL;"
+"return Lo;"
+"}"
+"void main()"
+"{"
+"vec3 sampledMaterial = u_getMaterialMapped();"
+"float roughnessSampled = sampledMaterial.r;"
+"roughnessSampled = max(0.50,roughnessSampled);"
+"float metallicSampled = sampledMaterial.g;"
+"float sampledAo = sampledMaterial.b;"
+"{	"
+"color = u_getAlbedo();"
+"noMappedNorals = normalize(v_normals);"
+"normal = getNormalMapFunc(noMappedNorals);"
+"viewDir = u_eyePosition - v_position;"
+"viewDir = normalize(viewDir); "
+"}"
+"vec3 I = normalize(v_position - u_eyePosition); "
+"vec3 R = reflect(I, normal);	"
+"vec3 skyBoxSpecular = textureCube(u_skybox, R).rgb;		"
+"vec3 skyBoxDiffuse = textureCube(u_skybox, normal).rgb; "
+"vec3 Lo = vec3(0,0,0); "
+"for(int i=0; i<u_pointLightCount;i++)"
+"{"
+"vec3 lightPosition = light[i].positions.xyz;"
+"vec3 lightColor = light[i].color.rgb;"
+"Lo += computePointLightSource(lightPosition, metallicSampled, roughnessSampled, lightColor);"
+"}"
+"vec3 ambient = vec3(0.03) * color.rgb * sampledAo; "
+"vec3 color   = Lo + ambient; "
+"float exposure = 1;"
+"color = vec3(1.0) - exp(-color  * exposure);"
+"color = pow(color, vec3(1.0/2.2));"
+"a_outColor = clamp(vec4(color.rgb,1), 0, 1);"
+"}"},
 
-      std::pair<std::string, const char*>{"drawQuads.vert", R"(#version 330 core
-layout (location = 0) in vec3 a_Pos;
-layout (location = 1) in vec2 a_TexCoords;
-noperspective out vec2 v_texCoords;
-void main()
-{
-v_texCoords = a_TexCoords;
-gl_Position = vec4(a_Pos, 1.0);
-})"},
+      std::pair<std::string, const char*>{"drawQuads.vert", "#version 330 core"
+"layout (location = 0) in vec3 a_Pos;"
+"layout (location = 1) in vec2 a_TexCoords;"
+"noperspective out vec2 v_texCoords;"
+"void main()"
+"{"
+"v_texCoords = a_TexCoords;"
+"gl_Position = vec4(a_Pos, 1.0);"
+"}"},
 
-      std::pair<std::string, const char*>{"drawDepth.frag", R"(#version 150
-out vec4 outColor;
-noperspective in vec2 v_texCoords;
-uniform sampler2D u_depth;
-void main ()
-{
-float tmpvar_1;
-tmpvar_1 = texture (u_depth, v_texCoords).x;
-vec4 tmpvar_2;
-tmpvar_2.w = 1.0;
-tmpvar_2.x = tmpvar_1;
-tmpvar_2.y = tmpvar_1;
-tmpvar_2.z = tmpvar_1;
-outColor = tmpvar_2;
-})"},
+      std::pair<std::string, const char*>{"drawDepth.frag", "#version 150"
+"out vec4 outColor;"
+"noperspective in vec2 v_texCoords;"
+"uniform sampler2D u_depth;"
+"void main ()"
+"{"
+"float tmpvar_1;"
+"tmpvar_1 = texture (u_depth, v_texCoords).x;"
+"vec4 tmpvar_2;"
+"tmpvar_2.w = 1.0;"
+"tmpvar_2.x = tmpvar_1;"
+"tmpvar_2.y = tmpvar_1;"
+"tmpvar_2.z = tmpvar_1;"
+"outColor = tmpvar_2;"
+"}"},
 
-      std::pair<std::string, const char*>{"color.vert", R"(#version 330
-#pragma debug(on)
-in layout(location = 0) vec3 positions;
-in layout(location = 1) vec3 colors;
-uniform mat4 u_transform;
-out vec3 v_colors;
-void main()
-{
-gl_Position = u_transform * vec4(positions,1.f);
-v_colors = colors;
-} )"},
+      std::pair<std::string, const char*>{"color.vert", "#version 330"
+"#pragma debug(on)"
+"in layout(location = 0) vec3 positions;"
+"in layout(location = 1) vec3 colors;"
+"uniform mat4 u_transform;"
+"out vec3 v_colors;"
+"void main()"
+"{"
+"gl_Position = u_transform * vec4(positions,1.f);"
+"v_colors = colors;"
+"} "},
 
-      std::pair<std::string, const char*>{"color.frag", R"(#version 150
-out vec4 outColor;
-in vec3 v_colors;
-void main ()
-{
-vec4 tmpvar_1;
-tmpvar_1.w = 1.0;
-tmpvar_1.xyz = v_colors;
-outColor = tmpvar_1;
-})"},
+      std::pair<std::string, const char*>{"color.frag", "#version 150"
+"out vec4 outColor;"
+"in vec3 v_colors;"
+"void main ()"
+"{"
+"vec4 tmpvar_1;"
+"tmpvar_1.w = 1.0;"
+"tmpvar_1.xyz = v_colors;"
+"outColor = tmpvar_1;"
+"}"},
 
         //std::pair test stuff...
 	
