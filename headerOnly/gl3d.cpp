@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2021-11-28
+//built on 2022-10-31
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31230,6 +31230,7 @@ namespace gl3d
 #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
 #define TINYGLTF_NO_INCLUDE_JSON
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE  
+#define JSON_NOEXCEPTION
 
 
 
@@ -31723,7 +31724,6 @@ namespace gl3d
 		}
 
 		return shaderId;
-
 	}
 
 #ifdef GL3D_LOAD_SHADERS_FROM_HEADER_ONLY
@@ -32654,6 +32654,7 @@ uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
 uniform isampler2D u_textureDerivates;
 uniform vec3 u_eyePosition;
+uniform int u_transparentPass;
 struct MaterialStruct
 {
 vec4 kd;
@@ -33115,23 +33116,29 @@ vec3 emissive = vec3(0,0,0);
 vec3 material;
 if(materialIndex == 0)
 {
+if(u_transparentPass != 0)
+{
+discard;
+}else
+{
 a_outColor = vec4(0,0,0,0);
 a_outBloom = vec4(0,0,0,1);
 return;
+}
 }
 {
 uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
 if(albedoSampler.x == 0 && albedoSampler.y == 0)
 {
-albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
+albedoAlpha.rgba = vec4(1,1,1,1); //multiply after with color;
 }else
 {
 albedoAlpha = 
 textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 sampledDerivates.xy, sampledDerivates.zw).rgba;
 }
-albedoAlpha.a = 1;
 albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+albedoAlpha.a *= mat[materialIndex-1].kd.a;
 uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
 if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
 {
@@ -33268,7 +33275,7 @@ vec3 V = viewDir;
 float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
 vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 vec3 kS = F;
-vec3 irradiance = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly at the object
+vec3 irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
 const float MAX_REFLECTION_LOD = 4.0;
 vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
 vec2 brdfVec = vec2(dotNVClamped, roughness);
@@ -33330,8 +33337,15 @@ vec3 hdrCorrectedColor = color;
 hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
 hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
 float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
+if(u_transparentPass != 0)
+{
 a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
+a_outBloom = vec4(emissive.rgb, albedoAlpha.a);
+}else
+{
+a_outColor = vec4(color.rgb + emissive.rgb, 1);
 a_outBloom = vec4(emissive.rgb, 1);
+}
 })"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", R"(#version 430
@@ -34302,6 +34316,7 @@ outColor = tmpvar_1;
 		light_u_materialIndex = getUniform(lightingPassShader.id, "u_materialIndex");
 		light_u_textureUV = getUniform(lightingPassShader.id, "u_textureUV");
 		light_u_textureDerivates = getUniform(lightingPassShader.id, "u_textureDerivates");
+		light_u_transparentPass = getUniform(lightingPassShader.id, "u_transparentPass");
 
 		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material");
 		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);
@@ -35525,7 +35540,7 @@ namespace gl3d
 
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-	#pragma region convoluted texture
+	#pragma region convoluted texturelayout(binding = 4) uniform sampler2D u_roughness;
 
 
 		glGenTextures(1, &skyBox.convolutedTexture);
@@ -35562,7 +35577,7 @@ namespace gl3d
 
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+			glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube, todo refactor to draw only a face lol
 
 		}
 	#pragma endregion
@@ -35727,6 +35742,7 @@ namespace gl3d
 #include <stb_image.h>
 #include <random>
 #include <string>
+
 
 #ifdef _MSC_VER
 //#pragma warning( disable : 4244 4305 4267 4996 4018)
@@ -38050,6 +38066,54 @@ namespace gl3d
 		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 64.f);
 	}
 
+	bool &Renderer3D::bloom()
+	{
+		return this->internal.lightShader.bloom;
+	}
+
+	float Renderer3D::getBloomTresshold()
+	{
+		return this->internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold;
+	}
+
+	void Renderer3D::setBloomTresshold(float b)
+	{
+		b = std::max(b, 0.f);
+		b = std::min(b, 1.0f);
+		this->internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold = b;
+	}
+
+	void Renderer3D::setBloomIntensisy(float b)
+	{
+		b = std::max(b, 0.f);
+		b = std::min(b, 15.0f);
+		this->postProcess.bloomIntensty = b;
+	}
+
+	bool &Renderer3D::bloomHighQualityDownSample()
+	{
+		return this->postProcess.highQualityDownSample;
+	}
+
+	bool &Renderer3D::bloomHighQualityUpSample()
+	{
+		return this->postProcess.highQualityUpSample;
+	}
+
+	float stub = 0;
+	float &Renderer3D::getDirectionalShadowCascadesFrustumSplit(int cascadeIndex)
+	{
+		if (cascadeIndex >= DirectionalShadows::CASCADES || cascadeIndex < 0)
+		{
+			std::cout << "index out of cascades range\n";
+			stub = 0;
+			return stub;
+		}
+
+		return directionalShadows.frustumSplits[cascadeIndex];
+		// TODO: insert return statement here
+	}
+
 	void Renderer3D::enableFXAA(bool fxaa)
 	{
 		this->antiAlias.usingFXAA = fxaa;
@@ -38065,8 +38129,25 @@ namespace gl3d
 		return antiAlias.usingFXAA;
 	}
 
+	std::string Renderer3D::saveSettingsToFileData()
+	{
+		using Json = nlohmann::json;
+
+		Json j;
+
+		j["exposure"] = getExposure();
+		j["normal mapping"] = isNormalMappingEnabeled();
+		j["light subscatter"] = isLightSubScatteringEnabeled();
+
+		return j.dump();
+	}
+
 	//todo look into  glProgramUniform
 	//in order to send less stuff tu uniforms
+	// 
+	//todo not crash the program when you can't load a file.....
+
+	//todo investigate ssao darkening sky
 
 	//todo look into
 	//ATI/AMD created GL_ATI_meminfo. This extension is very easy to use. 
@@ -39796,53 +39877,46 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-		#pragma region stuff to be bound for rendering the geometry
-
-		internal.lightShader.geometryPassShader.bind();
-		internal.lightShader.getSubroutines();
-
-		//glUniform3fv(normalShaderLightposLocation, 1, &lightPosition[0]);
-		//glUniform3fv(eyePositionLocation, 1, &eyePosition[0]);
-		glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
-		//glUniform1i(lightShader.skyBoxSamplerLocation, 2);
-
-		//material buffer
-		if (internal.materials.size())
-		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
-				, &internal.materials[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
-				internal.lightShader.materialBlockBuffer);
-		}
-
-		GLsizei n;
-		glGetProgramStageiv(internal.lightShader.geometryPassShader.id,
-			GL_FRAGMENT_SHADER,
-			GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
-			&n);
-
-		GLuint* indices = new GLuint[n]{ 0 };
-
-		if (zPrePass)
-		{
-			glDepthFunc(GL_EQUAL);
-		}
-		else
-		{
-			glDepthFunc(GL_LESS);
-		}
-
-		#pragma endregion
-
-
-		auto isTranslucent = [&]()
-		{
-		
-		};
 
 		auto gBufferRender = [&](bool transparentPhaze)
 		{
+			#pragma region stuff to be bound for rendering the geometry
+			glBindVertexArray(0);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
+
+			//material buffer
+			if (internal.materials.size())
+			{
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
+					, &internal.materials[0], GL_STREAM_DRAW);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
+					internal.lightShader.materialBlockBuffer);
+			}
+
+			GLsizei n;
+			glGetProgramStageiv(internal.lightShader.geometryPassShader.id,
+				GL_FRAGMENT_SHADER,
+				GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+				&n);
+
+			GLuint* indices = new GLuint[n]{0};
+
+			if (zPrePass)
+			{
+				glDepthFunc(GL_EQUAL);
+			}
+			else
+			{
+				glDepthFunc(GL_LESS);
+			}
+
+			internal.lightShader.geometryPassShader.bind();
+			internal.lightShader.getSubroutines();
+			glUniform1i(internal.lightShader.normalMapSamplerLocation, 1);
+			#pragma endregion
+
 			//first we render the entities in the gbuffer
 			for (auto& entity : internal.cpuEntities)
 			{
@@ -39878,7 +39952,7 @@ namespace gl3d
 				bool changed = 1;
 				for (auto& i : entity.models)
 				{
-
+					
 					if (frustumCulling && i.culledThisFrame)
 					{
 						continue;
@@ -39889,6 +39963,39 @@ namespace gl3d
 					if (materialId == -1)
 					{
 						continue;
+					}
+					
+					TextureDataForMaterial textureData = internal.materialTexturesData[materialId];
+					auto albedoTextureIndex = internal.getTextureIndex(textureData.albedoTexture);
+					
+					bool alphaExists = 0;
+					bool alphaHasData = internal.materials[materialId].kd.w < 1.f;
+					GLuint diffuseTextureId = 0;
+
+					if (albedoTextureIndex >= 0)
+					{
+						auto &diffuseTexture = internal.loadedTextures[albedoTextureIndex];
+						diffuseTextureId = diffuseTexture.texture.id;
+
+						alphaExists = diffuseTexture.alphaExists();
+						alphaHasData |= diffuseTexture.alphaWithData();
+
+						if (internal.materials[materialId].kd.w == 0.f) { continue; } //todo ?? 
+					}
+
+					if (transparentPhaze)
+					{
+						if (!alphaHasData)
+						{
+							continue;
+						}
+					}
+					else
+					{
+						if (alphaHasData)
+						{
+							continue;
+						}
 					}
 
 					glUniform1i(internal.lightShader.materialIndexLocation, materialId);
@@ -39906,21 +40013,7 @@ namespace gl3d
 						}
 					}
 				#pragma endregion
-
-
-					TextureDataForMaterial textureData = internal.materialTexturesData[materialId];
-
-					int rmaLoaded = 0;
-					int albedoLoaded = 0;
 					int normalLoaded = 0;
-
-					auto albedoTextureData = internal.getTextureIndex(textureData.albedoTexture);
-					if (albedoTextureData >= 0 && internal.loadedTextures[albedoTextureData].alphaExists())
-					{
-						albedoLoaded = 1;
-						glActiveTexture(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, internal.loadedTextures[albedoTextureData].texture.id);
-					}
 
 					GpuTexture* normalMapTextureData = this->getTextureData(textureData.normalMapTexture);
 					if (normalMapTextureData != nullptr && normalMapTextureData->id != 0)
@@ -39928,14 +40021,6 @@ namespace gl3d
 						normalLoaded = 1;
 						glActiveTexture(GL_TEXTURE1);
 						glBindTexture(GL_TEXTURE_2D, normalMapTextureData->id);
-					}
-
-					GpuTexture* rmaTextureData = this->getTextureData(textureData.pbrTexture.texture);
-					if (rmaTextureData != nullptr && rmaTextureData->id != 0)
-					{
-						rmaLoaded = 1;
-						glActiveTexture(GL_TEXTURE3);
-						glBindTexture(GL_TEXTURE_2D, rmaTextureData->id);
 					}
 
 					if (normalLoaded && internal.lightShader.normalMap)
@@ -39994,18 +40079,17 @@ namespace gl3d
 		{
 			glDepthFunc(GL_LESS);
 		}
-
-
-		//we draw a rect several times so we keep this vao binded
-		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
 		
 
-		auto lightingPass = [&]()
+		auto lightingPass = [&](bool transparentPhaze)
 		{
+			glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
+
 			glBindFramebuffer(GL_FRAMEBUFFER, postProcess.fbo);
-			//glClear(GL_COLOR_BUFFER_BIT); cleared before
 
 			glUseProgram(internal.lightShader.lightingPassShader.id);
+
+			glUniform1i(internal.lightShader.light_u_transparentPass, transparentPhaze);
 
 			glUniform1i(internal.lightShader.light_u_positions, 0);
 			glActiveTexture(GL_TEXTURE0);
@@ -40109,18 +40193,33 @@ namespace gl3d
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightShader::LightPassData),
 				&internal.lightShader.lightPassUniformBlockCpuData);
 
-			//blend with skybox
 			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
+			if (transparentPhaze)
+			{
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			}
+			else
+			{
+				//blend with skybox
+				glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			}
+			glDisable(GL_DEPTH_TEST);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+			glEnable(GL_DEPTH_TEST);
 			glDisable(GL_BLEND);
 		};
-
 		//do the lighting pass
-		lightingPass();
+		lightingPass(false);
 
+
+		glClearTexImage(internal.gBuffer.buffers[internal.gBuffer.materialIndex], 0, GL_RED_INTEGER, GL_INT, 0);
+		gBufferRender(true);
+		//blend geometry
+		lightingPass(true);
+
+		//we draw a rect several times so we keep this vao binded
+		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
 
 		#pragma region ssao
 
@@ -40916,7 +41015,6 @@ namespace gl3d
 			}
 		
 		}
-
 
 	}
 

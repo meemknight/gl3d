@@ -18,7 +18,7 @@ void main()
 
 	if(u_skyBoxPresent != 0)
 	{
-		a_outColor = textureLod(u_skybox, v_texCoords, 2);
+		a_outColor = textureLod(u_skybox, v_texCoords, 2); //what?????????????
 		a_outColor.rgb *= gammaAmbient;
 	}else
 	{

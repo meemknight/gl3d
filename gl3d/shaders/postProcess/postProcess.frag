@@ -16,6 +16,7 @@ uniform int u_useSSAO;
 uniform float u_ssaoExponent;
 uniform sampler2D u_ssao;
 
+//https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 /*
 =================================================================================================
 

@@ -47,7 +47,6 @@ namespace gl3d
 		}
 
 		return shaderId;
-
 	}
 
 #ifdef GL3D_LOAD_SHADERS_FROM_HEADER_ONLY

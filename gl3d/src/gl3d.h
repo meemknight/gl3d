@@ -273,6 +273,7 @@ namespace gl3d
 
 	#pragma region settings
 
+
 		void setExposure(float exposure);
 		float getExposure();
 
@@ -280,7 +281,7 @@ namespace gl3d
 		void enableNormalMapping(bool normalMapping = 1);
 		bool isNormalMappingEnabeled();
 
-		//cheap
+		//cheap (will calculate the light from sky box more accurately)
 		void enableLightSubScattering(bool lightSubScatter = 1);
 		bool isLightSubScatteringEnabeled();
 
@@ -295,6 +296,19 @@ namespace gl3d
 		void setSSAOSampleCount(int samples);
 		float &getSSAOExponent();
 		void setSSAOExponent(float exponent);
+
+		//bloom
+		//more or less expensive
+		//this is setter and getter
+		bool &bloom();
+		float getBloomTresshold();
+		void setBloomTresshold(float b);
+		void setBloomIntensisy(float b);
+		bool &bloomHighQualityDownSample();
+		bool &bloomHighQualityUpSample();
+
+		//
+		float &getDirectionalShadowCascadesFrustumSplit(int cascadeIndex);
 
 		#pragma region fxaa
 
@@ -316,9 +330,15 @@ namespace gl3d
 
 		#pragma endregion
 		
+		//saves the current settings to a file;
+		std::string saveSettingsToFileData();
 
 	#pragma endregion
+			
+		//todo export settings; import settings
+		//todo clear all
 
+		//todo move remove?
 		struct VAO
 		{
 			//this is not used yet

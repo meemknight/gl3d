@@ -979,7 +979,6 @@ void main()
 			continue;
 		}
 
-
 		if(dotAngle > angle && dotAngle > 0)
 		{
 			float attenuation = attenuationFunctionNotClamped(currentDist, dist, at);
@@ -1028,7 +1027,7 @@ void main()
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
-		vec3 irradiance = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly at the object
+		vec3 irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;

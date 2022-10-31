@@ -4,6 +4,7 @@
 #include <stb_image.h>
 #include <random>
 #include <string>
+#include "json.h"
 
 #ifdef _MSC_VER
 //#pragma warning( disable : 4244 4305 4267 4996 4018)
@@ -2327,6 +2328,54 @@ namespace gl3d
 		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 64.f);
 	}
 
+	bool &Renderer3D::bloom()
+	{
+		return this->internal.lightShader.bloom;
+	}
+
+	float Renderer3D::getBloomTresshold()
+	{
+		return this->internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold;
+	}
+
+	void Renderer3D::setBloomTresshold(float b)
+	{
+		b = std::max(b, 0.f);
+		b = std::min(b, 1.0f);
+		this->internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold = b;
+	}
+
+	void Renderer3D::setBloomIntensisy(float b)
+	{
+		b = std::max(b, 0.f);
+		b = std::min(b, 15.0f);
+		this->postProcess.bloomIntensty = b;
+	}
+
+	bool &Renderer3D::bloomHighQualityDownSample()
+	{
+		return this->postProcess.highQualityDownSample;
+	}
+
+	bool &Renderer3D::bloomHighQualityUpSample()
+	{
+		return this->postProcess.highQualityUpSample;
+	}
+
+	float stub = 0;
+	float &Renderer3D::getDirectionalShadowCascadesFrustumSplit(int cascadeIndex)
+	{
+		if (cascadeIndex >= DirectionalShadows::CASCADES || cascadeIndex < 0)
+		{
+			std::cout << "index out of cascades range\n";
+			stub = 0;
+			return stub;
+		}
+
+		return directionalShadows.frustumSplits[cascadeIndex];
+		// TODO: insert return statement here
+	}
+
 	void Renderer3D::enableFXAA(bool fxaa)
 	{
 		this->antiAlias.usingFXAA = fxaa;
@@ -2342,8 +2391,25 @@ namespace gl3d
 		return antiAlias.usingFXAA;
 	}
 
+	std::string Renderer3D::saveSettingsToFileData()
+	{
+		using Json = nlohmann::json;
+
+		Json j;
+
+		j["exposure"] = getExposure();
+		j["normal mapping"] = isNormalMappingEnabeled();
+		j["light subscatter"] = isLightSubScatteringEnabeled();
+
+		return j.dump();
+	}
+
 	//todo look into  glProgramUniform
 	//in order to send less stuff tu uniforms
+	// 
+	//todo not crash the program when you can't load a file.....
+
+	//todo investigate ssao darkening sky
 
 	//todo look into
 	//ATI/AMD created GL_ATI_meminfo. This extension is very easy to use. 
@@ -5211,7 +5277,6 @@ namespace gl3d
 			}
 		
 		}
-
 
 	}
 

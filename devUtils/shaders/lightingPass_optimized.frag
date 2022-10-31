@@ -24,6 +24,7 @@ uniform isampler2D u_textureDerivates;
 //uniform sampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
+uniform int u_transparentPass;
 
 struct MaterialStruct
 {
@@ -792,9 +793,16 @@ void main()
 		//no material, no alpha component that is important
 		//discard ??
 		//discard;
-		a_outColor = vec4(0,0,0,0);
-		a_outBloom = vec4(0,0,0,1);
-		return;
+		if(u_transparentPass != 0)
+		{
+			discard;
+		}else
+		{
+			a_outColor = vec4(0,0,0,0);
+			a_outBloom = vec4(0,0,0,1);
+			return;
+		}
+		
 		//albedoAlpha = vec4(0,0,0,0);
 	}
 
@@ -802,16 +810,16 @@ void main()
 		uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
 		if(albedoSampler.x == 0 && albedoSampler.y == 0)
 		{
-			albedoAlpha.rgb = vec3(1,1,1); //multiply after with color;
+			albedoAlpha.rgba = vec4(1,1,1,1); //multiply after with color;
 		}else
 		{
 			albedoAlpha = 
 				textureGrad(sampler2D(albedoSampler), sampledUV.xy, 
 					sampledDerivates.xy, sampledDerivates.zw).rgba;
 		}
-		albedoAlpha.a = 1;
-		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
 
+		albedoAlpha.rgb *= pow( vec3(mat[materialIndex-1].kd), vec3(1.0/2.2) );
+		albedoAlpha.a *= mat[materialIndex-1].kd.a;
 
 		uvec2 emmisiveSampler = mat[materialIndex-1].secondBIndlessSamplers.xy;
 		if(emmisiveSampler.x == 0 && emmisiveSampler.y == 0)
@@ -971,7 +979,6 @@ void main()
 			continue;
 		}
 
-
 		if(dotAngle > angle && dotAngle > 0)
 		{
 			float attenuation = attenuationFunctionNotClamped(currentDist, dist, at);
@@ -1020,7 +1027,7 @@ void main()
 		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 		vec3 kS = F;
 		
-		vec3 irradiance = texture(u_skyboxIradiance, normal).rgb; //this color is coming directly at the object
+		vec3 irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;
@@ -1124,8 +1131,17 @@ void main()
 
 	//gama correction and hdr is done in the post process step
 
-	a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
-	a_outBloom = vec4(emissive.rgb, 1);
+	if(u_transparentPass != 0)
+	{
+		a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
+		a_outBloom = vec4(emissive.rgb, albedoAlpha.a);
+	}else
+	{
+		a_outColor = vec4(color.rgb + emissive.rgb, 1);
+		a_outBloom = vec4(emissive.rgb, 1);
+	}
+
+	
 
 	//a_outColor.rgb = vec3(albedoAlpha);
 	//a_outColor.rgb =  material.bbb;

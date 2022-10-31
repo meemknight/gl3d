@@ -943,7 +943,7 @@ namespace gl3d
 
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-	#pragma region convoluted texture
+	#pragma region convoluted texturelayout(binding = 4) uniform sampler2D u_roughness;
 
 
 		glGenTextures(1, &skyBox.convolutedTexture);
@@ -980,7 +980,7 @@ namespace gl3d
 
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube
+			glDrawArrays(GL_TRIANGLES, 0, 6 * 6); // renders a 1x1 cube, todo refactor to draw only a face lol
 
 		}
 	#pragma endregion

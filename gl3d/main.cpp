@@ -105,6 +105,9 @@ int main()
 	gl3d::Renderer3D renderer;
 	renderer.init(w, h);
 
+	{
+		std::cout << renderer.saveSettingsToFileData() << "\n";
+	}
 
 #pragma region shader
 	gl3d::Shader shader;
@@ -405,11 +408,12 @@ int main()
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
-	//auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
+	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
+	auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
@@ -419,7 +423,8 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
 
-	auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
+	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
+	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
 	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
@@ -431,11 +436,10 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto sphereModel = renderer.loadModel("resources/birb.glb");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
-	auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
+	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
-
 
 
 	std::cout << "\n\nLoad profiler: time(s):" << rez.timeSeconds << "    cpu clocks:" << rez.cpuClocks << "\n";
@@ -787,12 +791,12 @@ int main()
 			{
 				ImGui::PushID(__COUNTER__);
 
-				ImGui::Checkbox("Bloom", &renderer.internal.lightShader.bloom);
+				ImGui::Checkbox("Bloom", &renderer.bloom());
 				ImGui::DragFloat("Bloom tresshold", &renderer.internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold,
 					0.01, 0, 1);
 				ImGui::DragFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0.01, 0, 10);
-				ImGui::Checkbox("High quality down sample", &renderer.postProcess.highQualityDownSample);
-				ImGui::Checkbox("High quality up sample", &renderer.postProcess.highQualityUpSample);
+				ImGui::Checkbox("High quality down sample", &renderer.bloomHighQualityDownSample());
+				ImGui::Checkbox("High quality up sample", &renderer.bloomHighQualityUpSample());
 
 				ImGui::PopID();
 			}
