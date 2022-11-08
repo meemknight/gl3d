@@ -757,7 +757,7 @@ namespace objl
 			std::vector<int> skinJoints;
 			std::vector<int> skeletonRoots = {};
 
-			auto convertNode = [&skinJoints](int index)
+			auto convertNode = [&skinJoints](int index) -> int
 			{
 				auto convertedNode = std::find(skinJoints.begin(), skinJoints.end(), index);
 				if (convertedNode == skinJoints.end())

@@ -2376,6 +2376,31 @@ namespace gl3d
 		// TODO: insert return statement here
 	}
 
+	bool &Renderer3D::chromaticAberation()
+	{
+		return postProcess.chromaticAberationOn;
+	}
+
+	float Renderer3D::getChromaticAberationStrength()
+	{
+		return postProcess.chromaticAberationStrength;
+	}
+
+	void Renderer3D::setChromaticAberationStrength(float pixels)
+	{
+		postProcess.chromaticAberationStrength = std::max(0.f, pixels);
+	}
+
+	float Renderer3D::getChromaticAberationUnfocusDistance()
+	{
+		return postProcess.unfocusDistance;
+	}
+
+	void Renderer3D::setChromaticAberationUnfocusDistance(float distance)
+	{
+		postProcess.unfocusDistance = std::max(distance, 0.f);
+	}
+
 	void Renderer3D::enableFXAA(bool fxaa)
 	{
 		this->antiAlias.usingFXAA = fxaa;
@@ -3967,7 +3992,7 @@ namespace gl3d
 
 
 		#pragma region setup bindless textures
-
+			//todo cache stuff?
 			for (int i=0; i< internal.materials.size(); i++)
 			{
 				auto &textures = internal.materialTexturesData[i];
@@ -4775,7 +4800,7 @@ namespace gl3d
 
 		#pragma region do the post process stuff and draw to the screen
 
-		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
+		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution || postProcess.chromaticAberationOn)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, adaptiveResolution.fbo);
 		}
@@ -4854,10 +4879,38 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region draw to screen and fxaa
+	#pragma region draw to screen and fxaa and chromatic aberation
+
+		GLuint currentTexture = adaptiveResolution.texture;
+
+		if (postProcess.chromaticAberationOn)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, adaptiveResolution.fbo2);
+
+			postProcess.chromaticAberation.shader.bind();
+			glUniform1i(postProcess.chromaticAberation.u_finalColorTexture, 0);
+			glUniform1i(postProcess.chromaticAberation.u_DepthTexture, 1);
+			glUniform2i(postProcess.chromaticAberation.u_windowSize, adaptiveResolution.currentDimensions.x, 
+				adaptiveResolution.currentDimensions.y);
+			glUniform1f(postProcess.chromaticAberation.u_strength, postProcess.chromaticAberationStrength);
+			glUniform1f(postProcess.chromaticAberation.u_near, camera.closePlane);
+			glUniform1f(postProcess.chromaticAberation.u_far, camera.farPlane);
+			glUniform1f(postProcess.chromaticAberation.u_unfocusDistance, postProcess.unfocusDistance);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, adaptiveResolution.texture);
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.depthBuffer);
+
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			currentTexture = adaptiveResolution.texture2;
+		}
 
 		glViewport(0, 0, internal.w, internal.h);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -4869,7 +4922,7 @@ namespace gl3d
 				antiAlias.shader.bind();
 				glUniform1i(antiAlias.u_texture, 0);
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, adaptiveResolution.texture);
+				glBindTexture(GL_TEXTURE_2D, currentTexture);
 
 				//send data.
 				//todo lazyness
@@ -4878,12 +4931,12 @@ namespace gl3d
 
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
-			else
+			else if(adaptiveResolution.useAdaptiveResolution)
 			{
 				antiAlias.noAAshader.bind();
 				glUniform1i(antiAlias.noAAu_texture, 0);
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, adaptiveResolution.texture);
+				glBindTexture(GL_TEXTURE_2D, currentTexture);
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
 
@@ -5194,6 +5247,15 @@ namespace gl3d
 		filterDown.u_mip = getUniform(filterDown.shader.id, "u_mip");
 		filterDown.u_texture = getUniform(filterDown.shader.id, "u_texture");
 
+		chromaticAberation.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/chromaticAberation.frag");
+		chromaticAberation.u_finalColorTexture = getUniform(chromaticAberation.shader.id, "u_finalColorTexture");
+		chromaticAberation.u_windowSize = getUniform(chromaticAberation.shader.id, "u_windowSize");
+		chromaticAberation.u_strength = getUniform(chromaticAberation.shader.id, "u_strength");
+		chromaticAberation.u_DepthTexture = getUniform(chromaticAberation.shader.id, "u_DepthTexture");
+		chromaticAberation.u_near = getUniform(chromaticAberation.shader.id, "u_near");
+		chromaticAberation.u_far = getUniform(chromaticAberation.shader.id, "u_far");
+		chromaticAberation.u_unfocusDistance = getUniform(chromaticAberation.shader.id, "u_unfocusDistance");
+
 		glGenFramebuffers(2, blurFbo);
 		glGenTextures(2, bluredColorBuffer);
 
@@ -5479,12 +5541,31 @@ namespace gl3d
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
+
+		glGenFramebuffers(1, &fbo2);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
+		glGenTextures(1, &texture2);
+		glBindTexture(GL_TEXTURE_2D, texture2);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, currentDimensions.x, currentDimensions.y
+			, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture2, 0);
+
+
 	}
 
 	void Renderer3D::AdaptiveResolution::resize(int w, int h)
 	{
 		if (currentDimensions.x != w || currentDimensions.y != h)
 		{
+			glBindTexture(GL_TEXTURE_2D, texture2);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h,
+				0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h,
@@ -5747,10 +5828,16 @@ namespace gl3d
 			GL_COLOR_ATTACHMENT5};
 		glDrawBuffers(bufferCount, attachments);
 
-		glGenRenderbuffers(1, &depthBuffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1, 1);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+		//glGenRenderbuffers(1, &depthBuffer);
+		//glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+		//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1, 1);
+		//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+
+		glGenTextures(1, &depthBuffer);
+		glBindTexture(GL_TEXTURE_2D, depthBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
 
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		{
@@ -5786,9 +5873,12 @@ namespace gl3d
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, w, h, 0, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, NULL);
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-			glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
-			
+			//glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+			//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
+			glBindTexture(GL_TEXTURE_2D, depthBuffer);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		
+
 			currentDimensions = glm::ivec2(w, h);
 		}
 	}

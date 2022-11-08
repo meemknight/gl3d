@@ -310,6 +310,17 @@ namespace gl3d
 		//
 		float &getDirectionalShadowCascadesFrustumSplit(int cascadeIndex);
 
+		//chromatic aberation
+		bool &chromaticAberation();
+		//in pixels
+		float getChromaticAberationStrength();
+		//in pixels
+		void setChromaticAberationStrength(float pixels);
+		float getChromaticAberationUnfocusDistance();
+		void setChromaticAberationUnfocusDistance(float distance);
+
+
+		
 		#pragma region fxaa
 
 			//todo explain this parameters
@@ -561,6 +572,19 @@ namespace gl3d
 				GLint u_mip;
 			}filterDown;
 
+			struct
+			{
+				Shader shader;
+				GLint u_finalColorTexture;
+				GLint u_windowSize;
+				GLint u_strength;
+				GLint u_DepthTexture;
+				GLint u_near;
+				GLint u_far;
+				GLint u_unfocusDistance;
+				GLuint fbo;
+			}chromaticAberation;
+
 			Shader postProcessShader;
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader
@@ -595,6 +619,10 @@ namespace gl3d
 			bool highQualityDownSample = 0;
 			bool highQualityUpSample = 0;
 
+			bool chromaticAberationOn = 0;
+			float chromaticAberationStrength = 20.f;
+			float unfocusDistance = 5.f;
+
 		}postProcess;
 
 		//used for adaptive resolution or fxaa or both
@@ -618,6 +646,9 @@ namespace gl3d
 
 			GLuint texture;
 			GLuint fbo;
+
+			GLuint texture2;
+			GLuint fbo2;
 
 		}adaptiveResolution;
 

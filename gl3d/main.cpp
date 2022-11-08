@@ -413,7 +413,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 1.f);
-	auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 1.f);
+	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
@@ -426,7 +426,7 @@ int main()
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
+	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
@@ -797,6 +797,22 @@ int main()
 				ImGui::DragFloat("Bloom intensity", &renderer.postProcess.bloomIntensty, 0.01, 0, 10);
 				ImGui::Checkbox("High quality down sample", &renderer.bloomHighQualityDownSample());
 				ImGui::Checkbox("High quality up sample", &renderer.bloomHighQualityUpSample());
+
+				ImGui::PopID();
+			}
+			ImGui::NewLine();
+
+			if (ImGui::CollapsingHeader("Chromatic aberation", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			{
+				ImGui::PushID(__COUNTER__);
+
+				ImGui::Checkbox("Chromatic aberation", &renderer.chromaticAberation());
+
+				ImGui::DragFloat("Chromatic aberation strength", &renderer.postProcess.chromaticAberationStrength,
+					1, 0, 200);
+
+				ImGui::DragFloat("Chromatic aberation defocus", &renderer.postProcess.unfocusDistance,
+					0.01, 0, 100);
 
 				ImGui::PopID();
 			}
