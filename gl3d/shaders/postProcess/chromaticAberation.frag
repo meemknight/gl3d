@@ -13,6 +13,7 @@ uniform float u_near;
 uniform float u_far;
 uniform float u_unfocusDistance;
 
+
 float toDistance(vec2 coords)
 {
 	float depth = texture(u_DepthTexture, v_texCoords).x;
@@ -24,13 +25,12 @@ float toDistance(vec2 coords)
 void main()
 {
 	
+
 	float linearDepth = toDistance(v_texCoords);
-	float depth = texture(u_DepthTexture, v_texCoords).x;
-
-
-	a_color = vec4(depth ,depth ,depth , 1);
-	return;
-
+	//float depth = texture(u_DepthTexture, v_texCoords).x;
+	//a_color = vec4(linearDepth ,linearDepth ,linearDepth , 1);
+	//return;
+	
 	if(linearDepth < u_unfocusDistance)
 	{
 		a_color = vec4(texture(u_finalColorTexture, v_texCoords).rgb, 1);

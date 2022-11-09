@@ -318,8 +318,6 @@ namespace gl3d
 		void setChromaticAberationStrength(float pixels);
 		float getChromaticAberationUnfocusDistance();
 		void setChromaticAberationUnfocusDistance(float distance);
-
-
 		
 		#pragma region fxaa
 

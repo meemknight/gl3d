@@ -22,7 +22,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 1
+#define USE_GPU_ENGINE 0
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
