@@ -4,6 +4,8 @@
 #include <Core.h>
 #include <vector>
 #include "Texture.h"
+#include <string>
+#include "ErrorReporting.h"
 
 namespace gl3d
 {
@@ -31,32 +33,23 @@ namespace gl3d
 	{
 		GLuint id = 0;
 
-		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader);
+		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter);
 		bool loadShaderProgramFromFile(const char *vertexShader, 
-			const char *geometryShader, const char *fragmentShader);
+			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter);
 
 		void bind();
 
 		void clear();
 	};
 
-	GLint getUniform(GLuint id, const char *name);
+	GLint getUniform(GLuint id, const char *name, ErrorReporter &errorReporter);
 
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		void create();
-		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
+		std::string create(ErrorReporter &errorReporter);
 
-		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
-
-		void setMaterial(const MaterialValues &material);
-
-		void getSubroutines();
+		void getSubroutines(ErrorReporter &errorReporter);
 
 		struct
 		{

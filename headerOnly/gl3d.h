@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-08
+//built on 2022-11-14
 ////////////////////////////////////////////////
 
 
@@ -11,10 +11,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <glm\vec4.hpp>
-#include <glm\vec3.hpp>
-#include <glm\mat4x4.hpp>
-#include <gl\glew.h>
+#include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
+#include <gl/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat3x3.hpp>
@@ -205,6 +205,34 @@ namespace gl3d
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__), comment), 0)\
 		)
 
+#pragma endregion
+
+
+////////////////////////////////////////////////
+//ErrorReporting.h
+////////////////////////////////////////////////
+#pragma region ErrorReporting
+#pragma once
+
+#include <string>
+#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
+
+namespace gl3d
+{
+
+	void defaultErrorCallback(std::string err);
+
+	using ErrorCallback_t = decltype(defaultErrorCallback);
+
+	
+	struct ErrorReporter
+	{
+		ErrorCallback_t *currentErrorCallback = defaultErrorCallback;
+
+		void callErrorCallback(std::string s);
+	};
+
+};
 #pragma endregion
 
 
@@ -31410,15 +31438,13 @@ namespace tinygltf
 ////////////////////////////////////////////////
 #pragma region OBJ_Loader
 // OBJ_Loader.h - A Single Header OBJ Model Loader
-//todo add license 
+// This piece of code is not owned by gl3d
 
 #pragma once
-
-
-
-
-// Iostream - STD I/O Library
 #include <iostream>
+
+
+
 
 // Vector - STD Vector/Array Library
 #include <vector>
@@ -31441,6 +31467,8 @@ namespace tinygltf
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+
+
 
 
 
@@ -31945,27 +31973,27 @@ namespace objl
 		//
 		// If the file is unable to be found
 		// or unable to be loaded return false
-		bool LoadFile(std::string Path, bool *outShouldFlipUV = 0)
+		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, bool *outShouldFlipUV = 0)
 		{
 			if (outShouldFlipUV) { *outShouldFlipUV = 0; }
 
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) == ".obj")
 			{
-				return loadObj(Path);
+				return loadObj(Path, reporter);
 			}
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, 0);
+				return loadGltf(Path, reporter, 0);
 			}else if (Path.substr(Path.size() - 4, 4) == ".glb")
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, 1);
+				return loadGltf(Path, reporter, 1);
 			}
 			else
 			{
-				std::cout << "3D model format not supported: " << Path << "\n"; //todo proper log
+				reporter.callErrorCallback("3D model format not supported: " + Path);
 				return 0;
 			}
 				
@@ -31983,7 +32011,7 @@ namespace objl
 			}
 		};
 
-		bool loadGltf(const std::string &Path, bool glb = 0)
+		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter, bool glb = 0)
 		{
 
 			tinygltf::Model model;
@@ -32168,7 +32196,7 @@ namespace objl
 			std::vector<int> skinJoints;
 			std::vector<int> skeletonRoots = {};
 
-			auto convertNode = [&skinJoints](int index)
+			auto convertNode = [&skinJoints](int index) -> int
 			{
 				auto convertedNode = std::find(skinJoints.begin(), skinJoints.end(), index);
 				if (convertedNode == skinJoints.end())
@@ -32436,13 +32464,13 @@ namespace objl
 					}
 					else if (channel.target_path == "weights") 
 					{
-						gl3dAssertComment(0, "weights are supported");
+						errorReporter.callErrorCallback("weights are supported");
 					}
 					else 
 					{
-						std::cout << channel.target_path << "\n";
-						gl3dAssertComment(0, "unknow animation target");
-						continue;
+						std::string message = "unknow animation target";
+						message += channel.target_path;
+						errorReporter.callErrorCallback(message);
 					}
 				}
 
@@ -32844,7 +32872,7 @@ namespace objl
 
 		}
 
-		bool loadObj(const std::string &Path)
+		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter)
 		{
 
 			std::ifstream file(Path);
@@ -33074,7 +33102,7 @@ namespace objl
 				#endif
 
 					// Load Materials
-					LoadMaterials(pathtomat);
+					LoadMaterials(pathtomat, repoter);
 				}
 			}
 
@@ -33135,7 +33163,7 @@ namespace objl
 		std::vector<Material> LoadedMaterials;
 
 		// Load Materials from .mtl file
-		bool LoadMaterials(std::string path)
+		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter)
 		{
 			// If the file is not a material file return false
 			if (path.substr(path.size() - 4, path.size()) != ".mtl")
@@ -33146,7 +33174,7 @@ namespace objl
 			// If the file is not found return false
 			if (!file.is_open())
 			{
-				std::cout << "error loading mtl file: " << path << "\n";
+				errorReporter.callErrorCallback("error loading mtl file: " + path);
 				return false;
 			}
 
@@ -33675,6 +33703,7 @@ namespace objl
 #include <GL/glew.h>
 #include <glm/vec2.hpp>
 
+#include <string>
 
 namespace gl3d
 {
@@ -33695,13 +33724,14 @@ namespace gl3d
 		GpuTexture() = default;
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
+		//returns error
+		std::string loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
 			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
 
-		//one if there is alpha data
-		void loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
+		//returns error
+		std::string loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
 			int quality = maxQuality, int channels = 4);
 
 		void clear();
@@ -33744,6 +33774,8 @@ namespace gl3d
 
 #include <vector>
 
+#include <string>
+
 
 namespace gl3d
 {
@@ -33771,32 +33803,23 @@ namespace gl3d
 	{
 		GLuint id = 0;
 
-		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader);
+		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter);
 		bool loadShaderProgramFromFile(const char *vertexShader, 
-			const char *geometryShader, const char *fragmentShader);
+			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter);
 
 		void bind();
 
 		void clear();
 	};
 
-	GLint getUniform(GLuint id, const char *name);
+	GLint getUniform(GLuint id, const char *name, ErrorReporter &errorReporter);
 
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		void create();
-		void bind(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
+		std::string create(ErrorReporter &errorReporter);
 
-		void setData(const glm::mat4 &viewProjMat, const glm::mat4 &transformMat,
-		const glm::vec3 &lightPosition, const glm::vec3 &eyePosition, float gama
-		, const MaterialValues &material, std::vector<internal::GpuPointLight> &pointLights);
-
-		void setMaterial(const MaterialValues &material);
-
-		void getSubroutines();
+		void getSubroutines(ErrorReporter &errorReporter);
 
 		struct
 		{
@@ -34069,9 +34092,9 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file, float scale = 1.f) { load(file, scale); }
+		LoadedModelData(const char *file, ErrorReporter &errorReporter ,float scale = 1.f) { load(file, errorReporter, scale); }
 
-		void load(const char *file, float scale = 1.f);
+		void load(const char *file, ErrorReporter &errorReporter, float scale = 1.f);
 
 		objl::Loader loader;
 		std::string path;
@@ -34223,7 +34246,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData();
+		void createGpuData(ErrorReporter &errorReporter);
 
 		struct
 		{
@@ -34280,9 +34303,9 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox);
-		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
-		void loadHDRtexture(const char *name, SkyBox &skyBox);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox);
 		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
 
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);
@@ -34327,6 +34350,8 @@ namespace gl3d
 
 #include <algorithm>
 
+
+
 namespace gl3d
 {
 	namespace internal
@@ -34368,12 +34393,17 @@ namespace gl3d
 
 	};
 
+	
+
 	struct Renderer3D
 
 	{
 		void init(int x, int y);
 		
-		//todo implement error callback
+		ErrorReporter errorReporter;
+
+		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback);
+		ErrorCallback_t *getErrorCallback();
 
 	#pragma region material
 		
@@ -34630,6 +34660,15 @@ namespace gl3d
 		//
 		float &getDirectionalShadowCascadesFrustumSplit(int cascadeIndex);
 
+		//chromatic aberation
+		bool &chromaticAberation();
+		//in pixels
+		float getChromaticAberationStrength();
+		//in pixels
+		void setChromaticAberationStrength(float pixels);
+		float getChromaticAberationUnfocusDistance();
+		void setChromaticAberationUnfocusDistance(float distance);
+		
 		#pragma region fxaa
 
 			//todo explain this parameters
@@ -34692,7 +34731,7 @@ namespace gl3d
 				Shader shader;
 				GLuint fbo;
 
-				void init();
+				void init(ErrorReporter &errorReporter);
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
@@ -34776,7 +34815,7 @@ namespace gl3d
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
-					void create(int w, int h);
+					void create(int w, int h, ErrorReporter &errorReporter);
 					void resize(int w, int h);
 
 					glm::ivec2 currentDimensions = {};
@@ -34816,7 +34855,7 @@ namespace gl3d
 
 			struct GBuffer
 			{
-				void create(int w, int h);
+				void create(int w, int h, ErrorReporter &errorReporter);
 				void resize(int w, int h);
 
 				enum bufferTargers
@@ -34881,6 +34920,19 @@ namespace gl3d
 				GLint u_mip;
 			}filterDown;
 
+			struct
+			{
+				Shader shader;
+				GLint u_finalColorTexture;
+				GLint u_windowSize;
+				GLint u_strength;
+				GLint u_DepthTexture;
+				GLint u_near;
+				GLint u_far;
+				GLint u_unfocusDistance;
+				GLuint fbo;
+			}chromaticAberation;
+
 			Shader postProcessShader;
 			Shader gausianBLurShader;
 			GLint u_colorTexture;	//post process shader
@@ -34904,7 +34956,7 @@ namespace gl3d
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
-			void create(int w, int h);
+			void create(int w, int h, ErrorReporter &errorReporter);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
@@ -34914,6 +34966,10 @@ namespace gl3d
 
 			bool highQualityDownSample = 0;
 			bool highQualityUpSample = 0;
+
+			bool chromaticAberationOn = 0;
+			float chromaticAberationStrength = 20.f;
+			float unfocusDistance = 5.f;
 
 		}postProcess;
 
@@ -34939,13 +34995,16 @@ namespace gl3d
 			GLuint texture;
 			GLuint fbo;
 
+			GLuint texture2;
+			GLuint fbo2;
+
 		}adaptiveResolution;
 
 		struct AntiAlias
 		{
 			Shader shader;
 			Shader noAAshader;
-			void create(int w, int h);
+			void create(int w, int h, ErrorReporter &errorReporter);
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
@@ -35014,7 +35073,7 @@ namespace gl3d
 		//todo remove or implement properly
 		struct RenderDepthMap
 		{
-			void create();
+			void create(ErrorReporter &errorReporter);
 
 			Shader shader;
 			GLint u_depth = -1;

@@ -6,6 +6,8 @@
 #include <Camera.h>
 #include <GraphicModel.h>
 #include <algorithm>
+#include <ErrorReporting.h>
+
 
 namespace gl3d
 {
@@ -48,12 +50,17 @@ namespace gl3d
 
 	};
 
+	
+
 	struct Renderer3D
 
 	{
 		void init(int x, int y);
 		
-		//todo implement error callback
+		ErrorReporter errorReporter;
+
+		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback);
+		ErrorCallback_t *getErrorCallback();
 
 	#pragma region material
 		
@@ -381,7 +388,7 @@ namespace gl3d
 				Shader shader;
 				GLuint fbo;
 
-				void init();
+				void init(ErrorReporter &errorReporter);
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
@@ -465,7 +472,7 @@ namespace gl3d
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
-					void create(int w, int h);
+					void create(int w, int h, ErrorReporter &errorReporter);
 					void resize(int w, int h);
 
 					glm::ivec2 currentDimensions = {};
@@ -505,7 +512,7 @@ namespace gl3d
 
 			struct GBuffer
 			{
-				void create(int w, int h);
+				void create(int w, int h, ErrorReporter &errorReporter);
 				void resize(int w, int h);
 
 				enum bufferTargers
@@ -606,7 +613,7 @@ namespace gl3d
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
-			void create(int w, int h);
+			void create(int w, int h, ErrorReporter &errorReporter);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
@@ -654,7 +661,7 @@ namespace gl3d
 		{
 			Shader shader;
 			Shader noAAshader;
-			void create(int w, int h);
+			void create(int w, int h, ErrorReporter &errorReporter);
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
@@ -723,7 +730,7 @@ namespace gl3d
 		//todo remove or implement properly
 		struct RenderDepthMap
 		{
-			void create();
+			void create(ErrorReporter &errorReporter);
 
 			Shader shader;
 			GLint u_depth = -1;

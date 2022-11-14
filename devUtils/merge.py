@@ -1,10 +1,10 @@
 import os
 from datetime import date
 
-cppFiles = ["Core", "Animations", "Texture", "Shader", "Camera", "GraphicModel",\
+cppFiles = ["Core", "ErrorReporting", "Animations", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
-headerFiles = ["Core", "Animations", "json", "stb_image_write", "tiny_gltf", \
+headerFiles = ["Core", "ErrorReporting", "Animations", "json", "stb_image_write", "tiny_gltf", \
     "OBJ_Loader", "Texture", "Shader", "Camera", "GraphicModel",\
      "gl3d"]
 
@@ -165,7 +165,7 @@ for i in cppFiles:
                     shaderSource[index] = shaderSource[index][0:found]
                 
                 if(len(shaderSource[index]) != 0):
-                    shaderSource[index] = "\"" + shaderSource[index] + "\""
+                    shaderSource[index] = "\"" + shaderSource[index] + "\\n\""
 
             shaderSource = list(filter(None, shaderSource))
 

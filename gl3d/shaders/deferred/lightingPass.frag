@@ -879,6 +879,7 @@ void main()
 
 	}
 	
+	//calculate BRDF
 
 	vec3 albedo = albedoAlpha.rgb;
 	albedo  = pow(albedo , vec3(2.2)).rgb; //gamma corection
@@ -1123,13 +1124,12 @@ void main()
 	vec3 color = Lo + ambient; 
 	
 
-	vec3 hdrCorrectedColor = color;
-	hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
-	hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
-	float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
-	//float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
-
-	//gama correction and hdr is done in the post process step
+	//vec3 hdrCorrectedColor = color;
+	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
+	//hdrCorrectedColor.rgb = pow(hdrCorrectedColor.rgb, vec3(1.0/2.2));
+	//float lightIntensity = dot(hdrCorrectedColor.rgb, vec3(0.2126, 0.7152, 0.0722));	
+	////float lightIntensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));	
+	//gama correction and hdr is done and applied in the post process step
 
 	if(u_transparentPass != 0)
 	{

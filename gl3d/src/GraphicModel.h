@@ -48,9 +48,9 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file, float scale = 1.f) { load(file, scale); }
+		LoadedModelData(const char *file, ErrorReporter &errorReporter ,float scale = 1.f) { load(file, errorReporter, scale); }
 
-		void load(const char *file, float scale = 1.f);
+		void load(const char *file, ErrorReporter &errorReporter, float scale = 1.f);
 
 		objl::Loader loader;
 		std::string path;
@@ -202,7 +202,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData();
+		void createGpuData(ErrorReporter &errorReporter);
 
 		struct
 		{
@@ -259,9 +259,9 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox);
-		void loadTexture(const char *name, SkyBox &skyBox, int format = 0);
-		void loadHDRtexture(const char *name, SkyBox &skyBox);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox);
 		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
 
 		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);

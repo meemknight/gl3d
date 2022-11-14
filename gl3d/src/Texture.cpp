@@ -1,15 +1,15 @@
 #include "Texture.h"
-#include <stb_image.h>
-#include <iostream>
 #include <glm\vec2.hpp>
 #include <glm\vec3.hpp>
 #include "Core.h"
 #include <algorithm>
+#include <stb_image.h>
+
 
 namespace gl3d
 {
 
-	void GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
+	std::string GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
 	{
 	
 		int w, h, nrChannels;
@@ -18,9 +18,8 @@ namespace gl3d
 	
 		if (!data)
 		{
-			//todo err messages
-			std::cout << "err: " << file << "\n";
 			id = 0;
+			return std::string("err: ") + file;
 		}
 		else
 		{
@@ -28,7 +27,7 @@ namespace gl3d
 			stbi_image_free(data);
 		}
 	
-	
+		return "";
 	}
 	
 	void GpuTexture::loadTextureFromMemory(void *data, int w, int h, int chanels,
@@ -114,7 +113,7 @@ namespace gl3d
 	}
 	
 
-	void GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData, int quality, int channels)
+	std::string GpuTexture::loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData, int quality, int channels)
 	{
 		int w, h, nrChannels;
 		stbi_set_flip_vertically_on_load(true);
@@ -126,7 +125,7 @@ namespace gl3d
 		if (!data)
 		{
 			//todo err messages
-			std::cout << "err: " << file << "\n";
+			return std::string("err: ") + file;
 			id = 0;
 		}
 		else
@@ -178,6 +177,7 @@ namespace gl3d
 			stbi_image_free(data);
 		}
 
+		return "";
 	}
 
 	void GpuTexture::clear()

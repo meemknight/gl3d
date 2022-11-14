@@ -2,6 +2,7 @@
 #include <GL/glew.h>
 #include <glm/vec2.hpp>
 #include "Core.h"
+#include <string>
 
 namespace gl3d
 {
@@ -22,13 +23,14 @@ namespace gl3d
 		GpuTexture() = default;
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
-		void loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
+		//returns error
+		std::string loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
 			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
 
-		//one if there is alpha data
-		void loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
+		//returns error
+		std::string loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
 			int quality = maxQuality, int channels = 4);
 
 		void clear();

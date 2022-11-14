@@ -1,13 +1,10 @@
 // OBJ_Loader.h - A Single Header OBJ Model Loader
-//todo add license 
+// This piece of code is not owned by gl3d
 
 #pragma once
 
 #include "Core.h"
 #include "Animations.h"
-
-// Iostream - STD I/O Library
-#include <iostream>
 
 // Vector - STD Vector/Array Library
 #include <vector>
@@ -32,6 +29,8 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "tiny_gltf.h"
+
+#include "ErrorReporting.h"
 
 // Namespace: OBJL
 //
@@ -534,27 +533,27 @@ namespace objl
 		//
 		// If the file is unable to be found
 		// or unable to be loaded return false
-		bool LoadFile(std::string Path, bool *outShouldFlipUV = 0)
+		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, bool *outShouldFlipUV = 0)
 		{
 			if (outShouldFlipUV) { *outShouldFlipUV = 0; }
 
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) == ".obj")
 			{
-				return loadObj(Path);
+				return loadObj(Path, reporter);
 			}
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, 0);
+				return loadGltf(Path, reporter, 0);
 			}else if (Path.substr(Path.size() - 4, 4) == ".glb")
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, 1);
+				return loadGltf(Path, reporter, 1);
 			}
 			else
 			{
-				std::cout << "3D model format not supported: " << Path << "\n"; //todo proper log
+				reporter.callErrorCallback("3D model format not supported: " + Path);
 				return 0;
 			}
 				
@@ -572,7 +571,7 @@ namespace objl
 			}
 		};
 
-		bool loadGltf(const std::string &Path, bool glb = 0)
+		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter, bool glb = 0)
 		{
 
 			tinygltf::Model model;
@@ -596,17 +595,17 @@ namespace objl
 
 			if (!warn.empty())
 			{
-				printf("Warn: %s\n", warn.c_str());
+				errorReporter.callErrorCallback("Warn: " + warn);
 			}
 
 			if (!err.empty())
 			{
-				printf("Err: %s\n", err.c_str());
+				errorReporter.callErrorCallback("Err: " + err);
 			}
 
 			if (!ret)
 			{
-				printf("Failed to parse glTF\n");
+				errorReporter.callErrorCallback("Failed to parse glTF\n");
 				return 0;
 			}
 
@@ -1025,13 +1024,13 @@ namespace objl
 					}
 					else if (channel.target_path == "weights") 
 					{
-						gl3dAssertComment(0, "weights are supported");
+						errorReporter.callErrorCallback("weights are supported");
 					}
 					else 
 					{
-						std::cout << channel.target_path << "\n";
-						gl3dAssertComment(0, "unknow animation target");
-						continue;
+						std::string message = "unknow animation target";
+						message += channel.target_path;
+						errorReporter.callErrorCallback(message);
 					}
 				}
 
@@ -1433,7 +1432,7 @@ namespace objl
 
 		}
 
-		bool loadObj(const std::string &Path)
+		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter)
 		{
 
 			std::ifstream file(Path);
@@ -1663,7 +1662,7 @@ namespace objl
 				#endif
 
 					// Load Materials
-					LoadMaterials(pathtomat);
+					LoadMaterials(pathtomat, repoter);
 				}
 			}
 
@@ -1724,7 +1723,7 @@ namespace objl
 		std::vector<Material> LoadedMaterials;
 
 		// Load Materials from .mtl file
-		bool LoadMaterials(std::string path)
+		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter)
 		{
 			// If the file is not a material file return false
 			if (path.substr(path.size() - 4, path.size()) != ".mtl")
@@ -1735,7 +1734,7 @@ namespace objl
 			// If the file is not found return false
 			if (!file.is_open())
 			{
-				std::cout << "error loading mtl file: " << path << "\n";
+				errorReporter.callErrorCallback("error loading mtl file: " + path);
 				return false;
 			}
 

@@ -105,13 +105,13 @@ namespace gl3d
 	}
 
 
-	void LoadedModelData::load(const char *file, float scale)
+	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, float scale)
 	{
 		stbi_set_flip_vertically_on_load(true);
 		bool shouldFlipUVs = 0;
 
 
-		loader.LoadFile(file, &shouldFlipUVs);
+		loader.LoadFile(file, errorReporter, &shouldFlipUVs);
 
 		//parse path
 		path = file;
@@ -163,7 +163,7 @@ namespace gl3d
 			
 		}
 
-		std::cout << "Loaded: " << loader.LoadedMeshes.size() << " meshes\n";
+		//errorReporter.currentErrorCallback(std::string("Loaded: ") + std::to_string(loader.LoadedMeshes.size()) + " meshes");
 	}
 
 	float skyboxVertices[] = {
@@ -523,37 +523,37 @@ namespace gl3d
 		*this = GraphicModel{};
 	}
 
-	void SkyBoxLoaderAndDrawer::createGpuData()
+	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter)
 	{
-		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag");
-		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox");
-		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection");
-		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient");
-		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent");
+		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter);
+		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox", errorReporter);
+		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection", errorReporter);
+		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient", errorReporter);
+		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent", errorReporter);
 		
-		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag");
-		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap");
-		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection");
+		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag", errorReporter);
+		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap", errorReporter);
+		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection", errorReporter);
 
-		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag");
-		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap");
-		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection");
-		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality");
+		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag", errorReporter);
+		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap", errorReporter);
+		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection", errorReporter);
+		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality", errorReporter);
 
-		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag");
-		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection");
-		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap");
-		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness");
-		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount");
+		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag", errorReporter);
+		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection", errorReporter);
+		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap", errorReporter);
+		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness", errorReporter);
+		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount", errorReporter);
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
-			"shaders/skyBox/atmosphericScattering.frag");
-		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos");
-		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g");
-		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1");
-		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2");
+			"shaders/skyBox/atmosphericScattering.frag", errorReporter);
+		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos", errorReporter);
+		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g", errorReporter);
+		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1", errorReporter);
+		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2", errorReporter);
 		atmosphericScatteringShader.modelViewUniformLocation 
-			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection");
+			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection", errorReporter);
 
 
 		glGenVertexArrays(1, &vertexArray);
@@ -575,7 +575,7 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter)
 	{
 		skyBox = {};
 
@@ -602,7 +602,7 @@ namespace gl3d
 			}
 			else
 			{
-				std::cout << "err loading " << names[i] << "\n";
+				errorReporter.callErrorCallback(std::string("err loading ") + names[i]);
 				glDeleteTextures(1, &skyBox.texture);
 				return;
 			}
@@ -619,7 +619,7 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox);
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, int format)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format)
 	{
 		skyBox = {};
 
@@ -630,7 +630,7 @@ namespace gl3d
 		stbi_set_flip_vertically_on_load(false);
 		data = stbi_load(name, &width, &height, &nrChannels, 3);
 
-		if (!data) { std::cout << "err loading " << name << "\n"; return; }
+		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
 		glGenTextures(1, &skyBox.texture);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
@@ -768,7 +768,7 @@ namespace gl3d
 		}
 		else
 		{
-			std::cout << "err loading " << name << "\n";
+			errorReporter.callErrorCallback(std::string("err loading ") + name);
 		}
 
 
@@ -783,7 +783,7 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox)
 	{
 		skyBox = {};
 
@@ -792,7 +792,7 @@ namespace gl3d
 
 		stbi_set_flip_vertically_on_load(true);
 		data = stbi_loadf(name, &width, &height, &nrChannels, 0);
-		if (!data) { std::cout << "err loading " << name << "\n"; return; }
+		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
 
 		GLuint hdrTexture;

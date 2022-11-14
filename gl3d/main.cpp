@@ -63,14 +63,7 @@ int main()
 		std::cout << "err initializing glew";
 	}
 
-#pragma region enable debug output
-#if DEBUG_OUTPUT
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(gl3d::glDebugOutput, nullptr);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-#endif
-#pragma endregion
+
 
 
 	ImGui::CreateContext();
@@ -103,6 +96,16 @@ int main()
 #pragma endregion
 
 	gl3d::Renderer3D renderer;
+
+#pragma region enable debug output
+#if DEBUG_OUTPUT
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(gl3d::glDebugOutput, &renderer.errorReporter);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+#endif
+#pragma endregion
+
 	renderer.init(w, h);
 
 	{
@@ -111,19 +114,19 @@ int main()
 
 #pragma region shader
 	gl3d::Shader shader;
-	shader.loadShaderProgramFromFile("shaders/color.vert", "shaders/color.frag");
+	shader.loadShaderProgramFromFile("shaders/color.vert", "shaders/color.frag", renderer.errorReporter);
 	shader.bind();
 	GLint location = glGetUniformLocation(shader.id, "u_transform");
-
+	
 	if (location == -1)
 	{
 		std::cout << "uniform error u_transform\n";
 	}
 
 
-	gl3d::Shader showNormalsShader;
-	showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
-		"shaders/showNormals.geom", "shaders/showNormals.frag");
+	//gl3d::Shader showNormalsShader;
+	//showNormalsShader.loadShaderProgramFromFile("shaders/showNormals.vert",
+	//	"shaders/showNormals.geom", "shaders/showNormals.frag");
 
 #pragma endregion
 
