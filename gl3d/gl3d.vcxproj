@@ -196,6 +196,7 @@
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\Shader.cpp" />
+    <ClCompile Include="src\StbImmageImpl.cpp" />
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>

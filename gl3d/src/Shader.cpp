@@ -243,7 +243,7 @@ namespace gl3d
 		GLint uniform = glGetSubroutineUniformLocation(id, shaderType, name);
 		if (uniform == -1)
 		{
-			errorReporter.currentErrorCallback("uniform subroutine error " + std::string(name));
+			errorReporter.callErrorCallback("uniform subroutine error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -253,7 +253,7 @@ namespace gl3d
 		GLint uniform = glGetUniformLocation(id, name);
 		if (uniform == -1)
 		{
-			errorReporter.currentErrorCallback("uniform error " + std::string(name));
+			errorReporter.callErrorCallback("uniform error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -263,7 +263,7 @@ namespace gl3d
 		GLuint uniform = glGetUniformBlockIndex(id, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("uniform block error " + std::string(name));
+			errorReporter.callErrorCallback("uniform block error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -273,7 +273,7 @@ namespace gl3d
 		GLuint uniform = glGetSubroutineIndex(id, shaderType, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("uniform subroutine index error " + std::string(name));
+			errorReporter.callErrorCallback("uniform subroutine index error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -283,7 +283,7 @@ namespace gl3d
 		GLuint uniform = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("storage block index error " + std::string(name));
+			errorReporter.callErrorCallback("storage block index error " + std::string(name));
 		}
 		return uniform;
 	};

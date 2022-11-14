@@ -1,5 +1,4 @@
 #pragma once
-#include "GL/glew.h"
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>

@@ -1,8 +1,6 @@
 #include <Windows.h>
 #include <iostream>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #include <GLFW/glfw3.h>
 #include <GL/glew.h>
@@ -62,8 +60,6 @@ int main()
 	{
 		std::cout << "err initializing glew";
 	}
-
-
 
 
 	ImGui::CreateContext();

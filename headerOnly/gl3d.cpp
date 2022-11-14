@@ -31103,7 +31103,8 @@ namespace tinygltf
 #include <stdio.h>
 #include <Windows.h>
 #include <signal.h>
-#include <iostream>
+#include <sstream>
+
 
 #undef min
 #undef max
@@ -31116,7 +31117,7 @@ namespace gl3d
 		unsigned const line_number,
 		const char *comment)
 	{
-		
+	
 		char c[1024] = {};
 	
 		sprintf(c,
@@ -31170,7 +31171,6 @@ namespace gl3d
 	}
 
 	//https://learnopengl.com/In-Practice/Debugging
-	//todo probably remove iostream when error api is ready
 	void GLAPIENTRY glDebugOutput(GLenum source,
 								GLenum type,
 								unsigned int id,
@@ -31179,6 +31179,8 @@ namespace gl3d
 								const char *message,
 								const void *userParam)
 	{
+		ErrorReporter *errorReporter = (ErrorReporter*)userParam;
+
 		// ignore non-significant error/warning codes
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204
 			|| id == 131222
@@ -31186,41 +31188,43 @@ namespace gl3d
 			) return;
 		if (type == GL_DEBUG_TYPE_PERFORMANCE) return;
 
-		std::cout << "---------------" << std::endl;
-		std::cout << "Debug message (" << id << "): " << message << std::endl;
+		std::stringstream error;
+
+		error << "---------------" << std::endl;
+		error << "Debug message (" << id << "): " << message << std::endl;
 	
 		switch (source)
 		{
-			case GL_DEBUG_SOURCE_API:             std::cout << "Source: API"; break;
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cout << "Source: Window System"; break;
-			case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler"; break;
-			case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cout << "Source: Third Party"; break;
-			case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
-			case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
-		} std::cout << std::endl;
+			case GL_DEBUG_SOURCE_API:             error << "Source: API"; break;
+			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   error << "Source: Window System"; break;
+			case GL_DEBUG_SOURCE_SHADER_COMPILER: error << "Source: Shader Compiler"; break;
+			case GL_DEBUG_SOURCE_THIRD_PARTY:     error << "Source: Third Party"; break;
+			case GL_DEBUG_SOURCE_APPLICATION:     error << "Source: Application"; break;
+			case GL_DEBUG_SOURCE_OTHER:           error << "Source: Other"; break;
+		} error << std::endl;
 	
 		switch (type)
 		{
-			case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
-			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour"; break;
-			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cout << "Type: Undefined Behaviour"; break;
-			case GL_DEBUG_TYPE_PORTABILITY:         std::cout << "Type: Portability"; break;
-			case GL_DEBUG_TYPE_PERFORMANCE:         std::cout << "Type: Performance"; break;
-			case GL_DEBUG_TYPE_MARKER:              std::cout << "Type: Marker"; break;
-			case GL_DEBUG_TYPE_PUSH_GROUP:          std::cout << "Type: Push Group"; break;
-			case GL_DEBUG_TYPE_POP_GROUP:           std::cout << "Type: Pop Group"; break;
-			case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
-		} std::cout << std::endl;
+			case GL_DEBUG_TYPE_ERROR:               error << "Type: Error"; break;
+			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: error << "Type: Deprecated Behaviour"; break;
+			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  error << "Type: Undefined Behaviour"; break;
+			case GL_DEBUG_TYPE_PORTABILITY:         error << "Type: Portability"; break;
+			case GL_DEBUG_TYPE_PERFORMANCE:         error << "Type: Performance"; break;
+			case GL_DEBUG_TYPE_MARKER:              error << "Type: Marker"; break;
+			case GL_DEBUG_TYPE_PUSH_GROUP:          error << "Type: Push Group"; break;
+			case GL_DEBUG_TYPE_POP_GROUP:           error << "Type: Pop Group"; break;
+			case GL_DEBUG_TYPE_OTHER:               error << "Type: Other"; break;
+		} error << std::endl;
 	
 		switch (severity)
 		{
-			case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
-			case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
-			case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
-			case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
-		} std::cout << std::endl;
-		std::cout << std::endl;
+			case GL_DEBUG_SEVERITY_HIGH:         error << "Severity: high"; break;
+			case GL_DEBUG_SEVERITY_MEDIUM:       error << "Severity: medium"; break;
+			case GL_DEBUG_SEVERITY_LOW:          error << "Severity: low"; break;
+			case GL_DEBUG_SEVERITY_NOTIFICATION: error << "Severity: notification"; break;
+		};
 
+		errorReporter->callErrorCallback(error.str());
 	}
 
 
@@ -31249,11 +31253,11 @@ void gl3d::ErrorReporter::callErrorCallback(std::string s)
 {
 	if (!s.empty() && currentErrorCallback != nullptr)
 	{
-		currentErrorCallback(s);
+		currentErrorCallback(s, userData);
 	}
 }
 
-void gl3d::defaultErrorCallback(std::string err)
+void gl3d::defaultErrorCallback(std::string err, void *userData)
 {
 	std::cout << err << "\n";
 }
@@ -31278,7 +31282,6 @@ void gl3d::defaultErrorCallback(std::string err)
 #include <glm\vec3.hpp>
 
 #include <algorithm>
-#include <stb_image.h>
 
 
 namespace gl3d
@@ -34274,7 +34277,7 @@ namespace gl3d
 		GLint uniform = glGetSubroutineUniformLocation(id, shaderType, name);
 		if (uniform == -1)
 		{
-			errorReporter.currentErrorCallback("uniform subroutine error " + std::string(name));
+			errorReporter.callErrorCallback("uniform subroutine error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -34284,7 +34287,7 @@ namespace gl3d
 		GLint uniform = glGetUniformLocation(id, name);
 		if (uniform == -1)
 		{
-			errorReporter.currentErrorCallback("uniform error " + std::string(name));
+			errorReporter.callErrorCallback("uniform error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -34294,7 +34297,7 @@ namespace gl3d
 		GLuint uniform = glGetUniformBlockIndex(id, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("uniform block error " + std::string(name));
+			errorReporter.callErrorCallback("uniform block error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -34304,7 +34307,7 @@ namespace gl3d
 		GLuint uniform = glGetSubroutineIndex(id, shaderType, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("uniform subroutine index error " + std::string(name));
+			errorReporter.callErrorCallback("uniform subroutine index error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -34314,7 +34317,7 @@ namespace gl3d
 		GLuint uniform = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, name);
 		if (uniform == GL_INVALID_INDEX)
 		{
-			errorReporter.currentErrorCallback("storage block index error " + std::string(name));
+			errorReporter.callErrorCallback("storage block index error " + std::string(name));
 		}
 		return uniform;
 	};
@@ -34686,7 +34689,6 @@ namespace gl3d
 
 
 
-#include <stb_image.h>
 
 #include <algorithm>
 
@@ -35827,7 +35829,6 @@ namespace gl3d
 
 
 #include <algorithm>
-#include <stb_image.h>
 #include <random>
 #include <string>
 
@@ -35888,10 +35889,11 @@ namespace gl3d
 		internal.pBRtextureMaker.init(errorReporter);
 	}
 
-	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback)
+	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback, void *userData)
 	{
 		auto a = errorReporter.currentErrorCallback;
 		errorReporter.currentErrorCallback = errorCallback;
+		errorReporter.userData = userData;
 		return a;
 	}
 

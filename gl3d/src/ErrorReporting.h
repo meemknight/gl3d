@@ -6,14 +6,14 @@
 namespace gl3d
 {
 
-	void defaultErrorCallback(std::string err);
+	void defaultErrorCallback(std::string err, void *userData);
 
 	using ErrorCallback_t = decltype(defaultErrorCallback);
-
 	
 	struct ErrorReporter
 	{
 		ErrorCallback_t *currentErrorCallback = defaultErrorCallback;
+		void *userData = nullptr;
 
 		void callErrorCallback(std::string s);
 	};

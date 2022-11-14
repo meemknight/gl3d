@@ -11,10 +11,12 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include <gl/glew.h>
+#include <stb_image.h>
+
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include <gl/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat3x3.hpp>
@@ -220,14 +222,14 @@ namespace gl3d
 namespace gl3d
 {
 
-	void defaultErrorCallback(std::string err);
+	void defaultErrorCallback(std::string err, void *userData);
 
 	using ErrorCallback_t = decltype(defaultErrorCallback);
-
 	
 	struct ErrorReporter
 	{
 		ErrorCallback_t *currentErrorCallback = defaultErrorCallback;
+		void *userData = nullptr;
 
 		void callErrorCallback(std::string s);
 	};
@@ -31441,7 +31443,6 @@ namespace tinygltf
 // This piece of code is not owned by gl3d
 
 #pragma once
-#include <iostream>
 
 
 
@@ -32035,17 +32036,17 @@ namespace objl
 
 			if (!warn.empty())
 			{
-				printf("Warn: %s\n", warn.c_str());
+				errorReporter.callErrorCallback("Warn: " + warn);
 			}
 
 			if (!err.empty())
 			{
-				printf("Err: %s\n", err.c_str());
+				errorReporter.callErrorCallback("Err: " + err);
 			}
 
 			if (!ret)
 			{
-				printf("Failed to parse glTF\n");
+				errorReporter.callErrorCallback("Failed to parse glTF\n");
 				return 0;
 			}
 
@@ -33700,7 +33701,6 @@ namespace objl
 ////////////////////////////////////////////////
 #pragma region Texture
 #pragma once
-#include <GL/glew.h>
 #include <glm/vec2.hpp>
 
 #include <string>
@@ -33769,7 +33769,6 @@ namespace gl3d
 ////////////////////////////////////////////////
 #pragma region Shader
 #pragma once
-#include "GL/glew.h"
 #include <glm\mat4x4.hpp>
 
 #include <vector>
@@ -34043,7 +34042,6 @@ namespace gl3d
 ////////////////////////////////////////////////
 #pragma region GraphicModel
 #pragma once
-#include "GL/glew.h"
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -34402,7 +34400,7 @@ namespace gl3d
 		
 		ErrorReporter errorReporter;
 
-		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback);
+		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback, void *userData);
 		ErrorCallback_t *getErrorCallback();
 
 	#pragma region material

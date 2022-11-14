@@ -1,7 +1,6 @@
 #include "gl3d.h"
 
 #include <algorithm>
-#include <stb_image.h>
 #include <random>
 #include <string>
 #include "json.h"
@@ -62,10 +61,11 @@ namespace gl3d
 		internal.pBRtextureMaker.init(errorReporter);
 	}
 
-	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback)
+	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback, void *userData)
 	{
 		auto a = errorReporter.currentErrorCallback;
 		errorReporter.currentErrorCallback = errorCallback;
+		errorReporter.userData = userData;
 		return a;
 	}
 

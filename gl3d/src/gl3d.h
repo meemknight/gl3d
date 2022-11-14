@@ -59,7 +59,7 @@ namespace gl3d
 		
 		ErrorReporter errorReporter;
 
-		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback);
+		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback, void *userData);
 		ErrorCallback_t *getErrorCallback();
 
 	#pragma region material

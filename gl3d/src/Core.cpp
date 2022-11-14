@@ -70,7 +70,6 @@ namespace gl3d
 	}
 
 	//https://learnopengl.com/In-Practice/Debugging
-	//todo probably remove iostream when error api is ready
 	void GLAPIENTRY glDebugOutput(GLenum source,
 								GLenum type,
 								unsigned int id,
