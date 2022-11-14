@@ -11,6 +11,8 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+
 #include <gl/glew.h>
 #include <stb_image.h>
 
@@ -34244,7 +34246,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData(ErrorReporter &errorReporter);
+		void createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer);
 
 		struct
 		{
@@ -34301,12 +34303,15 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter);
-		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format = 0);
-		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox);
-		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer);
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox,
+			GLuint frameBuffer);
 
-		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);
+		//, GLuint frameBuffer is the default fbo
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, GLuint frameBuffer,
+			float sampleQuality = 0.025, unsigned int specularSamples = 1024);
 
 		//void clearGpuData();
 		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,
@@ -34396,7 +34401,8 @@ namespace gl3d
 	struct Renderer3D
 
 	{
-		void init(int x, int y);
+		//size of the screen and the default frameBuffer
+		void init(int x, int y, GLuint frameBuffer);
 		
 		ErrorReporter errorReporter;
 
@@ -34405,14 +34411,14 @@ namespace gl3d
 
 	#pragma region material
 		
-		Material createMaterial(glm::vec4 kd = glm::vec4(1), 
+		Material createMaterial(GLuint frameBuffer, glm::vec4 kd = glm::vec4(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
 			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
 
-		Material createMaterial(Material m);
+		Material createMaterial(Material m, GLuint frameBuffer);
 
-		std::vector<Material> loadMaterial(std::string file);
+		std::vector<Material> loadMaterial(std::string file, GLuint frameBuffer);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -34449,19 +34455,19 @@ namespace gl3d
 		Texture createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
-			Texture& ambientOcclusion);
+			Texture& ambientOcclusion, GLuint frameBuffer);
 		void deletePBRTexture(PBRTexture &t);
 
 	#pragma endregion
 
 	#pragma region skyBox
 
-		SkyBox loadSkyBox(const char* names[6]);
+		SkyBox loadSkyBox(const char* names[6], GLuint frameBuffer);
 		SkyBox loadSkyBox(const char* name, int format = 0);
-		SkyBox loadHDRSkyBox(const char* name);
+		SkyBox loadHDRSkyBox(const char* name, GLuint frameBuffer);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, GLuint frameBuffer);
 
 	#pragma endregion
 
@@ -34469,7 +34475,7 @@ namespace gl3d
 
 		//todo implement stuff here
 
-		Model loadModel(std::string path, float scale = 1);
+		Model loadModel(std::string path, GLuint frameBuffer, float scale = 1);
 		bool isModel(Model& m);
 		void deleteModel(Model &m);
 
@@ -34569,7 +34575,7 @@ namespace gl3d
 		Entity createEntity(Model m, Transform transform = {}, 
 			bool staticGeometry = 1, bool visible = 1, bool castShadows = 1);
 
-		Entity duplicateEntity(Entity &e);
+		Entity duplicateEntity(Entity &e, GLuint frameBuffer);
 
 		void setEntityModel(Entity& e, Model m);
 		void clearEntityModel(Entity& e);
@@ -34607,15 +34613,15 @@ namespace gl3d
 
 		int getEntityMeshesCount(Entity& e);
 		MaterialValues getEntityMeshMaterialValues(Entity& e, int meshIndex);
-		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat);
+		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat, GLuint frameBuffer);
 
 		std::string getEntityMeshMaterialName(Entity& e, int meshIndex);
-		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name);
+		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name, GLuint frameBuffer);
 		
 		void setEntityMeshMaterial(Entity& e, int meshIndex, Material mat);
 		
 		TextureDataForMaterial getEntityMeshMaterialTextures(Entity& e, int meshIndex);
-		void setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture);
+		void setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture, GLuint frameBuffer);
 
 	#pragma endregion
 
@@ -34733,7 +34739,7 @@ namespace gl3d
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
-					GLuint quadVAO, int &RMA_loadedTextures);
+					GLuint quadVAO, int &RMA_loadedTextures, GLuint frameBuffer);
 
 			}pBRtextureMaker;
 
@@ -34813,7 +34819,7 @@ namespace gl3d
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
-					void create(int w, int h, ErrorReporter &errorReporter);
+					void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
 					void resize(int w, int h);
 
 					glm::ivec2 currentDimensions = {};
@@ -34853,7 +34859,7 @@ namespace gl3d
 
 			struct GBuffer
 			{
-				void create(int w, int h, ErrorReporter &errorReporter);
+				void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
 				void resize(int w, int h);
 
 				enum bufferTargers
@@ -34954,7 +34960,7 @@ namespace gl3d
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
-			void create(int w, int h, ErrorReporter &errorReporter);
+			void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
@@ -35016,7 +35022,7 @@ namespace gl3d
 
 		struct DirectionalShadows
 		{
-			void create();
+			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
 
 			constexpr static int CASCADES = 3;
@@ -35037,7 +35043,7 @@ namespace gl3d
 
 		struct SpotShadows
 		{
-			void create();
+			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
 			int textureCount = 0;
 
@@ -35053,7 +35059,7 @@ namespace gl3d
 
 		struct PointShadows
 		{
-			void create();
+			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
 			int textureCount = 0;
 
@@ -35071,7 +35077,7 @@ namespace gl3d
 		//todo remove or implement properly
 		struct RenderDepthMap
 		{
-			void create(ErrorReporter &errorReporter);
+			void create(ErrorReporter &errorReporter, GLuint frameBuffer);
 
 			Shader shader;
 			GLint u_depth = -1;
@@ -35080,9 +35086,9 @@ namespace gl3d
 			GLuint texture;
 
 		}renderDepthMap;
-		void renderADepthMap(GLuint texture);
+		void renderADepthMap(GLuint texture, GLuint frameBuffer);
 
-		void render(float deltaTime);
+		void render(float deltaTime, GLuint frameBuffer = 0);
 		void updateWindowMetrics(int x, int y);
 
 		bool frustumCulling = 1;

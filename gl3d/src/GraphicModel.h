@@ -201,7 +201,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData(ErrorReporter &errorReporter);
+		void createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer);
 
 		struct
 		{
@@ -258,12 +258,15 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter);
-		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format = 0);
-		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox);
-		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer);
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox,
+			GLuint frameBuffer);
 
-		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality = 0.025, unsigned int specularSamples = 1024);
+		//, GLuint frameBuffer is the default fbo
+		void createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, GLuint frameBuffer,
+			float sampleQuality = 0.025, unsigned int specularSamples = 1024);
 
 		//void clearGpuData();
 		void draw(const glm::mat4& viewProjMat, SkyBox& skyBox, float exposure,

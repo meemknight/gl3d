@@ -102,7 +102,7 @@ int main()
 #endif
 #pragma endregion
 
-	renderer.init(w, h);
+	renderer.init(w, h, 0);
 
 	{
 		std::cout << renderer.saveSettingsToFileData() << "\n";
@@ -147,7 +147,7 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.loadSkyBox(names, 0);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -407,7 +407,7 @@ int main()
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 1.f);
-	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf");
+	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf", 0);
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 1.f);
@@ -417,7 +417,7 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb");
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
 	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
-	auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj");
+	auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0);
 	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb", 1.f);
@@ -425,7 +425,7 @@ int main()
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj");
+	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj", 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj", 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
@@ -1243,7 +1243,7 @@ int main()
 					ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
 
 					renderer.setEntityMeshMaterialValues(
-						models[itemCurrent], subItemCurent, materialData);
+						models[itemCurrent], subItemCurent, materialData, 0);
 
 					auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
 						{

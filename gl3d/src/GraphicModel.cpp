@@ -522,7 +522,7 @@ namespace gl3d
 		*this = GraphicModel{};
 	}
 
-	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter)
+	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter);
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox", errorReporter);
@@ -570,11 +570,11 @@ namespace gl3d
 
 		glGenFramebuffers(1, &captureFBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 		skyBox = {};
 
@@ -615,10 +615,11 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		
-		createConvolutedAndPrefilteredTextureData(skyBox);
+		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, int format)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter,
+		GLuint frameBuffer, int format)
 	{
 		skyBox = {};
 
@@ -778,11 +779,11 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	
-		createConvolutedAndPrefilteredTextureData(skyBox);
+		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox)
+	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
 
@@ -855,7 +856,7 @@ namespace gl3d
 				}
 
 				glBindVertexArray(0);
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 			}
 
@@ -865,10 +866,11 @@ namespace gl3d
 
 		glDeleteTextures(1, &hdrTexture);
 
-		createConvolutedAndPrefilteredTextureData(skyBox);
+		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox)
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g,
+		SkyBox& skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
 		constexpr int skyBoxSize = 128;
@@ -918,7 +920,7 @@ namespace gl3d
 				}
 
 				glBindVertexArray(0);
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 			}
 
@@ -930,7 +932,8 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox, float sampleQuality, unsigned int specularSamples)
+	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox
+		, GLuint frameBuffer, float sampleQuality, unsigned int specularSamples)
 	{
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -1041,7 +1044,7 @@ namespace gl3d
 		glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 		glBindVertexArray(0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		glViewport(viewPort[0], viewPort[1], viewPort[2], viewPort[3]);
 
 		//texture = convolutedTexture; //visualize convolutex texture

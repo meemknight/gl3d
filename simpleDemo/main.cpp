@@ -66,8 +66,7 @@ int main()
 #pragma endregion
 
 	gl3d::Renderer3D renderer;
-	renderer.init(w, h);
-
+	renderer.init(w, h, 0);
 
 	const char* names[6] =
 	{ "resources/skyBoxes/ocean/right.jpg",
@@ -77,14 +76,14 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.loadSkyBox(names, 0);
 
-	auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl");
+	auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
 
 
-	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj");
-	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb");
-	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
+	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj", 0);
+	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", 0);
+	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl", 0);
 	
 
 	gl3d::Transform transform{};

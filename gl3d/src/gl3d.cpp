@@ -15,7 +15,7 @@ namespace gl3d
 {
 	
 
-	void Renderer3D::init(int x, int y)
+	void Renderer3D::init(int x, int y, GLuint frameBuffer)
 	{
 		internal.w = x; internal.h = y;
 		internal.adaptiveW = x;
@@ -27,7 +27,7 @@ namespace gl3d
 
 		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter));
 		vao.createVAOs();
-		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter);
+		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, frameBuffer);
 
 
 		internal.showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
@@ -48,13 +48,13 @@ namespace gl3d
 		//};
 		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
-		internal.gBuffer.create(x, y, errorReporter);
-		internal.ssao.create(x, y, errorReporter);
-		postProcess.create(x, y, errorReporter);
-		directionalShadows.create();
-		spotShadows.create();
-		pointShadows.create();
-		renderDepthMap.create(errorReporter);
+		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
+		internal.ssao.create(x, y, errorReporter, frameBuffer);
+		postProcess.create(x, y, errorReporter, frameBuffer);
+		directionalShadows.create(frameBuffer);
+		spotShadows.create(frameBuffer);
+		pointShadows.create(frameBuffer);
+		renderDepthMap.create(errorReporter, frameBuffer);
 		antiAlias.create(x, y, errorReporter);
 		adaptiveResolution.create(x, y);
 
@@ -90,7 +90,7 @@ namespace gl3d
 
 	}
 	
-	Material Renderer3D::createMaterial(glm::vec4 kd,
+	Material Renderer3D::createMaterial(GLuint frameBuffer, glm::vec4 kd,
 		float roughness, float metallic, float ao, std::string name,
 		gl3d::Texture albedoTexture, gl3d::Texture normalTexture, gl3d::Texture roughnessTexture, gl3d::Texture metallicTexture,
 		gl3d::Texture occlusionTexture, gl3d::Texture emmisiveTexture)
@@ -111,7 +111,8 @@ namespace gl3d
 		textureData.emissiveTexture = emmisiveTexture;
 
 
-		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture);
+		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture,
+			frameBuffer);
 
 
 		internal.materialIndexes.push_back(id);
@@ -125,9 +126,9 @@ namespace gl3d
 
 	}
 
-	Material Renderer3D::createMaterial(Material m)
+	Material Renderer3D::createMaterial(Material m, GLuint frameBuffer)
 	{
-		auto newM = createMaterial();
+		auto newM = createMaterial(frameBuffer);
 		copyMaterialData(newM, m);
 
 		return newM;
@@ -139,9 +140,10 @@ namespace gl3d
 	}
 
 	//this is the function that loads a material from parsed data
-	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, objl::Material &mat, const std::string &path)
+	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, 
+		objl::Material &mat, const std::string &path, GLuint frameBuffer)
 	{
-		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
+		auto m = renderer.createMaterial(frameBuffer, mat.Kd, mat.roughness,
 			mat.metallic, mat.ao, mat.name);
 
 		stbi_set_flip_vertically_on_load(true);
@@ -307,7 +309,7 @@ namespace gl3d
 
 					auto t = renderer.internal.pBRtextureMaker.createRMAtexture(
 						roughness, metallic, ambientOcclusion, renderer.internal.lightShader.quadDrawer.quadVAO,
-						textureData.pbrTexture.RMA_loadedTextures);
+						textureData.pbrTexture.RMA_loadedTextures, frameBuffer);
 
 					if (textureData.pbrTexture.RMA_loadedTextures != 0)
 					{
@@ -463,7 +465,7 @@ namespace gl3d
 		return m;
 	}
 
-	std::vector<Material> Renderer3D::loadMaterial(std::string file)
+	std::vector<Material> Renderer3D::loadMaterial(std::string file, GLuint frameBuffer)
 	{
 
 		objl::Loader loader;
@@ -488,7 +490,7 @@ namespace gl3d
 		for (auto &m : loader.LoadedMaterials)
 		{
 
-			auto material = createMaterialFromLoadedData(*this, m, path);
+			auto material = createMaterialFromLoadedData(*this, m, path, frameBuffer);
 			ret.push_back(material);
 
 		}
@@ -777,7 +779,7 @@ namespace gl3d
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
-		Texture& ambientOcclusion)
+		Texture& ambientOcclusion, GLuint frameBuffer)
 	{
 
 		PBRTexture ret = {};
@@ -785,7 +787,8 @@ namespace gl3d
 		auto t = internal.pBRtextureMaker.createRMAtexture(
 			{getTextureOpenglId(roughness)},
 			{ getTextureOpenglId(metallic) },
-			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures);
+			{ getTextureOpenglId(ambientOcclusion) }, internal.lightShader.quadDrawer.quadVAO, ret.RMA_loadedTextures, 
+			frameBuffer);
 
 		ret.texture = this->createIntenralTexture(t, 0, 0);
 
@@ -798,7 +801,7 @@ namespace gl3d
 		t.RMA_loadedTextures = 0;
 	}
 
-	Model Renderer3D::loadModel(std::string path, float scale)
+	Model Renderer3D::loadModel(std::string path, GLuint frameBuffer, float scale)
 	{
 
 		gl3d::LoadedModelData model(path.c_str(), errorReporter, scale);
@@ -822,7 +825,7 @@ namespace gl3d
 			{
 				auto &mat = model.loader.LoadedMaterials[i];
 				
-				auto m = createMaterialFromLoadedData(*this, mat, model.path);
+				auto m = createMaterialFromLoadedData(*this, mat, model.path, frameBuffer);
 
 				returnModel.createdMaterials.push_back(m);
 			}
@@ -890,7 +893,7 @@ namespace gl3d
 				}else
 				{
 					//if no material loaded for this object create a new default one
-					gm.material = createMaterial(glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
+					gm.material = createMaterial(frameBuffer, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
 				}
 				
 				gm.ownMaterial = true;
@@ -1641,7 +1644,7 @@ namespace gl3d
 		return e;
 	}
 
-	Entity Renderer3D::duplicateEntity(Entity& e)
+	Entity Renderer3D::duplicateEntity(Entity& e, GLuint frameBuffer)
 	{
 		int oldIndex = internal.getEntityIndex(e);
 
@@ -1674,7 +1677,7 @@ namespace gl3d
 
 			if (model.ownMaterial)
 			{
-				model.material = createMaterial();
+				model.material = createMaterial(frameBuffer);
 				this->copyMaterialData(model.material, i.material);
 			}
 
@@ -1882,7 +1885,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat)
+	void Renderer3D::setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat, GLuint frameBuffer)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return ; } //warn or sthing
@@ -1903,7 +1906,7 @@ namespace gl3d
 				}else
 				if (mat != data)
 				{
-					Material newMat = this->createMaterial(mat.kd, mat.roughness,
+					Material newMat = this->createMaterial(frameBuffer, mat.kd, mat.roughness,
 						mat.metallic, mat.ao, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 
@@ -1951,7 +1954,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string& name)
+	void Renderer3D::setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string& name, GLuint frameBuffer)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
@@ -1973,7 +1976,7 @@ namespace gl3d
 				else
 				if (name != oldName) //copy to new material
 				{
-					Material newMat = this->createMaterial(data.kd, data.roughness,
+					Material newMat = this->createMaterial(frameBuffer, data.kd, data.roughness,
 						data.metallic, data.ao, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = textures;
@@ -2046,7 +2049,7 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture)
+	void Renderer3D::setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture, GLuint frameBuffer)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
@@ -2068,7 +2071,7 @@ namespace gl3d
 				else
 				if (texture != oldTextures) //copy to new material
 				{
-					Material newMat = this->createMaterial(data.kd, data.roughness,
+					Material newMat = this->createMaterial(frameBuffer, data.kd, data.roughness,
 						data.metallic, data.ao, oldName);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = texture; //new textures
@@ -2898,7 +2901,7 @@ namespace gl3d
 	};
 
 
-	void Renderer3D::render(float deltaTime)
+	void Renderer3D::render(float deltaTime, GLuint frameBuffer)
 	{
 	
 		if (internal.w == 0 || internal.h == 0)
@@ -2955,7 +2958,7 @@ namespace gl3d
 		#pragma endregion
 
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		glStencilMask(0xFF);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDepthFunc(GL_LESS);
@@ -4818,7 +4821,7 @@ namespace gl3d
 		}
 		else
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		}
 
 		glUseProgram(postProcess.postProcessShader.id);
@@ -4921,7 +4924,7 @@ namespace gl3d
 		}
 
 		glViewport(0, 0, internal.w, internal.h);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
@@ -4963,13 +4966,13 @@ namespace gl3d
 		glBindVertexArray(0);
 
 		//glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
-		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer); // write to default framebuffer
 		//glBlitFramebuffer(
 		//  0, 0, adaptiveW, adaptiveH, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
 		//);
 
 		
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 	#pragma endregion
 
 
@@ -5010,7 +5013,7 @@ namespace gl3d
 	}
 
 	//todo remove
-	void Renderer3D::renderADepthMap(GLuint texture)
+	void Renderer3D::renderADepthMap(GLuint texture, GLuint frameBuffer)
 	{
 		glDisable(GL_DEPTH_TEST);
 
@@ -5034,16 +5037,16 @@ namespace gl3d
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 		glBindVertexArray(0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		
 		glEnable(GL_DEPTH_TEST);
 
 	}
 
-	SkyBox Renderer3D::loadSkyBox(const char *names[6])
+	SkyBox Renderer3D::loadSkyBox(const char *names[6], GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter);
+		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, frameBuffer);
 		return skyBox;
 	}
 
@@ -5054,10 +5057,10 @@ namespace gl3d
 		return skyBox;
 	}
 
-	SkyBox Renderer3D::loadHDRSkyBox(const char *name)
+	SkyBox Renderer3D::loadHDRSkyBox(const char *name, GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, skyBox);
+		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, skyBox, frameBuffer);
 		return skyBox;
 	}
 
@@ -5066,10 +5069,10 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox);
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox, frameBuffer);
 		return skyBox;
 	}
 
@@ -5078,7 +5081,7 @@ namespace gl3d
 		return a + f * (b - a);
 	}
 
-	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter)
+	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
 		std::uniform_real_distribution<float> randomFloatsSmaller(0.1f, 0.9f); //avoid ssao artefacts
@@ -5173,7 +5176,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColorBuffer, 0);
 		u_ssaoInput = getUniform(blurShader.id, "u_ssaoInput", errorReporter);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 		resize(w, h);
 	}
@@ -5194,7 +5197,7 @@ namespace gl3d
 	
 	}
 
-	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter)
+	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -5286,7 +5289,7 @@ namespace gl3d
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bluredColorBuffer[i], 0);
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 			
 		resize(w, h);
 	}
@@ -5388,7 +5391,7 @@ namespace gl3d
 
 	//todo use the max w h to create it
 	GLuint Renderer3D::InternalStruct::PBRtextureMaker::createRMAtexture(GpuTexture roughness, 
-		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO, int &RMA_loadedTextures)
+		GpuTexture metallic, GpuTexture ambientOcclusion, GLuint quadVAO, int &RMA_loadedTextures, GLuint frameBuffer)
 	{
 		bool roughnessLoaded = (roughness.id != 0);
 		bool metallicLoaded = (metallic.id != 0);
@@ -5459,7 +5462,7 @@ namespace gl3d
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindVertexArray(0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 		return texture;
 	}
@@ -5487,7 +5490,7 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::DirectionalShadows::create()
+	void Renderer3D::DirectionalShadows::create(GLuint frameBuffer)
 	{
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -5521,7 +5524,7 @@ namespace gl3d
 			glReadBuffer(GL_NONE);
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 	}
 
@@ -5610,7 +5613,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter)
+	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -5634,11 +5637,11 @@ namespace gl3d
 			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter);
 		u_depth = getUniform(shader.id, "u_depth", errorReporter);
 		
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 	}
 
-	void Renderer3D::PointShadows::create()
+	void Renderer3D::PointShadows::create(GLuint frameBuffer)
 	{
 
 		glGenTextures(1, &shadowTextures);
@@ -5671,7 +5674,7 @@ namespace gl3d
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 	}
 
 	void Renderer3D::PointShadows::allocateTextures(int count)
@@ -5703,7 +5706,7 @@ namespace gl3d
 	}
 
 
-	void Renderer3D::SpotShadows::create()
+	void Renderer3D::SpotShadows::create(GLuint frameBuffer)
 	{
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -5737,7 +5740,7 @@ namespace gl3d
 		glReadBuffer(GL_NONE);
 
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 	}
 
 	void Renderer3D::SpotShadows::allocateTextures(int count)
@@ -5769,7 +5772,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::InternalStruct::GBuffer::create(int w, int h, ErrorReporter &errorReporter)
+	void Renderer3D::InternalStruct::GBuffer::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
 	{
 
 		glGenFramebuffers(1, &gBuffer);
@@ -5858,7 +5861,7 @@ namespace gl3d
 			errorReporter.callErrorCallback("Gbuffer failed");
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 		resize(w, h);
 	}
