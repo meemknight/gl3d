@@ -34,6 +34,8 @@ extern "C"
 int main()
 {
 
+	//todo remove fstream 
+
 #pragma region init
 
 	if (!glfwInit())
@@ -110,7 +112,8 @@ int main()
 
 #pragma region shader
 	gl3d::Shader shader;
-	shader.loadShaderProgramFromFile("shaders/color.vert", "shaders/color.frag", renderer.errorReporter);
+	shader.loadShaderProgramFromFile("shaders/color.vert", "shaders/color.frag", 
+		renderer.errorReporter, renderer.fileOpener);
 	shader.bind();
 	GLint location = glGetUniformLocation(shader.id, "u_transform");
 	

@@ -59,6 +59,7 @@ namespace gl3d
 		void init(int x, int y, GLuint frameBuffer);
 		
 		ErrorReporter errorReporter;
+		FileOpener fileOpener;
 
 		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback, void *userData);
 		ErrorCallback_t *getErrorCallback();
@@ -389,7 +390,7 @@ namespace gl3d
 				Shader shader;
 				GLuint fbo;
 
-				void init(ErrorReporter &errorReporter);
+				void init(ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
@@ -473,7 +474,7 @@ namespace gl3d
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
-					void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
+					void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 					void resize(int w, int h);
 
 					glm::ivec2 currentDimensions = {};
@@ -614,7 +615,7 @@ namespace gl3d
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
-			void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
@@ -662,7 +663,7 @@ namespace gl3d
 		{
 			Shader shader;
 			Shader noAAshader;
-			void create(int w, int h, ErrorReporter &errorReporter);
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
@@ -731,7 +732,7 @@ namespace gl3d
 		//todo remove or implement properly
 		struct RenderDepthMap
 		{
-			void create(ErrorReporter &errorReporter, GLuint frameBuffer);
+			void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 
 			Shader shader;
 			GLint u_depth = -1;

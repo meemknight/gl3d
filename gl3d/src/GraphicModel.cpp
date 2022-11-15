@@ -522,31 +522,31 @@ namespace gl3d
 		*this = GraphicModel{};
 	}
 
-	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
-		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter);
+		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter, fileOpener);
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox", errorReporter);
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection", errorReporter);
 		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient", errorReporter);
 		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent", errorReporter);
 		
-		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag", errorReporter);
+		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag", errorReporter, fileOpener);
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap", errorReporter);
 		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection", errorReporter);
 
-		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag", errorReporter);
+		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag", errorReporter, fileOpener);
 		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap", errorReporter);
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection", errorReporter);
 		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality", errorReporter);
 
-		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag", errorReporter);
+		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag", errorReporter, fileOpener);
 		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection", errorReporter);
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap", errorReporter);
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness", errorReporter);
 		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount", errorReporter);
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
-			"shaders/skyBox/atmosphericScattering.frag", errorReporter);
+			"shaders/skyBox/atmosphericScattering.frag", errorReporter, fileOpener);
 		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos", errorReporter);
 		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g", errorReporter);
 		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1", errorReporter);

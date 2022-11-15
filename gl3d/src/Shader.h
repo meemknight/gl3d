@@ -32,9 +32,9 @@ namespace gl3d
 	{
 		GLuint id = 0;
 
-		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter);
+		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter, FileOpener &fileOpener);
 		bool loadShaderProgramFromFile(const char *vertexShader, 
-			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter);
+			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 		void bind();
 
@@ -46,7 +46,7 @@ namespace gl3d
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		std::string create(ErrorReporter &errorReporter);
+		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 		void getSubroutines(ErrorReporter &errorReporter);
 

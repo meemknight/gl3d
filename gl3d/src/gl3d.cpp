@@ -25,13 +25,13 @@ namespace gl3d
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
-		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter));
+		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener));
 		vao.createVAOs();
-		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, fileOpener, frameBuffer);
 
 
 		internal.showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
-		"shaders/showNormals.geom", "shaders/showNormals.frag", errorReporter);
+		"shaders/showNormals.geom", "shaders/showNormals.frag", errorReporter, fileOpener);
 
 		//todo error report here + make this work :)))
 		internal.showNormalsProgram.modelTransformLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_modelTransform");
@@ -49,16 +49,16 @@ namespace gl3d
 		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
 		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
-		internal.ssao.create(x, y, errorReporter, frameBuffer);
-		postProcess.create(x, y, errorReporter, frameBuffer);
+		internal.ssao.create(x, y, errorReporter, fileOpener, frameBuffer);
+		postProcess.create(x, y, errorReporter, fileOpener, frameBuffer);
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
-		renderDepthMap.create(errorReporter, frameBuffer);
-		antiAlias.create(x, y, errorReporter);
+		renderDepthMap.create(errorReporter, fileOpener, frameBuffer);
+		antiAlias.create(x, y, errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 
-		internal.pBRtextureMaker.init(errorReporter);
+		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
 
 	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback, void *userData)
@@ -5081,7 +5081,8 @@ namespace gl3d
 		return a + f * (b - a);
 	}
 
-	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter,
+		FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
 		std::uniform_real_distribution<float> randomFloatsSmaller(0.1f, 0.9f); //avoid ssao artefacts
@@ -5141,7 +5142,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
 
 
-		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/ssao.frag", errorReporter);
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/ssao.frag", errorReporter, fileOpener);
 
 
 		u_projection = getUniform(shader.id, "u_projection", errorReporter);
@@ -5162,7 +5163,7 @@ namespace gl3d
 		glUniformBlockBinding(shader.id, u_SSAODATA, internal::SSAODataBlockBinding);
 		
 		//blur
-		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag", errorReporter);
+		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag", errorReporter, fileOpener);
 		
 		glGenFramebuffers(1, &blurBuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer);
@@ -5197,7 +5198,7 @@ namespace gl3d
 	
 	}
 
-	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -5227,7 +5228,8 @@ namespace gl3d
 
 
 		
-		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag", errorReporter);
+		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag", 
+			errorReporter, fileOpener);
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture", errorReporter);
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture", errorReporter);
 		u_bloomNotBluredTexture = getUniform(postProcessShader.id, "u_bloomNotBluredTexture", errorReporter);
@@ -5239,30 +5241,30 @@ namespace gl3d
 		u_ssao = getUniform(postProcessShader.id, "u_ssao", errorReporter);
 
 
-		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag", errorReporter);
+		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag", errorReporter, fileOpener);
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput", errorReporter);
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal", errorReporter);
 		u_mip = getUniform(gausianBLurShader.id, "u_mip", errorReporter);
 		u_texel = getUniform(gausianBLurShader.id, "u_texel", errorReporter);
 
-		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag", errorReporter);
+		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag", errorReporter, fileOpener);
 		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure", errorReporter);
 		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture", errorReporter);
 		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold", errorReporter);
 
-		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag", errorReporter);
+		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag", errorReporter, fileOpener);
 		addMips.u_mip = getUniform(addMips.shader.id, "u_mip", errorReporter);
 		addMips.u_texture= getUniform(addMips.shader.id, "u_texture", errorReporter);
 
-		addMipsBlur.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMipsBlur.frag", errorReporter);
+		addMipsBlur.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMipsBlur.frag", errorReporter, fileOpener);
 		addMipsBlur.u_mip = getUniform(addMipsBlur.shader.id, "u_mip", errorReporter);
 		addMipsBlur.u_texture = getUniform(addMipsBlur.shader.id, "u_texture", errorReporter);
 
-		filterDown.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filterDown.frag", errorReporter);
+		filterDown.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filterDown.frag", errorReporter, fileOpener);
 		filterDown.u_mip = getUniform(filterDown.shader.id, "u_mip", errorReporter);
 		filterDown.u_texture = getUniform(filterDown.shader.id, "u_texture", errorReporter);
 
-		chromaticAberation.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/chromaticAberation.frag", errorReporter);
+		chromaticAberation.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/chromaticAberation.frag", errorReporter, fileOpener);
 		chromaticAberation.u_finalColorTexture = getUniform(chromaticAberation.shader.id, "u_finalColorTexture", errorReporter);
 		chromaticAberation.u_windowSize = getUniform(chromaticAberation.shader.id, "u_windowSize", errorReporter);
 		chromaticAberation.u_strength = getUniform(chromaticAberation.shader.id, "u_strength", errorReporter);
@@ -5357,9 +5359,9 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::InternalStruct::PBRtextureMaker::init(ErrorReporter &errorReporter)
+	void Renderer3D::InternalStruct::PBRtextureMaker::init(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
-		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag", errorReporter);
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag", errorReporter, fileOpener);
 		glGenFramebuffers(1, &fbo);
 	}
 
@@ -5589,11 +5591,11 @@ namespace gl3d
 	}
 
 
-	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter)
+	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
-			"shaders/aa/fxaa.frag", errorReporter);
+			"shaders/aa/fxaa.frag", errorReporter, fileOpener);
 		u_texture = getUniform(shader.id, "u_texture", errorReporter);
 
 		u_FXAAData = glGetUniformBlockIndex(shader.id, "u_FXAAData");
@@ -5606,14 +5608,14 @@ namespace gl3d
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 		noAAshader.loadShaderProgramFromFile("shaders/drawQuads.vert",
-			"shaders/aa/noaa.frag", errorReporter);
+			"shaders/aa/noaa.frag", errorReporter, fileOpener);
 		noAAu_texture = getUniform(noAAshader.id, "u_texture", errorReporter);
 
 
 
 	}
 
-	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -5634,7 +5636,7 @@ namespace gl3d
 		}
 
 		shader.loadShaderProgramFromFile
-			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter);
+			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter, fileOpener);
 		u_depth = getUniform(shader.id, "u_depth", errorReporter);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);

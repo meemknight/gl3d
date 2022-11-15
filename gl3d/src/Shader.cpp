@@ -89,46 +89,31 @@ namespace gl3d
 
 #else
 
-	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter)
+	GLint createShaderFromFile(const char* name, GLenum shaderType, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
-		std::ifstream file;
-		file.open(source);
+		bool err = 0;
+		auto fileContent = fileOpener(name, err);
 
-		if (!file.is_open())
+		if (err)
 		{
-			errorReporter.callErrorCallback(std::string("Error openning file: ") + source);
+			errorReporter.callErrorCallback(std::string("Error openning file: ") + name);
 			return 0;
 		}
-
-		GLint size = 0;
-		file.seekg(0, file.end);
-		size = file.tellg();
-		file.seekg(0, file.beg);
-
-		char* fileContent = new char[size+1] {};
-
-		file.read(fileContent, size);
-
-
-		file.close();
-
-		auto rez = createShaderFromData(fileContent, shaderType, errorReporter);
-
-		delete[] fileContent;
+		auto rez = createShaderFromData(fileContent.c_str(), shaderType, errorReporter);
 
 		return rez;
-
 	}
 
 #endif
 
 
 
-	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter)
+	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader,
+		ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
-		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter);
-		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter);
+		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter, fileOpener);
+		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter, fileOpener);
 
 
 		if (vertexId == 0 || fragmentId == 0)
@@ -175,12 +160,12 @@ namespace gl3d
 	}
 
 	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *geometryShader, const char *fragmentShader,
-		ErrorReporter &errorReporter)
+		ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
-		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter);
-		auto geometryId = createShaderFromFile(geometryShader, GL_GEOMETRY_SHADER, errorReporter);
-		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter);
+		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter, fileOpener);
+		auto geometryId = createShaderFromFile(geometryShader, GL_GEOMETRY_SHADER, errorReporter, fileOpener);
+		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter, fileOpener);
 
 		if (vertexId == 0 || fragmentId == 0 || geometryId == 0)
 		{
@@ -290,7 +275,7 @@ namespace gl3d
 
 
 	//todo move
-	std::string LightShader::create(ErrorReporter &errorReporter)
+	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		std::string error = "";
 
@@ -305,7 +290,7 @@ namespace gl3d
 
 		if (!error.empty()) { error += "\n"; };
 
-		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag", errorReporter);
+		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag", errorReporter, fileOpener);
 		prePass.u_transform = getUniform(prePass.shader.id, "u_transform", errorReporter);
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler", errorReporter);
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture", errorReporter);
@@ -315,7 +300,7 @@ namespace gl3d
 
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
-			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag", errorReporter);
+			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag", errorReporter, fileOpener);
 		pointShadowShader.u_albedoSampler = getUniform(pointShadowShader.shader.id, "u_albedoSampler", errorReporter);
 		pointShadowShader.u_farPlane = getUniform(pointShadowShader.shader.id, "u_farPlane", errorReporter);
 		pointShadowShader.u_hasTexture = getUniform(pointShadowShader.shader.id, "u_hasTexture", errorReporter);
@@ -329,7 +314,8 @@ namespace gl3d
 
 
 
-		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag", errorReporter);
+		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert",
+			"shaders/deferred/geometryPass.frag", errorReporter, fileOpener);
 		//geometryPassShader.bind();
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform", errorReporter);
@@ -354,7 +340,8 @@ namespace gl3d
 		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 		
 
-		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag", errorReporter);
+		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag",
+			errorReporter, fileOpener);
 		lightingPassShader.bind();
 
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals", errorReporter);
