@@ -1,5 +1,5 @@
 #include "Shader.h"
-#include <fstream>
+#include "Core.h"
 #include <unordered_map>
 
 namespace gl3d
@@ -63,7 +63,7 @@ namespace gl3d
 
 	};
 	
-	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter)
+	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		std::string newFileName;
 		std::string strSource = source;
@@ -280,7 +280,7 @@ namespace gl3d
 		std::string error = "";
 
 	#pragma region brdf texture
-		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", TextureLoadQuality::leastPossible, 3);
+		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", fileOpener, TextureLoadQuality::leastPossible, 3);
 		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

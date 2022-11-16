@@ -13,9 +13,8 @@
 
 // String - STD String Library
 #include <string>
+#include <sstream>
 
-// fStream - STD File I/O Library
-#include <fstream>
 
 // Math.h - STD math Library
 #include <math.h>
@@ -518,6 +517,24 @@ namespace objl
 		}
 	}
 
+	inline bool customGLTFReadWholeFile(std::vector<unsigned char> *out, std::string *err,
+		const std::string &filepath, void *userData)
+	{
+		gl3d::FileOpener *fileOpener = (gl3d::FileOpener *)userData;
+
+		bool couldNotOpen = false;
+		auto rez = fileOpener->binary(filepath.c_str(), couldNotOpen);
+
+		if (couldNotOpen)
+		{
+			*err = "Error, could not open file: " + filepath;
+			return 0;
+		}
+		
+		out->assign(rez.begin(), rez.end());
+		return 1;
+	}
+
 	// Class: Loader
 	//
 	// Description: The OBJ Model Loader
@@ -533,23 +550,23 @@ namespace objl
 		//
 		// If the file is unable to be found
 		// or unable to be loaded return false
-		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, bool *outShouldFlipUV = 0)
+		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, gl3d::FileOpener &fileOpener, bool *outShouldFlipUV = 0)
 		{
 			if (outShouldFlipUV) { *outShouldFlipUV = 0; }
 
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) == ".obj")
 			{
-				return loadObj(Path, reporter);
+				return loadObj(Path, reporter, fileOpener);
 			}
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, reporter, 0);
+				return loadGltf(Path, reporter, fileOpener, 0);
 			}else if (Path.substr(Path.size() - 4, 4) == ".glb")
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, reporter, 1);
+				return loadGltf(Path, reporter, fileOpener, 1);
 			}
 			else
 			{
@@ -571,11 +588,21 @@ namespace objl
 			}
 		};
 
-		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter, bool glb = 0)
+		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter,
+			gl3d::FileOpener &fileOpener, bool glb = 0)
 		{
-
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
+			
+			tinygltf::FsCallbacks callBacks;
+
+			callBacks.ExpandFilePath = tinygltf::ExpandFilePath;
+			callBacks.FileExists = tinygltf::FileExists;
+			callBacks.ReadWholeFile = customGLTFReadWholeFile;
+			callBacks.WriteWholeFile = tinygltf::WriteWholeFile;
+			callBacks.user_data = &fileOpener;
+
+			loader.SetFsCallbacks(callBacks);
 
 			std::string err;
 			std::string warn;
@@ -1432,13 +1459,18 @@ namespace objl
 
 		}
 
-		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter)
+		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter, gl3d::FileOpener &fileOpener)
 		{
 
-			std::ifstream file(Path);
 
-			if (!file.is_open())
+			bool couldNotOpen = 0;
+			auto fileContent = fileOpener(Path.c_str(), couldNotOpen);
+
+			if (couldNotOpen)
 				return false;
+
+			std::stringstream stream;
+			stream.str(std::move(fileContent));
 
 			//todo delete materials or make sure you can't load over things
 			LoadedMeshes.clear();
@@ -1463,7 +1495,7 @@ namespace objl
 		#endif
 
 			std::string curline;
-			while (std::getline(file, curline))
+			while (std::getline(stream, curline))
 			{
 			#ifdef OBJL_CONSOLE_OUTPUT
 				if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
@@ -1662,7 +1694,7 @@ namespace objl
 				#endif
 
 					// Load Materials
-					LoadMaterials(pathtomat, repoter);
+					LoadMaterials(pathtomat, repoter, fileOpener);
 				}
 			}
 
@@ -1682,7 +1714,7 @@ namespace objl
 				LoadedMeshes.push_back(tempMesh);
 			}
 
-			file.close();
+			stream.clear();
 
 			// Set Materials for each Mesh
 			for (int i = 0; i < MeshMatNames.size(); i++)
@@ -1723,20 +1755,21 @@ namespace objl
 		std::vector<Material> LoadedMaterials;
 
 		// Load Materials from .mtl file
-		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter)
+		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter, gl3d::FileOpener &fileOpener)
 		{
 			// If the file is not a material file return false
 			if (path.substr(path.size() - 4, path.size()) != ".mtl")
 				return false;
 
-			std::ifstream file(path);
-
-			// If the file is not found return false
-			if (!file.is_open())
+			bool couldNotOpen = 0;
+			auto fileContent = fileOpener(path.c_str(), couldNotOpen);
+			if (couldNotOpen)
 			{
 				errorReporter.callErrorCallback("error loading mtl file: " + path);
 				return false;
 			}
+			std::stringstream stream;
+			stream.str(std::move(fileContent));
 
 			Material tempMaterial;
 
@@ -1744,7 +1777,7 @@ namespace objl
 
 			// Go through each line looking for material variables
 			std::string curline;
-			while (std::getline(file, curline))
+			while (std::getline(stream, curline))
 			{
 				auto firstToken = algorithm::firstToken(curline);
 

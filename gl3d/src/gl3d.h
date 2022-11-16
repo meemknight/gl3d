@@ -73,7 +73,7 @@ namespace gl3d
 
 		Material createMaterial(Material m, GLuint frameBuffer);
 
-		std::vector<Material> loadMaterial(std::string file, GLuint frameBuffer);
+		std::vector<Material> loadMaterial(std::string file,  GLuint frameBuffer);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);

@@ -137,7 +137,7 @@ int main()
 
 	#pragma region camera
 
-		float speed = 4;
+		float speed = 4+0;
 		glm::vec3 dir = {};
 		if (GetAsyncKeyState('W'))
 		{

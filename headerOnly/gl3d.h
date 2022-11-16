@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-14
+//built on 2022-11-16
 ////////////////////////////////////////////////
 
 
@@ -219,14 +219,21 @@ namespace gl3d
 #pragma once
 
 #include <string>
+#include <vector>
+
 #include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
+#include <fstream> //you can remove this if neded to. It is just used for the default file callback
 
 namespace gl3d
 {
 
 	void defaultErrorCallback(std::string err, void *userData);
+	std::string defaultReadEntireFile(const char *fileName, bool &couldNotOpen, void *userData);
+	std::vector<char> defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData);
 
 	using ErrorCallback_t = decltype(defaultErrorCallback);
+	using ReadEntireFile_t = decltype(defaultReadEntireFile);
+	using ReadEntireFileBinart_t = decltype(defaultReadEntireFileBinary);
 	
 	struct ErrorReporter
 	{
@@ -234,6 +241,26 @@ namespace gl3d
 		void *userData = nullptr;
 
 		void callErrorCallback(std::string s);
+	};
+
+
+
+	struct FileOpener
+	{
+		ReadEntireFile_t *readEntireFileCallback = defaultReadEntireFile;
+		ReadEntireFileBinart_t *readEntireFileBinaryCallback = defaultReadEntireFileBinary;
+		void *userData = nullptr;
+
+		std::string operator()(const char *fileName, bool &couldNotOpen)
+		{
+			return readEntireFileCallback(fileName, couldNotOpen, userData);
+		}
+
+		std::vector<char> binary(const char *fileName, bool &couldNotOpen)
+		{
+			return readEntireFileBinaryCallback(fileName, couldNotOpen, userData);
+		}
+
 	};
 
 };
@@ -22571,6 +22598,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <vector>
 
+
+
 #ifndef TINYGLTF_USE_CPP14
 #include <functional>
 #endif
@@ -25546,9 +25575,13 @@ namespace tinygltf
 	#endif
 	}
 
+	//removed writing data
+
 	bool WriteWholeFile(std::string *err, const std::string &filepath,
 		const std::vector<unsigned char> &contents, void *)
 	{
+		assert(0);
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(filepath).c_str(),
@@ -25583,7 +25616,7 @@ namespace tinygltf
 			}
 			return false;
 		}
-
+		*/
 		return true;
 	}
 
@@ -30023,9 +30056,14 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static bool SerializeGltfBufferData(const std::vector<unsigned char> &data,
 		const std::string &binFilename)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(binFilename).c_str(),
@@ -30056,6 +30094,7 @@ namespace tinygltf
 			// size 0 will be still valid buffer data.
 			// write empty file.
 		}
+		*/
 		return true;
 	}
 
@@ -31135,9 +31174,14 @@ namespace tinygltf
 		return true;
 	}
 
+	//removed writing data
+
 	static bool WriteGltfFile(const std::string &output,
 		const std::string &content)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str());
@@ -31157,6 +31201,8 @@ namespace tinygltf
 		if (!gltfFile.is_open()) return false;
 	#endif
 		return WriteGltfStream(gltfFile, content);
+		*/
+		return 0;
 	}
 
 	static void WriteBinaryGltfStream(std::ostream &stream,
@@ -31229,10 +31275,15 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static void WriteBinaryGltfFile(const std::string &output,
 		const std::string &content,
 		const std::vector<unsigned char> &binBuffer)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str(), std::ios::binary);
@@ -31249,6 +31300,7 @@ namespace tinygltf
 		std::ofstream gltfFile(output.c_str(), std::ios::binary);
 	#endif
 		WriteBinaryGltfStream(gltfFile, content, binBuffer);
+		*/
 	}
 
 	bool TinyGLTF::WriteGltfSceneToStream(Model *model, std::ostream &stream,
@@ -31456,9 +31508,8 @@ namespace tinygltf
 
 // String - STD String Library
 #include <string>
+#include <sstream>
 
-// fStream - STD File I/O Library
-#include <fstream>
 
 // Math.h - STD math Library
 #include <math.h>
@@ -31976,14 +32027,14 @@ namespace objl
 		//
 		// If the file is unable to be found
 		// or unable to be loaded return false
-		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, bool *outShouldFlipUV = 0)
+		bool LoadFile(std::string Path, gl3d::ErrorReporter &reporter, gl3d::FileOpener &fileOpener, bool *outShouldFlipUV = 0)
 		{
 			if (outShouldFlipUV) { *outShouldFlipUV = 0; }
 
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) == ".obj")
 			{
-				return loadObj(Path, reporter);
+				return loadObj(Path, reporter, fileOpener);
 			}
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
@@ -32875,13 +32926,18 @@ namespace objl
 
 		}
 
-		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter)
+		bool loadObj(const std::string &Path, gl3d::ErrorReporter &repoter, gl3d::FileOpener &fileOpener)
 		{
 
-			std::ifstream file(Path);
 
-			if (!file.is_open())
+			bool couldNotOpen = 0;
+			auto fileContent = fileOpener(Path.c_str(), couldNotOpen);
+
+			if (couldNotOpen)
 				return false;
+
+			std::stringstream stream;
+			stream.str(std::move(fileContent));
 
 			//todo delete materials or make sure you can't load over things
 			LoadedMeshes.clear();
@@ -32906,7 +32962,7 @@ namespace objl
 		#endif
 
 			std::string curline;
-			while (std::getline(file, curline))
+			while (std::getline(stream, curline))
 			{
 			#ifdef OBJL_CONSOLE_OUTPUT
 				if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
@@ -33105,7 +33161,7 @@ namespace objl
 				#endif
 
 					// Load Materials
-					LoadMaterials(pathtomat, repoter);
+					LoadMaterials(pathtomat, repoter, fileOpener);
 				}
 			}
 
@@ -33125,7 +33181,7 @@ namespace objl
 				LoadedMeshes.push_back(tempMesh);
 			}
 
-			file.close();
+			stream.clear();
 
 			// Set Materials for each Mesh
 			for (int i = 0; i < MeshMatNames.size(); i++)
@@ -33166,20 +33222,21 @@ namespace objl
 		std::vector<Material> LoadedMaterials;
 
 		// Load Materials from .mtl file
-		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter)
+		bool LoadMaterials(std::string path, gl3d::ErrorReporter &errorReporter, gl3d::FileOpener &fileOpener)
 		{
 			// If the file is not a material file return false
 			if (path.substr(path.size() - 4, path.size()) != ".mtl")
 				return false;
 
-			std::ifstream file(path);
-
-			// If the file is not found return false
-			if (!file.is_open())
+			bool couldNotOpen = 0;
+			auto fileContent = fileOpener(path.c_str(), couldNotOpen);
+			if (couldNotOpen)
 			{
 				errorReporter.callErrorCallback("error loading mtl file: " + path);
 				return false;
 			}
+			std::stringstream stream;
+			stream.str(std::move(fileContent));
 
 			Material tempMaterial;
 
@@ -33187,7 +33244,7 @@ namespace objl
 
 			// Go through each line looking for material variables
 			std::string curline;
-			while (std::getline(file, curline))
+			while (std::getline(stream, curline))
 			{
 				auto firstToken = algorithm::firstToken(curline);
 
@@ -33705,6 +33762,7 @@ namespace objl
 #pragma once
 #include <glm/vec2.hpp>
 
+
 #include <string>
 
 namespace gl3d
@@ -33727,7 +33785,7 @@ namespace gl3d
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		//returns error
-		std::string loadTextureFromFile(const char *file, int quality = maxQuality, int channels = 4);
+		std::string loadTextureFromFile(const char *file, FileOpener &fileOpener, int quality = maxQuality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
 			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
@@ -33804,9 +33862,9 @@ namespace gl3d
 	{
 		GLuint id = 0;
 
-		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter);
+		bool loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter, FileOpener &fileOpener);
 		bool loadShaderProgramFromFile(const char *vertexShader, 
-			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter);
+			const char *geometryShader, const char *fragmentShader, ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 		void bind();
 
@@ -33818,7 +33876,7 @@ namespace gl3d
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		std::string create(ErrorReporter &errorReporter);
+		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 		void getSubroutines(ErrorReporter &errorReporter);
 
@@ -34092,9 +34150,10 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file, ErrorReporter &errorReporter ,float scale = 1.f) { load(file, errorReporter, scale); }
+		LoadedModelData(const char *file, ErrorReporter &errorReporter, 
+			FileOpener &fileOpener, float scale = 1.f) { load(file, errorReporter, fileOpener, scale); }
 
-		void load(const char *file, ErrorReporter &errorReporter, float scale = 1.f);
+		void load(const char *file, ErrorReporter &errorReporter, FileOpener &fileOpener, float scale = 1.f);
 
 		objl::Loader loader;
 		std::string path;
@@ -34246,7 +34305,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer);
+		void createGpuData(ErrorReporter &errorReporter, FileOpener &fileOpener,  GLuint frameBuffer);
 
 		struct
 		{
@@ -34405,6 +34464,7 @@ namespace gl3d
 		void init(int x, int y, GLuint frameBuffer);
 		
 		ErrorReporter errorReporter;
+		FileOpener fileOpener;
 
 		ErrorCallback_t *setErrorCallback(ErrorCallback_t *errorCallback, void *userData);
 		ErrorCallback_t *getErrorCallback();
@@ -34418,7 +34478,7 @@ namespace gl3d
 
 		Material createMaterial(Material m, GLuint frameBuffer);
 
-		std::vector<Material> loadMaterial(std::string file, GLuint frameBuffer);
+		std::vector<Material> loadMaterial(std::string file,  GLuint frameBuffer);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -34735,7 +34795,7 @@ namespace gl3d
 				Shader shader;
 				GLuint fbo;
 
-				void init(ErrorReporter &errorReporter);
+				void init(ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
@@ -34819,7 +34879,7 @@ namespace gl3d
 				{
 					//https://learnopengl.com/Advanced-Lighting/SSAO
 
-					void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
+					void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 					void resize(int w, int h);
 
 					glm::ivec2 currentDimensions = {};
@@ -34960,7 +35020,7 @@ namespace gl3d
 
 			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
 			GLuint bluredColorBuffer[2];
-			void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 			void resize(int w, int h);
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
@@ -35008,7 +35068,7 @@ namespace gl3d
 		{
 			Shader shader;
 			Shader noAAshader;
-			void create(int w, int h, ErrorReporter &errorReporter);
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
@@ -35077,7 +35137,7 @@ namespace gl3d
 		//todo remove or implement properly
 		struct RenderDepthMap
 		{
-			void create(ErrorReporter &errorReporter, GLuint frameBuffer);
+			void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 
 			Shader shader;
 			GLint u_depth = -1;

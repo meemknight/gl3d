@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-14
+//built on 2022-11-16
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -22231,6 +22231,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <vector>
 
+
+
 #ifndef TINYGLTF_USE_CPP14
 #include <functional>
 #endif
@@ -25206,9 +25208,13 @@ namespace tinygltf
 	#endif
 	}
 
+	//removed writing data
+
 	bool WriteWholeFile(std::string *err, const std::string &filepath,
 		const std::vector<unsigned char> &contents, void *)
 	{
+		assert(0);
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(filepath).c_str(),
@@ -25243,7 +25249,7 @@ namespace tinygltf
 			}
 			return false;
 		}
-
+		*/
 		return true;
 	}
 
@@ -29683,9 +29689,14 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static bool SerializeGltfBufferData(const std::vector<unsigned char> &data,
 		const std::string &binFilename)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(binFilename).c_str(),
@@ -29716,6 +29727,7 @@ namespace tinygltf
 			// size 0 will be still valid buffer data.
 			// write empty file.
 		}
+		*/
 		return true;
 	}
 
@@ -30795,9 +30807,14 @@ namespace tinygltf
 		return true;
 	}
 
+	//removed writing data
+
 	static bool WriteGltfFile(const std::string &output,
 		const std::string &content)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str());
@@ -30817,6 +30834,8 @@ namespace tinygltf
 		if (!gltfFile.is_open()) return false;
 	#endif
 		return WriteGltfStream(gltfFile, content);
+		*/
+		return 0;
 	}
 
 	static void WriteBinaryGltfStream(std::ostream &stream,
@@ -30889,10 +30908,15 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static void WriteBinaryGltfFile(const std::string &output,
 		const std::string &content,
 		const std::vector<unsigned char> &binBuffer)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str(), std::ios::binary);
@@ -30909,6 +30933,7 @@ namespace tinygltf
 		std::ofstream gltfFile(output.c_str(), std::ios::binary);
 	#endif
 		WriteBinaryGltfStream(gltfFile, content, binBuffer);
+		*/
 	}
 
 	bool TinyGLTF::WriteGltfSceneToStream(Model *model, std::ostream &stream,
@@ -31262,6 +31287,64 @@ void gl3d::defaultErrorCallback(std::string err, void *userData)
 	std::cout << err << "\n";
 }
 
+std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen, void *userData)
+{
+	std::ifstream file;
+	file.open(fileName);
+
+	if (!file.is_open())
+	{
+		couldNotOpen = true;
+		return "";
+	}
+
+	couldNotOpen = false;
+
+	size_t size = 0;
+	file.seekg(0, file.end);
+	size = file.tellg();
+	file.seekg(0, file.beg);
+
+	std::string ret;
+	ret.reserve(size + 1);
+
+	ret.assign((std::istreambuf_iterator<char>(file)),
+		std::istreambuf_iterator<char>());
+
+	file.close();
+
+	return ret;
+}
+
+std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData)
+{
+	std::ifstream file;
+	file.open(fileName, std::ios::binary);
+
+	if (!file.is_open())
+	{
+		couldNotOpen = true;
+		return {};
+	}
+
+	couldNotOpen = false;
+
+	size_t size = 0;
+	file.seekg(0, file.end);
+	size = file.tellg();
+	file.seekg(0, file.beg);
+
+	std::vector<char> ret;
+	ret.reserve(size + 1);
+
+	ret.assign((std::istreambuf_iterator<char>(file)),
+		std::istreambuf_iterator<char>());
+
+	file.close();
+
+	return ret;
+}
+
 #pragma endregion
 
 
@@ -31287,12 +31370,19 @@ void gl3d::defaultErrorCallback(std::string err, void *userData)
 namespace gl3d
 {
 
-	std::string GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
+	std::string GpuTexture::loadTextureFromFile(const char *file, FileOpener &fileOpener, int quality, int channels)
 	{
-	
-		int w, h, nrChannels;
+		
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(file, couldNotOpen);
+		if (couldNotOpen)
+		{
+			return std::string("Could not open file: ") + file;
+		}
+
+		int w=0, h=0, nrChannels=0;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, channels);
+		unsigned char *data = stbi_load_from_memory((unsigned char*)content.data(), content.size(), &w, &h, &nrChannels, channels);
 	
 		if (!data)
 		{
@@ -31702,7 +31792,7 @@ namespace gl3d
 #pragma region Shader
 #define GL3D_LOAD_SHADERS_FROM_HEADER_ONLY
 
-#include <fstream>
+
 #include <unordered_map>
 
 namespace gl3d
@@ -34097,7 +34187,7 @@ namespace gl3d
 
 	};
 	
-	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter)
+	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		std::string newFileName;
 		std::string strSource = source;
@@ -34123,46 +34213,31 @@ namespace gl3d
 
 #else
 
-	GLint createShaderFromFile(const char* source, GLenum shaderType, ErrorReporter &errorReporter)
+	GLint createShaderFromFile(const char* name, GLenum shaderType, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
-		std::ifstream file;
-		file.open(source);
+		bool err = 0;
+		auto fileContent = fileOpener(name, err);
 
-		if (!file.is_open())
+		if (err)
 		{
-			errorReporter.callErrorCallback(std::string("Error openning file: ") + source);
+			errorReporter.callErrorCallback(std::string("Error openning file: ") + name);
 			return 0;
 		}
-
-		GLint size = 0;
-		file.seekg(0, file.end);
-		size = file.tellg();
-		file.seekg(0, file.beg);
-
-		char* fileContent = new char[size+1] {};
-
-		file.read(fileContent, size);
-
-
-		file.close();
-
-		auto rez = createShaderFromData(fileContent, shaderType, errorReporter);
-
-		delete[] fileContent;
+		auto rez = createShaderFromData(fileContent.c_str(), shaderType, errorReporter);
 
 		return rez;
-
 	}
 
 #endif
 
 
 
-	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader, ErrorReporter &errorReporter)
+	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *fragmentShader,
+		ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
-		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter);
-		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter);
+		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter, fileOpener);
+		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter, fileOpener);
 
 
 		if (vertexId == 0 || fragmentId == 0)
@@ -34209,12 +34284,12 @@ namespace gl3d
 	}
 
 	bool Shader::loadShaderProgramFromFile(const char *vertexShader, const char *geometryShader, const char *fragmentShader,
-		ErrorReporter &errorReporter)
+		ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
-		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter);
-		auto geometryId = createShaderFromFile(geometryShader, GL_GEOMETRY_SHADER, errorReporter);
-		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter);
+		auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER, errorReporter, fileOpener);
+		auto geometryId = createShaderFromFile(geometryShader, GL_GEOMETRY_SHADER, errorReporter, fileOpener);
+		auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER, errorReporter, fileOpener);
 
 		if (vertexId == 0 || fragmentId == 0 || geometryId == 0)
 		{
@@ -34324,12 +34399,12 @@ namespace gl3d
 
 
 	//todo move
-	std::string LightShader::create(ErrorReporter &errorReporter)
+	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		std::string error = "";
 
 	#pragma region brdf texture
-		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", TextureLoadQuality::leastPossible, 3);
+		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", fileOpener, TextureLoadQuality::leastPossible, 3);
 		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -34339,7 +34414,7 @@ namespace gl3d
 
 		if (!error.empty()) { error += "\n"; };
 
-		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag", errorReporter);
+		prePass.shader.loadShaderProgramFromFile("shaders/deferred/zPrePass.vert", "shaders/deferred/zPrePass.frag", errorReporter, fileOpener);
 		prePass.u_transform = getUniform(prePass.shader.id, "u_transform", errorReporter);
 		prePass.u_albedoSampler = getUniform(prePass.shader.id, "u_albedoSampler", errorReporter);
 		prePass.u_hasTexture = getUniform(prePass.shader.id, "u_hasTexture", errorReporter);
@@ -34349,7 +34424,7 @@ namespace gl3d
 
 
 		pointShadowShader.shader.loadShaderProgramFromFile("shaders/shadows/pointShadow.vert",
-			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag", errorReporter);
+			"shaders/shadows/pointShadow.geom", "shaders/shadows/pointShadow.frag", errorReporter, fileOpener);
 		pointShadowShader.u_albedoSampler = getUniform(pointShadowShader.shader.id, "u_albedoSampler", errorReporter);
 		pointShadowShader.u_farPlane = getUniform(pointShadowShader.shader.id, "u_farPlane", errorReporter);
 		pointShadowShader.u_hasTexture = getUniform(pointShadowShader.shader.id, "u_hasTexture", errorReporter);
@@ -34363,7 +34438,8 @@ namespace gl3d
 
 
 
-		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert", "shaders/deferred/geometryPass.frag", errorReporter);
+		geometryPassShader.loadShaderProgramFromFile("shaders/deferred/geometryPass.vert",
+			"shaders/deferred/geometryPass.frag", errorReporter, fileOpener);
 		//geometryPassShader.bind();
 
 		u_transform = getUniform(geometryPassShader.id, "u_transform", errorReporter);
@@ -34388,7 +34464,8 @@ namespace gl3d
 		glShaderStorageBlockBinding(geometryPassShader.id, u_jointTransforms, internal::JointsTransformBlockBinding);		//todo define or enums for this
 		
 
-		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag", errorReporter);
+		lightingPassShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/deferred/lightingPass.frag",
+			errorReporter, fileOpener);
 		lightingPassShader.bind();
 
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals", errorReporter);
@@ -34792,13 +34869,13 @@ namespace gl3d
 	}
 
 
-	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, float scale)
+	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, FileOpener &fileOpener, float scale)
 	{
 		stbi_set_flip_vertically_on_load(true);
 		bool shouldFlipUVs = 0;
 
 
-		loader.LoadFile(file, errorReporter, &shouldFlipUVs);
+		loader.LoadFile(file, errorReporter, fileOpener, &shouldFlipUVs);
 
 		//parse path
 		path = file;
@@ -35210,31 +35287,31 @@ namespace gl3d
 		*this = GraphicModel{};
 	}
 
-	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::createGpuData(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
-		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter);
+		normalSkyBox.shader.loadShaderProgramFromFile("shaders/skyBox/skyBox.vert", "shaders/skyBox/skyBox.frag", errorReporter, fileOpener);
 		normalSkyBox.samplerUniformLocation = getUniform(normalSkyBox.shader.id, "u_skybox", errorReporter);
 		normalSkyBox.modelViewUniformLocation = getUniform(normalSkyBox.shader.id, "u_viewProjection", errorReporter);
 		normalSkyBox.u_ambient = getUniform(normalSkyBox.shader.id, "u_ambient", errorReporter);
 		normalSkyBox.u_skyBoxPresent = getUniform(normalSkyBox.shader.id, "u_skyBoxPresent", errorReporter);
 		
-		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag", errorReporter);
+		hdrtoCubeMap.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/hdrToCubeMap.frag", errorReporter, fileOpener);
 		hdrtoCubeMap.u_equirectangularMap = getUniform(hdrtoCubeMap.shader.id, "u_equirectangularMap", errorReporter);
 		hdrtoCubeMap.modelViewUniformLocation = getUniform(hdrtoCubeMap.shader.id, "u_viewProjection", errorReporter);
 
-		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag", errorReporter);
+		convolute.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/convolute.frag", errorReporter, fileOpener);
 		convolute.u_environmentMap = getUniform(convolute.shader.id, "u_environmentMap", errorReporter);
 		convolute.modelViewUniformLocation = getUniform(convolute.shader.id, "u_viewProjection", errorReporter);
 		convolute.u_sampleQuality = getUniform(convolute.shader.id, "u_sampleQuality", errorReporter);
 
-		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag", errorReporter);
+		preFilterSpecular.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert", "shaders/skyBox/preFilterSpecular.frag", errorReporter, fileOpener);
 		preFilterSpecular.modelViewUniformLocation = getUniform(preFilterSpecular.shader.id, "u_viewProjection", errorReporter);
 		preFilterSpecular.u_environmentMap = getUniform(preFilterSpecular.shader.id, "u_environmentMap", errorReporter);
 		preFilterSpecular.u_roughness = getUniform(preFilterSpecular.shader.id, "u_roughness", errorReporter);
 		preFilterSpecular.u_sampleCount = getUniform(preFilterSpecular.shader.id, "u_sampleCount", errorReporter);
 
 		atmosphericScatteringShader.shader.loadShaderProgramFromFile("shaders/skyBox/hdrToCubeMap.vert",
-			"shaders/skyBox/atmosphericScattering.frag", errorReporter);
+			"shaders/skyBox/atmosphericScattering.frag", errorReporter, fileOpener);
 		atmosphericScatteringShader.u_lightPos = getUniform(atmosphericScatteringShader.shader.id, "u_lightPos", errorReporter);
 		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g", errorReporter);
 		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1", errorReporter);
@@ -35856,13 +35933,13 @@ namespace gl3d
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
-		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter));
+		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener));
 		vao.createVAOs();
-		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, fileOpener, frameBuffer);
 
 
 		internal.showNormalsProgram.shader.loadShaderProgramFromFile("shaders/showNormals.vert",
-		"shaders/showNormals.geom", "shaders/showNormals.frag", errorReporter);
+		"shaders/showNormals.geom", "shaders/showNormals.frag", errorReporter, fileOpener);
 
 		//todo error report here + make this work :)))
 		internal.showNormalsProgram.modelTransformLocation = glGetUniformLocation(internal.showNormalsProgram.shader.id, "u_modelTransform");
@@ -35880,16 +35957,16 @@ namespace gl3d
 		//defaultTexture.loadTextureFromMemory(textureData, 2, 2, 4, TextureLoadQuality::leastPossible);
 
 		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
-		internal.ssao.create(x, y, errorReporter, frameBuffer);
-		postProcess.create(x, y, errorReporter, frameBuffer);
+		internal.ssao.create(x, y, errorReporter, fileOpener, frameBuffer);
+		postProcess.create(x, y, errorReporter, fileOpener, frameBuffer);
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
-		renderDepthMap.create(errorReporter, frameBuffer);
-		antiAlias.create(x, y, errorReporter);
+		renderDepthMap.create(errorReporter, fileOpener, frameBuffer);
+		antiAlias.create(x, y, errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 
-		internal.pBRtextureMaker.init(errorReporter);
+		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
 
 	ErrorCallback_t *Renderer3D::setErrorCallback(ErrorCallback_t *errorCallback, void *userData)
@@ -36114,7 +36191,8 @@ namespace gl3d
 
 					if (!mat.map_Pr.empty())
 					{
-						renderer.errorReporter.callErrorCallback(roughness.loadTextureFromFile(std::string(path + mat.map_Pr).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(
+							roughness.loadTextureFromFile(std::string(path + mat.map_Pr).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, roughness.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -36123,7 +36201,8 @@ namespace gl3d
 					GpuTexture metallic{};
 					if (!mat.map_Pm.empty())
 					{
-						renderer.errorReporter.callErrorCallback(metallic.loadTextureFromFile(std::string(path + mat.map_Pm).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(metallic.loadTextureFromFile(
+							std::string(path + mat.map_Pm).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, metallic.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -36132,7 +36211,8 @@ namespace gl3d
 					GpuTexture ambientOcclusion{};
 					if (!mat.map_Ka.empty())
 					{
-						renderer.errorReporter.callErrorCallback(ambientOcclusion.loadTextureFromFile(std::string(path + mat.map_Ka).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(ambientOcclusion.loadTextureFromFile(
+							std::string(path + mat.map_Ka).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -36300,7 +36380,7 @@ namespace gl3d
 	{
 
 		objl::Loader loader;
-		if (!loader.LoadMaterials(file, errorReporter)) 
+		if (!loader.LoadMaterials(file, errorReporter, fileOpener)) 
 		{
 			errorReporter.callErrorCallback("err loading: " + file);
 			return {};
@@ -36635,7 +36715,7 @@ namespace gl3d
 	Model Renderer3D::loadModel(std::string path, GLuint frameBuffer, float scale)
 	{
 
-		gl3d::LoadedModelData model(path.c_str(), errorReporter, scale);
+		gl3d::LoadedModelData model(path.c_str(), errorReporter, fileOpener, scale);
 		if(model.loader.LoadedMeshes.empty())
 		{
 			errorReporter.callErrorCallback("err loading " + path);
@@ -40912,7 +40992,8 @@ namespace gl3d
 		return a + f * (b - a);
 	}
 
-	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::InternalStruct::SSAO::create(int w, int h, ErrorReporter &errorReporter,
+		FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
 		std::uniform_real_distribution<float> randomFloatsSmaller(0.1f, 0.9f); //avoid ssao artefacts
@@ -40972,7 +41053,7 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
 
 
-		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/ssao.frag", errorReporter);
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/ssao.frag", errorReporter, fileOpener);
 
 
 		u_projection = getUniform(shader.id, "u_projection", errorReporter);
@@ -40993,7 +41074,7 @@ namespace gl3d
 		glUniformBlockBinding(shader.id, u_SSAODATA, internal::SSAODataBlockBinding);
 		
 		//blur
-		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag", errorReporter);
+		blurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/ssao/blur.frag", errorReporter, fileOpener);
 		
 		glGenFramebuffers(1, &blurBuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer);
@@ -41028,7 +41109,7 @@ namespace gl3d
 	
 	}
 
-	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -41058,7 +41139,8 @@ namespace gl3d
 
 
 		
-		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag", errorReporter);
+		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag", 
+			errorReporter, fileOpener);
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture", errorReporter);
 		u_bloomTexture = getUniform(postProcessShader.id, "u_bloomTexture", errorReporter);
 		u_bloomNotBluredTexture = getUniform(postProcessShader.id, "u_bloomNotBluredTexture", errorReporter);
@@ -41070,30 +41152,30 @@ namespace gl3d
 		u_ssao = getUniform(postProcessShader.id, "u_ssao", errorReporter);
 
 
-		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag", errorReporter);
+		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag", errorReporter, fileOpener);
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput", errorReporter);
 		u_horizontal = getUniform(gausianBLurShader.id, "u_horizontal", errorReporter);
 		u_mip = getUniform(gausianBLurShader.id, "u_mip", errorReporter);
 		u_texel = getUniform(gausianBLurShader.id, "u_texel", errorReporter);
 
-		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag", errorReporter);
+		filterShader.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filter.frag", errorReporter, fileOpener);
 		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure", errorReporter);
 		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture", errorReporter);
 		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold", errorReporter);
 
-		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag", errorReporter);
+		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag", errorReporter, fileOpener);
 		addMips.u_mip = getUniform(addMips.shader.id, "u_mip", errorReporter);
 		addMips.u_texture= getUniform(addMips.shader.id, "u_texture", errorReporter);
 
-		addMipsBlur.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMipsBlur.frag", errorReporter);
+		addMipsBlur.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMipsBlur.frag", errorReporter, fileOpener);
 		addMipsBlur.u_mip = getUniform(addMipsBlur.shader.id, "u_mip", errorReporter);
 		addMipsBlur.u_texture = getUniform(addMipsBlur.shader.id, "u_texture", errorReporter);
 
-		filterDown.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filterDown.frag", errorReporter);
+		filterDown.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/filterDown.frag", errorReporter, fileOpener);
 		filterDown.u_mip = getUniform(filterDown.shader.id, "u_mip", errorReporter);
 		filterDown.u_texture = getUniform(filterDown.shader.id, "u_texture", errorReporter);
 
-		chromaticAberation.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/chromaticAberation.frag", errorReporter);
+		chromaticAberation.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/chromaticAberation.frag", errorReporter, fileOpener);
 		chromaticAberation.u_finalColorTexture = getUniform(chromaticAberation.shader.id, "u_finalColorTexture", errorReporter);
 		chromaticAberation.u_windowSize = getUniform(chromaticAberation.shader.id, "u_windowSize", errorReporter);
 		chromaticAberation.u_strength = getUniform(chromaticAberation.shader.id, "u_strength", errorReporter);
@@ -41188,9 +41270,9 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::InternalStruct::PBRtextureMaker::init(ErrorReporter &errorReporter)
+	void Renderer3D::InternalStruct::PBRtextureMaker::init(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
-		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag", errorReporter);
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag", errorReporter, fileOpener);
 		glGenFramebuffers(1, &fbo);
 	}
 
@@ -41420,11 +41502,11 @@ namespace gl3d
 	}
 
 
-	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter)
+	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
-			"shaders/aa/fxaa.frag", errorReporter);
+			"shaders/aa/fxaa.frag", errorReporter, fileOpener);
 		u_texture = getUniform(shader.id, "u_texture", errorReporter);
 
 		u_FXAAData = glGetUniformBlockIndex(shader.id, "u_FXAAData");
@@ -41437,14 +41519,14 @@ namespace gl3d
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 		noAAshader.loadShaderProgramFromFile("shaders/drawQuads.vert",
-			"shaders/aa/noaa.frag", errorReporter);
+			"shaders/aa/noaa.frag", errorReporter, fileOpener);
 		noAAu_texture = getUniform(noAAshader.id, "u_texture", errorReporter);
 
 
 
 	}
 
-	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, GLuint frameBuffer)
+	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -41465,7 +41547,7 @@ namespace gl3d
 		}
 
 		shader.loadShaderProgramFromFile
-			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter);
+			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter, fileOpener);
 		u_depth = getUniform(shader.id, "u_depth", errorReporter);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);

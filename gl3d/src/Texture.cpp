@@ -8,12 +8,19 @@
 namespace gl3d
 {
 
-	std::string GpuTexture::loadTextureFromFile(const char *file, int quality, int channels)
+	std::string GpuTexture::loadTextureFromFile(const char *file, FileOpener &fileOpener, int quality, int channels)
 	{
-	
-		int w, h, nrChannels;
+		
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(file, couldNotOpen);
+		if (couldNotOpen)
+		{
+			return std::string("Could not open file: ") + file;
+		}
+
+		int w=0, h=0, nrChannels=0;
 		stbi_set_flip_vertically_on_load(true);
-		unsigned char *data = stbi_load(file, &w, &h, &nrChannels, channels);
+		unsigned char *data = stbi_load_from_memory((unsigned char*)content.data(), content.size(), &w, &h, &nrChannels, channels);
 	
 		if (!data)
 		{

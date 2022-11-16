@@ -283,7 +283,8 @@ namespace gl3d
 
 					if (!mat.map_Pr.empty())
 					{
-						renderer.errorReporter.callErrorCallback(roughness.loadTextureFromFile(std::string(path + mat.map_Pr).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(
+							roughness.loadTextureFromFile(std::string(path + mat.map_Pr).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, roughness.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -292,7 +293,8 @@ namespace gl3d
 					GpuTexture metallic{};
 					if (!mat.map_Pm.empty())
 					{
-						renderer.errorReporter.callErrorCallback(metallic.loadTextureFromFile(std::string(path + mat.map_Pm).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(metallic.loadTextureFromFile(
+							std::string(path + mat.map_Pm).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, metallic.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -301,7 +303,8 @@ namespace gl3d
 					GpuTexture ambientOcclusion{};
 					if (!mat.map_Ka.empty())
 					{
-						renderer.errorReporter.callErrorCallback(ambientOcclusion.loadTextureFromFile(std::string(path + mat.map_Ka).c_str(), dontSet, 1));
+						renderer.errorReporter.callErrorCallback(ambientOcclusion.loadTextureFromFile(
+							std::string(path + mat.map_Ka).c_str(), renderer.fileOpener, dontSet, 1));
 						glBindTexture(GL_TEXTURE_2D, ambientOcclusion.id);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -469,7 +472,7 @@ namespace gl3d
 	{
 
 		objl::Loader loader;
-		if (!loader.LoadMaterials(file, errorReporter)) 
+		if (!loader.LoadMaterials(file, errorReporter, fileOpener)) 
 		{
 			errorReporter.callErrorCallback("err loading: " + file);
 			return {};
@@ -804,7 +807,7 @@ namespace gl3d
 	Model Renderer3D::loadModel(std::string path, GLuint frameBuffer, float scale)
 	{
 
-		gl3d::LoadedModelData model(path.c_str(), errorReporter, scale);
+		gl3d::LoadedModelData model(path.c_str(), errorReporter, fileOpener, scale);
 		if(model.loader.LoadedMeshes.empty())
 		{
 			errorReporter.callErrorCallback("err loading " + path);

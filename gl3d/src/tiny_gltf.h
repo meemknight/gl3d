@@ -1599,7 +1599,6 @@ namespace tinygltf
 //#include <cassert>
 #ifndef TINYGLTF_NO_FS
 #include <cstdio>
-#include <fstream>
 #endif
 #include <sstream>
 
@@ -2943,9 +2942,15 @@ namespace tinygltf
 	#endif
 	}
 
+	//removed default write
+
 	bool ReadWholeFile(std::vector<unsigned char> *out, std::string *err,
 		const std::string &filepath, void *)
 	{
+		assert(0);
+
+		/*
+
 	#ifdef TINYGLTF_ANDROID_LOAD_FROM_ASSETS
 		if (asset_manager)
 		{
@@ -3037,11 +3042,19 @@ namespace tinygltf
 
 		return true;
 	#endif
+
+	*/
+		return false;
+
 	}
+
+	//removed writing data
 
 	bool WriteWholeFile(std::string *err, const std::string &filepath,
 		const std::vector<unsigned char> &contents, void *)
 	{
+		assert(0);
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(filepath).c_str(),
@@ -3076,7 +3089,7 @@ namespace tinygltf
 			}
 			return false;
 		}
-
+		*/
 		return true;
 	}
 
@@ -7516,9 +7529,14 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static bool SerializeGltfBufferData(const std::vector<unsigned char> &data,
 		const std::string &binFilename)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(__GLIBCXX__)  // mingw
 		int file_descriptor = _wopen(UTF8ToWchar(binFilename).c_str(),
@@ -7549,6 +7567,7 @@ namespace tinygltf
 			// size 0 will be still valid buffer data.
 			// write empty file.
 		}
+		*/
 		return true;
 	}
 
@@ -8628,9 +8647,14 @@ namespace tinygltf
 		return true;
 	}
 
+	//removed writing data
+
 	static bool WriteGltfFile(const std::string &output,
 		const std::string &content)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str());
@@ -8650,6 +8674,8 @@ namespace tinygltf
 		if (!gltfFile.is_open()) return false;
 	#endif
 		return WriteGltfStream(gltfFile, content);
+		*/
+		return 0;
 	}
 
 	static void WriteBinaryGltfStream(std::ostream &stream,
@@ -8722,10 +8748,15 @@ namespace tinygltf
 		}
 	}
 
+	//removed writing data
+
 	static void WriteBinaryGltfFile(const std::string &output,
 		const std::string &content,
 		const std::vector<unsigned char> &binBuffer)
 	{
+		assert(0);
+
+		/*
 	#ifdef _WIN32
 	#if defined(_MSC_VER)
 		std::ofstream gltfFile(UTF8ToWchar(output).c_str(), std::ios::binary);
@@ -8742,6 +8773,7 @@ namespace tinygltf
 		std::ofstream gltfFile(output.c_str(), std::ios::binary);
 	#endif
 		WriteBinaryGltfStream(gltfFile, content, binBuffer);
+		*/
 	}
 
 	bool TinyGLTF::WriteGltfSceneToStream(Model *model, std::ostream &stream,

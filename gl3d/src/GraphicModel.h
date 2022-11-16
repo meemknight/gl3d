@@ -47,9 +47,10 @@ namespace gl3d
 	struct LoadedModelData
 	{
 		LoadedModelData() = default;
-		LoadedModelData(const char *file, ErrorReporter &errorReporter ,float scale = 1.f) { load(file, errorReporter, scale); }
+		LoadedModelData(const char *file, ErrorReporter &errorReporter, 
+			FileOpener &fileOpener, float scale = 1.f) { load(file, errorReporter, fileOpener, scale); }
 
-		void load(const char *file, ErrorReporter &errorReporter, float scale = 1.f);
+		void load(const char *file, ErrorReporter &errorReporter, FileOpener &fileOpener, float scale = 1.f);
 
 		objl::Loader loader;
 		std::string path;

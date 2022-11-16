@@ -104,13 +104,12 @@ namespace gl3d
 	}
 
 
-	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, float scale)
+	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, FileOpener &fileOpener, float scale)
 	{
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(true); //gltf and obj files hold textures flipped diferently...
 		bool shouldFlipUVs = 0;
 
-
-		loader.LoadFile(file, errorReporter, &shouldFlipUVs);
+		loader.LoadFile(file, errorReporter, fileOpener, &shouldFlipUVs);
 
 		//parse path
 		path = file;
