@@ -6,6 +6,11 @@
 #include <gl/glew.h>
 #include <stb_image.h>
 
+
+#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
+#include <fstream> //you can remove this if neded to. It is just used for the default file callback
+
+
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>

@@ -573,7 +573,8 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener,
+		GLuint frameBuffer)
 	{
 		skyBox = {};
 
@@ -582,11 +583,22 @@ namespace gl3d
 
 		for (unsigned int i = 0; i < 6; i++)
 		{
-			int w, h, nrChannels;
-			unsigned char *data;
+			int w=0, h=0, nrChannels=0;
+			unsigned char *data=0;
 
 			stbi_set_flip_vertically_on_load(false);
-			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
+
+
+			bool couldNotOpen = 0;
+			auto content = fileOpener.binary(names[i], couldNotOpen);
+			if (couldNotOpen)
+			{
+				errorReporter.callErrorCallback(std::string("Could not open file: ") + names[i]);
+				glDeleteTextures(1, &skyBox.texture);
+				return;
+			}
+
+			data = stbi_load_from_memory((unsigned char*)content.data(), content.size(), &w, &h, &nrChannels, 3);
 
 			if (data)
 			{
@@ -617,17 +629,26 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter,
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener,
 		GLuint frameBuffer, int format)
 	{
 		skyBox = {};
 
-		int width, height, nrChannels;
-		unsigned char *data;
-
+		int width=0, height=0, nrChannels=0;
+		unsigned char *data=0;
 
 		stbi_set_flip_vertically_on_load(false);
-		data = stbi_load(name, &width, &height, &nrChannels, 3);
+
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(name, couldNotOpen);
+		if (couldNotOpen)
+		{
+			errorReporter.callErrorCallback(std::string("Could not open file: ") + name);
+			glDeleteTextures(1, &skyBox.texture);
+			return;
+		}
+
+		data = stbi_load_from_memory((unsigned char *)content.data(), content.size(), &width, &height, &nrChannels, 3);
 
 		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
@@ -782,15 +803,27 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter,
+		FileOpener &fileOpener, SkyBox &skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
 
-		int width, height, nrChannels;
-		float *data;
+		int width=0, height=0, nrChannels=0;
+		float *data=0;
 
 		stbi_set_flip_vertically_on_load(true);
-		data = stbi_loadf(name, &width, &height, &nrChannels, 0);
+		
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(name, couldNotOpen);
+		if (couldNotOpen)
+		{
+			errorReporter.callErrorCallback(std::string("Could not open file: ") + name);
+			glDeleteTextures(1, &skyBox.texture);
+			return;
+		}
+
+		data = stbi_loadf_from_memory((unsigned char *)content.data(), content.size(), &width, &height, &nrChannels, 3);
+
 		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
 

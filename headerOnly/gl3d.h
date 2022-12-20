@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-16
+//built on 2022-11-22
 ////////////////////////////////////////////////
 
 
@@ -15,6 +15,11 @@
 
 #include <gl/glew.h>
 #include <stb_image.h>
+
+
+#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
+#include <fstream> //you can remove this if neded to. It is just used for the default file callback
+
 
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
@@ -221,8 +226,6 @@ namespace gl3d
 #include <string>
 #include <vector>
 
-#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
-#include <fstream> //you can remove this if neded to. It is just used for the default file callback
 
 namespace gl3d
 {
@@ -230,11 +233,13 @@ namespace gl3d
 	void defaultErrorCallback(std::string err, void *userData);
 	std::string defaultReadEntireFile(const char *fileName, bool &couldNotOpen, void *userData);
 	std::vector<char> defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData);
+	bool defaultFileExists(const char *fileName, void *userData);
 
 	using ErrorCallback_t = decltype(defaultErrorCallback);
 	using ReadEntireFile_t = decltype(defaultReadEntireFile);
 	using ReadEntireFileBinart_t = decltype(defaultReadEntireFileBinary);
-	
+	using FileExists_t = decltype(defaultFileExists);
+
 	struct ErrorReporter
 	{
 		ErrorCallback_t *currentErrorCallback = defaultErrorCallback;
@@ -249,6 +254,7 @@ namespace gl3d
 	{
 		ReadEntireFile_t *readEntireFileCallback = defaultReadEntireFile;
 		ReadEntireFileBinart_t *readEntireFileBinaryCallback = defaultReadEntireFileBinary;
+		FileExists_t *fileExistsCallback = defaultFileExists;
 		void *userData = nullptr;
 
 		std::string operator()(const char *fileName, bool &couldNotOpen)
@@ -261,6 +267,10 @@ namespace gl3d
 			return readEntireFileBinaryCallback(fileName, couldNotOpen, userData);
 		}
 
+		bool exists(const char *fileName)
+		{
+			return fileExistsCallback(fileName, userData);
+		}
 	};
 
 };
@@ -22598,8 +22608,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <vector>
 
-
-
 #ifndef TINYGLTF_USE_CPP14
 #include <functional>
 #endif
@@ -24135,7 +24143,6 @@ namespace tinygltf
 //#include <cassert>
 #ifndef TINYGLTF_NO_FS
 #include <cstdio>
-#include <fstream>
 #endif
 #include <sstream>
 
@@ -25479,9 +25486,15 @@ namespace tinygltf
 	#endif
 	}
 
+	//removed default write
+
 	bool ReadWholeFile(std::vector<unsigned char> *out, std::string *err,
 		const std::string &filepath, void *)
 	{
+		assert(0);
+
+		/*
+
 	#ifdef TINYGLTF_ANDROID_LOAD_FROM_ASSETS
 		if (asset_manager)
 		{
@@ -25573,6 +25586,10 @@ namespace tinygltf
 
 		return true;
 	#endif
+
+	*/
+		return false;
+
 	}
 
 	//removed writing data
@@ -32012,6 +32029,31 @@ namespace objl
 		}
 	}
 
+	inline bool customFileExists(const std::string &abs_filename, void *userData)
+	{
+		gl3d::FileOpener *fileOpener = (gl3d::FileOpener *)userData;
+
+		return fileOpener->exists(abs_filename.c_str());
+	}
+
+	inline bool customGLTFReadWholeFile(std::vector<unsigned char> *out, std::string *err,
+		const std::string &filepath, void *userData)
+	{
+		gl3d::FileOpener *fileOpener = (gl3d::FileOpener *)userData;
+
+		bool couldNotOpen = false;
+		auto rez = fileOpener->binary(filepath.c_str(), couldNotOpen);
+
+		if (couldNotOpen)
+		{
+			*err = "Error, could not open file: " + filepath;
+			return 0;
+		}
+		
+		out->assign(rez.begin(), rez.end());
+		return 1;
+	}
+
 	// Class: Loader
 	//
 	// Description: The OBJ Model Loader
@@ -32039,11 +32081,11 @@ namespace objl
 			else if (Path.substr(Path.size() - 5, 5) == ".gltf") 
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, reporter, 0);
+				return loadGltf(Path, reporter, fileOpener, 0);
 			}else if (Path.substr(Path.size() - 4, 4) == ".glb")
 			{
 				if (outShouldFlipUV) { *outShouldFlipUV = 1; }
-				return loadGltf(Path, reporter, 1);
+				return loadGltf(Path, reporter, fileOpener, 1);
 			}
 			else
 			{
@@ -32065,11 +32107,21 @@ namespace objl
 			}
 		};
 
-		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter, bool glb = 0)
+		bool loadGltf(const std::string &Path, gl3d::ErrorReporter &errorReporter,
+			gl3d::FileOpener &fileOpener, bool glb = 0)
 		{
-
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
+			
+			tinygltf::FsCallbacks callBacks;
+
+			callBacks.ExpandFilePath = tinygltf::ExpandFilePath;
+			callBacks.FileExists = customFileExists;
+			callBacks.ReadWholeFile = customGLTFReadWholeFile;
+			callBacks.WriteWholeFile = tinygltf::WriteWholeFile;
+			callBacks.user_data = &fileOpener;
+
+			loader.SetFsCallbacks(callBacks);
 
 			std::string err;
 			std::string warn;
@@ -33876,7 +33928,7 @@ namespace gl3d
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener);
+		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener, const char *BRDFIntegrationMapFileLocation);
 
 		void getSubroutines(ErrorReporter &errorReporter);
 
@@ -34362,9 +34414,9 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer);
-		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer, int format = 0);
-		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, FileOpener &fileOpener, SkyBox &skyBox, GLuint frameBuffer);
 		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox,
 			GLuint frameBuffer);
 
@@ -34460,8 +34512,9 @@ namespace gl3d
 	struct Renderer3D
 
 	{
+		//todo store the default fbo
 		//size of the screen and the default frameBuffer
-		void init(int x, int y, GLuint frameBuffer);
+		void init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation);
 		
 		ErrorReporter errorReporter;
 		FileOpener fileOpener;
@@ -34753,8 +34806,12 @@ namespace gl3d
 
 		#pragma endregion
 		
-		//saves the current settings to a file;
-		std::string saveSettingsToFileData();
+		//saves the current settings to a string;
+		std::string saveSettingsToJson();
+
+		//this will terminate if data is not a valid json
+		void loadSettingsFromJson(const char *data);
+
 
 	#pragma endregion
 			

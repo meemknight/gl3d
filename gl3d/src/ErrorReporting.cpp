@@ -70,3 +70,18 @@ std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &
 
 	return ret;
 }
+
+bool gl3d::defaultFileExists(const char *fileName, void *userData)
+{
+	std::ifstream file;
+	file.open(fileName);
+
+	if (!file.is_open())
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}

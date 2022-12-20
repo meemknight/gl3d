@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-16
+//built on 2022-11-22
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -22231,8 +22231,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <vector>
 
-
-
 #ifndef TINYGLTF_USE_CPP14
 #include <functional>
 #endif
@@ -23768,7 +23766,6 @@ namespace tinygltf
 //#include <cassert>
 #ifndef TINYGLTF_NO_FS
 #include <cstdio>
-#include <fstream>
 #endif
 #include <sstream>
 
@@ -25112,9 +25109,15 @@ namespace tinygltf
 	#endif
 	}
 
+	//removed default write
+
 	bool ReadWholeFile(std::vector<unsigned char> *out, std::string *err,
 		const std::string &filepath, void *)
 	{
+		assert(0);
+
+		/*
+
 	#ifdef TINYGLTF_ANDROID_LOAD_FROM_ASSETS
 		if (asset_manager)
 		{
@@ -25206,6 +25209,10 @@ namespace tinygltf
 
 		return true;
 	#endif
+
+	*/
+		return false;
+
 	}
 
 	//removed writing data
@@ -31345,6 +31352,21 @@ std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &
 	return ret;
 }
 
+bool gl3d::defaultFileExists(const char *fileName, void *userData)
+{
+	std::ifstream file;
+	file.open(fileName);
+
+	if (!file.is_open())
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 #pragma endregion
 
 
@@ -34399,12 +34421,13 @@ namespace gl3d
 
 
 	//todo move
-	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
+	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener, 
+		const char *BRDFIntegrationMapFileLocation)
 	{
 		std::string error = "";
 
 	#pragma region brdf texture
-		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", fileOpener, TextureLoadQuality::leastPossible, 3);
+		error += brdfTexture.loadTextureFromFile(BRDFIntegrationMapFileLocation, fileOpener, TextureLoadQuality::leastPossible, 3);
 		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -34871,9 +34894,8 @@ namespace gl3d
 
 	void LoadedModelData::load(const char *file, ErrorReporter &errorReporter, FileOpener &fileOpener, float scale)
 	{
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(true); //gltf and obj files hold textures flipped diferently...
 		bool shouldFlipUVs = 0;
-
 
 		loader.LoadFile(file, errorReporter, fileOpener, &shouldFlipUVs);
 
@@ -35339,7 +35361,8 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener,
+		GLuint frameBuffer)
 	{
 		skyBox = {};
 
@@ -35348,11 +35371,22 @@ namespace gl3d
 
 		for (unsigned int i = 0; i < 6; i++)
 		{
-			int w, h, nrChannels;
-			unsigned char *data;
+			int w=0, h=0, nrChannels=0;
+			unsigned char *data=0;
 
 			stbi_set_flip_vertically_on_load(false);
-			data = stbi_load(names[i], &w, &h, &nrChannels, 3);
+
+
+			bool couldNotOpen = 0;
+			auto content = fileOpener.binary(names[i], couldNotOpen);
+			if (couldNotOpen)
+			{
+				errorReporter.callErrorCallback(std::string("Could not open file: ") + names[i]);
+				glDeleteTextures(1, &skyBox.texture);
+				return;
+			}
+
+			data = stbi_load_from_memory((unsigned char*)content.data(), content.size(), &w, &h, &nrChannels, 3);
 
 			if (data)
 			{
@@ -35383,17 +35417,26 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter,
+	void SkyBoxLoaderAndDrawer::loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener,
 		GLuint frameBuffer, int format)
 	{
 		skyBox = {};
 
-		int width, height, nrChannels;
-		unsigned char *data;
-
+		int width=0, height=0, nrChannels=0;
+		unsigned char *data=0;
 
 		stbi_set_flip_vertically_on_load(false);
-		data = stbi_load(name, &width, &height, &nrChannels, 3);
+
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(name, couldNotOpen);
+		if (couldNotOpen)
+		{
+			errorReporter.callErrorCallback(std::string("Could not open file: ") + name);
+			glDeleteTextures(1, &skyBox.texture);
+			return;
+		}
+
+		data = stbi_load_from_memory((unsigned char *)content.data(), content.size(), &width, &height, &nrChannels, 3);
 
 		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
@@ -35548,15 +35591,27 @@ namespace gl3d
 
 	}
 
-	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer)
+	void SkyBoxLoaderAndDrawer::loadHDRtexture(const char *name, ErrorReporter &errorReporter,
+		FileOpener &fileOpener, SkyBox &skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
 
-		int width, height, nrChannels;
-		float *data;
+		int width=0, height=0, nrChannels=0;
+		float *data=0;
 
 		stbi_set_flip_vertically_on_load(true);
-		data = stbi_loadf(name, &width, &height, &nrChannels, 0);
+		
+		bool couldNotOpen = 0;
+		auto content = fileOpener.binary(name, couldNotOpen);
+		if (couldNotOpen)
+		{
+			errorReporter.callErrorCallback(std::string("Could not open file: ") + name);
+			glDeleteTextures(1, &skyBox.texture);
+			return;
+		}
+
+		data = stbi_loadf_from_memory((unsigned char *)content.data(), content.size(), &width, &height, &nrChannels, 3);
+
 		if (!data) { errorReporter.callErrorCallback(std::string("err loading ") + name); return; }
 
 
@@ -35923,7 +35978,7 @@ namespace gl3d
 {
 	
 
-	void Renderer3D::init(int x, int y, GLuint frameBuffer)
+	void Renderer3D::init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation)
 	{
 		internal.w = x; internal.h = y;
 		internal.adaptiveW = x;
@@ -35933,7 +35988,7 @@ namespace gl3d
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
-		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener));
+		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener, BRDFIntegrationMapFileLocation));
 		vao.createVAOs();
 		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, fileOpener, frameBuffer);
 
@@ -38342,7 +38397,8 @@ namespace gl3d
 		return antiAlias.usingFXAA;
 	}
 
-	std::string Renderer3D::saveSettingsToFileData()
+	//todo flags
+	std::string Renderer3D::saveSettingsToJson()
 	{
 		using Json = nlohmann::json;
 
@@ -38352,7 +38408,80 @@ namespace gl3d
 		j["normal mapping"] = isNormalMappingEnabeled();
 		j["light subscatter"] = isLightSubScatteringEnabeled();
 
+		//fxaa
+		{
+			j["fxaa"] = isFXAAenabeled();
+			Json fxaaData;
+			auto data = getFxaaSettings();
+
+			fxaaData["edgeDarkTreshold"] = data.edgeDarkTreshold;
+			fxaaData["edgeMinTreshold"] = data.edgeMinTreshold;
+			fxaaData["qualityMultiplyer"] = data.quaityMultiplier;
+			fxaaData["iterations"] = data.ITERATIONS;
+			fxaaData["subPixelQuality"] = data.SUBPIXEL_QUALITY;
+
+			j["fxaaData"] = fxaaData;
+		}
+		
+		//todo separate thing
+		j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
+		j["zprePass"] = zPrePass; //todo setter getter
+		j["frustumCulling"] = frustumCulling; 
+
+
+		//ssao
+		{
+			j["ssao"] = isSSAOenabeled();
+			Json ssaoData;
+			ssaoData["bias"] = getSSAOBias();
+			ssaoData["radius"] = getSSAORadius();
+			ssaoData["sampleCount"] = getSSAOSampleCount();
+			ssaoData["exponent"] = getSSAOExponent();
+			
+			j["ssaoData"] = ssaoData;
+		}
+
+		//chromatic aberation
+		{
+			j["chromaticAberation"] = chromaticAberation();
+			
+			Json chromaticAberationData;
+			chromaticAberationData["strength"] = getChromaticAberationStrength();
+			chromaticAberationData["unfocusDistance"] = getChromaticAberationUnfocusDistance();
+
+			j["chromaticAberationData"] = chromaticAberationData;
+		}
+
 		return j.dump();
+	}
+
+	void Renderer3D::loadSettingsFromJson(const char *data)
+	{
+		using Json = nlohmann::json;
+
+		auto rez = Json::parse(data);
+
+		{
+			auto exposure = rez["exposure"];
+			if (exposure.is_number_float())
+			{
+				setExposure(exposure);
+			}
+
+			auto normalMapping = rez["normal mapping"];
+			if (normalMapping.is_boolean())
+			{
+				this->enableNormalMapping(normalMapping);
+			}
+
+			auto lightSubscatter = rez["light subscatter"];
+
+			if (lightSubscatter.is_boolean())
+			{
+				enableLightSubScattering(lightSubscatter);
+			}
+		}
+
 	}
 
 	//todo look into  glProgramUniform
@@ -40957,21 +41086,21 @@ namespace gl3d
 	SkyBox Renderer3D::loadSkyBox(const char *names[6], GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, fileOpener, frameBuffer);
 		return skyBox;
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *name, int format)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadTexture(name, skyBox, errorReporter, format);
+		internal.skyBoxLoaderAndDrawer.loadTexture(name, skyBox, errorReporter, fileOpener, format);
 		return skyBox;
 	}
 
 	SkyBox Renderer3D::loadHDRSkyBox(const char *name, GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, skyBox, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, fileOpener, skyBox, frameBuffer);
 		return skyBox;
 	}
 
@@ -41286,7 +41415,7 @@ namespace gl3d
 
 		skyBoxLoaderAndDrawer.draw(viewProjMat, s,
 			lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+			s.color);
 	}
 
 	void Renderer3D::InternalStruct::renderSkyBoxBefore(Camera& c, SkyBox& s)
@@ -41299,7 +41428,7 @@ namespace gl3d
 
 		skyBoxLoaderAndDrawer.drawBefore(viewProjMat, s,
 			lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+			s.color);
 	}
 
 	//todo use the max w h to create it

@@ -55,8 +55,9 @@ namespace gl3d
 	struct Renderer3D
 
 	{
+		//todo store the default fbo
 		//size of the screen and the default frameBuffer
-		void init(int x, int y, GLuint frameBuffer);
+		void init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation);
 		
 		ErrorReporter errorReporter;
 		FileOpener fileOpener;
@@ -348,8 +349,12 @@ namespace gl3d
 
 		#pragma endregion
 		
-		//saves the current settings to a file;
-		std::string saveSettingsToFileData();
+		//saves the current settings to a string;
+		std::string saveSettingsToJson();
+
+		//this will terminate if data is not a valid json
+		void loadSettingsFromJson(const char *data);
+
 
 	#pragma endregion
 			

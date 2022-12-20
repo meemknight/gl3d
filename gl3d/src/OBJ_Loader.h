@@ -517,6 +517,13 @@ namespace objl
 		}
 	}
 
+	inline bool customFileExists(const std::string &abs_filename, void *userData)
+	{
+		gl3d::FileOpener *fileOpener = (gl3d::FileOpener *)userData;
+
+		return fileOpener->exists(abs_filename.c_str());
+	}
+
 	inline bool customGLTFReadWholeFile(std::vector<unsigned char> *out, std::string *err,
 		const std::string &filepath, void *userData)
 	{
@@ -597,7 +604,7 @@ namespace objl
 			tinygltf::FsCallbacks callBacks;
 
 			callBacks.ExpandFilePath = tinygltf::ExpandFilePath;
-			callBacks.FileExists = tinygltf::FileExists;
+			callBacks.FileExists = customFileExists;
 			callBacks.ReadWholeFile = customGLTFReadWholeFile;
 			callBacks.WriteWholeFile = tinygltf::WriteWholeFile;
 			callBacks.user_data = &fileOpener;

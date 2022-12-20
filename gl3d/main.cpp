@@ -102,10 +102,11 @@ int main()
 #endif
 #pragma endregion
 
-	renderer.init(w, h, 0);
+	renderer.init(w, h, 0, "resources/BRDFintegrationMap.png");
 
 	{
-		std::cout << renderer.saveSettingsToFileData() << "\n";
+		std::cout << renderer.saveSettingsToJson() << "\n";
+		renderer.loadSettingsFromJson("{\"normal mapping\": false}");
 	}
 
 #pragma region shader
@@ -412,7 +413,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 0, 1.f);
+	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
@@ -426,7 +427,7 @@ int main()
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
+	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj",0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj",0, 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");

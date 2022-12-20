@@ -170,7 +170,7 @@ namespace gl3d
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 
 		GL3D_ADD_FLAG(isStatic, setStatic, 0);
-		GL3D_ADD_FLAG(isVisible, setVisible, 1);
+		GL3D_ADD_FLAG(isVisible, setVisible, 1); //set by user
 		GL3D_ADD_FLAG(castShadows, setCastShadows, 2);
 		GL3D_ADD_FLAG(animate, setAnimate, 3);
 
@@ -259,9 +259,9 @@ namespace gl3d
 			BottomOfTheCrossLeft,
 		};
 
-		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer);
-		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, GLuint frameBuffer, int format = 0);
-		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, SkyBox &skyBox, GLuint frameBuffer);
+		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer, int format = 0);
+		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, FileOpener &fileOpener, SkyBox &skyBox, GLuint frameBuffer);
 		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox,
 			GLuint frameBuffer);
 

@@ -300,9 +300,9 @@ vec3 computePointLightSource(vec3 lightDirection, float metallic, float roughnes
 	vec3 kD = vec3(1.0) - kS; //the difuse is the remaining specular
 	kD *= 1.0 - metallic;	//metallic surfaces are darker
 	
-	vec3 diffuse = fDiffuse(color.rgb);
+	//vec3 diffuse = fDiffuse(color.rgb);
 	//vec3 diffuse = fDiffuseOrenNayar(color.rgb, roughness, lightDirection, viewDir, normal);
-	//vec3 diffuse = fDiffuseOrenNayar2(color.rgb, roughness, lightDirection, viewDir, normal);
+	vec3 diffuse = fDiffuseOrenNayar2(color.rgb, roughness, lightDirection, viewDir, normal);
 	
 	float NdotL = max(dot(normal, lightDirection), 0.0);        
 	return (kD * diffuse + specular) * radiance * NdotL;

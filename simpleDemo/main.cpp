@@ -45,6 +45,7 @@ int main()
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	gl3d::Renderer3D renderer;
 
 
 	GLFWwindow* wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
@@ -60,13 +61,12 @@ int main()
 #if DEBUG_OUTPUT
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(gl3d::glDebugOutput, nullptr);
+	glDebugMessageCallback(gl3d::glDebugOutput, &renderer);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 #endif
 #pragma endregion
 
-	gl3d::Renderer3D renderer;
-	renderer.init(w, h, 0);
+	renderer.init(w, h, 0, "resources/BRDFintegrationMap.png");
 
 	const char* names[6] =
 	{ "resources/skyBoxes/ocean/right.jpg",
@@ -76,7 +76,8 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names, 0);
+	//renderer.skyBox = renderer.loadSkyBox(names, 0);
+	renderer.skyBox.color = {0.2,0.3,0.8};
 
 	auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
 
@@ -137,7 +138,7 @@ int main()
 
 	#pragma region camera
 
-		float speed = 4+0;
+		float speed = 4;
 		glm::vec3 dir = {};
 		if (GetAsyncKeyState('W'))
 		{

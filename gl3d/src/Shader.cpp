@@ -275,12 +275,13 @@ namespace gl3d
 
 
 	//todo move
-	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
+	std::string LightShader::create(ErrorReporter &errorReporter, FileOpener &fileOpener, 
+		const char *BRDFIntegrationMapFileLocation)
 	{
 		std::string error = "";
 
 	#pragma region brdf texture
-		error += brdfTexture.loadTextureFromFile("resources/BRDFintegrationMap.png", fileOpener, TextureLoadQuality::leastPossible, 3);
+		error += brdfTexture.loadTextureFromFile(BRDFIntegrationMapFileLocation, fileOpener, TextureLoadQuality::leastPossible, 3);
 		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

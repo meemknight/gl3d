@@ -15,7 +15,7 @@ namespace gl3d
 {
 	
 
-	void Renderer3D::init(int x, int y, GLuint frameBuffer)
+	void Renderer3D::init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation)
 	{
 		internal.w = x; internal.h = y;
 		internal.adaptiveW = x;
@@ -25,7 +25,7 @@ namespace gl3d
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
-		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener));
+		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener, BRDFIntegrationMapFileLocation));
 		vao.createVAOs();
 		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, fileOpener, frameBuffer);
 
@@ -2434,7 +2434,8 @@ namespace gl3d
 		return antiAlias.usingFXAA;
 	}
 
-	std::string Renderer3D::saveSettingsToFileData()
+	//todo flags
+	std::string Renderer3D::saveSettingsToJson()
 	{
 		using Json = nlohmann::json;
 
@@ -2444,7 +2445,80 @@ namespace gl3d
 		j["normal mapping"] = isNormalMappingEnabeled();
 		j["light subscatter"] = isLightSubScatteringEnabeled();
 
+		//fxaa
+		{
+			j["fxaa"] = isFXAAenabeled();
+			Json fxaaData;
+			auto data = getFxaaSettings();
+
+			fxaaData["edgeDarkTreshold"] = data.edgeDarkTreshold;
+			fxaaData["edgeMinTreshold"] = data.edgeMinTreshold;
+			fxaaData["qualityMultiplyer"] = data.quaityMultiplier;
+			fxaaData["iterations"] = data.ITERATIONS;
+			fxaaData["subPixelQuality"] = data.SUBPIXEL_QUALITY;
+
+			j["fxaaData"] = fxaaData;
+		}
+		
+		//todo separate thing
+		j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
+		j["zprePass"] = zPrePass; //todo setter getter
+		j["frustumCulling"] = frustumCulling; 
+
+
+		//ssao
+		{
+			j["ssao"] = isSSAOenabeled();
+			Json ssaoData;
+			ssaoData["bias"] = getSSAOBias();
+			ssaoData["radius"] = getSSAORadius();
+			ssaoData["sampleCount"] = getSSAOSampleCount();
+			ssaoData["exponent"] = getSSAOExponent();
+			
+			j["ssaoData"] = ssaoData;
+		}
+
+		//chromatic aberation
+		{
+			j["chromaticAberation"] = chromaticAberation();
+			
+			Json chromaticAberationData;
+			chromaticAberationData["strength"] = getChromaticAberationStrength();
+			chromaticAberationData["unfocusDistance"] = getChromaticAberationUnfocusDistance();
+
+			j["chromaticAberationData"] = chromaticAberationData;
+		}
+
 		return j.dump();
+	}
+
+	void Renderer3D::loadSettingsFromJson(const char *data)
+	{
+		using Json = nlohmann::json;
+
+		auto rez = Json::parse(data);
+
+		{
+			auto exposure = rez["exposure"];
+			if (exposure.is_number_float())
+			{
+				setExposure(exposure);
+			}
+
+			auto normalMapping = rez["normal mapping"];
+			if (normalMapping.is_boolean())
+			{
+				this->enableNormalMapping(normalMapping);
+			}
+
+			auto lightSubscatter = rez["light subscatter"];
+
+			if (lightSubscatter.is_boolean())
+			{
+				enableLightSubScattering(lightSubscatter);
+			}
+		}
+
 	}
 
 	//todo look into  glProgramUniform
@@ -2907,7 +2981,7 @@ namespace gl3d
 	void Renderer3D::render(float deltaTime, GLuint frameBuffer)
 	{
 	
-		if (internal.w == 0 || internal.h == 0)
+		if (internal.w <= 0 || internal.h <= 0)
 		{
 			return;
 		}
@@ -4258,7 +4332,7 @@ namespace gl3d
 				for (auto& i : entity.models)
 				{
 					
-					if (frustumCulling && i.culledThisFrame)
+					if (frustumCulling && i.culledThisFrame) //todo data oriented design, move not culled objects to a new buffer
 					{
 						continue;
 					}
@@ -5049,21 +5123,21 @@ namespace gl3d
 	SkyBox Renderer3D::loadSkyBox(const char *names[6], GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, fileOpener, frameBuffer);
 		return skyBox;
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *name, int format)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadTexture(name, skyBox, errorReporter, format);
+		internal.skyBoxLoaderAndDrawer.loadTexture(name, skyBox, errorReporter, fileOpener, format);
 		return skyBox;
 	}
 
 	SkyBox Renderer3D::loadHDRSkyBox(const char *name, GLuint frameBuffer)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, skyBox, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, fileOpener, skyBox, frameBuffer);
 		return skyBox;
 	}
 
@@ -5378,7 +5452,7 @@ namespace gl3d
 
 		skyBoxLoaderAndDrawer.draw(viewProjMat, s,
 			lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+			s.color);
 	}
 
 	void Renderer3D::InternalStruct::renderSkyBoxBefore(Camera& c, SkyBox& s)
@@ -5391,7 +5465,7 @@ namespace gl3d
 
 		skyBoxLoaderAndDrawer.drawBefore(viewProjMat, s,
 			lightShader.lightPassUniformBlockCpuData.exposure,
-			lightShader.lightPassUniformBlockCpuData.ambientLight);
+			s.color);
 	}
 
 	//todo use the max w h to create it

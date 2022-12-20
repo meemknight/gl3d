@@ -2,9 +2,7 @@
 
 #include <string>
 #include <vector>
-
-#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
-#include <fstream> //you can remove this if neded to. It is just used for the default file callback
+#include <Core.h>
 
 namespace gl3d
 {
@@ -12,11 +10,13 @@ namespace gl3d
 	void defaultErrorCallback(std::string err, void *userData);
 	std::string defaultReadEntireFile(const char *fileName, bool &couldNotOpen, void *userData);
 	std::vector<char> defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData);
+	bool defaultFileExists(const char *fileName, void *userData);
 
 	using ErrorCallback_t = decltype(defaultErrorCallback);
 	using ReadEntireFile_t = decltype(defaultReadEntireFile);
 	using ReadEntireFileBinart_t = decltype(defaultReadEntireFileBinary);
-	
+	using FileExists_t = decltype(defaultFileExists);
+
 	struct ErrorReporter
 	{
 		ErrorCallback_t *currentErrorCallback = defaultErrorCallback;
@@ -31,6 +31,7 @@ namespace gl3d
 	{
 		ReadEntireFile_t *readEntireFileCallback = defaultReadEntireFile;
 		ReadEntireFileBinart_t *readEntireFileBinaryCallback = defaultReadEntireFileBinary;
+		FileExists_t *fileExistsCallback = defaultFileExists;
 		void *userData = nullptr;
 
 		std::string operator()(const char *fileName, bool &couldNotOpen)
@@ -43,6 +44,10 @@ namespace gl3d
 			return readEntireFileBinaryCallback(fileName, couldNotOpen, userData);
 		}
 
+		bool exists(const char *fileName)
+		{
+			return fileExistsCallback(fileName, userData);
+		}
 	};
 
 };

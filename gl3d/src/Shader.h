@@ -46,7 +46,7 @@ namespace gl3d
 	//todo this will probably dissapear
 	struct LightShader
 	{
-		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener);
+		std::string create(ErrorReporter &errorReporter, FileOpener &fileOpener, const char *BRDFIntegrationMapFileLocation);
 
 		void getSubroutines(ErrorReporter &errorReporter);
 
