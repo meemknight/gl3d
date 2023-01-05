@@ -29,6 +29,48 @@ vec3 fromuShortToFloat(ivec3 a)
 	return normalize(ret);
 }
 
+float saturate(float a)
+{
+	return min(max(a,0),1);
+}
+
+float computeAO(vec3 normal, vec2 direction, vec2 screenSize, vec3 fragPos)
+{
+	vec3 leftDirection = cross(normal, vec3(direction, 0));
+	vec3 tangent = normalize( cross(leftDirection, normal) );
+
+	const float bias = (3.141592/360)*30;
+
+	float tangentAngle = atan(tangent.z / length(tangent.xy));
+	float sinTangentAngle = sin(tangentAngle + bias);
+	
+	//
+
+	vec2 texelSize = vec2(1.f,1.f) / screenSize;
+
+	float lowestZ = INFINITY;
+	vec3 foundPos = vec3(0,0,INFINITY);
+	for(int i=1; i<=10; i++)
+	{
+		vec2 marchPosition = v_texCoords + i*texelSize*direction;
+		
+		vec3 fragPosMarch = texture(u_gPosition, v_texCoords).xyz;
+		
+		if(fragPosMarch.z < lowestZ)
+		{
+			lowestZ = fragPosMarch.z;
+			foundPos = fragPosMarch;
+		}
+	}
+
+	vec3 horizonVector = normalize(foundPos - fragPos);
+	
+	float horizonAngle = atan(horizonVector.z/length(horizonVector.xy));
+	float sinHorizonAngle = sin(horizonAngle);	
+
+
+	return saturate((sinHorizonAngle - sinTangentAngle));
+}
 
 void main()
 {
@@ -36,7 +78,7 @@ void main()
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 	vec2 noisePos = v_texCoords * noiseScale;
 
-	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
+	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz; //view space
 	vec3 normal    = normalize( vec3(transpose(inverse(mat3(u_view))) * 
 		fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz)));
 	vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
@@ -47,38 +89,21 @@ void main()
 
 	//vec3 tangent = normalize(normal);
 
-	vec2 direction = normalize(vec2(0.5,0.5));
-	vec3 leftDirection = cross(normal, vec3(direction, 0));
-	vec3 tangent = normalize( cross(leftDirection, normal) );
+	float rez = 0;
+	//vec2 vectors[4]= vec2[4](normalize(vec2(0,1)),normalize(vec2(0,-1)),normalize(vec2(1,0)),normalize(vec2(-1,0)));
 
-	float tangentAngle = atan(tangent.z / length(tangent.xy));
-	float sinTangentAngle = sin(tangentAngle);
+	//for(int i=0; i<4; i++)
+	//{
+	//	rez += computeAO(normal, vectors[i], screenSize, fragPos);
+	//}
 	
-	//
+	rez += computeAO(normal, vec2(0,1), screenSize, fragPos);
+	rez += computeAO(normal, vec2(0,-1), screenSize, fragPos);
+	rez += computeAO(normal, vec2(1,0), screenSize, fragPos);
+	rez += computeAO(normal, vec2(-1,0), screenSize, fragPos);
 
-	vec2 texelSize = vec2(1.f,1.f) / screenSize;
-
-	float highestZ = -INFINITY;
-	vec3 foundPos = vec3(0,0,-INFINITY);
-	for(int i=1; i<=10; i++)
-	{
-		vec2 marchPosition = v_texCoords + i*texelSize*direction;
-		
-		vec3 fragPosMarch = texture(u_gPosition, v_texCoords).xyz;
-		
-		if(fragPosMarch.z > highestZ)
-		{
-			highestZ = fragPosMarch.z;
-			foundPos = fragPosMarch;
-		}
-	}
-
-	vec3 horizonVector = foundPos - fragPos;
+	rez/=4;
 	
-	float horizonAngle = atan(horizonVector.z/length(horizonVector.xy));
-	float sinHorizonAngle = sin(horizonAngle);	
-
-
-	fragColor = sinHorizonAngle - sinTangentAngle;
+	fragColor = 1.f - rez;
 
 }
