@@ -130,5 +130,6 @@
     <None Include="shaders\postProcess\addMipsBlur.frag" />
     <None Include="shaders\deferred\zPrePass.vert" />
     <None Include="shaders\postProcess\chromaticAberation.frag" />
+    <None Include="shaders\hbao\hbao.frag" />
   </ItemGroup>
 </Project>

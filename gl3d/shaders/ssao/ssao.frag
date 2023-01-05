@@ -49,8 +49,8 @@ void main()
 
 	//vec3 fragPos   = vec3(u_view * vec4(texture(u_gPosition, v_texCoords).xyz,1));
 	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
-	vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * 
-		fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz));
+	vec3 normal    = normalize( vec3(transpose(inverse(mat3(u_view))) * 
+		fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz)) );
 	vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; 
 
 	vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));

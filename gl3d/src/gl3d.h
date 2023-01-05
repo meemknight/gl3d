@@ -476,46 +476,61 @@ namespace gl3d
 			}showNormalsProgram;
 
 			struct SSAO
+			{
+				//https://learnopengl.com/Advanced-Lighting/SSAO
+
+				void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+				void resize(int w, int h);
+
+				glm::ivec2 currentDimensions = {};
+
+				GLuint noiseTexture;
+				GLuint ssaoFBO;
+				GLuint ssaoColorBuffer;
+
+				Shader shader;
+
+				GLuint ssaoUniformBlockBuffer;
+				struct SsaoShaderUniformBlockData
 				{
-					//https://learnopengl.com/Advanced-Lighting/SSAO
+					float radius = 0.2;
+					float bias = 0.025;
+					int samplesTestSize = 16; // should be less than kernelSize (64)
 
-					void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
-					void resize(int w, int h);
+				}ssaoShaderUniformBlockData;
 
-					glm::ivec2 currentDimensions = {};
+				GLint u_projection = -1;
+				GLint u_view = -1;
+				GLint u_gPosition = -1;
+				GLint u_gNormal = -1;
+				GLint u_texNoise = -1;
+				GLint u_samples = -1;
+				GLuint u_SSAODATA;
 
-					GLuint noiseTexture;
-					GLuint ssaoFBO;
-					GLuint ssaoColorBuffer;
+				std::vector<glm::vec3> ssaoKernel;
 
-					Shader shader;
+				GLuint blurBuffer;
+				GLuint blurColorBuffer;
+				GLint u_ssaoInput;
+				Shader blurShader;
 
-					GLuint ssaoUniformBlockBuffer;
-					struct SsaoShaderUniformBlockData
-					{
-						float radius = 0.2;
-						float bias = 0.025;
-						int samplesTestSize = 16; // should be less than kernelSize (64)
+				float ssao_finalColor_exponent = 5.f;
+			}ssao;
 
-					}ssaoShaderUniformBlockData;
+			struct HBAO
+			{
+				//https://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf
 
-					GLint u_projection = -1;
-					GLint u_view = -1;
-					GLint u_gPosition = -1;
-					GLint u_gNormal = -1;
-					GLint u_texNoise = -1;
-					GLint u_samples = -1;
-					GLuint u_SSAODATA;
+				void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+				Shader shader;
 
-					std::vector<glm::vec3> ssaoKernel;
+				GLint u_projection = -1;
+				GLint u_view = -1;
+				GLint u_gPosition = -1;
+				GLint u_gNormal = -1;
+				GLint u_texNoise = -1;
 
-					GLuint blurBuffer;
-					GLuint blurColorBuffer;
-					GLint u_ssaoInput;
-					Shader blurShader;
-
-					float ssao_finalColor_exponent = 5.f;
-				}ssao;
+			}hbao;
 
 			struct GBuffer
 			{

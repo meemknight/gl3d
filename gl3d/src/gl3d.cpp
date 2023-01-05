@@ -50,6 +50,7 @@ namespace gl3d
 
 		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
 		internal.ssao.create(x, y, errorReporter, fileOpener, frameBuffer);
+		internal.hbao.create(errorReporter, fileOpener, frameBuffer);
 		postProcess.create(x, y, errorReporter, fileOpener, frameBuffer);
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
@@ -4612,55 +4613,89 @@ namespace gl3d
 		if (internal.lightShader.useSSAO)
 		{
 
-		#pragma region render ssao at half rez
+			if (0)
+			{
+				//ssao
 
-			glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
+				glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
-			glUseProgram(internal.ssao.shader.id);
+				glUseProgram(internal.ssao.shader.id);
 
-			//todo lazyness
-			glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
-				&internal.ssao.ssaoShaderUniformBlockData);
+				//todo lazyness
+				glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
+					&internal.ssao.ssaoShaderUniformBlockData);
 
-			glUniformMatrix4fv(internal.ssao.u_projection, 1, GL_FALSE,
-				&(camera.getProjectionMatrix())[0][0]);
+				glUniformMatrix4fv(internal.ssao.u_projection, 1, GL_FALSE,
+					&(camera.getProjectionMatrix())[0][0]);
 
-			glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
-				&(camera.getWorldToViewMatrix())[0][0]);
+				glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
+					&(camera.getWorldToViewMatrix())[0][0]);
 
-			glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
+				glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
 
-			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
-			glClear(GL_COLOR_BUFFER_BIT);
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
+				glClear(GL_COLOR_BUFFER_BIT);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
-			glUniform1i(internal.ssao.u_gPosition, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
+				glUniform1i(internal.ssao.u_gPosition, 0);
 
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
-			glUniform1i(internal.ssao.u_gNormal, 1);
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
+				glUniform1i(internal.ssao.u_gNormal, 1);
 
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
-			glUniform1i(internal.ssao.u_texNoise, 2);
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
+				glUniform1i(internal.ssao.u_texNoise, 2);
 
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			}
+			else
+			{
+				//hbao
+				glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
+				glUseProgram(internal.hbao.shader.id);
+
+				glUniformMatrix4fv(internal.hbao.u_projection, 1, GL_FALSE,
+					&(camera.getProjectionMatrix())[0][0]);
+				glUniformMatrix4fv(internal.hbao.u_view, 1, GL_FALSE,
+					&(camera.getWorldToViewMatrix())[0][0]);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
+				glUniform1i(internal.hbao.u_gPosition, 0);
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
+				glUniform1i(internal.hbao.u_gNormal, 1);
+
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
+				glUniform1i(internal.hbao.u_texNoise, 2);
+
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+
+			}
+
+
+		#pragma region ssao/hbao "blur" (more like average blur)
+				glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.blurBuffer);
+				internal.ssao.blurShader.bind();
+				glClear(GL_COLOR_BUFFER_BIT);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
+				glUniform1i(internal.ssao.u_ssaoInput, 0);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		#pragma endregion
 
-
-		#pragma region ssao "blur" (more like average blur)
-			glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.blurBuffer);
-			internal.ssao.blurShader.bind();
-			glClear(GL_COLOR_BUFFER_BIT);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
-			glUniform1i(internal.ssao.u_ssaoInput, 0);
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		#pragma endregion
 
 			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
@@ -5091,7 +5126,7 @@ namespace gl3d
 		//gbuffer
 		internal.gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
 
-		//ssao
+		//ssao and hbao
 		internal.ssao.resize(internal.adaptiveW, internal.adaptiveH);
 	
 		//bloom buffer and color buffer
@@ -5990,5 +6025,19 @@ namespace gl3d
 			currentDimensions = glm::ivec2(w, h);
 		}
 	}
+
+	void Renderer3D::InternalStruct::HBAO::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
+	{
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/hbao/hbao.frag", errorReporter, fileOpener);
+
+		u_projection = getUniform(shader.id, "u_projection", errorReporter);
+		u_view = getUniform(shader.id, "u_view", errorReporter);
+		u_gPosition = getUniform(shader.id, "u_gPosition", errorReporter);
+		u_gNormal = getUniform(shader.id, "u_gNormal", errorReporter);
+		u_texNoise = getUniform(shader.id, "u_texNoise", errorReporter);
+		
+	}
+
 
 };
