@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-22
+//built on 2023-01-04
 ////////////////////////////////////////////////
 
 
@@ -34325,7 +34325,7 @@ namespace gl3d
 		unsigned char flags = {}; // lsb -> 1 static, visible, shadows
 
 		GL3D_ADD_FLAG(isStatic, setStatic, 0);
-		GL3D_ADD_FLAG(isVisible, setVisible, 1);
+		GL3D_ADD_FLAG(isVisible, setVisible, 1); //set by user
 		GL3D_ADD_FLAG(castShadows, setCastShadows, 2);
 		GL3D_ADD_FLAG(animate, setAnimate, 3);
 

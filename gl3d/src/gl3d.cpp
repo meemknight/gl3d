@@ -4127,9 +4127,16 @@ namespace gl3d
 
 		#pragma endregion
 
-
-		glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		#pragma region clear gbuffer
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+			float clearPositionColor[4] = {0,0,-INFINITY, 0};
+			glClearBufferfv(GL_COLOR, internal.gBuffer.positionViewSpace, clearPositionColor);
+		}
+		#pragma endregion
+	
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 
@@ -4604,6 +4611,9 @@ namespace gl3d
 
 		if (internal.lightShader.useSSAO)
 		{
+
+		#pragma region render ssao at half rez
+
 			glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
 			glUseProgram(internal.ssao.shader.id);
@@ -4637,6 +4647,7 @@ namespace gl3d
 			glUniform1i(internal.ssao.u_texNoise, 2);
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		#pragma endregion
 
 
 		#pragma region ssao "blur" (more like average blur)
@@ -4649,9 +4660,10 @@ namespace gl3d
 			glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
 			glUniform1i(internal.ssao.u_ssaoInput, 0);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		#pragma endregion
 
 			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
-		#pragma endregion
+
 		}
 	#pragma endregion
 

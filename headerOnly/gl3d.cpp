@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2022-11-22
+//built on 2023-01-04
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -33043,7 +33043,7 @@ namespace gl3d
 "vec3 kS = F; \n"
 "vec3 kD = vec3(1.0) - kS; \n"
 "kD *= 1.0 - metallic;	\n"
-"vec3 diffuse = fDiffuse(color.rgb);\n"
+"vec3 diffuse = fDiffuseOrenNayar2(color.rgb, roughness, lightDirection, viewDir, normal);\n"
 "float NdotL = max(dot(normal, lightDirection), 0.0);        \n"
 "return (kD * diffuse + specular) * radiance * NdotL;\n"
 "}\n"
@@ -38944,7 +38944,7 @@ namespace gl3d
 	void Renderer3D::render(float deltaTime, GLuint frameBuffer)
 	{
 	
-		if (internal.w == 0 || internal.h == 0)
+		if (internal.w <= 0 || internal.h <= 0)
 		{
 			return;
 		}
@@ -40295,7 +40295,7 @@ namespace gl3d
 				for (auto& i : entity.models)
 				{
 					
-					if (frustumCulling && i.culledThisFrame)
+					if (frustumCulling && i.culledThisFrame) //todo data oriented design, move not culled objects to a new buffer
 					{
 						continue;
 					}
