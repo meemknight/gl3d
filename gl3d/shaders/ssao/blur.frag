@@ -21,5 +21,5 @@ void main()
 
 	fragColor = result / (4.0 * 4.0);
 
-	fragColor = texture(u_ssaoInput, v_texCoords).r;
+	//fragColor = texture(u_ssaoInput, v_texCoords).r;
 }

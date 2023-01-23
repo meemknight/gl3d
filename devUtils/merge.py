@@ -158,8 +158,8 @@ for i in cppFiles:
             for index in range(len(shaderSource)):
                 shaderSource[index] = shaderSource[index].lstrip()
                 if(shaderSource[index].startswith("//")):
-                    shaderSource[index] = ""    
-                shaderSource[index].replace("#pragma debug(on)", "")
+                    shaderSource[index] = ""   
+                shaderSource[index] = shaderSource[index].replace("#pragma debug(on)", "")
                 found = shaderSource[index].find("//")
                 if found >= 0:
                     shaderSource[index] = shaderSource[index][0:found]

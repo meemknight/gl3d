@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <ErrorReporting.h>
 
+//todo get mesh material?
 
 namespace gl3d
 {
@@ -57,8 +58,10 @@ namespace gl3d
 	{
 		//todo store the default fbo
 		//size of the screen and the default frameBuffer
-		void init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation);
+		void init(int x, int y, const char *BRDFIntegrationMapFileLocation, GLuint frameBuffer = 0);
 		
+		GLuint frameBuffer = 0;
+
 		ErrorReporter errorReporter;
 		FileOpener fileOpener;
 
@@ -67,14 +70,14 @@ namespace gl3d
 
 	#pragma region material
 		
-		Material createMaterial(GLuint frameBuffer, glm::vec4 kd = glm::vec4(1), 
+		Material createMaterial(glm::vec4 kd = glm::vec4(1), 
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
 			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
 
-		Material createMaterial(Material m, GLuint frameBuffer);
+		Material createMaterial(Material m);
 
-		std::vector<Material> loadMaterial(std::string file,  GLuint frameBuffer);
+		std::vector<Material> loadMaterial(std::string file);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -111,19 +114,19 @@ namespace gl3d
 		Texture createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
-			Texture& ambientOcclusion, GLuint frameBuffer);
+			Texture& ambientOcclusion);
 		void deletePBRTexture(PBRTexture &t);
 
 	#pragma endregion
 
 	#pragma region skyBox
 
-		SkyBox loadSkyBox(const char* names[6], GLuint frameBuffer);
+		SkyBox loadSkyBox(const char* names[6]);
 		SkyBox loadSkyBox(const char* name, int format = 0);
-		SkyBox loadHDRSkyBox(const char* name, GLuint frameBuffer);
+		SkyBox loadHDRSkyBox(const char* name);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, GLuint frameBuffer);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
 
 	#pragma endregion
 
@@ -131,7 +134,7 @@ namespace gl3d
 
 		//todo implement stuff here
 
-		Model loadModel(std::string path, GLuint frameBuffer, float scale = 1);
+		Model loadModel(std::string path, float scale = 1);
 		bool isModel(Model& m);
 		void deleteModel(Model &m);
 
@@ -231,7 +234,7 @@ namespace gl3d
 		Entity createEntity(Model m, Transform transform = {}, 
 			bool staticGeometry = 1, bool visible = 1, bool castShadows = 1);
 
-		Entity duplicateEntity(Entity &e, GLuint frameBuffer);
+		Entity duplicateEntity(Entity &e);
 
 		void setEntityModel(Entity& e, Model m);
 		void clearEntityModel(Entity& e);
@@ -269,15 +272,15 @@ namespace gl3d
 
 		int getEntityMeshesCount(Entity& e);
 		MaterialValues getEntityMeshMaterialValues(Entity& e, int meshIndex);
-		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat, GLuint frameBuffer);
+		void setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat);
 
 		std::string getEntityMeshMaterialName(Entity& e, int meshIndex);
-		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name, GLuint frameBuffer);
+		void setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string &name);
 		
 		void setEntityMeshMaterial(Entity& e, int meshIndex, Material mat);
 		
 		TextureDataForMaterial getEntityMeshMaterialTextures(Entity& e, int meshIndex);
-		void setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture, GLuint frameBuffer);
+		void setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture);
 
 	#pragma endregion
 
@@ -506,6 +509,12 @@ namespace gl3d
 				GLint u_texNoise = -1;
 				GLint u_samples = -1;
 				GLuint u_SSAODATA;
+				GLint u_depthBuffer = -1;
+				GLint u_aspectRatio = -1;
+				GLint u_tanHalfFOV = -1;
+				GLint u_farPlane = -1;
+				GLint u_closePlane = -1;
+
 
 				std::vector<glm::vec3> ssaoKernel;
 
@@ -763,7 +772,7 @@ namespace gl3d
 		}renderDepthMap;
 		void renderADepthMap(GLuint texture, GLuint frameBuffer);
 
-		void render(float deltaTime, GLuint frameBuffer = 0);
+		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
 
 		bool frustumCulling = 1;

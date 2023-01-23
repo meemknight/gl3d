@@ -8,13 +8,18 @@ void gl3d::ErrorReporter::callErrorCallback(std::string s)
 	}
 }
 
+
 void gl3d::defaultErrorCallback(std::string err, void *userData)
 {
+#if GL3D_REMOVE_IOSTREAM == 0
 	std::cout << err << "\n";
+#endif
 }
 
 std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen, void *userData)
 {
+#if GL3D_REMOVE_FSTREAM == 0
+
 	std::ifstream file;
 	file.open(fileName);
 
@@ -22,7 +27,7 @@ std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen
 	{
 		couldNotOpen = true;
 		return "";
-	}
+}
 
 	couldNotOpen = false;
 
@@ -40,10 +45,17 @@ std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen
 	file.close();
 
 	return ret;
+
+#else
+
+	return "";
+
+#endif
 }
 
 std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData)
 {
+#if GL3D_REMOVE_FSTREAM == 0
 	std::ifstream file;
 	file.open(fileName, std::ios::binary);
 
@@ -69,10 +81,15 @@ std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &
 	file.close();
 
 	return ret;
+#else
+	return {};
+#endif
 }
 
 bool gl3d::defaultFileExists(const char *fileName, void *userData)
 {
+
+#if GL3D_REMOVE_FSTREAM == 0
 	std::ifstream file;
 	file.open(fileName);
 
@@ -84,4 +101,8 @@ bool gl3d::defaultFileExists(const char *fileName, void *userData)
 	{
 		return true;
 	}
+#else
+	return false;
+#endif
+	
 }

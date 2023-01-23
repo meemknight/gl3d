@@ -7,6 +7,7 @@
 #include "../headerOnly/gl3d.h"
 
 #include <chrono>
+#include <random>
 
 int w = 840;
 int h = 640;
@@ -66,7 +67,7 @@ int main()
 #endif
 #pragma endregion
 
-	renderer.init(w, h, 0, "resources/BRDFintegrationMap.png");
+	renderer.init(w, h, "resources/BRDFintegrationMap.png");
 
 	const char* names[6] =
 	{ "resources/skyBoxes/ocean/right.jpg",
@@ -76,21 +77,24 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	//renderer.skyBox = renderer.loadSkyBox(names, 0);
-	renderer.skyBox.color = {0.2,0.3,0.8};
+	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr", 0);
+	//renderer.skyBox.color = {0.2,0.3,0.8};
 
-	auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
+	//auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
 
 
-	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj", 0);
-	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", 0);
-	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl", 0);
+	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj");
+	//gl3d::Model ballModel = renderer.loadModel("resources/sphere2.obj", 0);
+	gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj");
+	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb");
+	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
 	
 
 	gl3d::Transform transform{};
 
 	//transform.rotation.x = glm::radians(90.f);
-	gl3d::Entity entity = renderer.createEntity(steveModel, transform);
+	gl3d::Entity entity = renderer.createEntity(ballModel, transform);
 	//renderer.setEntityMeshMaterial(entity, 0, steveMaterial[0]);
 
 	auto textures = renderer.getEntityMeshMaterialTextures(entity, 0);
@@ -100,7 +104,7 @@ int main()
 	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
 
 
-	renderer.setEntityMeshMaterial(entity, 0, rockMaterialModel[0]);
+	//renderer.setEntityMeshMaterial(entity, 0, rockMaterialModel[0]);
 
 #pragma region deltaTime
 	int fpsCount = 0;
@@ -137,6 +141,66 @@ int main()
 
 
 	#pragma region camera
+
+
+		//change material
+		if (0)
+		{
+			static float timer;
+			timer += deltaTime;
+			if (timer >= 1)
+			{
+				timer -= 1;
+				auto m = renderer.getEntityMeshMaterialValues(entity, 0);
+
+				auto getRandomFloat = []()
+				{
+					std::uniform_real_distribution<float> dist(0, 1.f);
+					std::random_device d;
+					return dist(d);
+				};
+
+				m.metallic = getRandomFloat();
+				m.roughness = getRandomFloat();
+				m.kd.r = getRandomFloat();
+				m.kd.g = getRandomFloat();
+				m.kd.b = getRandomFloat();
+
+				if (getRandomFloat() > 0.80f)
+				{
+					m.emmisive = getRandomFloat();
+				}
+				else
+				{
+					m.emmisive = 0;
+				}
+
+				renderer.setEntityMeshMaterialValues(entity, 0, m);
+			}
+
+
+		}
+
+
+		//rotate camera
+		if (1)
+		{
+			static float rotation = 0;
+			rotation += 3.141592 * deltaTime * 0.7;
+			if (rotation >= 3.141592 * 2) { rotation -= 3.141592 * 2; }
+
+			glm::vec3 cameraPos(0, 0, 5);
+			cameraPos = glm::rotate(rotation, glm::vec3{0,1,0}) * glm::vec4(cameraPos,1);
+			
+			//std::cout << glm::length(cameraPos) << "\n";
+
+			renderer.camera.position = cameraPos;
+			renderer.camera.viewDirection = -glm::normalize(cameraPos);
+
+
+
+		}
+
 
 		float speed = 4;
 		glm::vec3 dir = {};
@@ -196,10 +260,10 @@ int main()
 
 	#pragma endregion
 		
-		transform = renderer.getEntityTransform(entity);
+		//transform = renderer.getEntityTransform(entity);
 		//transform.position.x = std::sin(clock() / 1000.f);
-		transform.position.z = -1.f;
-		renderer.setEntityTransform(entity, transform);
+		//transform.position.z = -1.f;
+		//renderer.setEntityTransform(entity, transform);
 
 	#pragma region render and events
 		renderer.render(deltaTime);

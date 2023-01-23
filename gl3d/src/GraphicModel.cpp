@@ -967,6 +967,7 @@ namespace gl3d
 	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox
 		, GLuint frameBuffer, float sampleQuality, unsigned int specularSamples)
 	{
+
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

@@ -1140,7 +1140,6 @@ void main()
 		a_outColor = vec4(color.rgb + emissive.rgb, 1);
 		a_outBloom = vec4(emissive.rgb, 1);
 	}
-
 	
 
 	//a_outColor.rgb = vec3(albedoAlpha);

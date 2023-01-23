@@ -114,7 +114,7 @@ void main()
 	//gamma correction
 	a_color.rgb = pow(a_color.rgb, vec3(1.0/2.2));
 
-	a_color.rgb = vec3(ssaof);
+	//a_color.rgb = vec3(ssaof);
 
 	a_color.a = color.a;
 }

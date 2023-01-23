@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-01-04
+//built on 2023-01-23
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31289,13 +31289,18 @@ void gl3d::ErrorReporter::callErrorCallback(std::string s)
 	}
 }
 
+
 void gl3d::defaultErrorCallback(std::string err, void *userData)
 {
+#if GL3D_REMOVE_IOSTREAM == 0
 	std::cout << err << "\n";
+#endif
 }
 
 std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen, void *userData)
 {
+#if GL3D_REMOVE_FSTREAM == 0
+
 	std::ifstream file;
 	file.open(fileName);
 
@@ -31303,7 +31308,7 @@ std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen
 	{
 		couldNotOpen = true;
 		return "";
-	}
+}
 
 	couldNotOpen = false;
 
@@ -31321,10 +31326,17 @@ std::string gl3d::defaultReadEntireFile(const char* fileName, bool &couldNotOpen
 	file.close();
 
 	return ret;
+
+#else
+
+	return "";
+
+#endif
 }
 
 std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &couldNotOpen, void *userData)
 {
+#if GL3D_REMOVE_FSTREAM == 0
 	std::ifstream file;
 	file.open(fileName, std::ios::binary);
 
@@ -31350,10 +31362,15 @@ std::vector<char> gl3d::defaultReadEntireFileBinary(const char *fileName, bool &
 	file.close();
 
 	return ret;
+#else
+	return {};
+#endif
 }
 
 bool gl3d::defaultFileExists(const char *fileName, void *userData)
 {
+
+#if GL3D_REMOVE_FSTREAM == 0
 	std::ifstream file;
 	file.open(fileName);
 
@@ -31365,6 +31382,10 @@ bool gl3d::defaultFileExists(const char *fileName, void *userData)
 	{
 		return true;
 	}
+#else
+	return false;
+#endif
+	
 }
 
 #pragma endregion
@@ -31873,12 +31894,13 @@ namespace gl3d
 
 		//std::pair< std::string, const char*>{"name", "value"}
 		//#pragma shaderSources
-      std::pair<std::string, const char*>{"ssao.frag", "#version 330 core\n"
+      std::pair<std::string, const char*>{"ssao.frag", "﻿#version 330 core\n"
 "out float fragColor;\n"
 "noperspective in highp vec2 v_texCoords;\n"
 "uniform sampler2D u_gPosition;\n"
 "uniform isampler2D u_gNormal;\n"
 "uniform sampler2D u_texNoise;\n"
+"uniform sampler2D u_depthBuffer;\n"
 "uniform vec3 samples[64];\n"
 "uniform mat4 u_projection; \n"
 "uniform mat4 u_view; \n"
@@ -31897,14 +31919,29 @@ namespace gl3d
 "ret -= 1.f;\n"
 "return normalize(ret);\n"
 "}\n"
+"uniform float u_farPlane;\n"
+"uniform float u_closePlane;\n"
+"vec3 viewSpace(vec2 vTexCoord)\n"
+"{\n"
+"float z = texture2D(u_depthBuffer, vTexCoord).x;  \n"
+"float z_n = 2.0 * z - 1.0;\n"
+"float z_e = 2.0 * u_closePlane * u_farPlane / (u_farPlane + u_closePlane - z_n * (u_farPlane - u_closePlane));\n"
+"vec3 retVector = vec3(1,1,1);\n"
+"return retVector * z_e;\n"
+"float x = vTexCoord.x * 2 - 1;\n"
+"float y = (1 - vTexCoord.y) * 2 - 1;\n"
+"vec4 vProjectedPos = vec4(x, y, z, 1.0f);\n"
+"vec4 vPositionVS = inverse(u_projection) * vProjectedPos;  \n"
+"return vPositionVS.xyz / vPositionVS.w;  \n"
+"}\n"
 "void main()\n"
 "{\n"
 "vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; \n"
 "vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);\n"
 "vec2 noisePos = v_texCoords * noiseScale;\n"
 "vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;\n"
-"vec3 normal    = vec3(transpose(inverse(mat3(u_view))) * \n"
-"fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz));\n"
+"vec3 normal    = normalize( vec3(transpose(inverse(mat3(u_view))) * \n"
+"fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz)) );\n"
 "vec3 randomVec = texture2D(u_texNoise, noisePos).xyz; \n"
 "vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));\n"
 "vec3 bitangent = cross(normal, tangent);\n"
@@ -32016,7 +32053,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"skyBox.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "layout (location = 0) in vec3 aPos;\n"
 "out vec3 v_texCoords;\n"
 "uniform mat4 u_viewProjection;\n"
@@ -32156,7 +32192,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"hdrToCubeMap.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "layout (location = 0) in vec3 aPos;\n"
 "out vec3 v_localPos;\n"
 "uniform mat4 u_viewProjection;\n"
@@ -32338,7 +32373,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"pointShadow.vert", "#version 430\n"
-"#pragma debug(on)\n"
 "layout(location = 0) in vec3 a_positions;\n"
 "layout(location = 1) in vec3 a_normals; \n"
 "layout(location = 2) in vec2 a_texCoord;\n"
@@ -32792,8 +32826,84 @@ namespace gl3d
 "fragColor = vec4(roughness, metallic, ambient, 1);\n"
 "}\n"},
 
+      std::pair<std::string, const char*>{"hbao.frag", "#version 330 core\n"
+"out float fragColor;\n"
+"noperspective in highp vec2 v_texCoords;\n"
+"uniform sampler2D u_gPosition;\n"
+"uniform isampler2D u_gNormal;\n"
+"uniform sampler2D u_texNoise;\n"
+"uniform mat4 u_projection; \n"
+"uniform mat4 u_view; \n"
+"const float INFINITY = 1.f/0.f;\n"
+"vec3 fromuShortToFloat(ivec3 a)\n"
+"{\n"
+"vec3 ret = a;\n"
+"ret /= 65536;\n"
+"ret *= 2.f;\n"
+"ret -= 1.f;\n"
+"return normalize(ret);\n"
+"}\n"
+"float saturate(float a)\n"
+"{\n"
+"return min(max(a,0),1);\n"
+"}\n"
+"vec2 computeAO(vec3 normal, vec2 direction, vec2 screenSize, vec3 fragPos)\n"
+"{\n"
+"float RAD = 0.05;\n"
+"float RAD_FOR_DIRECTION = length( direction*vec2(10.0) / (vec2(abs(fragPos.z))*screenSize));\n"
+"vec3 viewVector = normalize(fragPos);\n"
+"vec3 leftDirection = cross(viewVector, vec3(direction,0));\n"
+"vec3 projectedNormal = normal - dot(leftDirection, normal) * leftDirection;\n"
+"float projectedLen = length(projectedNormal);\n"
+"projectedNormal /= projectedLen;\n"
+"vec3 tangent = cross(projectedNormal, leftDirection);\n"
+"const float bias = (3.141592/360)*20.f;\n"
+"float tangentAngle = atan(tangent.z / length(tangent.xy));\n"
+"float sinTangentAngle = sin(tangentAngle + bias);\n"
+"vec2 texelSize = vec2(1.f,1.f) / screenSize;\n"
+"float highestZ = -INFINITY;\n"
+"vec3 foundPos = vec3(0,0,-INFINITY);\n"
+"for(int i=2; i<=10; i++)\n"
+"{\n"
+"vec2 marchPosition = v_texCoords + i*texelSize*direction;\n"
+"vec3 fragPosMarch = texture(u_gPosition, marchPosition).xyz;\n"
+"vec3 hVector = normalize(fragPosMarch-fragPos); \n"
+"float rangeCheck = 1 - saturate(length(fragPosMarch-fragPos) / RAD-1);\n"
+"if(hVector.z > highestZ && length(fragPosMarch-fragPos) < RAD)\n"
+"{\n"
+"highestZ = hVector.z;\n"
+"foundPos = fragPosMarch;\n"
+"}\n"
+"}\n"
+"vec3 horizonVector = (foundPos - fragPos);\n"
+"float horizonAngle = atan(horizonVector.z/length(horizonVector.xy));\n"
+"float sinHorizonAngle = sin(horizonAngle);	\n"
+"vec2 rez = vec2(saturate((sinHorizonAngle - sinTangentAngle))/2, projectedLen);\n"
+"return rez;\n"
+"}\n"
+"void main()\n"
+"{\n"
+"vec2 screenSize = textureSize(u_gPosition, 0).xy/2.f; \n"
+"vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);\n"
+"vec2 noisePos = v_texCoords * noiseScale;\n"
+"vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz; \n"
+"if(fragPos.z == -INFINITY){fragColor = 1; return;}\n"
+"vec3 normal    = normalize( vec3( \n"
+"transpose(inverse(mat3(u_view))) * \n"
+"fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz)\n"
+"));\n"
+"vec2 randomVec = vec2(0,1);\n"
+"vec2 rez = vec2(0,0);\n"
+"vec3 viewVector = normalize(fragPos);\n"
+"rez += computeAO(normal, vec2(randomVec), screenSize, fragPos);\n"
+"rez += computeAO(normal, -vec2(randomVec), screenSize, fragPos);\n"
+"rez += computeAO(normal, vec2(-randomVec.y,randomVec.x), screenSize, fragPos);\n"
+"rez += computeAO(normal, vec2(randomVec.y, -randomVec.x), screenSize, fragPos);\n"
+"rez.x /= rez.y;\n"
+"fragColor = 1.f - rez.x;\n"
+"}\n"},
+
       std::pair<std::string, const char*>{"zPrePass.vert", "#version 430\n"
-"#pragma debug(on)\n"
 "layout(location = 0) in vec3 a_positions;\n"
 "layout(location = 2) in vec2 a_texCoord;\n"
 "layout(location = 3) in ivec4 a_jointsId;\n"
@@ -32841,7 +32951,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"lightingPass.frag", "#version 430 core\n"
-"#pragma debug(on)\n"
 "#extension GL_ARB_bindless_texture: require\n"
 "layout(location = 0) out vec4 a_outColor;\n"
 "layout(location = 1) out vec4 a_outBloom;\n"
@@ -33549,7 +33658,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"geometryPass.vert", "#version 430\n"
-"#pragma debug(on)\n"
 "layout(location = 0) in vec3 a_positions;\n"
 "layout(location = 1) in vec3 a_normals;\n"
 "layout(location = 2) in vec2 a_texCoord;\n"
@@ -33597,7 +33705,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"geometryPass.frag", "#version 430\n"
-"#pragma debug(on)\n"
 "#extension GL_ARB_bindless_texture: require\n"
 "layout(location = 0) out vec3 a_pos;\n"
 "layout(location = 1) out ivec3 a_normal;\n"
@@ -33867,7 +33974,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"stencil.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "in layout(location = 0) vec3 a_positions;\n"
 "in layout(location = 1) vec3 a_normals;\n"
 "uniform mat4 u_transform;\n"
@@ -33885,7 +33991,6 @@ namespace gl3d
       std::pair<std::string, const char*>{"stencil.frag", "#pragma once\n"},
 
       std::pair<std::string, const char*>{"showNormals.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "in layout(location = 0) vec3 a_positions;\n"
 "in layout(location = 1) vec3 a_normals;\n"
 "uniform mat4 u_modelTransform; \n"
@@ -33930,7 +34035,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"normals.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "in layout(location = 0) vec3 a_positions;\n"
 "in layout(location = 1) vec3 a_normals;\n"
 "in layout(location = 2) vec2 a_texCoord;\n"
@@ -33949,7 +34053,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"normals.frag", "#version 430\n"
-"#pragma debug(on)\n"
 "#extension GL_NV_shadow_samplers_cube : enable\n"
 "out layout(location = 0) vec4 a_outColor;\n"
 "in vec3 v_normals;\n"
@@ -34181,7 +34284,6 @@ namespace gl3d
 "}\n"},
 
       std::pair<std::string, const char*>{"color.vert", "#version 330\n"
-"#pragma debug(on)\n"
 "in layout(location = 0) vec3 positions;\n"
 "in layout(location = 1) vec3 colors;\n"
 "uniform mat4 u_transform;\n"
@@ -35755,6 +35857,7 @@ namespace gl3d
 	void SkyBoxLoaderAndDrawer::createConvolutedAndPrefilteredTextureData(SkyBox &skyBox
 		, GLuint frameBuffer, float sampleQuality, unsigned int specularSamples)
 	{
+
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.texture);
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -35978,8 +36081,10 @@ namespace gl3d
 {
 	
 
-	void Renderer3D::init(int x, int y, GLuint frameBuffer, const char *BRDFIntegrationMapFileLocation)
+	void Renderer3D::init(int x, int y, const char *BRDFIntegrationMapFileLocation, GLuint frameBuffer)
 	{
+		this->frameBuffer = frameBuffer;
+
 		internal.w = x; internal.h = y;
 		internal.adaptiveW = x;
 		internal.adaptiveH = y;
@@ -36013,6 +36118,7 @@ namespace gl3d
 
 		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
 		internal.ssao.create(x, y, errorReporter, fileOpener, frameBuffer);
+		internal.hbao.create(errorReporter, fileOpener, frameBuffer);
 		postProcess.create(x, y, errorReporter, fileOpener, frameBuffer);
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
@@ -36053,7 +36159,7 @@ namespace gl3d
 
 	}
 	
-	Material Renderer3D::createMaterial(GLuint frameBuffer, glm::vec4 kd,
+	Material Renderer3D::createMaterial(glm::vec4 kd,
 		float roughness, float metallic, float ao, std::string name,
 		gl3d::Texture albedoTexture, gl3d::Texture normalTexture, gl3d::Texture roughnessTexture, gl3d::Texture metallicTexture,
 		gl3d::Texture occlusionTexture, gl3d::Texture emmisiveTexture)
@@ -36074,8 +36180,7 @@ namespace gl3d
 		textureData.emissiveTexture = emmisiveTexture;
 
 
-		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture,
-			frameBuffer);
+		textureData.pbrTexture = createPBRTexture(roughnessTexture, metallicTexture, occlusionTexture);
 
 
 		internal.materialIndexes.push_back(id);
@@ -36089,7 +36194,7 @@ namespace gl3d
 
 	}
 
-	Material Renderer3D::createMaterial(Material m, GLuint frameBuffer)
+	Material Renderer3D::createMaterial(Material m)
 	{
 		auto newM = createMaterial(frameBuffer);
 		copyMaterialData(newM, m);
@@ -36106,7 +36211,7 @@ namespace gl3d
 	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, 
 		objl::Material &mat, const std::string &path, GLuint frameBuffer)
 	{
-		auto m = renderer.createMaterial(frameBuffer, mat.Kd, mat.roughness,
+		auto m = renderer.createMaterial(mat.Kd, mat.roughness,
 			mat.metallic, mat.ao, mat.name);
 
 		stbi_set_flip_vertically_on_load(true);
@@ -36431,7 +36536,7 @@ namespace gl3d
 		return m;
 	}
 
-	std::vector<Material> Renderer3D::loadMaterial(std::string file, GLuint frameBuffer)
+	std::vector<Material> Renderer3D::loadMaterial(std::string file)
 	{
 
 		objl::Loader loader;
@@ -36745,7 +36850,7 @@ namespace gl3d
 	}
 
 	PBRTexture Renderer3D::createPBRTexture(Texture& roughness, Texture& metallic,
-		Texture& ambientOcclusion, GLuint frameBuffer)
+		Texture& ambientOcclusion)
 	{
 
 		PBRTexture ret = {};
@@ -36767,7 +36872,7 @@ namespace gl3d
 		t.RMA_loadedTextures = 0;
 	}
 
-	Model Renderer3D::loadModel(std::string path, GLuint frameBuffer, float scale)
+	Model Renderer3D::loadModel(std::string path, float scale)
 	{
 
 		gl3d::LoadedModelData model(path.c_str(), errorReporter, fileOpener, scale);
@@ -36859,7 +36964,7 @@ namespace gl3d
 				}else
 				{
 					//if no material loaded for this object create a new default one
-					gm.material = createMaterial(frameBuffer, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
+					gm.material = createMaterial(glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
 				}
 				
 				gm.ownMaterial = true;
@@ -37610,7 +37715,7 @@ namespace gl3d
 		return e;
 	}
 
-	Entity Renderer3D::duplicateEntity(Entity& e, GLuint frameBuffer)
+	Entity Renderer3D::duplicateEntity(Entity& e)
 	{
 		int oldIndex = internal.getEntityIndex(e);
 
@@ -37851,7 +37956,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat, GLuint frameBuffer)
+	void Renderer3D::setEntityMeshMaterialValues(Entity& e, int meshIndex, MaterialValues mat)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return ; } //warn or sthing
@@ -37872,7 +37977,7 @@ namespace gl3d
 				}else
 				if (mat != data)
 				{
-					Material newMat = this->createMaterial(frameBuffer, mat.kd, mat.roughness,
+					Material newMat = this->createMaterial(mat.kd, mat.roughness,
 						mat.metallic, mat.ao, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 
@@ -37920,7 +38025,7 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string& name, GLuint frameBuffer)
+	void Renderer3D::setEntityMeshMaterialName(Entity& e, int meshIndex, const std::string& name)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
@@ -37942,7 +38047,7 @@ namespace gl3d
 				else
 				if (name != oldName) //copy to new material
 				{
-					Material newMat = this->createMaterial(frameBuffer, data.kd, data.roughness,
+					Material newMat = this->createMaterial(data.kd, data.roughness,
 						data.metallic, data.ao, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = textures;
@@ -38015,7 +38120,7 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture, GLuint frameBuffer)
+	void Renderer3D::setEntityMeshMaterialTextures(Entity& e, int meshIndex, TextureDataForMaterial texture)
 	{
 		auto i = internal.getEntityIndex(e);
 		if (i < 0) { return; } //warn or sthing
@@ -38037,7 +38142,7 @@ namespace gl3d
 				else
 				if (texture != oldTextures) //copy to new material
 				{
-					Material newMat = this->createMaterial(frameBuffer, data.kd, data.roughness,
+					Material newMat = this->createMaterial(data.kd, data.roughness,
 						data.metallic, data.ao, oldName);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = texture; //new textures
@@ -38941,9 +39046,11 @@ namespace gl3d
 	};
 
 
-	void Renderer3D::render(float deltaTime, GLuint frameBuffer)
+	void Renderer3D::render(float deltaTime)
 	{
-	
+		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+
 		if (internal.w <= 0 || internal.h <= 0)
 		{
 			return;
@@ -40090,9 +40197,16 @@ namespace gl3d
 
 		#pragma endregion
 
-
-		glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		#pragma region clear gbuffer
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+			float clearPositionColor[4] = {0,0,-INFINITY, 0};
+			glClearBufferfv(GL_COLOR, internal.gBuffer.positionViewSpace, clearPositionColor);
+		}
+		#pragma endregion
+	
 		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
 
 
@@ -40567,54 +40681,105 @@ namespace gl3d
 
 		if (internal.lightShader.useSSAO)
 		{
-			glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
-			glUseProgram(internal.ssao.shader.id);
+			if (1)
+			{
+				//ssao
 
-			//todo lazyness
-			glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
-				&internal.ssao.ssaoShaderUniformBlockData);
+				glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
 
-			glUniformMatrix4fv(internal.ssao.u_projection, 1, GL_FALSE,
-				&(camera.getProjectionMatrix())[0][0]);
+				glUseProgram(internal.ssao.shader.id);
 
-			glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
-				&(camera.getWorldToViewMatrix())[0][0]);
+				//todo lazyness
+				glBindBuffer(GL_UNIFORM_BUFFER, internal.ssao.ssaoUniformBlockBuffer);
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(InternalStruct::SSAO::SsaoShaderUniformBlockData),
+					&internal.ssao.ssaoShaderUniformBlockData);
 
-			glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
+				glUniformMatrix4fv(internal.ssao.u_projection, 1, GL_FALSE,
+					&(camera.getProjectionMatrix())[0][0]);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
-			glClear(GL_COLOR_BUFFER_BIT);
+				glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
+					&(camera.getWorldToViewMatrix())[0][0]);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
-			glUniform1i(internal.ssao.u_gPosition, 0);
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
-			glUniform1i(internal.ssao.u_gNormal, 1);
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
-			glUniform1i(internal.ssao.u_texNoise, 2);
-
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+				glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
 
 
-		#pragma region ssao "blur" (more like average blur)
-			glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
+				glUniform1f(internal.ssao.u_aspectRatio, camera.aspectRatio);
+				glUniform1f(internal.ssao.u_tanHalfFOV, std::tan(camera.fovRadians/2.f));
+				
+				glUniform1f(internal.ssao.u_farPlane, camera.farPlane);
+				glUniform1f(internal.ssao.u_closePlane, camera.closePlane);
+				
 
-			glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.blurBuffer);
-			internal.ssao.blurShader.bind();
-			glClear(GL_COLOR_BUFFER_BIT);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
-			glUniform1i(internal.ssao.u_ssaoInput, 0);
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
+				glUniform1i(internal.ssao.u_gPosition, 0);
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
+				glUniform1i(internal.ssao.u_gNormal, 1);
+
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
+				glUniform1i(internal.ssao.u_texNoise, 2);
+
+				glActiveTexture(GL_TEXTURE3);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.depthBuffer);
+				glUniform1i(internal.ssao.u_depthBuffer, 3);
+
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			}
+			else
+			{
+				//hbao
+				glViewport(0, 0, internal.adaptiveW / 2, internal.adaptiveH / 2);
+				glUseProgram(internal.hbao.shader.id);
+
+				glUniformMatrix4fv(internal.hbao.u_projection, 1, GL_FALSE,
+					&(camera.getProjectionMatrix())[0][0]);
+				glUniformMatrix4fv(internal.hbao.u_view, 1, GL_FALSE,
+					&(camera.getWorldToViewMatrix())[0][0]);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
+				glUniform1i(internal.hbao.u_gPosition, 0);
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
+				glUniform1i(internal.hbao.u_gNormal, 1);
+
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
+				glUniform1i(internal.hbao.u_texNoise, 2);
+
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+
+			}
+
+
+		#pragma region ssao/hbao "blur" (more like average blur)
+				glViewport(0, 0, internal.adaptiveW / 4, internal.adaptiveH / 4);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.blurBuffer);
+				internal.ssao.blurShader.bind();
+				glClear(GL_COLOR_BUFFER_BIT);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.ssao.ssaoColorBuffer);
+				glUniform1i(internal.ssao.u_ssaoInput, 0);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		#pragma endregion
+
 
 			glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
-		#pragma endregion
+
 		}
 	#pragma endregion
 
@@ -41042,7 +41207,7 @@ namespace gl3d
 		//gbuffer
 		internal.gBuffer.resize(internal.adaptiveW, internal.adaptiveH);
 
-		//ssao
+		//ssao and hbao
 		internal.ssao.resize(internal.adaptiveW, internal.adaptiveH);
 	
 		//bloom buffer and color buffer
@@ -41083,7 +41248,7 @@ namespace gl3d
 
 	}
 
-	SkyBox Renderer3D::loadSkyBox(const char *names[6], GLuint frameBuffer)
+	SkyBox Renderer3D::loadSkyBox(const char *names[6])
 	{
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.loadTexture(names, skyBox, errorReporter, fileOpener, frameBuffer);
@@ -41097,7 +41262,7 @@ namespace gl3d
 		return skyBox;
 	}
 
-	SkyBox Renderer3D::loadHDRSkyBox(const char *name, GLuint frameBuffer)
+	SkyBox Renderer3D::loadHDRSkyBox(const char *name)
 	{
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.loadHDRtexture(name, errorReporter, fileOpener, skyBox, frameBuffer);
@@ -41109,7 +41274,7 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, GLuint frameBuffer)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g)
 	{
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox, frameBuffer);
@@ -41191,7 +41356,13 @@ namespace gl3d
 		u_gNormal = getUniform(shader.id, "u_gNormal", errorReporter);
 		u_texNoise = getUniform(shader.id, "u_texNoise", errorReporter);
 		u_samples = getUniform(shader.id, "samples[0]", errorReporter);
-		
+		u_depthBuffer = getUniform(shader.id, "u_depthBuffer", errorReporter);
+		u_aspectRatio = getUniform(shader.id, "u_aspectRatio", errorReporter);
+		u_tanHalfFOV = getUniform(shader.id, "u_tanHalfFOV", errorReporter);
+		u_farPlane = getUniform(shader.id, "u_farPlane", errorReporter);
+		u_closePlane = getUniform(shader.id, "u_closePlane", errorReporter);
+
+
 
 		glGenBuffers(1, &ssaoUniformBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, ssaoUniformBlockBuffer);
@@ -41941,6 +42112,20 @@ namespace gl3d
 			currentDimensions = glm::ivec2(w, h);
 		}
 	}
+
+	void Renderer3D::InternalStruct::HBAO::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
+	{
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/hbao/hbao.frag", errorReporter, fileOpener);
+
+		u_projection = getUniform(shader.id, "u_projection", errorReporter);
+		u_view = getUniform(shader.id, "u_view", errorReporter);
+		u_gPosition = getUniform(shader.id, "u_gPosition", errorReporter);
+		u_gNormal = getUniform(shader.id, "u_gNormal", errorReporter);
+		u_texNoise = getUniform(shader.id, "u_texNoise", errorReporter);
+		
+	}
+
 
 };
 #pragma endregion

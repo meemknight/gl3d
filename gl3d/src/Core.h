@@ -7,8 +7,18 @@
 #include <stb_image.h>
 
 
-#include <iostream> //you can remove this if neded to. It is just used for the default errorcallback
-#include <fstream> //you can remove this if neded to. It is just used for the default file callback
+#define GL3D_REMOVE_IOSTREAM 0 //you can remove this if neded to. It is just used for the default errorcallback
+#define GL3D_REMOVE_FSTREAM 0 //you can remove this if neded to. It is used for the default file callback, supply your own function for file oppening so the library still works :))
+
+
+#if GL3D_REMOVE_IOSTREAM == 0
+#include <iostream> 
+#endif
+
+#if GL3D_REMOVE_FSTREAM == 0
+#include <fstream> 
+#endif
+
 
 
 #include <glm/vec4.hpp>

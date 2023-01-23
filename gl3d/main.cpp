@@ -84,10 +84,8 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(wind, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	glDisable(GL_DITHER);
+
+	//glDisable(GL_DITHER);
 
 #pragma endregion
 
@@ -102,7 +100,7 @@ int main()
 #endif
 #pragma endregion
 
-	renderer.init(w, h, 0, "resources/BRDFintegrationMap.png");
+	renderer.init(w, h, "resources/BRDFintegrationMap.png");
 
 	{
 		std::cout << renderer.saveSettingsToJson() << "\n";
@@ -149,7 +147,7 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names, 0);
+	renderer.skyBox = renderer.loadSkyBox(names);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -409,25 +407,26 @@ int main()
 
 	//auto levelModel = renderer.loadModel("resources/donut/Donut.glb", 0, 1.f);
 	//auto levelModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.gltf", 0, 1.f);
-	auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf", 0, 1);
+	//auto barelModel = renderer.loadModel("resources/wine/wine_barrel_01_2k.gltf", 0, 1);
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	//auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", 0, 1.f);
+	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf",  1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
 	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
-	auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
-	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0, 0.008);
+	//auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
+	auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
 
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
+	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj",0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj",0, 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
@@ -438,7 +437,7 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/birb.glb");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
-	//auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
 	
 	auto rez = loadProfiler.end();
 
@@ -1245,7 +1244,7 @@ int main()
 					ImGui::SliderFloat("ambient oclusion", &materialData.ao, 0, 1);
 
 					renderer.setEntityMeshMaterialValues(
-						models[itemCurrent], subItemCurent, materialData, 0);
+						models[itemCurrent], subItemCurent, materialData);
 
 					auto drawImage = [io](const char* c, GLuint id, int w, int h, int imguiId)
 						{

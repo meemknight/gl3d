@@ -202,7 +202,7 @@ namespace gl3d
 		GLuint vertexBuffer = 0;
 		GLuint captureFBO;
 
-		void createGpuData(ErrorReporter &errorReporter, FileOpener &fileOpener,  GLuint frameBuffer);
+		void createGpuData(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 
 		struct
 		{
