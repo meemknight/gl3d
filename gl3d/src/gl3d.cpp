@@ -28,7 +28,6 @@ namespace gl3d
 		glDisable(GL_BLEND);
 
 		errorReporter.callErrorCallback(internal.lightShader.create(errorReporter, fileOpener, BRDFIntegrationMapFileLocation));
-		vao.createVAOs();
 		internal.skyBoxLoaderAndDrawer.createGpuData(errorReporter, fileOpener, frameBuffer);
 
 
@@ -57,7 +56,6 @@ namespace gl3d
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
-		renderDepthMap.create(errorReporter, fileOpener, frameBuffer);
 		antiAlias.create(x, y, errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 
@@ -77,21 +75,6 @@ namespace gl3d
 		return errorReporter.currentErrorCallback;
 	}
 
-	void Renderer3D::VAO::createVAOs()
-	{
-		glGenVertexArrays(1, &posNormalTexture);
-		glBindVertexArray(posNormalTexture);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
-
-		glBindVertexArray(0);
-
-	}
 	
 	Material Renderer3D::createMaterial(glm::vec4 kd,
 		float roughness, float metallic, float ao, std::string name,
@@ -4267,6 +4250,18 @@ namespace gl3d
 		}
 		#pragma endregion 
 
+	#pragma region send material data
+		//material buffer //todo lazyness or sthing, don't forget to also change it on clearing all data
+		if (internal.materials.size())
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) *internal.materials.size()
+				, &internal.materials[0], GL_STREAM_DRAW);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
+				internal.lightShader.materialBlockBuffer);
+		}
+		
+	#pragma endregion
 
 		auto gBufferRender = [&](bool transparentPhaze)
 		{
@@ -4274,16 +4269,6 @@ namespace gl3d
 			glBindVertexArray(0);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
-
-			//material buffer
-			if (internal.materials.size())
-			{
-				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-				glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
-					, &internal.materials[0], GL_STREAM_DRAW);
-				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
-					internal.lightShader.materialBlockBuffer);
-			}
 
 			GLsizei n;
 			glGetProgramStageiv(internal.lightShader.geometryPassShader.id,
@@ -4635,7 +4620,7 @@ namespace gl3d
 				glUniformMatrix4fv(internal.ssao.u_view, 1, GL_FALSE,
 					&(camera.getWorldToViewMatrix())[0][0]);
 
-				glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0]));
+				glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0])); //todo send to the gpu only once wtf
 
 
 				glUniform1f(internal.ssao.u_aspectRatio, camera.aspectRatio);
@@ -5151,34 +5136,47 @@ namespace gl3d
 
 	}
 
-	//todo remove
-	void Renderer3D::renderADepthMap(GLuint texture, GLuint frameBuffer)
+	void Renderer3D::clearAllLoadedResource()
 	{
-		glDisable(GL_DEPTH_TEST);
+		internal.lightShader.clear();
+		internal.skyBoxLoaderAndDrawer.clear();
 
-		glBindFramebuffer(GL_FRAMEBUFFER, renderDepthMap.fbo);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-
-		renderDepthMap.shader.bind();
-		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(0, 0, 1024, 1024);
-
-		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
+		internal.showNormalsProgram.shader.clear();
 		
+		internal.gBuffer.clear();
+		internal.ssao.clear();
+		internal.hbao.clear();
+		postProcess.clear();
+		directionalShadows.clear();
+		spotShadows.clear();
+		pointShadows.clear();
+		antiAlias.clear();
+		adaptiveResolution.clear();
+		internal.pBRtextureMaker.clear();
+	}
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glUniform1i(renderDepthMap.u_depth, 0);
+	void Renderer3D::clearAllRendererResources()
+	{
 
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	#pragma region skyboxes
+		skyBox.clearTextures();
+	#pragma endregion
 
-		glViewport(0, 0, internal.adaptiveW, internal.adaptiveH);
+	#pragma region materials
 
-		glBindVertexArray(0);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		
-		glEnable(GL_DEPTH_TEST);
+		//std::vector<MaterialValues> materials;
+		//std::vector<int> materialIndexes;
+		//std::vector<std::string> materialNames;
+		//std::vector<TextureDataForMaterial> materialTexturesData;
+
+		//MaterialValues.
+
+	#pragma endregion
+
+
+
+
+		clearAllLoadedResource();
 
 	}
 
@@ -5266,7 +5264,6 @@ namespace gl3d
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-
 		glGenFramebuffers(1, &ssaoFBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
 
@@ -5295,7 +5292,6 @@ namespace gl3d
 		u_tanHalfFOV = getUniform(shader.id, "u_tanHalfFOV", errorReporter);
 		u_farPlane = getUniform(shader.id, "u_farPlane", errorReporter);
 		u_closePlane = getUniform(shader.id, "u_closePlane", errorReporter);
-
 
 
 		glGenBuffers(1, &ssaoUniformBlockBuffer);
@@ -5343,6 +5339,23 @@ namespace gl3d
 	
 	}
 
+	void Renderer3D::InternalStruct::SSAO::clear()
+	{
+		ssaoKernel.clear();
+		glDeleteTextures(1, &noiseTexture);
+		glDeleteFramebuffers(1, &ssaoFBO);
+		glDeleteTextures(1, &ssaoColorBuffer);
+
+		shader.clear();
+
+		glDeleteBuffers(1, &ssaoUniformBlockBuffer);
+
+		blurShader.clear();
+
+		glDeleteFramebuffers(1, &blurBuffer);
+		glDeleteTextures(1, &blurColorBuffer);
+	}
+
 	void Renderer3D::PostProcess::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 		glGenFramebuffers(1, &fbo);
@@ -5372,7 +5385,6 @@ namespace gl3d
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffers[1], 0);
 
 
-		
 		postProcessShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/postProcess.frag", 
 			errorReporter, fileOpener);
 		u_colorTexture = getUniform(postProcessShader.id, "u_colorTexture", errorReporter);
@@ -5504,10 +5516,33 @@ namespace gl3d
 
 	}
 
+	void Renderer3D::PostProcess::clear()
+	{
+		glDeleteTextures(2, colorBuffers);
+		postProcessShader.clear();
+		glDeleteFramebuffers(1, &filterFbo);
+		glDeleteFramebuffers(1, &fbo);
+		gausianBLurShader.clear();
+		filterShader.shader.clear();
+		addMips.shader.clear();
+		addMipsBlur.shader.clear();
+		filterDown.shader.clear();
+		chromaticAberation.shader.clear();
+
+		glDeleteFramebuffers(2, blurFbo);
+		glDeleteTextures(2, bluredColorBuffer);
+	}
+
 	void Renderer3D::InternalStruct::PBRtextureMaker::init(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/modelLoader/mergePBRmat.frag", errorReporter, fileOpener);
 		glGenFramebuffers(1, &fbo);
+	}
+
+	void Renderer3D::InternalStruct::PBRtextureMaker::clear()
+	{
+		shader.clear();
+		glDeleteFramebuffers(1, &fbo);
 	}
 
 	void Renderer3D::InternalStruct::renderSkyBox(Camera& c, SkyBox& s)
@@ -5637,6 +5672,15 @@ namespace gl3d
 		}
 	}
 
+	void Renderer3D::DirectionalShadows::clear()
+	{
+		glDeleteTextures(1, &cascadesTexture);
+		glDeleteTextures(1, &staticGeometryTexture);
+
+		glDeleteFramebuffers(1, &cascadesFbo);
+		glDeleteFramebuffers(1, &staticGeometryFbo);
+	}
+
 	void Renderer3D::DirectionalShadows::create(GLuint frameBuffer)
 	{
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -5667,7 +5711,7 @@ namespace gl3d
 		for (int i = 0; i < 2; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, fbos[i]);
-			glDrawBuffer(GL_NONE);
+			glDrawBuffer(GL_NONE); //why am i doing this tho? dont remember
 			glReadBuffer(GL_NONE);
 		}
 
@@ -5716,7 +5760,6 @@ namespace gl3d
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture2, 0);
 
-
 	}
 
 	void Renderer3D::AdaptiveResolution::resize(int w, int h)
@@ -5733,6 +5776,14 @@ namespace gl3d
 
 			currentDimensions = glm::ivec2(w, h);
 		}
+	}
+
+	void Renderer3D::AdaptiveResolution::clear()
+	{
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteTextures(1, &texture);
+		glDeleteFramebuffers(1, &fbo2);
+		glDeleteTextures(1, &texture2);
 	}
 
 
@@ -5760,32 +5811,11 @@ namespace gl3d
 
 	}
 
-	void Renderer3D::RenderDepthMap::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
+	void Renderer3D::AntiAlias::clear()
 	{
-		glGenFramebuffers(1, &fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		
-		glGenTextures(1, &texture);
-		glBindTexture(GL_TEXTURE_2D, texture);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		{
-			errorReporter.callErrorCallback("renderdepth map frame buffer failed");
-		}
-
-		shader.loadShaderProgramFromFile
-			("shaders/drawQuads.vert", "shaders/drawDepth.frag", errorReporter, fileOpener);
-		u_depth = getUniform(shader.id, "u_depth", errorReporter);
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-
+		shader.clear();
+		noAAshader.clear();
+		glDeleteBuffers(1, &fxaaDataBuffer);
 	}
 
 	void Renderer3D::PointShadows::create(GLuint frameBuffer)
@@ -5852,6 +5882,15 @@ namespace gl3d
 
 	}
 
+	void Renderer3D::PointShadows::clear()
+	{
+		glDeleteTextures(1, &shadowTextures);
+		glDeleteTextures(1, &staticGeometryTextures);
+
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteFramebuffers(1, &staticGeometryFbo);
+	}
+
 
 	void Renderer3D::SpotShadows::create(GLuint frameBuffer)
 	{
@@ -5877,7 +5916,6 @@ namespace gl3d
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 		}
 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
@@ -5885,7 +5923,6 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, staticGeometryfbo);
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
-
 
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 	}
@@ -5912,11 +5949,16 @@ namespace gl3d
 			glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
-
-		
 		}
-		
+	}
 
+	void Renderer3D::SpotShadows::clear()
+	{
+		glDeleteTextures(1, &shadowTextures);
+		glDeleteTextures(1, &staticGeometryTextures);
+
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteFramebuffers(1, &staticGeometryfbo);
 	}
 
 	void Renderer3D::InternalStruct::GBuffer::create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer)
@@ -6047,6 +6089,13 @@ namespace gl3d
 		}
 	}
 
+	void Renderer3D::InternalStruct::GBuffer::clear()
+	{
+		glDeleteFramebuffers(1, &gBuffer);
+		glDeleteTextures(bufferCount, buffers);
+		glDeleteTextures(1, &depthBuffer);
+	}
+
 	void Renderer3D::InternalStruct::HBAO::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
 	{
 
@@ -6058,6 +6107,11 @@ namespace gl3d
 		u_gNormal = getUniform(shader.id, "u_gNormal", errorReporter);
 		u_texNoise = getUniform(shader.id, "u_texNoise", errorReporter);
 		
+	}
+
+	void Renderer3D::InternalStruct::HBAO::clear()
+	{
+		shader.clear();
 	}
 
 

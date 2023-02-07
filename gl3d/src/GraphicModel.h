@@ -275,6 +275,7 @@ namespace gl3d
 		void drawBefore(const glm::mat4 &viewProjMat, SkyBox &skyBox, float exposure,
 			glm::vec3 ambient);
 
+		void clear();
 	};
 
 	/*

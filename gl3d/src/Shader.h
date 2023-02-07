@@ -170,7 +170,7 @@ namespace gl3d
 
 		GpuTexture brdfTexture;
 
-		//todo clear
+		void clear();
 	};
 
 

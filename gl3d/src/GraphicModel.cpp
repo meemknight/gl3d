@@ -157,8 +157,31 @@ namespace gl3d
 					j.Position.Z *= scale;
 				}
 			}
+		}
 
-			
+		for (auto &i : loader.joints)
+		{
+			//i.scale *= scale;
+			//i.trans *= scale;
+		}
+
+		for (auto &i : loader.animations)
+		{
+			for (auto &k1 : i.keyFramesTrans)
+			{
+				for (auto &k2 : k1)
+				{
+					//k2.translation *= scale;
+				}
+			}
+
+			for (auto &k1 : i.keyFramesScale)
+			{
+				for (auto &k2 : k1)
+				{
+				//	k2.scale *= scale;
+				}
+			}
 		}
 
 		//errorReporter.currentErrorCallback(std::string("Loaded: ") + std::to_string(loader.LoadedMeshes.size()) + " meshes");
@@ -568,7 +591,7 @@ namespace gl3d
 		glBindVertexArray(0);
 
 		glGenFramebuffers(1, &captureFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, captureFBO); //also allocate gpu resources
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
 	}
@@ -1146,6 +1169,21 @@ namespace gl3d
 
 		glBindVertexArray(0);
 	}
+
+	void SkyBoxLoaderAndDrawer::clear()
+	{
+		normalSkyBox.shader.clear();
+		hdrtoCubeMap.shader.clear();
+		convolute.shader.clear();
+		preFilterSpecular.shader.clear();
+		atmosphericScatteringShader.shader.clear();
+
+		glDeleteVertexArrays(1, &vertexArray);
+		glDeleteBuffers(1, &vertexBuffer);
+		glDeleteFramebuffers(1, &captureFBO);
+
+	}
+
 
 	void SkyBox::clearTextures()
 	{

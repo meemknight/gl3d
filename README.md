@@ -1,4 +1,7 @@
 # gl3d
+
+Retained mode, deferred BPR 3D renderer.
+
 - Still in working progress (the proper api for the users is not ready)
 
 ![](https://github.com/meemknight/photos/blob/master/gl3d2.png)

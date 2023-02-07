@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-01-23
+//built on 2023-02-07
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -35047,8 +35047,12 @@ namespace gl3d
 					j.Position.Z *= scale;
 				}
 			}
+		}
 
-			
+		for (auto &i : loader.joints)
+		{
+			i.scale *= scale;
+			//i.trans *= scale;
 		}
 
 		//errorReporter.currentErrorCallback(std::string("Loaded: ") + std::to_string(loader.LoadedMeshes.size()) + " meshes");

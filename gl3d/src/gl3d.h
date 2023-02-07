@@ -361,16 +361,6 @@ namespace gl3d
 
 	#pragma endregion
 			
-		//todo export settings; import settings
-		//todo clear all
-
-		//todo move remove?
-		struct VAO
-		{
-			//this is not used yet
-			GLuint posNormalTexture;
-			void createVAOs();
-		}vao;
 
 		Camera camera;
 		SkyBox skyBox;
@@ -403,6 +393,8 @@ namespace gl3d
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
 					GLuint quadVAO, int &RMA_loadedTextures, GLuint frameBuffer);
+				
+				void clear();
 
 			}pBRtextureMaker;
 
@@ -485,6 +477,8 @@ namespace gl3d
 				void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 				void resize(int w, int h);
 
+				void clear();
+
 				glm::ivec2 currentDimensions = {};
 
 				GLuint noiseTexture;
@@ -531,6 +525,7 @@ namespace gl3d
 				//https://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf
 
 				void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+				void clear();
 				Shader shader;
 
 				GLint u_projection = -1;
@@ -545,6 +540,8 @@ namespace gl3d
 			{
 				void create(int w, int h, ErrorReporter &errorReporter, GLuint frameBuffer);
 				void resize(int w, int h);
+
+				void clear();
 
 				enum bufferTargers
 				{
@@ -574,7 +571,6 @@ namespace gl3d
 
 
 		}internal;
-
 		
 
 		struct PostProcess
@@ -646,6 +642,7 @@ namespace gl3d
 			GLuint bluredColorBuffer[2];
 			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 			void resize(int w, int h);
+			void clear();
 			glm::ivec2 currentDimensions = {};
 			int currentMips = 1;
 
@@ -666,6 +663,7 @@ namespace gl3d
 		{
 			void create(int w, int h);
 			void resize(int w, int h);
+			void clear();
 
 			static constexpr int timeSamplesCount = 20;
 			float msSampled[timeSamplesCount] = {};
@@ -693,6 +691,7 @@ namespace gl3d
 			Shader shader;
 			Shader noAAshader;
 			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
+			void clear();
 
 			GLuint u_texture;
 			GLuint noAAu_texture;
@@ -708,6 +707,7 @@ namespace gl3d
 		{
 			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
+			void clear();
 
 			constexpr static int CASCADES = 3;
 
@@ -729,6 +729,7 @@ namespace gl3d
 		{
 			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
+			void clear();
 			int textureCount = 0;
 
 			GLuint shadowTextures;
@@ -745,6 +746,7 @@ namespace gl3d
 		{
 			void create(GLuint frameBuffer);
 			void allocateTextures(int count);
+			void clear();
 			int textureCount = 0;
 
 			int shadowSize = 1024;
@@ -758,22 +760,13 @@ namespace gl3d
 
 		}pointShadows;
 
-		//todo remove or implement properly
-		struct RenderDepthMap
-		{
-			void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
-
-			Shader shader;
-			GLint u_depth = -1;
-
-			GLuint fbo;
-			GLuint texture;
-
-		}renderDepthMap;
-		void renderADepthMap(GLuint texture, GLuint frameBuffer);
-
 		void render(float deltaTime);
 		void updateWindowMetrics(int x, int y);
+
+		void clearAllLoadedResource();
+
+		//only cleares the current skybox!, other user created skyboxes won't be cleared
+		void clearAllRendererResources();
 
 		bool frustumCulling = 1;
 		bool zPrePass = 0;

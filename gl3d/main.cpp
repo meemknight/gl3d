@@ -411,7 +411,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf",  1.f);
+	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf");
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);

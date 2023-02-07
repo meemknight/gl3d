@@ -280,8 +280,10 @@ namespace gl3d
 	{
 		std::string error = "";
 
+		//todo proper quality choises
+
 	#pragma region brdf texture
-		error += brdfTexture.loadTextureFromFile(BRDFIntegrationMapFileLocation, fileOpener, TextureLoadQuality::leastPossible, 3);
+		error += brdfTexture.loadTextureFromFile(BRDFIntegrationMapFileLocation, fileOpener, TextureLoadQuality::linearMipmap, 3);
 		glBindTexture(GL_TEXTURE_2D, brdfTexture.id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -446,5 +448,27 @@ namespace gl3d
 			"getNormalMapFunc", errorReporter);
 		
 	}
+
+	void LightShader::clear()
+	{
+		brdfTexture.clear();
+		prePass.shader.clear();
+		pointShadowShader.shader.clear();
+		geometryPassShader.clear();
+		glDeleteBuffers(1, &materialBlockBuffer);
+		lightingPassShader.clear();
+		glDeleteBuffers(1, &lightPassShaderData.lightPassDataBlockBuffer);
+		glDeleteBuffers(1, &pointLightsBlockBuffer);
+		glDeleteBuffers(1, &directionalLightsBlockBuffer);
+		glDeleteBuffers(1, &spotLightsBlockBuffer);
+		glDeleteVertexArrays(1, &quadDrawer.quadVAO);
+		glDeleteBuffers(1, &quadDrawer.quadBuffer);
+	
+	
+	}
+
+
+
+
 
 };
