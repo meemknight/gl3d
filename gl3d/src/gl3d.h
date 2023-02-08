@@ -567,8 +567,8 @@ namespace gl3d
 			}gBuffer;
 
 			#pragma endregion
-			
 
+			bool hasLastFrameTexture = 0;
 
 		}internal;
 		
@@ -638,7 +638,7 @@ namespace gl3d
 			GLuint filterFbo;
 			GLuint blurFbo[2];
 
-			GLuint colorBuffers[2]; // 0 for color, 1 for bloom
+			GLuint colorBuffers[3]; // 0 for color, 1 for bloom, 2 last frame
 			GLuint bluredColorBuffer[2];
 			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 			void resize(int w, int h);

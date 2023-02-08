@@ -20,7 +20,9 @@ uniform sampler2DArrayShadow u_spotShadows;
 uniform samplerCubeArrayShadow u_pointShadows;
 uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
+uniform sampler2D u_lastFrameTexture;
 uniform isampler2D u_textureDerivates;
+uniform int u_hasLastFrameTexture;
 //uniform sampler2D u_textureDerivates;
 
 uniform vec3 u_eyePosition;
@@ -771,22 +773,7 @@ vec3 fromuShortToFloat(ivec3 a)
 
 void main()
 {
-	vec3 pos = texture(u_positions, v_texCoords).xyz;
-		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
-
-	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
-	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
-	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
-	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
-	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
-
-	vec4 albedoAlpha = vec4(0,0,0,0);
-	vec3 emissive = vec3(0,0,0);
-	
-	vec3 material;
-
-	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
 
 	if(materialIndex == 0)
 	{
@@ -802,9 +789,29 @@ void main()
 			a_outBloom = vec4(0,0,0,1);
 			return;
 		}
-		
 		//albedoAlpha = vec4(0,0,0,0);
 	}
+
+
+	vec3 pos = texture(u_positions, v_texCoords).xyz;
+		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
+
+	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
+	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
+	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
+	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
+	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+
+	vec3 lastFrameColor = texture(u_lastFrameTexture, v_texCoords).xyz;
+
+	vec4 albedoAlpha = vec4(0,0,0,0);
+	vec3 emissive = vec3(0,0,0);
+	
+
+	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+	
+
+	vec3 material = vec3(0,0,0);
 
 	{
 		uvec2 albedoSampler = mat[materialIndex-1].firstBIndlessSamplers.xy;
@@ -1141,6 +1148,13 @@ void main()
 		a_outBloom = vec4(emissive.rgb, 1);
 	}
 	
+	if(u_hasLastFrameTexture!=0)
+	{
+		//a_outColor.rgb = 0.7 * a_outColor.rgb + 0.3 * lastFrameColor;
+		a_outColor.rgb = lastFrameColor;
+	}
+
+
 
 	//a_outColor.rgb = vec3(albedoAlpha);
 	//a_outColor.rgb =  material.bbb;

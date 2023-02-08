@@ -4511,6 +4511,13 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE10);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureDerivates]);
 
+			glUniform1i(internal.lightShader.light_u_lastTexture, 11);
+			glActiveTexture(GL_TEXTURE11);
+			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[2]);
+
+			glUniform1i(internal.lightShader.ligut_u_hasLastFrameTexture, internal.hasLastFrameTexture);
+			
+
 			glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
 
 			if (internal.pointLights.size())
@@ -4594,8 +4601,19 @@ namespace gl3d
 		//blend geometry
 		lightingPass(true);
 
+
+		//copy current texture to last texture
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glCopyTextureSubImage2D(postProcess.colorBuffers[2], 0, 0, 0, 0, 0,
+			postProcess.currentDimensions.x, postProcess.currentDimensions.y);
+		//internal.hasLastFrameTexture = true;
+
+
+
 		//we draw a rect several times so we keep this vao binded
 		glBindVertexArray(internal.lightShader.quadDrawer.quadVAO);
+
+
 
 		#pragma region ssao
 
@@ -4938,6 +4956,9 @@ namespace gl3d
 
 		#pragma endregion
 
+		
+	
+
 		#pragma region do the post process stuff and draw to the screen
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution || postProcess.chromaticAberationOn)
@@ -5014,6 +5035,7 @@ namespace gl3d
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+
 		//glDisable(GL_BLEND);
 
 
@@ -5048,6 +5070,7 @@ namespace gl3d
 			currentTexture = adaptiveResolution.texture2;
 		}
 
+
 		glViewport(0, 0, internal.w, internal.h);
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		
@@ -5057,7 +5080,7 @@ namespace gl3d
 
 			if (antiAlias.usingFXAA)
 			{
-				//if adaptive rez is on mabe resample first and then fxaa
+				//todo if adaptive rez is on mabe resample first and then fxaa?
 				
 				antiAlias.shader.bind();
 				glUniform1i(antiAlias.u_texture, 0);
@@ -5412,8 +5435,8 @@ namespace gl3d
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 		//one for colors the other for things to be bloomed
-		glGenTextures(2, colorBuffers);
-		for (int i = 0; i < 2; i++)
+		glGenTextures(3, colorBuffers);
+		for (int i = 0; i < 3; i++)
 		{
 			glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -5556,7 +5579,7 @@ namespace gl3d
 		{
 			currentDimensions = glm::ivec2(w, h);
 
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < 3; i++)
 			{
 				glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);

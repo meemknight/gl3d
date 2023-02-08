@@ -1079,11 +1079,15 @@ int main()
 			ImGui::NewLine();
 			ImGui::NewLine();
 			ImGui::ColorEdit3("Global Ambient color", &renderer.skyBox.color[0]);
-		
+			
+			ImGui::Checkbox("LAstFrame", &renderer.internal.hasLastFrameTexture);
+
+
 			ImGui::End();
 			ImGui::PopID();
 
 		}
+
 
 		//imgui objectEditor
 		if (cubeEditor)

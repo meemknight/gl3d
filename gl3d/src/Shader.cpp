@@ -363,6 +363,8 @@ namespace gl3d
 		light_u_textureUV = getUniform(lightingPassShader.id, "u_textureUV", errorReporter);
 		light_u_textureDerivates = getUniform(lightingPassShader.id, "u_textureDerivates", errorReporter);
 		light_u_transparentPass = getUniform(lightingPassShader.id, "u_transparentPass", errorReporter);
+		light_u_lastTexture = getUniform(lightingPassShader.id, "u_lastFrameTexture", errorReporter);
+		ligut_u_hasLastFrameTexture = getUniform(lightingPassShader.id, "u_hasLastFrameTexture", errorReporter);
 
 		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material", errorReporter);
 		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);
