@@ -123,6 +123,7 @@ namespace gl3d
 		std::vector < char* > subModelsNames; //for imgui
 		std::vector <Material> createdMaterials;
 		void clear(Renderer3D &renderer);
+		void internalClear();
 
 		std::vector<gl3d::Animation> animations;
 		std::vector<gl3d::Joint> joints;
@@ -139,7 +140,7 @@ namespace gl3d
 		Transform transform;
 
 		std::vector < GraphicModel >models;
-		std::vector < char* > subModelsNames; //for imgui
+		std::vector < char* > subModelsNames; //for imgui 
 		void clear();
 
 		void allocateGpuData();

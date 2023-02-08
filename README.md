@@ -119,3 +119,14 @@ Whenever the render function is called, this steps are taken:
 
 12) Last post proces step: (fxaa, traw to the screen the final exposed HDR rezult and chromatic aberation)
 
+
+# Resource storing
+
+Materials are handeled by the engine using an internal id.
+When creating a material it will also create the associated PBR texture
+
+
+Cpu entities will hold a weak refference to graphic models, and will also create gpu data (for skinning matrix)
+
+
+

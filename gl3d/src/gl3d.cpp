@@ -698,6 +698,7 @@ namespace gl3d
 		}
 	}
 
+	//todo delete from gpu 
 	void Renderer3D::deleteTexture(Texture& t)
 	{
 		int index = internal.getTextureIndex(t);
@@ -5138,11 +5139,85 @@ namespace gl3d
 
 	void Renderer3D::clearAllLoadedResource()
 	{
+
+	#pragma region skyboxes
+		skyBox.clearTextures();
+	#pragma endregion
+
+	#pragma region materials
+
+		internal.materialIndexes.clear();
+		internal.materials.clear();
+		internal.materialNames.clear();
+		internal.materialTexturesData.clear();
+
+	#pragma endregion
+
+	#pragma region textures
+
+		for (auto &t : internal.loadedTextures)
+		{
+			glDeleteTextures(1, &t.texture.id);
+		}
+
+		internal.loadedTexturesIndexes.clear();
+		internal.loadedTextures.clear();
+		internal.loadedTexturesBindlessHandle.clear();
+		internal.loadedTexturesNames.clear();
+
+	#pragma endregion
+
+	#pragma region models
+
+		for (auto &m : internal.graphicModels)
+		{
+			m.internalClear();
+		}
+
+		internal.graphicModels.clear();
+		internal.graphicModelsIndexes.clear();
+
+	#pragma endregion
+
+	#pragma region cpuEntities
+
+		for (auto &e : internal.cpuEntities)
+		{
+			e.clear();
+		}
+
+		internal.cpuEntities.clear();
+		internal.entitiesIndexes.clear();;
+
+	#pragma endregion
+
+	#pragma region lights
+
+		internal.spotLights.clear();
+		internal.spotLightIndexes.clear();
+		internal.pointLights.clear();
+		internal.pointLightIndexes.clear();
+		internal.directionalLights.clear();
+		internal.directionalLightIndexes.clear();
+
+		spotShadows.clear();
+		pointShadows.clear();
+		directionalShadows.clear();
+
+	#pragma endregion
+
+	}
+
+	void Renderer3D::clearAllRendererResources()
+	{
+
+		clearAllLoadedResource();
+
 		internal.lightShader.clear();
 		internal.skyBoxLoaderAndDrawer.clear();
 
 		internal.showNormalsProgram.shader.clear();
-		
+
 		internal.gBuffer.clear();
 		internal.ssao.clear();
 		internal.hbao.clear();
@@ -5153,31 +5228,6 @@ namespace gl3d
 		antiAlias.clear();
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
-	}
-
-	void Renderer3D::clearAllRendererResources()
-	{
-
-	#pragma region skyboxes
-		skyBox.clearTextures();
-	#pragma endregion
-
-	#pragma region materials
-
-		//std::vector<MaterialValues> materials;
-		//std::vector<int> materialIndexes;
-		//std::vector<std::string> materialNames;
-		//std::vector<TextureDataForMaterial> materialTexturesData;
-
-		//MaterialValues.
-
-	#pragma endregion
-
-
-
-
-		clearAllLoadedResource();
-
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])

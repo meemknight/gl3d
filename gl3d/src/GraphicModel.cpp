@@ -321,6 +321,16 @@ namespace gl3d
 
 	void ModelData::clear(Renderer3D& renderer)
 	{
+		for (auto &i : createdMaterials)
+		{
+			renderer.deleteMaterial(i);
+		}
+
+		internalClear();
+	}
+
+	void ModelData::internalClear()
+	{
 		for (auto &i : models)
 		{
 			i.clear();
@@ -331,15 +341,10 @@ namespace gl3d
 			delete[] i;
 		}
 		subModelsNames.clear();
-		
-		for (auto& i : createdMaterials)
-		{
-			renderer.deleteMaterial(i);
-		}
+
 		createdMaterials.clear();
 
 		models.clear();
-
 	}
 
 	
@@ -534,6 +539,7 @@ namespace gl3d
 
 	}
 
+	//	does not clear owned material
 	void GraphicModel::clear()
 	{
 		glDeleteBuffers(1, &vertexBuffer);
@@ -1191,6 +1197,24 @@ namespace gl3d
 		texture = 0;
 		convolutedTexture = 0;
 		preFilteredMap = 0;
+	}
+
+	//does not clear materials owned
+	void CpuEntity::clear()
+	{
+		deleteGpuData();
+
+		for (auto &n : subModelsNames)
+		{
+			delete[] n;
+		}
+
+		for (auto &m : models)
+		{
+			m.clear();
+		}
+
+		*this = CpuEntity();
 	}
 
 	void CpuEntity::allocateGpuData()
