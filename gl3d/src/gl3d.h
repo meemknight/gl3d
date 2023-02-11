@@ -568,7 +568,7 @@ namespace gl3d
 
 			#pragma endregion
 
-			bool hasLastFrameTexture = 0;
+			bool hasLastFrameTexture = 1;
 
 		}internal;
 		

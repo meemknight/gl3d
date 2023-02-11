@@ -4515,10 +4515,15 @@ namespace gl3d
 			glActiveTexture(GL_TEXTURE11);
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[2]);
 
-			glUniform1i(internal.lightShader.ligut_u_hasLastFrameTexture, internal.hasLastFrameTexture);
-			
+			glUniform1i(internal.lightShader.light_u_positionViewSpace, 12);
+			glActiveTexture(GL_TEXTURE12);
+			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
 
+			glUniform1i(internal.lightShader.light_u_hasLastFrameTexture, internal.hasLastFrameTexture);
+			
 			glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
+
+			glUniformMatrix4fv(internal.lightShader.light_u_cameraProjection, 1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
 
 			if (internal.pointLights.size())
 			{//todo laziness if lights don't change and stuff

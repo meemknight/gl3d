@@ -21,9 +21,12 @@ uniform samplerCubeArrayShadow u_pointShadows;
 uniform isampler2D u_materialIndex;
 uniform sampler2D u_textureUV;
 uniform sampler2D u_lastFrameTexture;
+uniform sampler2D u_positionViewSpace;
 uniform isampler2D u_textureDerivates;
 uniform int u_hasLastFrameTexture;
 //uniform sampler2D u_textureDerivates;
+uniform mat4 u_cameraProjection;
+
 
 uniform vec3 u_eyePosition;
 uniform int u_transparentPass;
@@ -144,6 +147,8 @@ const float randomNumbers[100] = float[100](
 0.37992,	0.61330,	0.49202,	0.69464,	0.14831,	0.51697,	0.34620,	0.55315,	0.41602,	0.49807,
 0.15133,	0.07372,	0.75259,	0.59642,	0.35652,	0.60051,	0.08879,	0.59271,	0.29388,	0.69505
 );
+
+const float INFINITY = 1.f/0.f;
 
 
 float attenuationFunctionNotClamped(float x, float r, float p)
@@ -770,19 +775,191 @@ vec3 fromuShortToFloat(ivec3 a)
 }
 
 
-
+//////////////////////////////////////////////
 //https://imanolfotia.com/blog/1
 //SSR
 
-vec3 SSR()
-{
 
-	return vec3(0,0,0);
+const float step = 0.1;
+const float minRayStep = 0.1;
+const float maxSteps = 30;
+const int numBinarySearchSteps = 5;
+const float reflectionSpecularFalloffExponent = 3.0;
+
+
+
+//todo try this
+//vec3 PositionFromDepth(float depth) {
+//    float z = depth * 2.0 - 1.0;
+//
+//    vec4 clipSpacePosition = vec4(TexCoords * 2.0 - 1.0, z, 1.0);
+//    vec4 viewSpacePosition = invprojection * clipSpacePosition;
+//
+//    // Perspective division
+//    viewSpacePosition /= viewSpacePosition.w;
+//
+//    return viewSpacePosition.xyz;
+//}
+
+vec3 hash(vec3 a)
+{
+	const vec3 Scale = vec3(.8, .8, .8);
+	const float K = 19.19;
+
+	a = fract(a * Scale);
+	a += dot(a, a.yxz + K);
+	return fract((a.xxy + a.yxx)*a.zyx);
 }
 
-//normal, viewDir
-vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, float metallic, vec3 albedo)
+
+vec2 BinarySearch(inout vec3 dir, inout vec3 hitCoord, 
+inout float dDepth, vec2 oldValue)
 {
+	float depth;
+
+	vec4 projectedCoord;
+	
+	vec2 foundProjectedCoord = oldValue;
+
+	for(int i = 0; i < numBinarySearchSteps; i++)
+	{
+
+		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
+		projectedCoord.xy /= projectedCoord.w;
+		projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+ 
+		//depth = textureLod(gPosition, projectedCoord.xy, 2).z;
+		depth = texture(u_positionViewSpace, projectedCoord.xy).z;
+ 
+		if(depth < -1000) //-INFINITY
+			continue;
+
+		foundProjectedCoord = projectedCoord.xy;
+
+		dDepth = hitCoord.z - depth;
+
+		dir *= 0.5;
+		if(dDepth > 0.0)
+			hitCoord += dir;
+		else
+			hitCoord -= dir;    
+	}
+
+		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
+		projectedCoord.xy /= projectedCoord.w;
+		projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+	
+	if(!(depth < -1000))
+	{
+		foundProjectedCoord = projectedCoord.xy;
+	}
+
+	return foundProjectedCoord.xy;
+}
+
+vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
+{
+	dir *= step;
+ 
+	float depth;
+	int steps;
+	vec4 projectedCoord;
+ 
+	for(int i = 0; i < maxSteps; i++)
+	{
+		hitCoord += dir;
+ 
+		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
+		projectedCoord.xy /= projectedCoord.w;
+		projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+ 
+		//depth = textureLod(gPosition, projectedCoord.xy, 2).z;
+		depth = texture(u_positionViewSpace, projectedCoord.xy).z;
+
+		if(depth > 1000.0)
+			continue;
+		
+		if(depth < -1000) //-INFINITY
+			continue;
+
+		dDepth = hitCoord.z - depth;
+
+		if((dir.z - dDepth) < 1.2)
+		{
+			if(dDepth <= 0.0)
+			{   
+				vec2 Result;
+				Result = BinarySearch(dir, hitCoord, dDepth, projectedCoord.xy);
+				//Result = projectedCoord.xy;
+				return Result;
+			}
+		}
+		
+		steps++;
+	}
+ 
+	//signal fail	
+	dDepth = -INFINITY;
+	return vec2(0,0);
+}
+
+
+////////////////////////////////////////////
+
+vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found)
+{
+	// Reflection vector
+	//vec3 viewPos = -V;//todo check again :)
+	vec3 reflected = normalize(reflect(normalize(viewPos), N));
+	//vec3 reflected = R; //todo check
+	
+	//found = true;
+	//return viewPos;
+
+	//if(reflected.z < 0){found = false; return vec3(0,0,0);}
+
+	vec3 hitPos = viewPos;
+	float dDepth;
+
+	//vec3 wp = vec3(vec4(viewPos, 1.0) * invView);
+	//vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), spec);
+	
+	//todo test
+	//vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), -roughness); //use roughness for specular factor
+	vec3 jitt = vec3(0.0);
+
+	vec2 coords = RayMarch((vec3(jitt) + reflected * max(minRayStep, -viewPos.z)), hitPos, dDepth);
+	
+	if(dDepth == -INFINITY){found = false; return vec3(0);}
+
+
+	vec2 dCoords = smoothstep(0.2, 0.6, abs(vec2(0.5, 0.5) - coords.xy));
+ 
+	float screenEdgefactor = clamp(1.0 - (dCoords.x + dCoords.y), 0.0, 1.0);
+
+	float ReflectionMultiplier = pow(metallic, reflectionSpecularFalloffExponent) * 
+			screenEdgefactor * 
+			-reflected.z;
+ 
+	// Get color
+	vec3 lastFrameColor = textureLod(u_lastFrameTexture, coords.xy, 0).rgb;
+	//vec3 SSR = lastFrameColor * clamp(ReflectionMultiplier, 0.0, 0.9) * F;  
+	vec3 SSR = lastFrameColor;// * clamp(ReflectionMultiplier, 0.0, 0.9);  
+
+
+	found = true;
+
+	return SSR;
+}
+
+
+//normal, viewDir, wp = world space position
+//F = freshnell
+//todo send F 
+vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, 
+float metallic, vec3 albedo, vec3 wp, vec3 viewPos)
+{
+
 
 	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2)); //just the static ambient color
 	vec3 ambient = vec3(0);
@@ -792,10 +969,23 @@ vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, float 
 	vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
 	vec3 kS = F;
 
-	vec3 irradiance = vec3(0,0,0);
-	vec3 radiance = vec3(0,0,0);
+	vec3 irradiance = vec3(0,0,0); //diffuse
+	vec3 radiance = vec3(0,0,0); //specular
 	vec2 brdf = vec2(0,0);
 	vec2 brdfVec = vec2(dotNVClamped, roughness);
+
+	bool foundRadianceValue = false;
+
+	if(u_hasLastFrameTexture != 0) //ssr
+	{
+		radiance = SSR(viewPos, N, metallic, F, foundRadianceValue);
+
+		if(!foundRadianceValue)
+		{
+		foundRadianceValue= true;
+		radiance = vec3(0);
+		}
+	}
 
 	if(lightPassData.skyBoxPresent != 0)
 	{
@@ -804,7 +994,11 @@ vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, float 
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;
-		radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
+
+		if(!foundRadianceValue)
+		{
+			radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
+		}
 
 		//brdfVec.y = 1 - brdfVec.y; 
 		brdf  = texture(u_brdfTexture, brdfVec).rg;
@@ -813,7 +1007,10 @@ vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, float 
 	{
 		irradiance = gammaAmbient ; //this color is coming directly at the object
 		
-		radiance = gammaAmbient;
+		if(!foundRadianceValue)
+		{
+			radiance = gammaAmbient;
+		}
 
 		//brdfVec.y = 1 - brdfVec.y; 
 		brdf = texture(u_brdfTexture, brdfVec).rg;
@@ -876,9 +1073,11 @@ void main()
 		//albedoAlpha = vec4(0,0,0,0);
 	}
 
-
 	vec3 pos = texture(u_positions, v_texCoords).xyz;
-		//if(pos.x == 0 && pos.y == 0 && pos.z == 0){discard;} todo add back
+	vec3 posViewSpace = texture(u_positionViewSpace, v_texCoords).xyz;
+
+
+	if(posViewSpace.z == -INFINITY){discard;}
 
 	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
@@ -886,7 +1085,6 @@ void main()
 	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
 	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
 
-	vec3 lastFrameColor = texture(u_lastFrameTexture, v_texCoords).xyz;
 
 	vec4 albedoAlpha = vec4(0,0,0,0);
 	vec3 emissive = vec3(0,0,0);
@@ -979,7 +1177,7 @@ void main()
 	float metallic = clamp(material.g, 0.0, 0.98);
 	float ambientOcclution = material.b;
 
-	vec3 viewDir = normalize(u_eyePosition - pos);
+	vec3 viewDir = normalize(u_eyePosition - pos); //towards hemisphere
 
 	//vec3 I = normalize(pos - u_eyePosition); //looking direction (towards eye)
 	vec3 R = reflect(-viewDir, normal);	//reflected vector
@@ -1104,8 +1302,11 @@ void main()
 	}
 
 
+	//vec3 wp = vec3(vec4(pos, 1.0) * inverse(u_viewProj));
+	vec3 wp = viewDir; //todo
+
 	vec3 color = Lo + computeAmbientTerm(normal, viewDir, F0, roughness, R, metallic, 
-	albedo) * ambientOcclution; 
+	albedo, wp, posViewSpace) * ambientOcclution; 
 
 	//vec3 hdrCorrectedColor = color;
 	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
@@ -1126,6 +1327,7 @@ void main()
 	
 	if(u_hasLastFrameTexture!=0)
 	{
+		//vec3 lastFrameColor = texture(u_lastFrameTexture, v_texCoords).xyz;
 		//a_outColor.rgb = 0.7 * a_outColor.rgb + 0.3 * lastFrameColor;
 		//a_outColor.rgb = lastFrameColor;
 	}
