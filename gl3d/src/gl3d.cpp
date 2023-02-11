@@ -5591,7 +5591,7 @@ namespace gl3d
 
 	void Renderer3D::PostProcess::clear()
 	{
-		glDeleteTextures(2, colorBuffers);
+		glDeleteTextures(3, colorBuffers);
 		postProcessShader.clear();
 		glDeleteFramebuffers(1, &filterFbo);
 		glDeleteFramebuffers(1, &fbo);

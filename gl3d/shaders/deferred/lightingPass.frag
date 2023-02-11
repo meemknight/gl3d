@@ -771,6 +771,90 @@ vec3 fromuShortToFloat(ivec3 a)
 
 
 
+//https://imanolfotia.com/blog/1
+//SSR
+
+vec3 SSR()
+{
+
+	return vec3(0,0,0);
+}
+
+//normal, viewDir
+vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, float metallic, vec3 albedo)
+{
+
+	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2)); //just the static ambient color
+	vec3 ambient = vec3(0);
+		
+		
+	float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
+	vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
+	vec3 kS = F;
+
+	vec3 irradiance = vec3(0,0,0);
+	vec3 radiance = vec3(0,0,0);
+	vec2 brdf = vec2(0,0);
+	vec2 brdfVec = vec2(dotNVClamped, roughness);
+
+	if(lightPassData.skyBoxPresent != 0)
+	{
+
+		irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
+		
+		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+		const float MAX_REFLECTION_LOD = 4.0;
+		radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
+
+		//brdfVec.y = 1 - brdfVec.y; 
+		brdf  = texture(u_brdfTexture, brdfVec).rg;
+	
+	}else
+	{
+		irradiance = gammaAmbient ; //this color is coming directly at the object
+		
+		radiance = gammaAmbient;
+
+		//brdfVec.y = 1 - brdfVec.y; 
+		brdf = texture(u_brdfTexture, brdfVec).rg;
+	}
+
+	if(lightPassData.lightSubScater == 0)
+	{
+		vec3 kD = 1.0 - kS;
+		kD *= 1.0 - metallic;
+		
+		vec3 diffuse = irradiance * albedo;
+		
+		vec3 specular = radiance * (F * brdf.x + brdf.y);
+
+		//no multiple scattering
+		ambient = (kD * diffuse + specular);
+	}else
+	{
+		//http://jcgt.org/published/0008/01/03/
+		// Multiple scattering version
+		vec3 FssEss = kS * brdf.x + brdf.y;
+		float Ess = brdf.x + brdf.y;
+		float Ems = 1-Ess;
+		vec3 Favg = F0 + (1-F0)/21;
+		vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
+		// Dielectrics
+		vec3 Edss = 1 - (FssEss + Fms * Ems);
+		vec3 kD = albedo * Edss;
+
+		// Multiple scattering version
+		ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
+	}
+
+	if(lightPassData.skyBoxPresent != 0)
+	{
+		ambient *= gammaAmbient;
+	}
+	
+	return ambient;
+}
+
 void main()
 {
 	int materialIndex = texture(u_materialIndex, v_texCoords).r;
@@ -1020,116 +1104,8 @@ void main()
 	}
 
 
-	//compute ambient
-	vec3 ambient;
-	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2));
-
-	if(lightPassData.skyBoxPresent != 0)
-	{
-
-		vec3 N = normal;
-		vec3 V = viewDir;
-		
-		float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
-
-		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
-		vec3 kS = F;
-		
-		vec3 irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
-		
-		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
-		const float MAX_REFLECTION_LOD = 4.0;
-		vec3 radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
-
-		vec2 brdfVec = vec2(dotNVClamped, roughness);
-		//brdfVec.y = 1 - brdfVec.y; 
-		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-
-
-		if(lightPassData.lightSubScater == 0)
-		{
-			vec3 kD = 1.0 - kS;
-			kD *= 1.0 - metallic;
-			
-			vec3 diffuse = irradiance * albedo;
-			
-			vec3 specular = radiance * (F * brdf.x + brdf.y);
-
-			//no multiple scattering
-			ambient = (kD * diffuse + specular);
-		}else
-		{
-			//http://jcgt.org/published/0008/01/03/
-			// Multiple scattering version
-			vec3 FssEss = kS * brdf.x + brdf.y;
-			float Ess = brdf.x + brdf.y;
-			float Ems = 1-Ess;
-			vec3 Favg = F0 + (1-F0)/21;
-			vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
-			// Dielectrics
-			vec3 Edss = 1 - (FssEss + Fms * Ems);
-			vec3 kD = albedo * Edss;
-
-			// Multiple scattering version
-			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
-		}
-
-		vec3 occlusionData = ambientOcclution * gammaAmbient;
-		ambient *= occlusionData;
-
-	}else
-	{
-		vec3 N = normal;
-		vec3 V = viewDir;
-		
-		float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
-
-		vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);
-		vec3 kS = F;
-		
-		vec3 irradiance = gammaAmbient ; //this color is coming directly at the object
-		
-		vec3 radiance = gammaAmbient ;
-
-		vec2 brdfVec = vec2(dotNVClamped, roughness);
-		//brdfVec.y = 1 - brdfVec.y; 
-		vec2 brdf  = texture(u_brdfTexture, brdfVec).rg;
-
-
-		if(lightPassData.lightSubScater == 0)
-		{
-			vec3 kD = 1.0 - kS;
-			kD *= 1.0 - metallic;
-			
-			vec3 diffuse = irradiance * albedo;
-			
-			vec3 specular = radiance * (F * brdf.x + brdf.y);
-
-			//no multiple scattering
-			ambient = (kD * diffuse + specular);
-		}else
-		{
-			//http://jcgt.org/published/0008/01/03/
-			// Multiple scattering version
-			vec3 FssEss = kS * brdf.x + brdf.y;
-			float Ess = brdf.x + brdf.y;
-			float Ems = 1-Ess;
-			vec3 Favg = F0 + (1-F0)/21;
-			vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);
-			// Dielectrics
-			vec3 Edss = 1 - (FssEss + Fms * Ems);
-			vec3 kD = albedo * Edss;
-
-			// Multiple scattering version
-			ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
-		}
-		
-		vec3 occlusionData = vec3(ambientOcclution);
-		ambient *= occlusionData;
-	}
-
-	vec3 color = Lo + ambient; 
-	
+	vec3 color = Lo + computeAmbientTerm(normal, viewDir, F0, roughness, R, metallic, 
+	albedo) * ambientOcclution; 
 
 	//vec3 hdrCorrectedColor = color;
 	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);
@@ -1151,7 +1127,7 @@ void main()
 	if(u_hasLastFrameTexture!=0)
 	{
 		//a_outColor.rgb = 0.7 * a_outColor.rgb + 0.3 * lastFrameColor;
-		a_outColor.rgb = lastFrameColor;
+		//a_outColor.rgb = lastFrameColor;
 	}
 
 
