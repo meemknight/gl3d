@@ -4524,6 +4524,7 @@ namespace gl3d
 			glUniform3f(internal.lightShader.light_u_eyePosition, camera.position.x, camera.position.y, camera.position.z);
 
 			glUniformMatrix4fv(internal.lightShader.light_u_cameraProjection, 1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
+			glUniformMatrix4fv(internal.lightShader.light_u_view, 1, GL_FALSE, &camera.getWorldToViewMatrix()[0][0]);
 
 			if (internal.pointLights.size())
 			{//todo laziness if lights don't change and stuff

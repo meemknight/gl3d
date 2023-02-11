@@ -26,6 +26,7 @@ uniform isampler2D u_textureDerivates;
 uniform int u_hasLastFrameTexture;
 //uniform sampler2D u_textureDerivates;
 uniform mat4 u_cameraProjection;
+uniform mat4 u_view;
 
 
 uniform vec3 u_eyePosition;
@@ -862,7 +863,6 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 	dir *= step;
  
 	float depth;
-	int steps;
 	vec4 projectedCoord;
  
 	for(int i = 0; i < maxSteps; i++)
@@ -872,7 +872,15 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
 		projectedCoord.xy /= projectedCoord.w;
 		projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
- 
+		
+		if(projectedCoord.x > 1.f || projectedCoord.y > 1.f
+			||projectedCoord.x < -1.f || projectedCoord.y < -1.f
+		)
+		{
+			dDepth = -INFINITY;
+			return vec2(0,0);
+		}
+
 		//depth = textureLod(gPosition, projectedCoord.xy, 2).z;
 		depth = texture(u_positionViewSpace, projectedCoord.xy).z;
 
@@ -895,7 +903,6 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 			}
 		}
 		
-		steps++;
 	}
  
 	//signal fail	
@@ -906,17 +913,16 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 
 ////////////////////////////////////////////
 
-vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found)
+vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found, float roughness, vec3 wp)
 {
 	// Reflection vector
-	//vec3 viewPos = -V;//todo check again :)
 	vec3 reflected = normalize(reflect(normalize(viewPos), N));
 	//vec3 reflected = R; //todo check
 	
 	//found = true;
 	//return viewPos;
 
-	//if(reflected.z < 0){found = false; return vec3(0,0,0);}
+	//if(reflected.z > 0){found = false; return vec3(0,0,0);}
 
 	vec3 hitPos = viewPos;
 	float dDepth;
@@ -925,8 +931,8 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found)
 	//vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), spec);
 	
 	//todo test
-	//vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), -roughness); //use roughness for specular factor
-	vec3 jitt = vec3(0.0);
+	vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), roughness); //use roughness for specular factor
+	//vec3 jitt = vec3(0.0);
 
 	vec2 coords = RayMarch((vec3(jitt) + reflected * max(minRayStep, -viewPos.z)), hitPos, dDepth);
 	
@@ -941,10 +947,15 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found)
 			screenEdgefactor * 
 			-reflected.z;
  
+	if(ReflectionMultiplier <= 0.001)
+	{
+		return vec3(0.f);
+	}
+
 	// Get color
 	vec3 lastFrameColor = textureLod(u_lastFrameTexture, coords.xy, 0).rgb;
 	//vec3 SSR = lastFrameColor * clamp(ReflectionMultiplier, 0.0, 0.9) * F;  
-	vec3 SSR = lastFrameColor;// * clamp(ReflectionMultiplier, 0.0, 0.9);  
+	vec3 SSR = lastFrameColor * clamp(ReflectionMultiplier, 0.0, 1.f);  
 
 
 	found = true;
@@ -957,7 +968,7 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found)
 //F = freshnell
 //todo send F 
 vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, 
-float metallic, vec3 albedo, vec3 wp, vec3 viewPos)
+float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpceNormal)
 {
 
 
@@ -978,12 +989,12 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos)
 
 	if(u_hasLastFrameTexture != 0) //ssr
 	{
-		radiance = SSR(viewPos, N, metallic, F, foundRadianceValue);
+		radiance = SSR(viewPos, viewSpceNormal, metallic, F, foundRadianceValue, roughness, wp);
 
 		if(!foundRadianceValue)
 		{
-		foundRadianceValue= true;
-		radiance = vec3(0);
+			foundRadianceValue= true;
+			radiance = vec3(0);
 		}
 	}
 
@@ -1080,6 +1091,7 @@ void main()
 	if(posViewSpace.z == -INFINITY){discard;}
 
 	vec3 normal = fromuShortToFloat(texture(u_normals, v_texCoords).xyz);
+	vec3 viewSpaceNormal = normalize( vec3(transpose(inverse(mat3(u_view))) * normal));
 	vec2 sampledUV = texture(u_textureUV, v_texCoords).xy;
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
 	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
@@ -1302,11 +1314,9 @@ void main()
 	}
 
 
-	//vec3 wp = vec3(vec4(pos, 1.0) * inverse(u_viewProj));
-	vec3 wp = viewDir; //todo
 
 	vec3 color = Lo + computeAmbientTerm(normal, viewDir, F0, roughness, R, metallic, 
-	albedo, wp, posViewSpace) * ambientOcclution; 
+	albedo, pos, posViewSpace, viewSpaceNormal) * ambientOcclution; 
 
 	//vec3 hdrCorrectedColor = color;
 	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);

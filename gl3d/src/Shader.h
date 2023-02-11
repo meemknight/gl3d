@@ -89,6 +89,7 @@ namespace gl3d
 		GLint light_u_transparentPass = -1;
 		GLint light_u_hasLastFrameTexture = -1;
 		GLint light_u_cameraProjection = -1;
+		GLint light_u_view = -1;
 		
 		GLint light_materialBlockLocation = GL_INVALID_INDEX;
 

@@ -367,7 +367,7 @@ namespace gl3d
 		light_u_hasLastFrameTexture = getUniform(lightingPassShader.id, "u_hasLastFrameTexture", errorReporter);
 		light_u_cameraProjection = getUniform(lightingPassShader.id, "u_cameraProjection", errorReporter);
 		light_u_positionViewSpace = getUniform(lightingPassShader.id, "u_positionViewSpace", errorReporter);
-
+		light_u_view = getUniform(lightingPassShader.id, "u_view", errorReporter);
 
 		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material", errorReporter);
 		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);
