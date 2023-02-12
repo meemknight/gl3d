@@ -319,6 +319,12 @@ namespace gl3d
 		void setBloomIntensisy(float b);
 		bool &bloomHighQualityDownSample();
 		bool &bloomHighQualityUpSample();
+		
+		//SSR
+		LightShader::LightPassData::SSRdata &getSSRdata();
+		void setSSRdata(LightShader::LightPassData::SSRdata data);
+		void ebableSSR(bool enable = true);
+		bool isSSRenabeled();
 
 		//
 		float &getDirectionalShadowCascadesFrustumSplit(int cascadeIndex);

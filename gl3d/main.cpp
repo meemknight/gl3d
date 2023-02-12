@@ -745,7 +745,7 @@ int main()
 			ImGui::Checkbox("Light sub scater", &lightSubScater);
 			renderer.enableLightSubScattering(lightSubScater);
 
-			if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);
 
@@ -772,7 +772,7 @@ int main()
 			ImGui::Checkbox("Frustum culling", &renderer.frustumCulling);
 
 
-			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);
 
@@ -786,8 +786,26 @@ int main()
 			}
 			ImGui::NewLine();
 
+			if (ImGui::CollapsingHeader("SSR", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))
+			{
+				ImGui::PushID(__COUNTER__);
+
+				ImGui::Checkbox("SSR", &renderer.internal.hasLastFrameTexture);
+				auto d = renderer.getSSRdata();
+
+				ImGui::SliderFloat("max ray delta", &d.maxRayDelta, 0.0001f, 2.f); //for clamping infinity
+				ImGui::SliderFloat("max ray step", &d.maxRayStep, 0.01f, 5.f);
+				ImGui::SliderInt("max steps", &d.maxSteps, 5, 150);
+				ImGui::SliderFloat("min ray step", &d.minRayStep, 0.001f, 1.f);
+				ImGui::SliderInt("binary search steps", &d.numBinarySearchSteps, 2, 20);
+
+				renderer.setSSRdata(d);
+
+				ImGui::PopID();
+
+			}
 	
-			if (ImGui::CollapsingHeader("Bloom", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			if (ImGui::CollapsingHeader("Bloom", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);
 
@@ -802,7 +820,7 @@ int main()
 			}
 			ImGui::NewLine();
 
-			if (ImGui::CollapsingHeader("Chromatic aberation", ImGuiTreeNodeFlags_Framed || ImGuiTreeNodeFlags_FramePadding))
+			if (ImGui::CollapsingHeader("Chromatic aberation", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))
 			{
 				ImGui::PushID(__COUNTER__);
 
@@ -1080,7 +1098,6 @@ int main()
 			ImGui::NewLine();
 			ImGui::ColorEdit3("Global Ambient color", &renderer.skyBox.color[0]);
 			
-			ImGui::Checkbox("LAstFrame", &renderer.internal.hasLastFrameTexture);
 
 
 			ImGui::End();

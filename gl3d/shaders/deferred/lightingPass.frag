@@ -68,6 +68,11 @@ layout (std140) uniform u_lightPassData
 	int lightSubScater;
 	float exposure;
 	int skyBoxPresent;
+	float SSR_minRayStep;
+	int SSR_maxSteps;
+	int	SSR_numBinarySearchSteps;
+	float SSR_maxRayStep;
+	float SSR_maxRayDelta;
 }lightPassData;
 
 struct PointLight
@@ -110,7 +115,6 @@ readonly restrict layout(std140) buffer u_directionalLights
 };
 uniform int u_directionalLightCount;
 
-
 struct SpotLight
 {
 	vec4 position; //w = cos(half angle)
@@ -131,7 +135,6 @@ readonly restrict layout(std140) buffer u_spotLights
 	SpotLight spotLights[];
 };
 uniform int u_spotLightCount;
-
 
 
 const float PI = 3.14159265359;
@@ -696,7 +699,6 @@ float pointShadowCalculation(vec3 pos, vec3 normal, int index)
 float cascadedShadowCalculation(vec3 pos, vec3 normal, vec3 lightDir, int index)
 {
 	
-
 	vec3 firstProjCoords = getProjCoords(dLight[index].firstLightSpaceMatrix, pos);
 	vec3 secondProjCoords = getProjCoords(dLight[index].secondLightSpaceMatrix, pos);
 	vec3 thirdProjCoords = getProjCoords(dLight[index].thirdLightSpaceMatrix, pos);
@@ -782,15 +784,6 @@ vec3 fromuShortToFloat(ivec3 a)
 //SSR
 
 
-const float step = 0.1;
-const float minRayStep = 0.01;
-const float maxSteps = 50;
-const int numBinarySearchSteps = 10;
-const float reflectionSpecularFalloffExponent = 3.0;
-const float maxRayStep = 1.2;
-const float maxRayDelta = 0.04;
-
-//todo try this
 //vec3 PositionFromDepth(float depth) {
 //    float z = depth * 2.0 - 1.0;
 //
@@ -813,7 +806,7 @@ inout float dDepth, vec2 oldValue)
 	
 	vec2 foundProjectedCoord = oldValue;
 
-	for(int i = 0; i < numBinarySearchSteps; i++)
+	for(int i = 0; i < lightPassData.SSR_numBinarySearchSteps; i++)
 	{
 
 		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
@@ -853,13 +846,12 @@ inout float dDepth, vec2 oldValue)
 
 vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth, vec3 worldNormal, vec3 viewDir)
 {
-	//dir *= step;
-	dir *= mix(minRayStep, maxRayStep, abs(dot(worldNormal, viewDir)));//maxRayStep;
+	dir *= mix(lightPassData.SSR_minRayStep, lightPassData.SSR_maxRayStep, abs(dot(worldNormal, viewDir)));//maxRayStep;
  
 	float depth;
 	vec4 projectedCoord;
  
-	for(int i = 0; i < maxSteps; i++)
+	for(int i = 0; i < lightPassData.SSR_maxSteps; i++)
 	{
 		hitCoord += dir;
  
@@ -885,13 +877,13 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth, vec3 worldNormal,
 
 		dDepth = hitCoord.z - depth;
 
-		if((dir.z - dDepth) < maxRayStep && dDepth <= 0.0)
+		if((dir.z - dDepth) < lightPassData.SSR_maxRayStep && dDepth <= 0.0)
 		{
 			vec2 Result;
 			Result = BinarySearch(dir, hitCoord, dDepth, projectedCoord.xy);
 			//Result = projectedCoord.xy;
 
-			if(dDepth < -maxRayDelta)
+			if(dDepth < -lightPassData.SSR_maxRayDelta)
 			{
 				break; //fail //project to infinity :(((
 			}
@@ -909,7 +901,6 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth, vec3 worldNormal,
 	dDepth = -INFINITY;
 	return vec2(0,0);
 }
-
 
 
 uvec3 murmurHash33(uvec3 src) {
@@ -963,7 +954,8 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F,
 	vec3 jitt = computeJitt(wp, rezolution, viewSpaceNormal, roughness); //use roughness for specular factor
 	//vec3 jitt = vec3(0.0);
 
-	vec2 coords = RayMarch( normalize((vec3(jitt) + reflected) * max(minRayStep, -viewPos.z)), hitPos, dDepth,
+	vec2 coords = RayMarch( normalize((vec3(jitt) + reflected) *
+		max(lightPassData.SSR_minRayStep, -viewPos.z)), hitPos, dDepth,
 	N, viewDir);
 	
 	if(dDepth < -1000){return vec3(0);}
@@ -974,7 +966,6 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F,
 	float screenEdgefactor = clamp(1.0 - (dCoords.x + dCoords.y), 0.0, 1.0);
 
 	float ReflectionMultiplier = 
-	//pow(metallic, reflectionSpecularFalloffExponent) * 
 			screenEdgefactor * 
 			-reflected.z;
  

@@ -137,6 +137,27 @@ namespace gl3d
 			float exposure = 1.7;
 			int skyBoxPresent = 0;
 
+			struct SSRdata
+			{
+				float minRayStep = 0.4;
+				int maxSteps = 20;
+				int	numBinarySearchSteps = 7;
+				float maxRayStep = 1.75;
+				float maxRayDelta = 0.6;
+
+				void setLowQuality()
+				{ *this = SSRdata(); };
+
+				void setMediumQuality()
+				{
+					minRayStep = 0.4;
+					maxSteps = 40;
+					numBinarySearchSteps = 5;
+					maxRayStep = 1.2;
+					maxRayDelta = 0.6;
+				};
+
+			}SSR;
 		}lightPassUniformBlockCpuData;
 
 		struct

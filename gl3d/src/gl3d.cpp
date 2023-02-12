@@ -2366,6 +2366,34 @@ namespace gl3d
 		return this->postProcess.highQualityUpSample;
 	}
 
+	LightShader::LightPassData::SSRdata &Renderer3D::getSSRdata()
+	{
+		return internal.lightShader.lightPassUniformBlockCpuData.SSR;
+	}
+
+	void Renderer3D::setSSRdata(LightShader::LightPassData::SSRdata data)
+	{
+		data.maxRayDelta = glm::clamp(data.maxRayDelta, 0.0001f, 2.f);
+		data.maxRayStep = glm::clamp(data.maxRayStep, 0.01f, 5.f);
+		data.maxSteps = glm::clamp(data.maxSteps, 5, 150);
+		data.minRayStep = glm::clamp(data.minRayStep, 0.001f, 1.f);
+		data.numBinarySearchSteps = glm::clamp(data.numBinarySearchSteps, 2, 20);
+
+
+		internal.lightShader.lightPassUniformBlockCpuData.SSR = data;
+
+
+	}
+
+	void Renderer3D::ebableSSR(bool enable)
+	{
+	}
+
+	bool Renderer3D::isSSRenabeled()
+	{
+		return false;
+	}
+
 	float stub = 0;
 	float &Renderer3D::getDirectionalShadowCascadesFrustumSplit(int cascadeIndex)
 	{
@@ -2475,9 +2503,26 @@ namespace gl3d
 			j["chromaticAberationData"] = chromaticAberationData;
 		}
 
+		{
+			j["SSR"] = isSSRenabeled();
+
+			Json SSR;
+
+			auto d = getSSRdata();
+			SSR["maxRayDelta"] = d.maxRayDelta;
+			SSR["maxRayStep"] = d.maxRayStep;
+			SSR["maxSteps"] = d.maxSteps;
+			SSR["minRayStep"] = d.minRayStep;
+			SSR["numBinarySearchSteps"] = d.numBinarySearchSteps;
+
+			j["SSRdata"] = SSR;
+		}
+
+
 		return j.dump();
 	}
 
+	//todo implement
 	void Renderer3D::loadSettingsFromJson(const char *data)
 	{
 		using Json = nlohmann::json;
