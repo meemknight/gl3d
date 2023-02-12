@@ -349,7 +349,6 @@ namespace gl3d
 
 		light_u_normals = getUniform(lightingPassShader.id, "u_normals", errorReporter);
 		light_u_skyboxFiltered = getUniform(lightingPassShader.id, "u_skyboxFiltered", errorReporter);
-		light_u_positions = getUniform(lightingPassShader.id, "u_positions", errorReporter);
 		light_u_eyePosition = getUniform(lightingPassShader.id, "u_eyePosition", errorReporter);
 		light_u_pointLightCount = getUniform(lightingPassShader.id, "u_pointLightCount", errorReporter);
 		light_u_directionalLightCount = getUniform(lightingPassShader.id, "u_directionalLightCount", errorReporter);
@@ -368,6 +367,7 @@ namespace gl3d
 		light_u_cameraProjection = getUniform(lightingPassShader.id, "u_cameraProjection", errorReporter);
 		light_u_positionViewSpace = getUniform(lightingPassShader.id, "u_positionViewSpace", errorReporter);
 		light_u_view = getUniform(lightingPassShader.id, "u_view", errorReporter);
+		light_u_inverseView = getUniform(lightingPassShader.id, "u_inverseView", errorReporter);
 
 		light_materialBlockLocation = getStorageBlockIndex(lightingPassShader.id, "u_material", errorReporter);
 		glShaderStorageBlockBinding(lightingPassShader.id, light_materialBlockLocation, internal::MaterialBlockBinding);

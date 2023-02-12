@@ -71,7 +71,6 @@ namespace gl3d
 
 		GLint light_u_normals = -1;
 		GLint light_u_skyboxFiltered = -1;
-		GLint light_u_positions = -1;
 		GLint light_u_eyePosition = -1;
 		GLint light_u_pointLightCount = -1;
 		GLint light_u_directionalLightCount = -1;
@@ -90,6 +89,7 @@ namespace gl3d
 		GLint light_u_hasLastFrameTexture = -1;
 		GLint light_u_cameraProjection = -1;
 		GLint light_u_view = -1;
+		GLint light_u_inverseView = -1;
 		
 		GLint light_materialBlockLocation = GL_INVALID_INDEX;
 

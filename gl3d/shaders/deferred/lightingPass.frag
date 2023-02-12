@@ -13,7 +13,6 @@ noperspective in vec2 v_texCoords;
 uniform isampler2D u_normals;
 uniform samplerCube u_skyboxFiltered;
 uniform samplerCube u_skyboxIradiance;
-uniform sampler2D u_positions;
 uniform sampler2D u_brdfTexture;
 uniform sampler2DArrayShadow u_cascades;
 uniform sampler2DArrayShadow u_spotShadows;
@@ -27,6 +26,7 @@ uniform int u_hasLastFrameTexture;
 //uniform sampler2D u_textureDerivates;
 uniform mat4 u_cameraProjection;
 uniform mat4 u_view;
+uniform mat4 u_inverseView;
 
 
 uniform vec3 u_eyePosition;
@@ -1100,9 +1100,11 @@ void main()
 		//albedoAlpha = vec4(0,0,0,0);
 	}
 
-	vec3 pos = texture(u_positions, v_texCoords).xyz;
-	vec3 posViewSpace = texture(u_positionViewSpace, v_texCoords).xyz;
+	//vec3 pos = texture(u_positions, v_texCoords).xyz;
 
+
+	vec3 posViewSpace = texture(u_positionViewSpace, v_texCoords).xyz;
+	vec3 pos = vec3(u_inverseView * vec4(posViewSpace,1));
 
 	if(posViewSpace.z == -INFINITY){discard;}
 

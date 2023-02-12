@@ -4467,56 +4467,52 @@ namespace gl3d
 
 			glUniform1i(internal.lightShader.light_u_transparentPass, transparentPhaze);
 
-			glUniform1i(internal.lightShader.light_u_positions, 0);
+			glUniform1i(internal.lightShader.light_u_normals, 0);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.position]);
-
-			glUniform1i(internal.lightShader.light_u_normals, 1);
-			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.normal]);
 
-			glUniform1i(internal.lightShader.light_u_skyboxFiltered, 2);
-			glActiveTexture(GL_TEXTURE2);
+			glUniform1i(internal.lightShader.light_u_skyboxFiltered, 1);
+			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.preFilteredMap);
 
-			glUniform1i(internal.lightShader.light_u_skyboxIradiance, 3);
-			glActiveTexture(GL_TEXTURE3);
+			glUniform1i(internal.lightShader.light_u_skyboxIradiance, 2);
+			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, skyBox.convolutedTexture);
 
-			glUniform1i(internal.lightShader.light_u_brdfTexture, 4);
-			glActiveTexture(GL_TEXTURE4);
+			glUniform1i(internal.lightShader.light_u_brdfTexture, 3);
+			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, internal.lightShader.brdfTexture.id);
 
-			glUniform1i(internal.lightShader.light_u_cascades, 5);
-			glActiveTexture(GL_TEXTURE5);
+			glUniform1i(internal.lightShader.light_u_cascades, 4);
+			glActiveTexture(GL_TEXTURE4);
 			glBindTexture(GL_TEXTURE_2D_ARRAY, directionalShadows.cascadesTexture);
 
-			glUniform1i(internal.lightShader.light_u_spotShadows, 6);
-			glActiveTexture(GL_TEXTURE6);
+			glUniform1i(internal.lightShader.light_u_spotShadows, 5);
+			glActiveTexture(GL_TEXTURE5);
 			glBindTexture(GL_TEXTURE_2D_ARRAY, spotShadows.shadowTextures);
 
-			glUniform1i(internal.lightShader.light_u_pointShadows, 7);
-			glActiveTexture(GL_TEXTURE7);
+			glUniform1i(internal.lightShader.light_u_pointShadows, 6);
+			glActiveTexture(GL_TEXTURE6);
 			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pointShadows.shadowTextures);
 
-			glUniform1i(internal.lightShader.light_u_materialIndex, 8);
-			glActiveTexture(GL_TEXTURE8);
+			glUniform1i(internal.lightShader.light_u_materialIndex, 7);
+			glActiveTexture(GL_TEXTURE7);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.materialIndex]);
 
-			glUniform1i(internal.lightShader.light_u_textureUV, 9);
-			glActiveTexture(GL_TEXTURE9);
+			glUniform1i(internal.lightShader.light_u_textureUV, 8);
+			glActiveTexture(GL_TEXTURE8);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureUV]);
 
-			glUniform1i(internal.lightShader.light_u_textureDerivates, 10);
-			glActiveTexture(GL_TEXTURE10);
+			glUniform1i(internal.lightShader.light_u_textureDerivates, 9);
+			glActiveTexture(GL_TEXTURE9);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.textureDerivates]);
 
-			glUniform1i(internal.lightShader.light_u_lastTexture, 11);
-			glActiveTexture(GL_TEXTURE11);
+			glUniform1i(internal.lightShader.light_u_lastTexture, 10);
+			glActiveTexture(GL_TEXTURE10);
 			glBindTexture(GL_TEXTURE_2D, postProcess.colorBuffers[2]);
 
-			glUniform1i(internal.lightShader.light_u_positionViewSpace, 12);
-			glActiveTexture(GL_TEXTURE12);
+			glUniform1i(internal.lightShader.light_u_positionViewSpace, 11);
+			glActiveTexture(GL_TEXTURE11);
 			glBindTexture(GL_TEXTURE_2D, internal.gBuffer.buffers[internal.gBuffer.positionViewSpace]);
 
 			glUniform1i(internal.lightShader.light_u_hasLastFrameTexture, internal.hasLastFrameTexture);
@@ -4525,6 +4521,8 @@ namespace gl3d
 
 			glUniformMatrix4fv(internal.lightShader.light_u_cameraProjection, 1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
 			glUniformMatrix4fv(internal.lightShader.light_u_view, 1, GL_FALSE, &camera.getWorldToViewMatrix()[0][0]);
+			glUniformMatrix4fv(internal.lightShader.light_u_inverseView, 1, GL_FALSE, &glm::inverse(camera.getWorldToViewMatrix())[0][0]);
+			
 
 			if (internal.pointLights.size())
 			{//todo laziness if lights don't change and stuff
