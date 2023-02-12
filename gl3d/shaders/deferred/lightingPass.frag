@@ -782,12 +782,12 @@ vec3 fromuShortToFloat(ivec3 a)
 
 
 const float step = 0.1;
-const float minRayStep = 0.1;
-const float maxSteps = 30;
-const int numBinarySearchSteps = 5;
+const float minRayStep = 0.01;
+const float maxSteps = 50;
+const int numBinarySearchSteps = 10;
 const float reflectionSpecularFalloffExponent = 3.0;
-
-
+const float maxRayStep = 1.2;
+const float maxRayDelta = 0.04;
 
 //todo try this
 //vec3 PositionFromDepth(float depth) {
@@ -849,6 +849,8 @@ inout float dDepth, vec2 oldValue)
 		projectedCoord = u_cameraProjection * vec4(hitCoord, 1.0);
 		projectedCoord.xy /= projectedCoord.w;
 		projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+		
+		depth = texture(u_positionViewSpace, projectedCoord.xy).z;
 	
 	if(!(depth < -1000))
 	{
@@ -858,9 +860,10 @@ inout float dDepth, vec2 oldValue)
 	return foundProjectedCoord.xy;
 }
 
-vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
+vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth, vec3 worldNormal, vec3 viewDir)
 {
-	dir *= step;
+	//dir *= step;
+	dir *= mix(minRayStep, maxRayStep, abs(dot(worldNormal, viewDir)));//maxRayStep;
  
 	float depth;
 	vec4 projectedCoord;
@@ -877,8 +880,7 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 			||projectedCoord.x < -1.f || projectedCoord.y < -1.f
 		)
 		{
-			dDepth = -INFINITY;
-			return vec2(0,0);
+			break;
 		}
 
 		//depth = textureLod(gPosition, projectedCoord.xy, 2).z;
@@ -892,15 +894,22 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 
 		dDepth = hitCoord.z - depth;
 
-		if((dir.z - dDepth) < 1.2)
+		if((dir.z - dDepth) < maxRayStep && dDepth <= 0.0)
 		{
-			if(dDepth <= 0.0)
-			{   
-				vec2 Result;
-				Result = BinarySearch(dir, hitCoord, dDepth, projectedCoord.xy);
-				//Result = projectedCoord.xy;
-				return Result;
+			vec2 Result;
+			Result = BinarySearch(dir, hitCoord, dDepth, projectedCoord.xy);
+			//Result = projectedCoord.xy;
+
+			if(dDepth < -maxRayDelta)
+			{
+				break; //fail //project to infinity :(((
 			}
+			
+			depth = texture(u_positionViewSpace, Result.xy).z;
+			if(depth < -10000)
+				{break;}//fail
+
+			return Result;
 		}
 		
 	}
@@ -913,16 +922,19 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth)
 
 ////////////////////////////////////////////
 
-vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found, float roughness, vec3 wp)
+vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, 
+	out float mixFactor, float roughness, vec3 wp, vec3 viewDir, vec3 viewSpaceNormal)
 {
+	mixFactor = 0;
+
 	// Reflection vector
-	vec3 reflected = normalize(reflect(normalize(viewPos), N));
+	vec3 reflected = normalize(reflect(normalize(viewPos), viewSpaceNormal));
 	//vec3 reflected = R; //todo check
 	
 	//found = true;
 	//return viewPos;
 
-	//if(reflected.z > 0){found = false; return vec3(0,0,0);}
+	if(reflected.z > 0){return vec3(0,0,0);}
 
 	vec3 hitPos = viewPos;
 	float dDepth;
@@ -934,9 +946,10 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found, float rou
 	vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), roughness); //use roughness for specular factor
 	//vec3 jitt = vec3(0.0);
 
-	vec2 coords = RayMarch((vec3(jitt) + reflected * max(minRayStep, -viewPos.z)), hitPos, dDepth);
+	vec2 coords = RayMarch( normalize((vec3(jitt) + reflected) * max(minRayStep, -viewPos.z)), hitPos, dDepth,
+	N, viewDir);
 	
-	if(dDepth == -INFINITY){found = false; return vec3(0);}
+	if(dDepth < -1000){return vec3(0);}
 
 
 	vec2 dCoords = smoothstep(0.2, 0.6, abs(vec2(0.5, 0.5) - coords.xy));
@@ -955,22 +968,20 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, out bool found, float rou
 	// Get color
 	vec3 lastFrameColor = textureLod(u_lastFrameTexture, coords.xy, 0).rgb;
 	//vec3 SSR = lastFrameColor * clamp(ReflectionMultiplier, 0.0, 0.9) * F;  
-	vec3 SSR = lastFrameColor * clamp(ReflectionMultiplier, 0.0, 1.f);  
+	vec3 SSR = lastFrameColor;
 
-
-	found = true;
+	mixFactor = clamp(ReflectionMultiplier, 0.0, 1.f);  
 
 	return SSR;
 }
 
 
-//normal, viewDir, wp = world space position
+//normal in world space, viewDir, wp = world space position
 //F = freshnell
 //todo send F 
 vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, 
-float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpceNormal)
+float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal)
 {
-
 
 	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2)); //just the static ambient color
 	vec3 ambient = vec3(0);
@@ -985,30 +996,25 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpceNormal)
 	vec2 brdf = vec2(0,0);
 	vec2 brdfVec = vec2(dotNVClamped, roughness);
 
-	bool foundRadianceValue = false;
+	float mixFactor = 0;
 
 	if(u_hasLastFrameTexture != 0) //ssr
 	{
-		radiance = SSR(viewPos, viewSpceNormal, metallic, F, foundRadianceValue, roughness, wp);
-
-		if(!foundRadianceValue)
-		{
-			foundRadianceValue= true;
-			radiance = vec3(0);
-		}
+		radiance = SSR(viewPos, N, metallic, F, mixFactor, roughness, wp, V, viewSpaceNormal);
+		irradiance = radiance;
 	}
 
 	if(lightPassData.skyBoxPresent != 0)
 	{
 
-		irradiance = texture(u_skyboxIradiance, N).rgb; //this color is coming directly at the object
 		
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;
 
-		if(!foundRadianceValue)
+		if(mixFactor < 0.95)
 		{
-			radiance = textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
+			radiance = mix(textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb, radiance, mixFactor);
+			irradiance = mix(texture(u_skyboxIradiance, N).rgb, irradiance, mixFactor); //this color is coming directly at the object
 		}
 
 		//brdfVec.y = 1 - brdfVec.y; 
@@ -1016,12 +1022,9 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpceNormal)
 	
 	}else
 	{
-		irradiance = gammaAmbient ; //this color is coming directly at the object
 		
-		if(!foundRadianceValue)
-		{
-			radiance = gammaAmbient;
-		}
+		radiance = mix(gammaAmbient, radiance, mixFactor);
+		irradiance = radiance ; //this color is coming directly at the object
 
 		//brdfVec.y = 1 - brdfVec.y; 
 		brdf = texture(u_brdfTexture, brdfVec).rg;

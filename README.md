@@ -43,6 +43,9 @@ Features and todos:
 - [x] Deferred rendering
 - [ ] Optimize lights (less calculations for many lights)
 ---
+- [ ] Optimized G buffer
+- [x] Deferred materials system 
+---
 - [x] Gama correction
 - [x] HDR, ACES tonemapping
 - [ ] Automatic exposure ajustment for HDR tonemapping
@@ -57,6 +60,9 @@ Features and todos:
 ---
 - [x] SSAO
 - [x] SSAO settings
+---
+- [ ] SSR
+- [ ] SSR settings
 ---
 - [x] Bloom
 - [x] Bloom settings
