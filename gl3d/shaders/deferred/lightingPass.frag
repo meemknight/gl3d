@@ -802,16 +802,6 @@ const float maxRayDelta = 0.04;
 //    return viewSpacePosition.xyz;
 //}
 
-vec3 hash(vec3 a)
-{
-	const vec3 Scale = vec3(.8, .8, .8);
-	const float K = 19.19;
-
-	a = fract(a * Scale);
-	a += dot(a, a.yxz + K);
-	return fract((a.xxy + a.yxx)*a.zyx);
-}
-
 
 vec2 BinarySearch(inout vec3 dir, inout vec3 hitCoord, 
 inout float dDepth, vec2 oldValue)
@@ -920,10 +910,36 @@ vec2 RayMarch(vec3 dir, inout vec3 hitCoord, out float dDepth, vec3 worldNormal,
 }
 
 
-////////////////////////////////////////////
+
+uvec3 murmurHash33(uvec3 src) {
+	const uint M = 0x5bd1e995u;
+	uvec3 h = uvec3(1190494759u, 2147483647u, 3559788179u);
+	src *= M; src ^= src>>24u; src *= M;
+	h *= M; h ^= src.x; h *= M; h ^= src.y; h *= M; h ^= src.z;
+	h ^= h>>13u; h *= M; h ^= h>>15u;
+	return h;
+}
+
+// 3 outputs, 3 inputs
+vec3 hash33(vec3 src) {
+	uvec3 h = murmurHash33(floatBitsToUint(src));
+	return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
+}
+
+vec3 computeJitt(vec3 wp, vec2 Resolution, vec3 viewNormal, float Roughness)
+{
+	vec2 NoiseScale = Resolution / 4.0;
+	//vec3 random = hash33(wp + iTime);//vec3(texture(noiseTexture, (TexCoords.xy*10.0) + (1.0 - iTime)).rgb);
+	vec3 random = hash33(wp);//vec3(texture(noiseTexture, (TexCoords.xy*10.0) + (1.0 - iTime)).rgb);
+	random = dot(random, viewNormal) > 0.0 ? random : -random;
+	float factor = Roughness*0.20;
+	vec3 hs = random * 2.0 - 1.0;
+	vec3 jitt = hs * factor;
+	return vec3(jitt);
+}
 
 vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F, 
-	out float mixFactor, float roughness, vec3 wp, vec3 viewDir, vec3 viewSpaceNormal)
+	out float mixFactor, float roughness, vec3 wp, vec3 viewDir, vec3 viewSpaceNormal, vec2 rezolution)
 {
 	mixFactor = 0;
 
@@ -943,7 +959,7 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F,
 	//vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), spec);
 	
 	//todo test
-	vec3 jitt = mix(vec3(0.0), vec3(hash(wp)), roughness); //use roughness for specular factor
+	vec3 jitt = computeJitt(wp, rezolution, viewSpaceNormal, roughness); //use roughness for specular factor
 	//vec3 jitt = vec3(0.0);
 
 	vec2 coords = RayMarch( normalize((vec3(jitt) + reflected) * max(minRayStep, -viewPos.z)), hitPos, dDepth,
@@ -956,7 +972,8 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F,
  
 	float screenEdgefactor = clamp(1.0 - (dCoords.x + dCoords.y), 0.0, 1.0);
 
-	float ReflectionMultiplier = pow(metallic, reflectionSpecularFalloffExponent) * 
+	float ReflectionMultiplier = 
+	//pow(metallic, reflectionSpecularFalloffExponent) * 
 			screenEdgefactor * 
 			-reflected.z;
  
@@ -975,12 +992,14 @@ vec3 SSR(vec3 viewPos, vec3 N, float metallic, vec3 F,
 	return SSR;
 }
 
+////////////////////////////////////////////
+
 
 //normal in world space, viewDir, wp = world space position
 //F = freshnell
 //todo send F 
 vec3 computeAmbientTerm(vec3 N, vec3 V, vec3 F0, float roughness, vec3 R, 
-float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal)
+float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal, vec2 rezolution)
 {
 
 	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2)); //just the static ambient color
@@ -1000,21 +1019,20 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal)
 
 	if(u_hasLastFrameTexture != 0) //ssr
 	{
-		radiance = SSR(viewPos, N, metallic, F, mixFactor, roughness, wp, V, viewSpaceNormal);
-		irradiance = radiance;
+		radiance = SSR(viewPos, N, metallic, F, mixFactor, roughness, wp, V, viewSpaceNormal, rezolution);
 	}
 
 	if(lightPassData.skyBoxPresent != 0)
 	{
-
 		
+		irradiance = texture(u_skyboxIradiance, N).rgb * gammaAmbient; //this color is coming directly at the object
+
 		// sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
 		const float MAX_REFLECTION_LOD = 4.0;
-
-		if(mixFactor < 0.95)
+		
+		if(mixFactor < 0.999)
 		{
-			radiance = mix(textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb, radiance, mixFactor);
-			irradiance = mix(texture(u_skyboxIradiance, N).rgb, irradiance, mixFactor); //this color is coming directly at the object
+			radiance = mix(textureLod(u_skyboxFiltered, R, roughness * MAX_REFLECTION_LOD).rgb * gammaAmbient, radiance, mixFactor);
 		}
 
 		//brdfVec.y = 1 - brdfVec.y; 
@@ -1024,7 +1042,7 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal)
 	{
 		
 		radiance = mix(gammaAmbient, radiance, mixFactor);
-		irradiance = radiance ; //this color is coming directly at the object
+		irradiance = gammaAmbient ; //this color is coming directly at the object
 
 		//brdfVec.y = 1 - brdfVec.y; 
 		brdf = texture(u_brdfTexture, brdfVec).rg;
@@ -1056,11 +1074,6 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal)
 
 		// Multiple scattering version
 		ambient = FssEss * radiance + (Fms*Ems+kD) * irradiance;
-	}
-
-	if(lightPassData.skyBoxPresent != 0)
-	{
-		ambient *= gammaAmbient;
 	}
 	
 	return ambient;
@@ -1099,6 +1112,7 @@ void main()
 	ivec4 sampledDerivatesInt = texture(u_textureDerivates, v_texCoords).xyzw;
 	vec4 sampledDerivates = fromuShortToFloat2(sampledDerivatesInt);
 	//vec4 sampledDerivates = texture(u_textureDerivates, v_texCoords).xyzw;
+	vec2 rezolution = textureSize(u_lastFrameTexture, 0);
 
 
 	vec4 albedoAlpha = vec4(0,0,0,0);
@@ -1319,7 +1333,8 @@ void main()
 
 
 	vec3 color = Lo + computeAmbientTerm(normal, viewDir, F0, roughness, R, metallic, 
-	albedo, pos, posViewSpace, viewSpaceNormal) * ambientOcclution; 
+	albedo, pos, posViewSpace, viewSpaceNormal, rezolution)
+	* ambientOcclution; 
 
 	//vec3 hdrCorrectedColor = color;
 	//hdrCorrectedColor.rgb = vec3(1.0) - exp(-hdrCorrectedColor.rgb  * lightPassData.exposure);

@@ -61,7 +61,7 @@ Features and todos:
 - [x] SSAO
 - [x] SSAO settings
 ---
-- [ ] SSR
+- [x] SSR
 - [ ] SSR settings
 ---
 - [x] Bloom
