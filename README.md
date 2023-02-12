@@ -43,8 +43,8 @@ Features and todos:
 - [x] Deferred rendering
 - [ ] Optimize lights (less calculations for many lights)
 ---
-- [ ] Optimized G buffer
-- [x] Deferred materials system 
+- [x] Optimized G buffer
+- [x] Deferred materials system
 ---
 - [x] Gama correction
 - [x] HDR, ACES tonemapping
@@ -106,14 +106,16 @@ Whenever the render function is called, this steps are taken:
 6) Z pre pass if enabeled (I still have it as an option but the new deferred pipeline doesn't seem to benefit) + Frustum culling is calculated
 
 7) The geometry buffer is rendered, this is the first step of a deferred rendering engine. I only render the geometry to a big buffer. I have the frustum culling calculated so now I know what to render and what not to render. The gBuffer looks like this in my implementaion:
-  - Position, GL_RGB16F
-  - Normal, GL_RGB16UI
-  - textureDerivates, GL_RGBA16UI
+  - Normal, GL_RGB16UI (stored in a custom format)
+  - textureDerivates, GL_RGBA16UI (stored in a custom format)
   - positionViewSpace, GL_RGB16F
   - materialIndex, GL_R16I
   - textureUV, GL_RG32F
+  - depth, GL_DEPTH_COMPONENT24
   
-  my implementation doesn't render to the g buffer lighting information but rather the material index that is later used to get the texture information. This Significatly speeds the geometry pass.
+  my deferred material implementation doesn't render to the g buffer lighting information but rather the material index that is later used to get the texture information. This Significatly speeds the geometry pass.
+	The materials are all stored into a global buffer (and I also use lazyness on copy materials). The textures are sampled using bindless textures so we can draw the entire lighting pass with one draw call no matter how many materials.
+	This implementation would also allow for a possible future implementation of a global geometry buffer.
 
 8) The lighting pass: the geometry information is in a buffer and now a shader will calculate the lighting information
 

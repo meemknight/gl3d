@@ -540,8 +540,7 @@ namespace gl3d
 
 				enum bufferTargers
 				{
-					position = 0,
-					normal,
+					normal = 0,
 					textureDerivates,
 					//albedo,
 					//material,

@@ -4,18 +4,13 @@
 //#extension GL_NV_shadow_samplers_cube : enable
 #extension GL_ARB_bindless_texture: require
 
-layout(location = 0) out vec3 a_pos;
-layout(location = 1) out ivec3 a_normal;
-//layout(location = 2) out vec4 a_outColor;
-//layout(location = 3) out vec3 a_material;
-layout(location = 3) out vec3 a_posViewSpace;
-layout(location = 4) out int a_materialIndex;
-layout(location = 5) out vec4 a_textureUV;
-layout(location = 2) out ivec4 a_textureDerivates;
-//layout(location = 2) out vec4 a_textureDerivates;
+layout(location = 0) out ivec3 a_normal;
+layout(location = 1) out ivec4 a_textureDerivates;
+layout(location = 2) out vec3 a_posViewSpace;
+layout(location = 3) out int a_materialIndex;
+layout(location = 4) out vec4 a_textureUV;
 
 in vec3 v_normals;
-in vec3 v_position;	//world space
 in vec2 v_texCoord;
 in vec3 v_positionViewSpace;
 
@@ -147,8 +142,6 @@ void main()
 	a_normal = fromFloatTouShort(normal);
 
 
-	a_pos = v_position;
-	//a_outColor = vec4(clamp(color.rgb, 0, 1), 1);
 	a_posViewSpace = v_positionViewSpace;
 	a_materialIndex = u_materialIndex+1;
 	a_textureUV.xy = v_texCoord.xy;

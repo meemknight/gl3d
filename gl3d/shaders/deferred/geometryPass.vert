@@ -12,7 +12,6 @@ uniform mat4 u_modelTransform; //just model to world
 uniform mat4 u_motelViewTransform; //model to world to view
 
 out vec3 v_normals;
-out vec3 v_position;
 out vec2 v_texCoord;
 out vec3 v_positionViewSpace;
 
@@ -53,8 +52,6 @@ void main()
 	v_positionViewSpace = vec3(u_motelViewTransform * totalLocalPos);
 	
 	gl_Position = u_transform * totalLocalPos;
-
-	v_position = (u_modelTransform * totalLocalPos).xyz;
 
 	//v_normals = (u_modelTransform * vec4(a_normals,0)).xyz; //uniform scale
 	v_normals = mat3(transpose(inverse(mat3(u_modelTransform)))) * totalNorm.xyz;  //non uniform scale
