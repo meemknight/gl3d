@@ -4647,14 +4647,6 @@ namespace gl3d
 
 				glUniform3fv(internal.ssao.u_samples, 64, &(internal.ssao.ssaoKernel[0][0])); //todo send to the gpu only once wtf
 
-
-				glUniform1f(internal.ssao.u_aspectRatio, camera.aspectRatio);
-				glUniform1f(internal.ssao.u_tanHalfFOV, std::tan(camera.fovRadians/2.f));
-				
-				glUniform1f(internal.ssao.u_farPlane, camera.farPlane);
-				glUniform1f(internal.ssao.u_closePlane, camera.closePlane);
-				
-
 				glBindFramebuffer(GL_FRAMEBUFFER, internal.ssao.ssaoFBO);
 				glClear(GL_COLOR_BUFFER_BIT);
 
@@ -4670,9 +4662,6 @@ namespace gl3d
 				glBindTexture(GL_TEXTURE_2D, internal.ssao.noiseTexture);
 				glUniform1i(internal.ssao.u_texNoise, 2);
 
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.depthBuffer);
-				glUniform1i(internal.ssao.u_depthBuffer, 3);
 
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -5366,12 +5355,6 @@ namespace gl3d
 		u_gNormal = getUniform(shader.id, "u_gNormal", errorReporter);
 		u_texNoise = getUniform(shader.id, "u_texNoise", errorReporter);
 		u_samples = getUniform(shader.id, "samples[0]", errorReporter);
-		u_depthBuffer = getUniform(shader.id, "u_depthBuffer", errorReporter);
-		u_aspectRatio = getUniform(shader.id, "u_aspectRatio", errorReporter);
-		u_tanHalfFOV = getUniform(shader.id, "u_tanHalfFOV", errorReporter);
-		u_farPlane = getUniform(shader.id, "u_farPlane", errorReporter);
-		u_closePlane = getUniform(shader.id, "u_closePlane", errorReporter);
-
 
 		glGenBuffers(1, &ssaoUniformBlockBuffer);
 		glBindBuffer(GL_UNIFORM_BUFFER, ssaoUniformBlockBuffer);

@@ -778,6 +778,7 @@ vec3 fromuShortToFloat(ivec3 a)
 
 //////////////////////////////////////////////
 //https://imanolfotia.com/blog/1
+//https://github.com/ImanolFotia/Epsilon-Engine/blob/master/bin/Release/shaders/SSR.glsl
 //SSR
 
 
@@ -1004,7 +1005,6 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal, vec2 r
 
 	vec3 gammaAmbient = pow(lightPassData.ambientColor.rgb, vec3(2.2)); //just the static ambient color
 	vec3 ambient = vec3(0);
-		
 		
 	float dotNVClamped = clamp(dot(N, V), 0.0, 0.99);
 	vec3 F = fresnelSchlickRoughness(dotNVClamped, F0, roughness);

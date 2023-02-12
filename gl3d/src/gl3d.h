@@ -503,11 +503,6 @@ namespace gl3d
 				GLint u_texNoise = -1;
 				GLint u_samples = -1;
 				GLuint u_SSAODATA;
-				GLint u_depthBuffer = -1;
-				GLint u_aspectRatio = -1;
-				GLint u_tanHalfFOV = -1;
-				GLint u_farPlane = -1;
-				GLint u_closePlane = -1;
 
 
 				std::vector<glm::vec3> ssaoKernel;
