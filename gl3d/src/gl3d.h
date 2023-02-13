@@ -51,7 +51,13 @@ namespace gl3d
 
 	};
 
-	
+	struct AtmosfericScatteringSettings
+	{
+		glm::vec3 sun = {0,1,0};
+		glm::vec3 color1 = {0,0,0};
+		glm::vec3 color2 = {0,0,0};
+		float g = 0;
+	};
 
 	struct Renderer3D
 
@@ -127,6 +133,7 @@ namespace gl3d
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
 		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
+		SkyBox atmosfericScattering(AtmosfericScatteringSettings settings);
 
 	#pragma endregion
 
@@ -359,10 +366,11 @@ namespace gl3d
 		#pragma endregion
 		
 		//saves the current settings to a string;
-		std::string saveSettingsToJson();
+		std::string saveSettingsToJson(bool includeRenderingSettings, std::string skyBoxName = "", 
+			gl3d::AtmosfericScatteringSettings *atmosphericScattering = nullptr);
 
 		//this will terminate if data is not a valid json
-		void loadSettingsFromJson(const char *data);
+		void loadSettingsFromJson(const char *data, bool includeRenderingSettings, bool loadSkyBox, bool loadAtmosphericScattering);
 
 
 	#pragma endregion

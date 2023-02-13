@@ -4,10 +4,9 @@ out float fragColor;
 
 noperspective in highp vec2 v_texCoords;
 
-uniform sampler2D u_gPosition;
+uniform sampler2D u_gPosition; //position view space
 uniform isampler2D u_gNormal;
 uniform sampler2D u_texNoise;
-uniform sampler2D u_depthBuffer;
 
 uniform vec3 samples[64];
 uniform mat4 u_projection; // camera projection matrix
@@ -40,36 +39,6 @@ vec3 fromuShortToFloat(ivec3 a)
 	return normalize(ret);
 }
 
-uniform float u_farPlane;
-uniform float u_closePlane;
-
-//https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
-// Function for converting depth to view-space position
-// in deferred pixel shader pass.  vTexCoord is a texture
-// coordinate for a full-screen quad, such that x=0 is the
-// left of the screen, and y=0 is the top of the screen.
-vec3 viewSpace(vec2 vTexCoord)
-{
-	// Get the depth value for this pixel
-	float z = texture2D(u_depthBuffer, vTexCoord).x;  
-
-	//https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
-	float z_n = 2.0 * z - 1.0;
-	float z_e = 2.0 * u_closePlane * u_farPlane / (u_farPlane + u_closePlane - z_n * (u_farPlane - u_closePlane));
-	
-	vec3 retVector = vec3(1,1,1);
-
-	return retVector * z_e;
-
-	// Get x/w and y/w from the viewport position
-	float x = vTexCoord.x * 2 - 1;
-	float y = (1 - vTexCoord.y) * 2 - 1;
-	vec4 vProjectedPos = vec4(x, y, z, 1.0f);
-	// Transform by the inverse projection matrix
-	vec4 vPositionVS = inverse(u_projection) * vProjectedPos;  
-	// Divide by w to get the view-space position
-	return vPositionVS.xyz / vPositionVS.w;  
-}
 
 
 void main()
@@ -78,9 +47,7 @@ void main()
 	vec2 noiseScale = vec2(screenSize.x/4.0, screenSize.y/4.0);
 	vec2 noisePos = v_texCoords * noiseScale;
 
-	vec3 fragPos   = texture(u_gPosition, v_texCoords).xyz;
-	
-	//vec3 fragPos   = viewSpace(v_texCoords);
+	vec3 fragPos = texture(u_gPosition, v_texCoords).xyz;
 
 	vec3 normal    = normalize( vec3(transpose(inverse(mat3(u_view))) * 
 		fromuShortToFloat(texture(u_gNormal, v_texCoords).xyz)) );

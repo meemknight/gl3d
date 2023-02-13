@@ -2449,85 +2449,129 @@ namespace gl3d
 	}
 
 	//todo flags
-	std::string Renderer3D::saveSettingsToJson()
+	std::string Renderer3D::saveSettingsToJson(bool includeRenderingSettings, std::string skyBoxName,
+		gl3d::AtmosfericScatteringSettings *atmosphericScattering)
 	{
 		using Json = nlohmann::json;
 
 		Json j;
 
-		j["exposure"] = getExposure();
-		j["normal mapping"] = isNormalMappingEnabeled();
-		j["light subscatter"] = isLightSubScatteringEnabeled();
-
-		//fxaa
+		if (!skyBoxName.empty())
 		{
-			j["fxaa"] = isFXAAenabeled();
-			Json fxaaData;
-			auto data = getFxaaSettings();
-
-			fxaaData["edgeDarkTreshold"] = data.edgeDarkTreshold;
-			fxaaData["edgeMinTreshold"] = data.edgeMinTreshold;
-			fxaaData["qualityMultiplyer"] = data.quaityMultiplier;
-			fxaaData["iterations"] = data.ITERATIONS;
-			fxaaData["subPixelQuality"] = data.SUBPIXEL_QUALITY;
-
-			j["fxaaData"] = fxaaData;
-		}
-		
-		//todo separate thing
-		j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
-		//j["zprePass"] = zPrePass; //todo setter getter //todo add back if will be used
-		j["frustumCulling"] = frustumCulling; 
-
-
-		//ssao
-		{
-			j["ssao"] = isSSAOenabeled();
-			Json ssaoData;
-			ssaoData["bias"] = getSSAOBias();
-			ssaoData["radius"] = getSSAORadius();
-			ssaoData["sampleCount"] = getSSAOSampleCount();
-			ssaoData["exponent"] = getSSAOExponent();
-			
-			j["ssaoData"] = ssaoData;
+			j["sky box"] = skyBoxName;
 		}
 
-		//chromatic aberation
+		if (atmosphericScattering != nullptr)
 		{
-			j["chromaticAberation"] = chromaticAberationEnabeled();
-			
-			Json chromaticAberationData;
-			chromaticAberationData["strength"] = getChromaticAberationStrength();
-			chromaticAberationData["unfocusDistance"] = getChromaticAberationUnfocusDistance();
+			Json a;
+			a["sunx"] = atmosphericScattering->sun.x;
+			a["suny"] = atmosphericScattering->sun.y;
+			a["sunz"] = atmosphericScattering->sun.z;
 
-			j["chromaticAberationData"] = chromaticAberationData;
+			a["color1x"] = atmosphericScattering->color1.x;
+			a["color1y"] = atmosphericScattering->color1.y;
+			a["color1z"] = atmosphericScattering->color1.z;
+
+			a["color2x"] = atmosphericScattering->color2.x;
+			a["color2y"] = atmosphericScattering->color2.y;
+			a["color2z"] = atmosphericScattering->color2.z;
+
+			a["g"] = atmosphericScattering->g;
+
+			j["atmosphericScattering"] = a;
 		}
 
+		if (!skyBoxName.empty() || atmosphericScattering != nullptr)
 		{
-			j["SSR"] = isSSRenabeled();
-
-			Json SSR;
-
-			auto d = getSSRdata();
-			SSR["maxRayDelta"] = d.maxRayDelta;
-			SSR["maxRayStep"] = d.maxRayStep;
-			SSR["maxSteps"] = d.maxSteps;
-			SSR["minRayStep"] = d.minRayStep;
-			SSR["numBinarySearchSteps"] = d.numBinarySearchSteps;
-
-			j["SSRdata"] = SSR;
+			j["ambientr"] = skyBox.color.r;
+			j["ambientg"] = skyBox.color.g;
+			j["ambientb"] = skyBox.color.b;
 		}
 
+		if (includeRenderingSettings)
+		{
+
+			j["exposure"] = getExposure();
+			j["normal mapping"] = isNormalMappingEnabeled();
+			j["light subscatter"] = isLightSubScatteringEnabeled();
+
+			//fxaa
+			{
+				j["fxaa"] = isFXAAenabeled();
+				Json fxaaData;
+				auto data = getFxaaSettings();
+
+				fxaaData["edgeDarkTreshold"] = data.edgeDarkTreshold;
+				fxaaData["edgeMinTreshold"] = data.edgeMinTreshold;
+				fxaaData["qualityMultiplyer"] = data.quaityMultiplier;
+				fxaaData["iterations"] = data.ITERATIONS;
+				fxaaData["subPixelQuality"] = data.SUBPIXEL_QUALITY;
+
+				j["fxaaData"] = fxaaData;
+			}
+
+			//todo separate thing
+			j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
+			//j["zprePass"] = zPrePass; //todo setter getter //todo add back if will be used
+			j["frustumCulling"] = frustumCulling;
+
+			//ssao
+			{
+				j["ssao"] = isSSAOenabeled();
+				Json ssaoData;
+				ssaoData["bias"] = getSSAOBias();
+				ssaoData["radius"] = getSSAORadius();
+				ssaoData["sampleCount"] = getSSAOSampleCount();
+				ssaoData["exponent"] = getSSAOExponent();
+
+				j["ssaoData"] = ssaoData;
+			}
+
+			//chromatic aberation
+			{
+				j["chromaticAberation"] = chromaticAberationEnabeled();
+
+				Json chromaticAberationData;
+				chromaticAberationData["strength"] = getChromaticAberationStrength();
+				chromaticAberationData["unfocusDistance"] = getChromaticAberationUnfocusDistance();
+
+				j["chromaticAberationData"] = chromaticAberationData;
+			}
+
+			{
+				j["SSR"] = isSSRenabeled();
+
+				Json SSR;
+
+				auto d = getSSRdata();
+				SSR["maxRayDelta"] = d.maxRayDelta;
+				SSR["maxRayStep"] = d.maxRayStep;
+				SSR["maxSteps"] = d.maxSteps;
+				SSR["minRayStep"] = d.minRayStep;
+				SSR["numBinarySearchSteps"] = d.numBinarySearchSteps;
+
+				j["SSRdata"] = SSR;
+			}
+
+		}
 
 		return j.dump();
 	}
 
-	void Renderer3D::loadSettingsFromJson(const char *data)
+	//https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
+	inline bool endsWith(std::string const &value, std::string const &ending)
+	{
+		if (ending.size() > value.size()) return false;
+		return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+	}
+
+	void Renderer3D::loadSettingsFromJson(const char *data, bool includeRenderingSettings, bool loadSkyBox, bool loadAtmosphericScattering)
 	{
 		using Json = nlohmann::json;
 
 		auto rez = Json::parse(data);
 
+		if(includeRenderingSettings)
 		{
 			auto exposure = rez["exposure"];
 			if (exposure.is_number())
@@ -2558,10 +2602,9 @@ namespace gl3d
 			{
 				this->frustumCulling = frustumCulling;
 			}
-		}
 
-		//SSAO
-		{
+			//SSAO
+			{
 			auto ssao = rez["ssao"];
 			if(ssao.is_boolean())
 			{
@@ -2583,8 +2626,8 @@ namespace gl3d
 			}
 		}
 
-		//FXAA
-		{
+			//FXAA
+			{
 			auto fxaaEnabeled = rez["fxaa"];
 			if (fxaaEnabeled.is_boolean()) { enableFXAA(fxaaEnabeled); }
 
@@ -2628,8 +2671,8 @@ namespace gl3d
 			}
 		}
 
-		//Chromatic Aberation
-		{
+			//Chromatic Aberation
+			{
 			auto chromaticAberationEnabeled = rez["chromaticAberation"];
 			if (chromaticAberationEnabeled.is_boolean()) { this->chromaticAberationEnabeled() = chromaticAberationEnabeled; }
 
@@ -2646,8 +2689,8 @@ namespace gl3d
 			}
 		}
 
-		//SSR
-		{
+			//SSR
+			{
 			auto ssrEnabeled = rez["SSR"];
 			if (ssrEnabeled.is_boolean()) { ebableSSR(ssrEnabeled); }
 			
@@ -2668,7 +2711,89 @@ namespace gl3d
 				#undef ADD_ENTRY
 			}
 		}
+		}
 
+		bool loadSkyBoxFailed = 1;
+		if (loadSkyBox)
+		{
+			auto s = rez["sky box"];
+
+			if (s.is_string())
+			{
+				std::string str = s;
+
+				if (endsWith(str, ".hdr") || endsWith(str, ".HDR"))
+				{
+					skyBox.clearTextures();
+					skyBox = loadHDRSkyBox(str.c_str());
+					if (skyBox.texture != 0) { loadSkyBoxFailed = 0; }
+				}else
+				if (endsWith(str, ".png") || endsWith(str, ".PNG"))
+				{
+					skyBox.clearTextures();
+					skyBox = this->loadSkyBox(str.c_str(), 0);
+					if (skyBox.texture != 0) { loadSkyBoxFailed = 0; }
+				}
+			}
+		}
+
+		if (loadAtmosphericScattering && loadSkyBoxFailed)
+		{
+			auto a = rez["atmosphericScattering"];
+
+			if (a.is_object())
+			{
+				auto sunx = a["sunx"];
+				auto suny = a["suny"];
+				auto sunz = a["sunz"];
+
+				auto color1x = a["color1x"];
+				auto color1y = a["color1y"];
+				auto color1z = a["color1z"];
+
+				auto color2x = a["color2x"];
+				auto color2y = a["color2y"];
+				auto color2z = a["color2z"];
+
+				auto g = a["g"];
+
+				gl3d::AtmosfericScatteringSettings s;
+
+				if (
+					sunx.is_number() &&
+					suny.is_number() &&
+					sunz.is_number() &&
+					color1x.is_number() &&
+					color1y.is_number() &&
+					color1z.is_number() &&
+					color2x.is_number() &&
+					color2y.is_number() &&
+					color2z.is_number() &&
+					g.is_number()
+					)
+				{
+					skyBox.clearTextures();
+					s.sun = glm::normalize(glm::vec3{sunx, suny, sunz});
+					s.color1 = {color1x, color1y, color1z};
+					s.color2 = {color2x, color2y, color2z};
+					s.g = g;
+					skyBox = this->atmosfericScattering(s);
+				}
+			}
+
+		}
+
+		if (loadSkyBox || loadAtmosphericScattering)
+		{
+			auto r = rez["ambientr"];
+			auto g = rez["ambientg"];
+			auto b = rez["ambientb"];
+			
+			if (r.is_number() && g.is_number() && b.is_number())
+			{
+				skyBox.color = glm::vec3{r,g,b};
+			}
+		}
 
 	}
 
@@ -5442,6 +5567,11 @@ namespace gl3d
 		SkyBox skyBox = {};
 		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox, frameBuffer);
 		return skyBox;
+	}
+
+	SkyBox Renderer3D::atmosfericScattering(AtmosfericScatteringSettings settings)
+	{
+		return atmosfericScattering(settings.sun, settings.color1, settings.color2, settings.g);
 	}
 
 	float lerp(float a, float b, float f)

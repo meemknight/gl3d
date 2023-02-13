@@ -109,7 +109,7 @@ int main()
 			std::string s((std::istreambuf_iterator<char>(f)),
 			std::istreambuf_iterator<char>());
 
-			renderer.loadSettingsFromJson(s.c_str());
+			renderer.loadSettingsFromJson(s.c_str(), 1, 0, 0);
 		}
 	}
 
@@ -709,40 +709,40 @@ int main()
 			ImGui::SliderFloat("Exposure", &renderer.internal.lightShader.lightPassUniformBlockCpuData.exposure , 0.1, 10);
 
 
-			static bool antiAliasing = 0;
-			ImGui::Checkbox("Anti aliasing", &antiAliasing);
-			if (antiAliasing)
-			{
-				glEnable(GL_MULTISAMPLE);
-			}
-			else
-			{
-				glDisable(GL_MULTISAMPLE);
-			}
+			//static bool antiAliasing = 0;
+			//ImGui::Checkbox("Anti aliasing", &antiAliasing);
+			//if (antiAliasing)
+			//{
+			//	glEnable(GL_MULTISAMPLE);
+			//}
+			//else
+			//{
+			//	glDisable(GL_MULTISAMPLE);
+			//}
 
-			static bool sampleShading = 0;
-			ImGui::Checkbox("Sample Shading", &sampleShading);
+			//static bool sampleShading = 0;
+			//ImGui::Checkbox("Sample Shading", &sampleShading);
 
-			if (sampleShading)
-			{
-				glEnable(GL_SAMPLE_SHADING);
-			}
-			else
-			{
-				glDisable(GL_SAMPLE_SHADING);
-			}
+			//if (sampleShading)
+			//{
+			//	glEnable(GL_SAMPLE_SHADING);
+			//}
+			//else
+			//{
+			//	glDisable(GL_SAMPLE_SHADING);
+			//}
 
-			static bool cullFace = 1;
-			ImGui::Checkbox("CullFace", &cullFace);
-			
-			if (cullFace)
-			{
-				glEnable(GL_CULL_FACE);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
+			//static bool cullFace = 1;
+			//ImGui::Checkbox("CullFace", &cullFace);
+			//
+			//if (cullFace)
+			//{
+			//	glEnable(GL_CULL_FACE);
+			//}
+			//else
+			//{
+			//	glDisable(GL_CULL_FACE);
+			//}
 
 			ImGui::Checkbox("Normal map", &normalMap);
 			renderer.enableNormalMapping(normalMap);
@@ -1539,7 +1539,7 @@ int main()
 	}
 	
 
-	std::string save = renderer.saveSettingsToJson();
+	std::string save = renderer.saveSettingsToJson(1);
 
 	std::ofstream f("save.txt");
 	f.write(save.c_str(), save.size());
