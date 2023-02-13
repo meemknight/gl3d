@@ -330,7 +330,7 @@ namespace gl3d
 		float &getDirectionalShadowCascadesFrustumSplit(int cascadeIndex);
 
 		//chromatic aberation
-		bool &chromaticAberation();
+		bool &chromaticAberationEnabeled();
 		//in pixels
 		float getChromaticAberationStrength();
 		//in pixels

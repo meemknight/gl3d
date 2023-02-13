@@ -2408,7 +2408,7 @@ namespace gl3d
 		// TODO: insert return statement here
 	}
 
-	bool &Renderer3D::chromaticAberation()
+	bool &Renderer3D::chromaticAberationEnabeled()
 	{
 		return postProcess.chromaticAberationOn;
 	}
@@ -2476,7 +2476,7 @@ namespace gl3d
 		
 		//todo separate thing
 		j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
-		j["zprePass"] = zPrePass; //todo setter getter
+		//j["zprePass"] = zPrePass; //todo setter getter //todo add back if will be used
 		j["frustumCulling"] = frustumCulling; 
 
 
@@ -2494,7 +2494,7 @@ namespace gl3d
 
 		//chromatic aberation
 		{
-			j["chromaticAberation"] = chromaticAberation();
+			j["chromaticAberation"] = chromaticAberationEnabeled();
 			
 			Json chromaticAberationData;
 			chromaticAberationData["strength"] = getChromaticAberationStrength();
@@ -2522,7 +2522,6 @@ namespace gl3d
 		return j.dump();
 	}
 
-	//todo implement
 	void Renderer3D::loadSettingsFromJson(const char *data)
 	{
 		using Json = nlohmann::json;
@@ -2531,7 +2530,7 @@ namespace gl3d
 
 		{
 			auto exposure = rez["exposure"];
-			if (exposure.is_number_float())
+			if (exposure.is_number())
 			{
 				setExposure(exposure);
 			}
@@ -2539,16 +2538,137 @@ namespace gl3d
 			auto normalMapping = rez["normal mapping"];
 			if (normalMapping.is_boolean())
 			{
-				this->enableNormalMapping(normalMapping);
+				enableNormalMapping(normalMapping);
 			}
 
 			auto lightSubscatter = rez["light subscatter"];
-
 			if (lightSubscatter.is_boolean())
 			{
 				enableLightSubScattering(lightSubscatter);
 			}
+
+			auto adaptiveResolution = rez["adaptiveResolution"];
+			if (adaptiveResolution.is_boolean())
+			{
+				this->adaptiveResolution.useAdaptiveResolution = adaptiveResolution;
+			}
+
+			auto frustumCulling = rez["frustumCulling"];
+			if (frustumCulling.is_boolean())
+			{
+				this->frustumCulling = frustumCulling;
+			}
 		}
+
+		//SSAO
+		{
+			auto ssao = rez["ssao"];
+			if(ssao.is_boolean())
+			{
+				enableSSAO(ssao);
+			}
+
+			auto ssaoData = rez["ssaoData"];
+
+			if (ssaoData.is_object())
+			{
+				auto bias = ssaoData["bias"];
+				if (bias.is_number()) { setSSAOBias(bias); }
+				auto radius = ssaoData["radius"];
+				if (radius.is_number()) { setSSAORadius(radius); }
+				auto sampleCount = ssaoData["sampleCount"];
+				if (sampleCount.is_number()) { setSSAOSampleCount(sampleCount); }
+				auto exponent = ssaoData["exponent"];
+				if (exponent.is_number()) { setSSAOExponent(exponent); }
+			}
+		}
+
+		//FXAA
+		{
+			auto fxaaEnabeled = rez["fxaa"];
+			if (fxaaEnabeled.is_boolean()) { enableFXAA(fxaaEnabeled); }
+
+			auto fxaaData = rez["fxaaData"];
+	
+			if (fxaaData.is_object())
+			{
+				auto &data = getFxaaSettings();
+
+				auto edgeDarkTreshold = fxaaData["edgeDarkTreshold"];
+				auto edgeMinTreshold = fxaaData["edgeMinTreshold"];
+				auto qualityMultiplyer = fxaaData["qualityMultiplyer"];
+				auto iterations = fxaaData["iterations"];
+				auto subPixelQuality = fxaaData["subPixelQuality"];
+
+				if (edgeDarkTreshold.is_number())
+				{
+					data.edgeDarkTreshold = edgeDarkTreshold;
+				}
+
+				if (edgeMinTreshold.is_number())
+				{
+					data.edgeMinTreshold = edgeMinTreshold;
+				}
+
+				if (qualityMultiplyer.is_number())
+				{
+					data.quaityMultiplier = qualityMultiplyer;
+				}
+
+				if (iterations.is_number())
+				{
+					data.ITERATIONS = iterations;
+				}
+
+				if (subPixelQuality.is_number())
+				{
+					data.SUBPIXEL_QUALITY = subPixelQuality;
+				}
+
+			}
+		}
+
+		//Chromatic Aberation
+		{
+			auto chromaticAberationEnabeled = rez["chromaticAberation"];
+			if (chromaticAberationEnabeled.is_boolean()) { this->chromaticAberationEnabeled() = chromaticAberationEnabeled; }
+
+			auto chromaticAberationData = rez["chromaticAberationData"];
+			
+			if (chromaticAberationData.is_object())
+			{
+				auto strength = chromaticAberationData["strength"];
+				auto unfocusDistance = chromaticAberationData["unfocusDistance"];
+
+				if (strength.is_number()) { setChromaticAberationStrength(strength); }
+				if (unfocusDistance.is_number()) { setChromaticAberationUnfocusDistance(unfocusDistance); }
+
+			}
+		}
+
+		//SSR
+		{
+			auto ssrEnabeled = rez["SSR"];
+			if (ssrEnabeled.is_boolean()) { ebableSSR(ssrEnabeled); }
+			
+			auto ssrData = rez["SSRdata"];
+
+			if (ssrData.is_object())
+			{
+				auto &d = getSSRdata();
+
+				#define ADD_ENTRY(X) auto X = ssrData[#X]; if (X .is_number()) { d. X = X; }
+
+				ADD_ENTRY(maxRayDelta)
+				ADD_ENTRY(maxRayStep)
+				ADD_ENTRY(maxSteps)
+				ADD_ENTRY(minRayStep)
+				ADD_ENTRY(numBinarySearchSteps)
+
+				#undef ADD_ENTRY
+			}
+		}
+
 
 	}
 

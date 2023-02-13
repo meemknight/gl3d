@@ -102,9 +102,15 @@ int main()
 
 	renderer.init(w, h, "resources/BRDFintegrationMap.png");
 
-	{
-		std::cout << renderer.saveSettingsToJson() << "\n";
-		renderer.loadSettingsFromJson("{\"normal mapping\": false}");
+	{//load
+		std::ifstream f("save.txt");
+		if (f.is_open())
+		{
+			std::string s((std::istreambuf_iterator<char>(f)),
+			std::istreambuf_iterator<char>());
+
+			renderer.loadSettingsFromJson(s.c_str());
+		}
 	}
 
 #pragma region shader
@@ -824,7 +830,7 @@ int main()
 			{
 				ImGui::PushID(__COUNTER__);
 
-				ImGui::Checkbox("Chromatic aberation", &renderer.chromaticAberation());
+				ImGui::Checkbox("Chromatic aberation", &renderer.chromaticAberationEnabeled());
 
 				ImGui::DragFloat("Chromatic aberation strength", &renderer.postProcess.chromaticAberationStrength,
 					1, 0, 200);
@@ -1532,6 +1538,11 @@ int main()
 
 	}
 	
+
+	std::string save = renderer.saveSettingsToJson();
+
+	std::ofstream f("save.txt");
+	f.write(save.c_str(), save.size());
 
 	
 	return 0;
