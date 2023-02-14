@@ -64,6 +64,10 @@ namespace gl3d
 	struct PBRTexture
 	{
 		Texture texture = {};  //rough metalness ambient oclusion
+
+		// (roughnessLoaded) -> 0b100
+		// (metallicLoaded)  -> 0b010
+		// (ambientLoaded)   -> 0b001
 		int RMA_loadedTextures = {};
 	};
 

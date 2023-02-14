@@ -36014,7 +36014,7 @@ namespace gl3d
 
 		}
 
-		createConvolutedAndPrefilteredTextureData(skyBox, 0.02, 64u);
+		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer, 0.02, 64u);
 
 	}
 
@@ -38646,16 +38646,16 @@ namespace gl3d
 
 		internal.lightShader.lightPassUniformBlockCpuData.SSR = data;
 
-
 	}
 
-	void Renderer3D::ebableSSR(bool enable)
+	void Renderer3D::enableSSR(bool enable)
 	{
+		internal.hasLastFrameTexture = enable;
 	}
 
 	bool Renderer3D::isSSRenabeled()
 	{
-		return false;
+		return internal.hasLastFrameTexture;
 	}
 
 	float stub = 0;
@@ -38961,7 +38961,7 @@ namespace gl3d
 			//SSR
 			{
 			auto ssrEnabeled = rez["SSR"];
-			if (ssrEnabeled.is_boolean()) { ebableSSR(ssrEnabeled); }
+			if (ssrEnabeled.is_boolean()) { enableSSR(ssrEnabeled); }
 			
 			auto ssrData = rez["SSRdata"];
 

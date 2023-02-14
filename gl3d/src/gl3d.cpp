@@ -791,6 +791,19 @@ namespace gl3d
 		t.RMA_loadedTextures = 0;
 	}
 
+	Model Renderer3D::createNewEmptyModel()
+	{
+		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
+		Model m;
+		m.id_ = id;
+		return m;
+	}
+
+	bool Renderer3D::addModelMeshes(std::string path, float scale)
+	{
+		return false;
+	}
+
 	Model Renderer3D::loadModel(std::string path, float scale)
 	{
 
@@ -2383,16 +2396,16 @@ namespace gl3d
 
 		internal.lightShader.lightPassUniformBlockCpuData.SSR = data;
 
-
 	}
 
-	void Renderer3D::ebableSSR(bool enable)
+	void Renderer3D::enableSSR(bool enable)
 	{
+		internal.hasLastFrameTexture = enable;
 	}
 
 	bool Renderer3D::isSSRenabeled()
 	{
-		return false;
+		return internal.hasLastFrameTexture;
 	}
 
 	float stub = 0;
@@ -2698,7 +2711,7 @@ namespace gl3d
 			//SSR
 			{
 			auto ssrEnabeled = rez["SSR"];
-			if (ssrEnabeled.is_boolean()) { ebableSSR(ssrEnabeled); }
+			if (ssrEnabeled.is_boolean()) { enableSSR(ssrEnabeled); }
 			
 			auto ssrData = rez["SSRdata"];
 

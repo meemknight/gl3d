@@ -34832,7 +34832,7 @@ namespace gl3d
 		//SSR
 		LightShader::LightPassData::SSRdata &getSSRdata();
 		void setSSRdata(LightShader::LightPassData::SSRdata data);
-		void ebableSSR(bool enable = true);
+		void enableSSR(bool enable = true);
 		bool isSSRenabeled();
 
 		//
@@ -35290,7 +35290,7 @@ namespace gl3d
 
 		bool frustumCulling = 1;
 		bool zPrePass = 0;
-		bool copyDepthForLaterForwardRendering = 1;
+		bool copyDepthForLaterForwardRendering = 0;
 
 	};
 
