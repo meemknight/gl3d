@@ -146,9 +146,10 @@ namespace gl3d
 
 		//todo implement stuff here
 
-		Model createNewEmptyModel();
-
-		bool addModelMeshes(std::string path, float scale = 1);
+		//position 3, normal 3, optional texture 2
+		Model createModelFromData(Material material, std::string name, 
+			size_t vertexCount, const float *vertices, size_t indexesCount = 0,
+			const unsigned int *indexes = nullptr, bool noTexture = false);
 
 		Model loadModel(std::string path, float scale = 1);
 		bool isModel(Model& m);

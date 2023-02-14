@@ -321,9 +321,12 @@ namespace gl3d
 
 	void ModelData::clear(Renderer3D& renderer)
 	{
-		for (auto &i : createdMaterials)
+		for (auto m : models)
 		{
-			renderer.deleteMaterial(i);
+			if (m.ownMaterial)
+			{
+				renderer.deleteMaterial(m.material);
+			}
 		}
 
 		internalClear();

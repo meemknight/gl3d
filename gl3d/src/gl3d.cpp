@@ -791,18 +791,53 @@ namespace gl3d
 		t.RMA_loadedTextures = 0;
 	}
 
-	Model Renderer3D::createNewEmptyModel()
+
+	Model Renderer3D::createModelFromData(Material material, std::string name,
+		size_t vertexCount, const float *vertices, size_t indexesCount,
+		const unsigned int *indexes, bool noTexture)
 	{
+
+		ModelData returnModel;
+		
+		//setup stuff
+		{
+			returnModel.createdMaterials.push_back(material);
+
+			GraphicModel gm;
+
+			gm.material = material;
+			gm.ownMaterial = false;
+			gm.name = name;
+			gm.hasBones = 0;
+
+			if (indexesCount == 0)
+			{
+				gm.loadFromComputedData(vertexCount * sizeof(float),
+					vertices,
+					0, nullptr, noTexture);
+			}
+			else
+			{
+				gm.loadFromComputedData(vertexCount * sizeof(float),
+					vertices,
+					indexesCount * sizeof(unsigned int), indexes, noTexture);
+			}
+	
+			char *c = new char[gm.name.size() + 1];
+			strcpy(c, gm.name.c_str());
+
+			returnModel.subModelsNames.push_back(c);
+			returnModel.models.push_back(gm);
+		}
+
 		int id = internal::generateNewIndex(internal.graphicModelsIndexes);
+		internal.graphicModelsIndexes.push_back(id);
+		internal.graphicModels.push_back(returnModel);
 		Model m;
 		m.id_ = id;
 		return m;
 	}
 
-	bool Renderer3D::addModelMeshes(std::string path, float scale)
-	{
-		return false;
-	}
 
 	Model Renderer3D::loadModel(std::string path, float scale)
 	{
@@ -850,7 +885,6 @@ namespace gl3d
 			for (int i = 0; i < s; i++)
 			{
 				GraphicModel gm;
-				
 
 				int index = i;
 				//TextureDataForModel textureData = {};
@@ -872,7 +906,7 @@ namespace gl3d
 							mesh.Indices.size() * 4, &mesh.Indices[0]);
 					}
 				}
-				else //if(mesh.VerticesAnimations.size()) //todo empty model ?
+				else if(mesh.VerticesAnimations.size())
 				{
 					if (mesh.Indices.empty())
 					{
@@ -886,6 +920,11 @@ namespace gl3d
 							(float *)&mesh.VerticesAnimations[0],
 							mesh.Indices.size() * 4, &mesh.Indices[0], false, true);
 					}
+				}
+				else
+				{
+					gl3dAssertComment(0, "Tried to load an emptty model");
+					return {0};
 				}
 				
 				gm.hasBones = mesh.hasBones;
@@ -902,6 +941,8 @@ namespace gl3d
 				gm.ownMaterial = true;
 
 				gm.name = model.loader.LoadedMeshes[i].MeshName;
+
+
 				char *c = new char[gm.name.size() + 1];
 				strcpy(c, gm.name.c_str());
 
@@ -935,8 +976,10 @@ namespace gl3d
 		}
 	}
 
-	void Renderer3D::deleteModel(Model &m) //todo delete created materials
+	void Renderer3D::deleteModel(Model &m) //todo check if delete created materials and internal stuff is good
 	{
+		clearModelData(m);
+
 		auto pos = internal.getModelIndex(m);
 		if (pos < 0)
 		{
@@ -945,20 +988,19 @@ namespace gl3d
 		}
 
 		internal.graphicModelsIndexes.erase(internal.graphicModelsIndexes.begin() + pos);
-		internal.graphicModels[pos].clear(*this);
 		internal.graphicModels.erase(internal.graphicModels.begin() + pos);
 
 		m.id_ = 0;
 	}
 
-	void Renderer3D::clearModelData(Model& m)
+	void Renderer3D::clearModelData(Model& m) 
 	{
 		auto pos = internal.getModelIndex(m);
 		if (pos < 0)
 		{
 			return;
 		}
-
+		
 		internal.graphicModels[pos].clear(*this);
 	}
 

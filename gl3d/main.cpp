@@ -425,7 +425,15 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
 	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
 	//auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
-	auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
+	//auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
+	
+	auto defaultMat = renderer.createMaterial();
+
+	auto levelModel = renderer.createModelFromData(defaultMat, "test",
+		sizeof(cubePositionsNormals)/sizeof(float), cubePositionsNormals, sizeof(cubeIndices)/sizeof(int),
+		cubeIndices);
+
+	
 	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
