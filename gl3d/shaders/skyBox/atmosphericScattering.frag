@@ -14,6 +14,7 @@ uniform vec3 u_color1;
 uniform vec3 u_color2;
 uniform vec3 u_groundColor;
 uniform float u_g;
+uniform int u_useGround;
 
 in vec3 v_localPos;
 out vec3 fragColor;
@@ -64,9 +65,9 @@ float fScaleOverScaleDepth;	// fScale / fScaleDepth
 
 	//u_groundColor = vec3(0.2,0.2,0.2);
 
-	vec3 computedGroundColor = vec3(0.1,0.2,0.1);// + pow(foneMinusCosEarth, 16) * sunColor;
+	vec3 computedGroundColor = u_groundColor;// + pow(foneMinusCosEarth, 16) * sunColor;
 
-	if(fCosEarth < 0.02)
+	if(fCosEarth < 0.02 && u_useGround != 0)
 	{
 		float a = min(max(fCosEarth/0.02,0), 1);
 		a*=a*a;

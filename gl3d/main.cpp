@@ -153,7 +153,8 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.loadSkyBox(names);
+	renderer.skyBox = renderer.atmosfericScattering({0,-1,0}, {0.2,0.2,0.5}, {0.6,0.2,0.1}, {}, false, 10);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -1479,7 +1480,8 @@ int main()
 		renderDurationProfilerFine.end();
 
 	#pragma region light cube
-		glDisable(GL_DEPTH_TEST);
+		//glDisable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
 		for (auto &i : renderer.internal.spotLights)
 		{
 			lightCubeModel.position = i.position;

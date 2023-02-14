@@ -249,6 +249,8 @@ namespace gl3d
 			GLuint u_g;
 			GLuint u_color1;
 			GLuint u_color2;
+			GLuint u_groundColor;
+			GLuint u_useGround;
 			GLuint modelViewUniformLocation;
 
 		}atmosphericScatteringShader;
@@ -263,7 +265,8 @@ namespace gl3d
 		void loadTexture(const char *names[6], SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
 		void loadTexture(const char *name, SkyBox &skyBox, ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer, int format = 0);
 		void loadHDRtexture(const char *name, ErrorReporter &errorReporter, FileOpener &fileOpener, SkyBox &skyBox, GLuint frameBuffer);
-		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g, SkyBox& skyBox,
+		void atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2,
+			glm::vec3 groundColor, bool useGroundColor, float g, SkyBox& skyBox,
 			GLuint frameBuffer);
 
 		//, GLuint frameBuffer is the default fbo

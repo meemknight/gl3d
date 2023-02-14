@@ -131,5 +131,6 @@
     <None Include="shaders\deferred\zPrePass.vert" />
     <None Include="shaders\postProcess\chromaticAberation.frag" />
     <None Include="shaders\hbao\hbao.frag" />
+    <None Include="shaders\copyDepth.frag" />
   </ItemGroup>
 </Project>

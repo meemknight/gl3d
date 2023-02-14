@@ -54,9 +54,13 @@ namespace gl3d
 	struct AtmosfericScatteringSettings
 	{
 		glm::vec3 sun = {0,1,0};
+		//sky
 		glm::vec3 color1 = {0,0,0};
+		//sun
 		glm::vec3 color2 = {0,0,0};
+		glm::vec3 ground = {0,0,0};
 		float g = 0;
+		bool useGroundColor = 0;
 	};
 
 	struct Renderer3D
@@ -132,7 +136,8 @@ namespace gl3d
 		SkyBox loadHDRSkyBox(const char* name);
 		void deleteSkyBoxTextures(SkyBox& skyBox);
 
-		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g);
+		SkyBox atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2,
+			glm::vec3 groundColor, bool useGroundColor, float g);
 		SkyBox atmosfericScattering(AtmosfericScatteringSettings settings);
 
 	#pragma endregion
@@ -533,7 +538,7 @@ namespace gl3d
 			{
 				//https://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf
 
-				void create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer);
+				void create(ErrorReporter &errorReporter, FileOpener &fileOpener);
 				void clear();
 				Shader shader;
 
@@ -711,6 +716,15 @@ namespace gl3d
 			bool usingFXAA = true;
 		}antiAlias;
 
+		struct CopyDepth
+		{
+			gl3d::Shader shader;
+			GLint u_depth = -1;
+
+			void create(ErrorReporter &errorReporter, FileOpener &fileOpener);
+			void clear();
+		}copyDepth;
+
 		struct DirectionalShadows
 		{
 			void create(GLuint frameBuffer);
@@ -769,6 +783,7 @@ namespace gl3d
 		}pointShadows;
 
 		void render(float deltaTime);
+
 		void updateWindowMetrics(int x, int y);
 
 		void clearAllLoadedResource();
@@ -778,6 +793,7 @@ namespace gl3d
 
 		bool frustumCulling = 1;
 		bool zPrePass = 0;
+		bool copyDepthForLaterForwardRendering = 1;
 
 	};
 

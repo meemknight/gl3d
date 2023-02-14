@@ -78,6 +78,8 @@ int main()
 		"resources/skyBoxes/ocean/back.jpg" };
 
 	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.atmosfericScattering({0,1,0}, {0.2,0.2,0.5}, {0.6,0.2,0.1}, 10);
+
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr", 0);
 	//renderer.skyBox.color = {0.2,0.3,0.8};
 

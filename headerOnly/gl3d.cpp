@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-02-13
+//built on 2023-02-14
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -32294,7 +32294,9 @@ namespace gl3d
 "uniform vec3 u_lightPos;\n"
 "uniform vec3 u_color1;\n"
 "uniform vec3 u_color2;\n"
+"uniform vec3 u_groundColor;\n"
 "uniform float u_g;\n"
+"uniform int u_useGround;\n"
 "in vec3 v_localPos;\n"
 "out vec3 fragColor;\n"
 "void main ()\n"
@@ -32327,10 +32329,10 @@ namespace gl3d
 "* \n"
 "pow (tmpvar_4, 16.0)\n"
 ")) + (pow (tmpvar_4, 16.0) * u_color2));\n"
-"if ((tmpvar_3 < 0.02)) {\n"
+"if (((tmpvar_3 < 0.02) && (u_useGround != 0))) {\n"
 "float tmpvar_8;\n"
 "tmpvar_8 = min (max ((tmpvar_3 / 0.02), 0.0), 1.0);\n"
-"fragColor = mix (vec3(0.1, 0.2, 0.1), tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));\n"
+"fragColor = mix (u_groundColor, tmpvar_7, vec3((tmpvar_8 * (tmpvar_8 * tmpvar_8))));\n"
 "} else {\n"
 "fragColor = tmpvar_7;\n"
 "};\n"
@@ -34373,6 +34375,14 @@ namespace gl3d
 "gl_Position = vec4(a_Pos, 1.0);\n"
 "}\n"},
 
+      std::pair<std::string, const char*>{"copyDepth.frag", "#version 330 core\n"
+"noperspective in vec2 v_texCoords;\n"
+"uniform sampler2D u_depth;\n"
+"void main()\n"
+"{\n"
+"gl_FragDepth = texture(u_depth, v_texCoords).r;\n"
+"}\n"},
+
       std::pair<std::string, const char*>{"color.vert", "#version 330\n"
 "in layout(location = 0) vec3 positions;\n"
 "in layout(location = 1) vec3 colors;\n"
@@ -35588,6 +35598,9 @@ namespace gl3d
 		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g", errorReporter);
 		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1", errorReporter);
 		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2", errorReporter);
+		atmosphericScatteringShader.u_groundColor = getUniform(atmosphericScatteringShader.shader.id, "u_groundColor", errorReporter);
+		atmosphericScatteringShader.u_useGround = getUniform(atmosphericScatteringShader.shader.id, "u_useGround", errorReporter);
+
 		atmosphericScatteringShader.modelViewUniformLocation 
 			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection", errorReporter);
 
@@ -35939,7 +35952,8 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g,
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2,
+		glm::vec3 groundColor, bool useGroundColor, float g,
 		SkyBox& skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
@@ -35972,6 +35986,8 @@ namespace gl3d
 				glUniform1f(atmosphericScatteringShader.u_g, g);
 				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
 				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
+				glUniform3fv(atmosphericScatteringShader.u_groundColor, 1, &groundColor[0]);
+				glUniform1i(atmosphericScatteringShader.u_useGround, (int)useGroundColor);
 
 				glViewport(0, 0, skyBoxSize, skyBoxSize);
 
@@ -36298,13 +36314,14 @@ namespace gl3d
 
 		internal.gBuffer.create(x, y, errorReporter, frameBuffer);
 		internal.ssao.create(x, y, errorReporter, fileOpener, frameBuffer);
-		internal.hbao.create(errorReporter, fileOpener, frameBuffer);
+		internal.hbao.create(errorReporter, fileOpener);
 		postProcess.create(x, y, errorReporter, fileOpener, frameBuffer);
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
 		antiAlias.create(x, y, errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
+		copyDepth.create(errorReporter, fileOpener);
 
 		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
@@ -38696,7 +38713,8 @@ namespace gl3d
 	}
 
 	//todo flags
-	std::string Renderer3D::saveSettingsToJson(bool includeRenderingSettings, std::string skyBoxName)
+	std::string Renderer3D::saveSettingsToJson(bool includeRenderingSettings, std::string skyBoxName,
+		gl3d::AtmosfericScatteringSettings *atmosphericScattering)
 	{
 		using Json = nlohmann::json;
 
@@ -38707,14 +38725,44 @@ namespace gl3d
 			j["sky box"] = skyBoxName;
 		}
 
+		if (atmosphericScattering != nullptr)
+		{
+			Json a;
+			a["sunx"] = atmosphericScattering->sun.x;
+			a["suny"] = atmosphericScattering->sun.y;
+			a["sunz"] = atmosphericScattering->sun.z;
+
+			a["color1x"] = atmosphericScattering->color1.x;
+			a["color1y"] = atmosphericScattering->color1.y;
+			a["color1z"] = atmosphericScattering->color1.z;
+
+			a["color2x"] = atmosphericScattering->color2.x;
+			a["color2y"] = atmosphericScattering->color2.y;
+			a["color2z"] = atmosphericScattering->color2.z;
+
+			a["groundx"] = atmosphericScattering->ground.x;
+			a["groundy"] = atmosphericScattering->ground.y;
+			a["groundz"] = atmosphericScattering->ground.z;
+
+			a["g"] = atmosphericScattering->g;
+			a["useGround"] = atmosphericScattering->useGroundColor;
+
+			j["atmosphericScattering"] = a;
+		}
+
+		if (!skyBoxName.empty() || atmosphericScattering != nullptr)
+		{
+			j["ambientr"] = skyBox.color.r;
+			j["ambientg"] = skyBox.color.g;
+			j["ambientb"] = skyBox.color.b;
+		}
+
 		if (includeRenderingSettings)
 		{
 
 			j["exposure"] = getExposure();
 			j["normal mapping"] = isNormalMappingEnabeled();
 			j["light subscatter"] = isLightSubScatteringEnabeled();
-
-
 
 			//fxaa
 			{
@@ -38735,7 +38783,6 @@ namespace gl3d
 			j["adaptiveResolution"] = adaptiveResolution.useAdaptiveResolution; //todo setter getter
 			//j["zprePass"] = zPrePass; //todo setter getter //todo add back if will be used
 			j["frustumCulling"] = frustumCulling;
-
 
 			//ssao
 			{
@@ -38787,7 +38834,7 @@ namespace gl3d
 		return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 	}
 
-	void Renderer3D::loadSettingsFromJson(const char *data, bool includeRenderingSettings, bool loadSkyBox)
+	void Renderer3D::loadSettingsFromJson(const char *data, bool includeRenderingSettings, bool loadSkyBox, bool loadAtmosphericScattering)
 	{
 		using Json = nlohmann::json;
 
@@ -38935,6 +38982,7 @@ namespace gl3d
 		}
 		}
 
+		bool loadSkyBoxFailed = 1;
 		if (loadSkyBox)
 		{
 			auto s = rez["sky box"];
@@ -38947,12 +38995,83 @@ namespace gl3d
 				{
 					skyBox.clearTextures();
 					skyBox = loadHDRSkyBox(str.c_str());
+					if (skyBox.texture != 0) { loadSkyBoxFailed = 0; }
 				}else
 				if (endsWith(str, ".png") || endsWith(str, ".PNG"))
 				{
 					skyBox.clearTextures();
 					skyBox = this->loadSkyBox(str.c_str(), 0);
+					if (skyBox.texture != 0) { loadSkyBoxFailed = 0; }
 				}
+			}
+		}
+
+		if (loadAtmosphericScattering && loadSkyBoxFailed)
+		{
+			auto a = rez["atmosphericScattering"];
+
+			if (a.is_object())
+			{
+				auto sunx = a["sunx"];
+				auto suny = a["suny"];
+				auto sunz = a["sunz"];
+
+				auto color1x = a["color1x"];
+				auto color1y = a["color1y"];
+				auto color1z = a["color1z"];
+
+				auto color2x = a["color2x"];
+				auto color2y = a["color2y"];
+				auto color2z = a["color2z"];
+
+				auto groundx = a["groundx"];
+				auto groundy = a["groundy"];
+				auto groundz = a["groundz"];
+
+				auto g = a["g"];
+				auto useGround = a["useGround"];
+
+				gl3d::AtmosfericScatteringSettings s;
+
+				if (
+					sunx.is_number() &&
+					suny.is_number() &&
+					sunz.is_number() &&
+					color1x.is_number() &&
+					color1y.is_number() &&
+					color1z.is_number() &&
+					color2x.is_number() &&
+					color2y.is_number() &&
+					color2z.is_number() &&
+					groundx.is_number() &&
+					groundy.is_number() &&
+					groundz.is_number() &&
+					useGround.is_boolean() &&
+					g.is_number()
+					)
+				{
+					skyBox.clearTextures();
+					s.sun = glm::normalize(glm::vec3{sunx, suny, sunz});
+					s.color1 = {color1x, color1y, color1z};
+					s.color2 = {color2x, color2y, color2z};
+					s.ground = {groundx,groundy,groundz};
+					s.useGroundColor = useGround;
+					s.g = g;
+					skyBox = this->atmosfericScattering(s);
+				}
+			}
+
+		}
+
+		if (loadSkyBox || loadAtmosphericScattering)
+		{
+			auto r = rez["ambientr"];
+			auto g = rez["ambientg"];
+			auto b = rez["ambientb"];
+			
+			if (r.is_number() && g.is_number() && b.is_number())
+			{
+				skyBox.color = glm::vec3{r,g,b};
 			}
 		}
 
@@ -41485,7 +41604,8 @@ namespace gl3d
 
 	#pragma endregion
 
-	#pragma region draw to screen and fxaa and chromatic aberation
+
+	#pragma region chromatic aberation
 
 		GLuint currentTexture = adaptiveResolution.texture;
 
@@ -41514,10 +41634,13 @@ namespace gl3d
 			currentTexture = adaptiveResolution.texture2;
 		}
 
+	#pragma endregion
+
+
+	#pragma region draw to screen and fxaa 
 
 		glViewport(0, 0, internal.w, internal.h);
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -41555,18 +41678,36 @@ namespace gl3d
 
 
 	#pragma region copy depth buffer for later forward rendering
-		glBindVertexArray(0);
 
-		//glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.gBuffer);
-		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer); // write to default framebuffer
-		//glBlitFramebuffer(
-		//  0, 0, adaptiveW, adaptiveH, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
-		//);
-
-		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+		if (copyDepthForLaterForwardRendering)
+		{
+
+			if ((internal.adaptiveW == internal.w &&
+				internal.adaptiveH == internal.h) || !adaptiveResolution.useAdaptiveResolution
+				)
+			{
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, internal.gBuffer.gBuffer);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer); // write to default framebuffer
+				glBlitFramebuffer(
+					0, 0, internal.adaptiveW, internal.adaptiveH, 0, 0, internal.w, internal.h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+				);
+			}
+			else
+			{
+				copyDepth.shader.bind();
+				glUniform1i(copyDepth.u_depth, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, internal.gBuffer.depthBuffer);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			}
+		
+		}
+
 	#pragma endregion
 
+		glBindVertexArray(0);
 
 		//reset per frame flags
 		internal.perFrameFlags = {};
@@ -41695,6 +41836,7 @@ namespace gl3d
 		antiAlias.clear();
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
+		copyDepth.clear();
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -41723,16 +41865,19 @@ namespace gl3d
 		skyBox.clearTextures();
 	}
 
-	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g)
+	SkyBox Renderer3D::atmosfericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2,
+		glm::vec3 groundColor, bool useGroundColor, float g)
 	{
 		SkyBox skyBox = {};
-		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, g, skyBox, frameBuffer);
+		internal.skyBoxLoaderAndDrawer.atmosphericScattering(sun, color1, color2, groundColor,
+			useGroundColor, g, skyBox, frameBuffer);
 		return skyBox;
 	}
 
 	SkyBox Renderer3D::atmosfericScattering(AtmosfericScatteringSettings settings)
 	{
-		return atmosfericScattering(settings.sun, settings.color1, settings.color2, settings.g);
+		return atmosfericScattering(settings.sun, settings.color1, settings.color2, settings.ground,
+			settings.useGroundColor, settings.g);
 	}
 
 	float lerp(float a, float b, float f)
@@ -42600,7 +42745,7 @@ namespace gl3d
 		glDeleteTextures(1, &depthBuffer);
 	}
 
-	void Renderer3D::InternalStruct::HBAO::create(ErrorReporter &errorReporter, FileOpener &fileOpener, GLuint frameBuffer)
+	void Renderer3D::InternalStruct::HBAO::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/hbao/hbao.frag", errorReporter, fileOpener);
@@ -42618,6 +42763,17 @@ namespace gl3d
 		shader.clear();
 	}
 
+
+	void Renderer3D::CopyDepth::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
+	{
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/copyDepth.frag", errorReporter, fileOpener);
+		u_depth = getUniform(shader.id, "u_depth", errorReporter);
+	}
+
+	void Renderer3D::CopyDepth::clear()
+	{
+		shader.clear();
+	}
 
 };
 #pragma endregion

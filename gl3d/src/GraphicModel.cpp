@@ -579,6 +579,9 @@ namespace gl3d
 		atmosphericScatteringShader.u_g = getUniform(atmosphericScatteringShader.shader.id, "u_g", errorReporter);
 		atmosphericScatteringShader.u_color1 = getUniform(atmosphericScatteringShader.shader.id, "u_color1", errorReporter);
 		atmosphericScatteringShader.u_color2 = getUniform(atmosphericScatteringShader.shader.id, "u_color2", errorReporter);
+		atmosphericScatteringShader.u_groundColor = getUniform(atmosphericScatteringShader.shader.id, "u_groundColor", errorReporter);
+		atmosphericScatteringShader.u_useGround = getUniform(atmosphericScatteringShader.shader.id, "u_useGround", errorReporter);
+
 		atmosphericScatteringShader.modelViewUniformLocation 
 			= getUniform(atmosphericScatteringShader.shader.id, "u_viewProjection", errorReporter);
 
@@ -930,7 +933,8 @@ namespace gl3d
 		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer);
 	}
 
-	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2, float g,
+	void SkyBoxLoaderAndDrawer::atmosphericScattering(glm::vec3 sun, glm::vec3 color1, glm::vec3 color2,
+		glm::vec3 groundColor, bool useGroundColor, float g,
 		SkyBox& skyBox, GLuint frameBuffer)
 	{
 		skyBox = {};
@@ -963,6 +967,8 @@ namespace gl3d
 				glUniform1f(atmosphericScatteringShader.u_g, g);
 				glUniform3fv(atmosphericScatteringShader.u_color1, 1, &color1[0]);
 				glUniform3fv(atmosphericScatteringShader.u_color2, 1, &color2[0]);
+				glUniform3fv(atmosphericScatteringShader.u_groundColor, 1, &groundColor[0]);
+				glUniform1i(atmosphericScatteringShader.u_useGround, (int)useGroundColor);
 
 				glViewport(0, 0, skyBoxSize, skyBoxSize);
 
@@ -989,7 +995,7 @@ namespace gl3d
 
 		}
 
-		createConvolutedAndPrefilteredTextureData(skyBox, 0.02, 64u);
+		createConvolutedAndPrefilteredTextureData(skyBox, frameBuffer, 0.02, 64u);
 
 	}
 
