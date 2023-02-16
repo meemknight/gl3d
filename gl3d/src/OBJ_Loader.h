@@ -1970,14 +1970,14 @@ namespace objl
 					tempMaterial.map_Pm = algorithm::tail(curline);
 				}
 				else
-				if (firstToken == "map_ORM")
+				if (firstToken == "map_ORM" || firstToken == "map_orm" || firstToken == "map_Orm")
 				{
 					tempMaterial.map_ORM = algorithm::tail(curline);
 				}
 				else
-				if (firstToken == "map_RMA")
+				if (firstToken == "map_RMA" || firstToken == "map_rma" || firstToken == "map_Rma")
 				{
-					tempMaterial.map_ORM = algorithm::tail(curline);
+					tempMaterial.map_RMA = algorithm::tail(curline);
 				}
 				else
 				if (firstToken == "map_emissive" || firstToken == "map_Ke" || firstToken == "map_Emissive")
