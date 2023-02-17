@@ -153,8 +153,8 @@ int main()
 		"resources/skyBoxes/ocean/front.jpg",
 		"resources/skyBoxes/ocean/back.jpg" };
 
-	//renderer.skyBox = renderer.loadSkyBox(names);
-	renderer.skyBox = renderer.atmosfericScattering({0,-1,0}, {0.2,0.2,0.5}, {0.6,0.2,0.1}, {}, false, 10);
+	renderer.skyBox = renderer.loadSkyBox(names);
+	//renderer.skyBox = renderer.atmosfericScattering({0,-1,0}, {0.2,0.2,0.5}, {0.6,0.2,0.1}, {}, false, 10);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -418,7 +418,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf");
+	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
@@ -427,14 +427,14 @@ int main()
 	//auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
 	//auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
 	
-	auto defaultMat = renderer.createMaterial();
+	auto defaultMat = renderer.createMaterial(gl3d::TextureLoadQuality::dontSet);
 
 	auto levelModel = renderer.createModelFromData(defaultMat, "test",
 		sizeof(cubePositionsNormals)/sizeof(float), cubePositionsNormals, sizeof(cubeIndices)/sizeof(int),
 		cubeIndices);
 
 	
-	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", 0.008);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
 
@@ -452,7 +452,7 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/birb.glb");
 	//auto levelModel = renderer.loadModel("resources/obj/sphere.obj");
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
-	auto barelModel = renderer.loadModel("resources/obj/sphere.obj");
+	auto barelModel = renderer.loadModel("resources/obj/sphere.obj", gl3d::TextureLoadQuality::maxQuality, 1.f);
 	
 	auto rez = loadProfiler.end();
 

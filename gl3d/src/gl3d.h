@@ -80,14 +80,14 @@ namespace gl3d
 
 	#pragma region material
 		
-		Material createMaterial(glm::vec4 kd = glm::vec4(1), 
+		Material createMaterial(int quality, glm::vec4 kd = glm::vec4(1),
 			float roughness = 0.5f, float metallic = 0.1, float ao = 1.f, std::string name = "",
 			gl3d::Texture albedoTexture = {}, gl3d::Texture normalTexture = {}, gl3d::Texture roughnessTexture = {}, gl3d::Texture metallicTexture = {},
 			gl3d::Texture occlusionTexture = {}, gl3d::Texture emmisiveTexture = {});
 
 		Material createMaterial(Material m);
 
-		std::vector<Material> loadMaterial(std::string file);
+		std::vector<Material> loadMaterial(std::string file, int quality);
 
 		bool deleteMaterial(Material m);  
 		bool copyMaterialData(Material dest, Material source);
@@ -110,8 +110,8 @@ namespace gl3d
 
 	#pragma region Texture
 
-		Texture loadTexture(std::string path);
-		Texture loadTextureFromMemory(objl::LoadedTexture &t);
+		Texture loadTexture(std::string path, int quality);
+		Texture loadTextureFromMemory(objl::LoadedTexture &t, int quality);
 		GLuint getTextureOpenglId(Texture& t);
 		bool isTexture(Texture& t);
 
@@ -124,7 +124,7 @@ namespace gl3d
 		Texture createIntenralTexture(GLuint id_, int alphaData, int alphaValues, const std::string &name = "");
 
 		PBRTexture createPBRTexture(Texture& roughness, Texture& metallic,
-			Texture& ambientOcclusion);
+			Texture& ambientOcclusion, int quality);
 		void deletePBRTexture(PBRTexture &t);
 
 	#pragma endregion
@@ -151,7 +151,7 @@ namespace gl3d
 			size_t vertexCount, const float *vertices, size_t indexesCount = 0,
 			const unsigned int *indexes = nullptr, bool noTexture = false);
 
-		Model loadModel(std::string path, float scale = 1);
+		Model loadModel(std::string path, int quality, float scale);
 		bool isModel(Model& m);
 		void deleteModel(Model &m);
 
@@ -416,7 +416,7 @@ namespace gl3d
 
 				GLuint createRMAtexture(
 					GpuTexture roughness, GpuTexture metallic, GpuTexture ambientOcclusion, 
-					GLuint quadVAO, int &RMA_loadedTextures, GLuint frameBuffer);
+					GLuint quadVAO, int &RMA_loadedTextures, GLuint frameBuffer, int quality);
 				
 				void clear();
 

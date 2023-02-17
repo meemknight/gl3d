@@ -24,14 +24,14 @@ namespace gl3d
 		//GpuTexture(const char *file) { loadTextureFromFile(file); };
 
 		//returns error
-		std::string loadTextureFromFile(const char *file, FileOpener &fileOpener, int quality = maxQuality, int channels = 4);
+		std::string loadTextureFromFile(const char *file, FileOpener &fileOpener, int quality, int channels = 4);
 		void loadTextureFromMemory(void* data, int w, int h, int chanels = 4, int quality = maxQuality);
 		void loadTextureFromMemoryAndCheckAlpha
 			(void *data, int w, int h, int &alpha, int &alphaWithData, int chanels = 4, int quality = maxQuality);
 
 		//returns error
 		std::string loadTextureFromFileAndCheckAlpha(const char* file, int& alpha, int& alphaData,
-			int quality = maxQuality, int channels = 4);
+			int quality, int channels = 4);
 
 		void clear();
 

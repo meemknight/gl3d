@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-02-14
+//built on 2023-02-16
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -36450,14 +36450,14 @@ namespace gl3d
 			if (!mat.map_RMA.empty())
 			{
 			
-				textureData.pbrTexture.texture = renderer.loadTexture(mat.map_RMA.c_str());
+				textureData.pbrTexture.texture = renderer.loadTexture((path + mat.map_RMA).c_str());
 				if (textureData.pbrTexture.texture.id_ != 0)
 				{
 					textureData.pbrTexture.RMA_loadedTextures = 0b111; //all textures loaded
 				}
 
-			}//else //todo just add else
-
+			}
+			else
 			if (!mat.loadedORM.data.empty())
 			{
 				auto &t = mat.loadedORM;
