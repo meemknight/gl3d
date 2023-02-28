@@ -132,5 +132,6 @@
     <None Include="shaders\postProcess\chromaticAberation.frag" />
     <None Include="shaders\hbao\hbao.frag" />
     <None Include="shaders\copyDepth.frag" />
+    <None Include="shaders\postProcess\colorCorrection.frag" />
   </ItemGroup>
 </Project>

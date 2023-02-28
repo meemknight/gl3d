@@ -56,9 +56,10 @@ namespace gl3d
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
-		antiAlias.create(x, y, errorReporter, fileOpener);
+		antiAlias.create(errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 		copyDepth.create(errorReporter, fileOpener);
+		colorCorrection.create(x, y, errorReporter, fileOpener);
 
 		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
@@ -5432,7 +5433,16 @@ namespace gl3d
 	#pragma region draw to screen and fxaa 
 
 		glViewport(0, 0, internal.w, internal.h);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		
+
+		if (colorCorrection.colorCorrection)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, colorCorrection.fbo);
+		}
+		else
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		}
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -5467,8 +5477,28 @@ namespace gl3d
 
 	#pragma endregion
 
+	#pragma region color corection
+
+		if (colorCorrection.colorCorrection)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+			colorCorrection.shader.bind();
+			glUniform1i(colorCorrection.u_texture, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, colorCorrection.texture);
+
+			glUniform1i(colorCorrection.u_lookup, 1);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, colorCorrection.currentTexture.id);
+
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+
+	#pragma endregion
 
 
+	//todo implement
 	#pragma region copy depth buffer for later forward rendering
 
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
@@ -5534,7 +5564,8 @@ namespace gl3d
 		postProcess.resize(internal.adaptiveW, internal.adaptiveH);
 
 		adaptiveResolution.resize(internal.adaptiveW, internal.adaptiveH);
-
+		
+		colorCorrection.resize(x, y);
 	}
 
 	void Renderer3D::clearAllLoadedResource()
@@ -5629,6 +5660,7 @@ namespace gl3d
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
 		copyDepth.clear();
+		colorCorrection.clear();
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -6242,7 +6274,7 @@ namespace gl3d
 	}
 
 
-	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
+	void Renderer3D::AntiAlias::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
@@ -6566,6 +6598,54 @@ namespace gl3d
 
 	void Renderer3D::CopyDepth::clear()
 	{
+		shader.clear();
+	}
+
+	void Renderer3D::ColorCorrection::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
+	{
+
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/colorCorrection.frag", errorReporter, fileOpener);
+
+		u_texture = getUniform(shader.id, "u_texture", errorReporter);
+		u_lookup = getUniform(shader.id, "u_lookup", errorReporter);
+
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glGenTextures(1, &texture);
+
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+
+		resize(w, h);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+
+	}
+
+	void Renderer3D::ColorCorrection::resize(int w, int h)
+	{
+		if (currentDimensions.x != w || currentDimensions.y != h)
+		{
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h,
+				0, GL_RGBA, GL_FLOAT, NULL);
+
+			currentDimensions = glm::ivec2(w, h);
+		}
+
+	}
+
+	void Renderer3D::ColorCorrection::clear()
+	{
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteTextures(1, &texture);
 		shader.clear();
 	}
 

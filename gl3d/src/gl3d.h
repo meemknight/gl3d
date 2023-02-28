@@ -708,7 +708,7 @@ namespace gl3d
 		{
 			Shader shader;
 			Shader noAAshader;
-			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
+			void create(ErrorReporter &errorReporter, FileOpener &fileOpener);
 			void clear();
 
 			GLuint u_texture;
@@ -720,6 +720,30 @@ namespace gl3d
 
 			bool usingFXAA = true;
 		}antiAlias;
+
+		struct ColorCorrection
+		{
+			GLuint u_texture;
+			GLuint u_lookup;
+			
+			Shader shader;
+
+			GLuint fbo;
+			GLuint texture;
+
+			glm::ivec2 currentDimensions = {};
+
+			bool colorCorrection = 1;
+
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
+
+			void resize(int w, int h);
+
+			void clear();
+
+			GpuTexture currentTexture;
+
+		}colorCorrection;
 
 		struct CopyDepth
 		{

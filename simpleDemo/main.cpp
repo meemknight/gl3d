@@ -86,10 +86,10 @@ int main()
 	//auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
 
 
-	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj");
+	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
 	//gl3d::Model ballModel = renderer.loadModel("resources/sphere2.obj", 0);
-	gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj");
-	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb");
+	gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj", 1);
+	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", 1);
 	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
 	
 

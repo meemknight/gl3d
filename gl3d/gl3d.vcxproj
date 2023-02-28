@@ -226,6 +226,7 @@
     <None Include="shaders\postProcess\addMips.frag" />
     <None Include="shaders\postProcess\addMipsBlur.frag" />
     <None Include="shaders\postProcess\chromaticAberation.frag" />
+    <None Include="shaders\postProcess\colorCorrection.frag" />
     <None Include="shaders\postProcess\filter.frag" />
     <None Include="shaders\postProcess\filterDown.frag" />
     <None Include="shaders\shadows\pointShadow.vert" />

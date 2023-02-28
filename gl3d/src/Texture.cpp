@@ -68,7 +68,9 @@ namespace gl3d
 			return;
 	
 		setTextureQuality(quality);
-		glGenerateMipmap(GL_TEXTURE_2D);
+
+		if(quality > linearNoMipmap)
+			glGenerateMipmap(GL_TEXTURE_2D);
 	
 	}
 
@@ -207,6 +209,12 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1.f);
+			}
+			case linearNoMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1.f);
 			}
 			break;

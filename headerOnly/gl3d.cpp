@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-02-18
+//built on 2023-02-28
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -31473,7 +31473,9 @@ namespace gl3d
 			return;
 	
 		setTextureQuality(quality);
-		glGenerateMipmap(GL_TEXTURE_2D);
+
+		if(quality > linearNoMipmap)
+			glGenerateMipmap(GL_TEXTURE_2D);
 	
 	}
 
@@ -31612,6 +31614,12 @@ namespace gl3d
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1.f);
+			}
+			case linearNoMipmap:
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 1.f);
 			}
 			break;
@@ -32691,6 +32699,39 @@ namespace gl3d
 "a_outBloom = vec4(0.0, 0.0, 0.0, 1.0);\n"
 "};\n"
 "a_outBloom = clamp (a_outBloom, 0.0, 1000.0);\n"
+"}\n"},
+
+      std::pair<std::string, const char*>{"colorCorrection.frag", "#version 150\n"
+"out vec4 a_color;\n"
+"noperspective in vec2 v_texCoords;\n"
+"uniform sampler2D u_texture;\n"
+"uniform sampler2D u_lookup;\n"
+"void main ()\n"
+"{\n"
+"vec4 tmpvar_1;\n"
+"tmpvar_1 = texture (u_texture, v_texCoords);\n"
+"int tmpvar_2;\n"
+"tmpvar_2 = int(floor((64.0 * tmpvar_1.z)));\n"
+"int tmpvar_3;\n"
+"tmpvar_3 = int(ceil((64.0 * tmpvar_1.z)));\n"
+"vec2 finalCellPos_4;\n"
+"ivec2 index2_5;\n"
+"index2_5.x = (int(mod (tmpvar_2, 8)));\n"
+"index2_5.y = (tmpvar_2 / 8);\n"
+"vec2 tmpvar_6;\n"
+"tmpvar_6 = ((vec2(0.125, 0.125) * tmpvar_1.xy) + (vec2(0.125, 0.125) * vec2(index2_5)));\n"
+"finalCellPos_4.x = tmpvar_6.x;\n"
+"finalCellPos_4.y = (1.0 - tmpvar_6.y);\n"
+"vec2 finalCellPos_7;\n"
+"ivec2 index2_8;\n"
+"index2_8.x = (int(mod (tmpvar_3, 8)));\n"
+"index2_8.y = (tmpvar_3 / 8);\n"
+"vec2 tmpvar_9;\n"
+"tmpvar_9 = ((vec2(0.125, 0.125) * tmpvar_1.xy) + (vec2(0.125, 0.125) * vec2(index2_8)));\n"
+"finalCellPos_7.x = tmpvar_9.x;\n"
+"finalCellPos_7.y = (1.0 - tmpvar_9.y);\n"
+"a_color.xyz = mix (texture (u_lookup, finalCellPos_4).xyz, texture (u_lookup, finalCellPos_7).xyz, vec3(((64.0 * tmpvar_1.z) - float(tmpvar_2))));\n"
+"a_color.w = 1.0;\n"
 "}\n"},
 
       std::pair<std::string, const char*>{"chromaticAberation.frag", "#version 150\n"
@@ -36322,9 +36363,10 @@ namespace gl3d
 		directionalShadows.create(frameBuffer);
 		spotShadows.create(frameBuffer);
 		pointShadows.create(frameBuffer);
-		antiAlias.create(x, y, errorReporter, fileOpener);
+		antiAlias.create(errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 		copyDepth.create(errorReporter, fileOpener);
+		colorCorrection.create(x, y, errorReporter, fileOpener);
 
 		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
@@ -40525,14 +40567,14 @@ namespace gl3d
 							internal.directionalLights[lightIndex].changedThisFrame = false;
 
 							glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
-							//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-							glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
-							//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
+							glm::vec3 direction = lightDir;
+							glm::vec3 eye = camera.position - (direction);
+							glm::vec3 center = eye + direction;
+
+							glm::mat4 lightView = lookAtSafe(eye, center, {0.f,1.f,0.f});//todo option to add a custom vector direction
 
 							//zoffset is used to move the light further
-
-
 							float zOffsets[] = { 15 / 200.f,0,0 };
 
 							glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
@@ -41698,7 +41740,16 @@ namespace gl3d
 	#pragma region draw to screen and fxaa 
 
 		glViewport(0, 0, internal.w, internal.h);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		
+
+		if (colorCorrection.colorCorrection)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, colorCorrection.fbo);
+		}
+		else
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		}
 
 		if (antiAlias.usingFXAA || adaptiveResolution.useAdaptiveResolution)
 		{
@@ -41733,8 +41784,28 @@ namespace gl3d
 
 	#pragma endregion
 
+	#pragma region color corection
+
+		if (colorCorrection.colorCorrection)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+			colorCorrection.shader.bind();
+			glUniform1i(colorCorrection.u_texture, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, colorCorrection.texture);
+
+			glUniform1i(colorCorrection.u_lookup, 1);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, colorCorrection.currentTexture.id);
+
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+
+	#pragma endregion
 
 
+	//todo implement
 	#pragma region copy depth buffer for later forward rendering
 
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
@@ -41800,7 +41871,8 @@ namespace gl3d
 		postProcess.resize(internal.adaptiveW, internal.adaptiveH);
 
 		adaptiveResolution.resize(internal.adaptiveW, internal.adaptiveH);
-
+		
+		colorCorrection.resize(x, y);
 	}
 
 	void Renderer3D::clearAllLoadedResource()
@@ -41895,6 +41967,7 @@ namespace gl3d
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
 		copyDepth.clear();
+		colorCorrection.clear();
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
@@ -42508,7 +42581,7 @@ namespace gl3d
 	}
 
 
-	void Renderer3D::AntiAlias::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
+	void Renderer3D::AntiAlias::create(ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 
 		shader.loadShaderProgramFromFile("shaders/drawQuads.vert",
@@ -42832,6 +42905,54 @@ namespace gl3d
 
 	void Renderer3D::CopyDepth::clear()
 	{
+		shader.clear();
+	}
+
+	void Renderer3D::ColorCorrection::create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener)
+	{
+
+
+		shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/colorCorrection.frag", errorReporter, fileOpener);
+
+		u_texture = getUniform(shader.id, "u_texture", errorReporter);
+		u_lookup = getUniform(shader.id, "u_lookup", errorReporter);
+
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glGenTextures(1, &texture);
+
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+
+		resize(w, h);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+
+	}
+
+	void Renderer3D::ColorCorrection::resize(int w, int h)
+	{
+		if (currentDimensions.x != w || currentDimensions.y != h)
+		{
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h,
+				0, GL_RGBA, GL_FLOAT, NULL);
+
+			currentDimensions = glm::ivec2(w, h);
+		}
+
+	}
+
+	void Renderer3D::ColorCorrection::clear()
+	{
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteTextures(1, &texture);
 		shader.clear();
 	}
 

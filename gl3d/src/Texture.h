@@ -11,6 +11,7 @@ namespace gl3d
 	{
 		dontSet = -1, //won't create mipmap
 		leastPossible = 0,
+		linearNoMipmap,
 		nearestMipmap,
 		linearMipmap,
 		maxQuality
