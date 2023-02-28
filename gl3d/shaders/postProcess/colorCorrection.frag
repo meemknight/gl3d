@@ -1,5 +1,8 @@
 #version 150 core
 
+//https://cdn.streamshark.io/obs-guide/img/neutral-lut.png
+//https://streamshark.io/obs-guide/converting-cube-3dl-lut-to-image
+
 out vec4 a_color;
 
 noperspective in vec2 v_texCoords;

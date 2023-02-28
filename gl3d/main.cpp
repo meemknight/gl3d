@@ -102,14 +102,9 @@ int main()
 
 	renderer.init(w, h, "resources/BRDFintegrationMap.png");
 
-	gl3d::GpuTexture lut;
-	lut.loadTextureFromFile("resources/testLut.png", renderer.fileOpener, 0, 4);
-	//lut.loadTextureFromFile("resources/neutral-lut.png", renderer.fileOpener, 0, 4);
-	glBindTexture(GL_TEXTURE_2D, lut.id);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	renderer.colorCorrection.currentTexture = lut;
+	renderer.colorCorrectionTexture() = renderer.loadColorLookupTextureFromFile("resources/testLut.png");
+	//renderer.colorCorrection.currentTexture = renderer.loadColorLookupTextureFromFile("resources/neutral-lut.png");
 
 	{//load
 		std::ifstream f("save.txt");
@@ -794,7 +789,7 @@ int main()
 			ImGui::Text("Adaptive rez ratio: %.1f", renderer.adaptiveResolution.rezRatio);
 			ImGui::Checkbox("Z pre pass", &renderer.zPrePass);
 			ImGui::Checkbox("Frustum culling", &renderer.frustumCulling);
-			ImGui::Checkbox("Color grading", &renderer.colorCorrection.colorCorrection);
+			ImGui::Checkbox("Color grading", &renderer.colorCorrection());
 
 
 			if (ImGui::CollapsingHeader("SSAO", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding))

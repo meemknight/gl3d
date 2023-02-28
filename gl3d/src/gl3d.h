@@ -63,6 +63,14 @@ namespace gl3d
 		bool useGroundColor = 0;
 	};
 
+	//load using renderer.loadColorLookupTextureFromFile
+	//the memory of the lookup texture is not managed by the engine and not cleared by the engine on clearAll.
+	struct ColorLookupTexture
+	{
+		GpuTexture t;
+		void clear() { t.clear(); }
+	};
+
 	struct Renderer3D
 
 	{
@@ -326,6 +334,11 @@ namespace gl3d
 		void setSSAOSampleCount(int samples);
 		float &getSSAOExponent();
 		void setSSAOExponent(float exponent);
+		
+		bool &colorCorrection();
+		//the memory of the lookup texture is not managed by the engine and not cleared by the engine on clearAll.
+		ColorLookupTexture &colorCorrectionTexture();
+
 
 		//bloom
 		//more or less expensive
@@ -398,6 +411,31 @@ namespace gl3d
 		void renderSubModelBorder(Model o, int index, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float borderSize = 0.5, glm::vec3 borderColor = { 0.7, 0.7, 0.1 });
 
+		struct ColorCorrection
+		{
+			GLuint u_texture;
+			GLuint u_lookup;
+
+			Shader shader;
+
+			GLuint fbo;
+			//fbo texture
+			GLuint texture;
+
+			glm::ivec2 currentDimensions = {};
+
+			bool colorCorrection = 1;
+
+			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
+
+			void resize(int w, int h);
+
+			void clear();
+
+			//the memory of the lookup texture is not managed by the engine and not cleared by the engine on clearAll.
+			ColorLookupTexture currentTexture; //the texture supplied by user
+
+		};
 
 		struct InternalStruct
 		{
@@ -588,6 +626,8 @@ namespace gl3d
 
 			bool hasLastFrameTexture = 1;
 
+			ColorCorrection colorCorrection;
+
 		}internal;
 		
 
@@ -721,29 +761,7 @@ namespace gl3d
 			bool usingFXAA = true;
 		}antiAlias;
 
-		struct ColorCorrection
-		{
-			GLuint u_texture;
-			GLuint u_lookup;
-			
-			Shader shader;
-
-			GLuint fbo;
-			GLuint texture;
-
-			glm::ivec2 currentDimensions = {};
-
-			bool colorCorrection = 1;
-
-			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
-
-			void resize(int w, int h);
-
-			void clear();
-
-			GpuTexture currentTexture;
-
-		}colorCorrection;
+		ColorLookupTexture loadColorLookupTextureFromFile(const char *path);
 
 		struct CopyDepth
 		{

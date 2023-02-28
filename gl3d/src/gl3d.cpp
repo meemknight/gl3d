@@ -59,7 +59,7 @@ namespace gl3d
 		antiAlias.create(errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 		copyDepth.create(errorReporter, fileOpener);
-		colorCorrection.create(x, y, errorReporter, fileOpener);
+		internal.colorCorrection.create(x, y, errorReporter, fileOpener);
 
 		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
@@ -2389,6 +2389,16 @@ namespace gl3d
 		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 64.f);
 	}
 
+	bool &Renderer3D::colorCorrection()
+	{
+		return internal.colorCorrection.colorCorrection;
+	}
+
+	ColorLookupTexture &Renderer3D::colorCorrectionTexture()
+	{
+		return internal.colorCorrection.currentTexture;
+	}
+
 	bool &Renderer3D::bloom()
 	{
 		return this->internal.lightShader.bloom;
@@ -2556,6 +2566,7 @@ namespace gl3d
 			j["exposure"] = getExposure();
 			j["normal mapping"] = isNormalMappingEnabeled();
 			j["light subscatter"] = isLightSubScatteringEnabeled();
+			j["colorCorrection"] = colorCorrection();
 
 			//fxaa
 			{
@@ -2639,6 +2650,12 @@ namespace gl3d
 			if (exposure.is_number())
 			{
 				setExposure(exposure);
+			}
+
+			auto colorCorrection = rez["colorCorrection"];
+			if (colorCorrection.is_number())
+			{
+				this->colorCorrection() = colorCorrection;
 			}
 
 			auto normalMapping = rez["normal mapping"];
@@ -3326,6 +3343,19 @@ namespace gl3d
 
 	};
 
+
+	ColorLookupTexture Renderer3D::loadColorLookupTextureFromFile(const char *path)
+	{
+		GpuTexture gpuTexture;
+		gpuTexture.loadTextureFromFile(path, fileOpener, -1, 3);
+		glBindTexture(GL_TEXTURE_2D, gpuTexture.id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		return {gpuTexture.id};
+	}
 
 	void Renderer3D::render(float deltaTime)
 	{
@@ -5435,9 +5465,9 @@ namespace gl3d
 		glViewport(0, 0, internal.w, internal.h);
 		
 
-		if (colorCorrection.colorCorrection)
+		if (colorCorrection())
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, colorCorrection.fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.colorCorrection.fbo);
 		}
 		else
 		{
@@ -5479,18 +5509,18 @@ namespace gl3d
 
 	#pragma region color corection
 
-		if (colorCorrection.colorCorrection)
+		if (colorCorrection())
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
-			colorCorrection.shader.bind();
-			glUniform1i(colorCorrection.u_texture, 0);
+			internal.colorCorrection.shader.bind();
+			glUniform1i(internal.colorCorrection.u_texture, 0);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, colorCorrection.texture);
+			glBindTexture(GL_TEXTURE_2D, internal.colorCorrection.texture);
 
-			glUniform1i(colorCorrection.u_lookup, 1);
+			glUniform1i(internal.colorCorrection.u_lookup, 1);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, colorCorrection.currentTexture.id);
+			glBindTexture(GL_TEXTURE_2D, internal.colorCorrection.currentTexture.t.id);
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
@@ -5565,7 +5595,7 @@ namespace gl3d
 
 		adaptiveResolution.resize(internal.adaptiveW, internal.adaptiveH);
 		
-		colorCorrection.resize(x, y);
+		internal.colorCorrection.resize(x, y);
 	}
 
 	void Renderer3D::clearAllLoadedResource()
@@ -5660,7 +5690,7 @@ namespace gl3d
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
 		copyDepth.clear();
-		colorCorrection.clear();
+		internal.colorCorrection.clear();
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])

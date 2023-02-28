@@ -31902,7 +31902,7 @@ namespace gl3d
 
 		//std::pair< std::string, const char*>{"name", "value"}
 		//#pragma shaderSources
-      std::pair<std::string, const char*>{"ssao.frag", "﻿#version 330 core\n"
+      std::pair<std::string, const char*>{"ssao.frag", "#version 330 core\n"
 "out float fragColor;\n"
 "noperspective in highp vec2 v_texCoords;\n"
 "uniform sampler2D u_gPosition; \n"
@@ -32712,15 +32712,31 @@ namespace gl3d
 "tmpvar_1 = texture (u_texture, v_texCoords);\n"
 "int tmpvar_2;\n"
 "tmpvar_2 = int(floor((64.0 * tmpvar_1.z)));\n"
-"vec2 finalCellPos_3;\n"
-"ivec2 index2_4;\n"
-"index2_4.x = (int(mod (tmpvar_2, 8)));\n"
-"index2_4.y = (tmpvar_2 / 8);\n"
-"vec2 tmpvar_5;\n"
-"tmpvar_5 = ((vec2(0.125, 0.125) * tmpvar_1.xy) + (vec2(0.125, 0.125) * vec2(index2_4)));\n"
-"finalCellPos_3.x = tmpvar_5.x;\n"
-"finalCellPos_3.y = (1.0 - tmpvar_5.y);\n"
-"a_color.xyz = texture (u_lookup, finalCellPos_3).xyz;\n"
+"int tmpvar_3;\n"
+"tmpvar_3 = min (int(ceil(\n"
+"(64.0 * tmpvar_1.z)\n"
+")), 63);\n"
+"vec2 finalCellPos_4;\n"
+"ivec2 index2_5;\n"
+"index2_5.x = (int(mod (tmpvar_2, 8)));\n"
+"index2_5.y = (tmpvar_2 / 8);\n"
+"vec2 tmpvar_6;\n"
+"tmpvar_6 = (((vec2(0.125, 0.125) * tmpvar_1.xy) + (vec2(0.125, 0.125) * \n"
+"vec2(index2_5)\n"
+")) + vec2(0.001, 0.001));\n"
+"finalCellPos_4.x = tmpvar_6.x;\n"
+"finalCellPos_4.y = (1.0 - tmpvar_6.y);\n"
+"vec2 finalCellPos_7;\n"
+"ivec2 index2_8;\n"
+"index2_8.x = (int(mod (tmpvar_3, 8)));\n"
+"index2_8.y = (tmpvar_3 / 8);\n"
+"vec2 tmpvar_9;\n"
+"tmpvar_9 = (((vec2(0.125, 0.125) * tmpvar_1.xy) + (vec2(0.125, 0.125) * \n"
+"vec2(index2_8)\n"
+")) + vec2(0.001, 0.001));\n"
+"finalCellPos_7.x = tmpvar_9.x;\n"
+"finalCellPos_7.y = (1.0 - tmpvar_9.y);\n"
+"a_color.xyz = mix (texture (u_lookup, finalCellPos_4).xyz, texture (u_lookup, finalCellPos_7).xyz, vec3(((64.0 * tmpvar_1.z) - float(tmpvar_2))));\n"
 "a_color.w = 1.0;\n"
 "}\n"},
 
@@ -36356,7 +36372,7 @@ namespace gl3d
 		antiAlias.create(errorReporter, fileOpener);
 		adaptiveResolution.create(x, y);
 		copyDepth.create(errorReporter, fileOpener);
-		colorCorrection.create(x, y, errorReporter, fileOpener);
+		internal.colorCorrection.create(x, y, errorReporter, fileOpener);
 
 		internal.pBRtextureMaker.init(errorReporter, fileOpener);
 	}
@@ -38686,6 +38702,16 @@ namespace gl3d
 		internal.ssao.ssao_finalColor_exponent = std::min(std::max(1.f, exponent), 64.f);
 	}
 
+	bool &Renderer3D::colorCorrection()
+	{
+		return internal.colorCorrection.colorCorrection;
+	}
+
+	ColorLookupTexture &Renderer3D::colorCorrectionTexture()
+	{
+		return internal.colorCorrection.currentTexture;
+	}
+
 	bool &Renderer3D::bloom()
 	{
 		return this->internal.lightShader.bloom;
@@ -38853,6 +38879,7 @@ namespace gl3d
 			j["exposure"] = getExposure();
 			j["normal mapping"] = isNormalMappingEnabeled();
 			j["light subscatter"] = isLightSubScatteringEnabeled();
+			j["colorCorrection"] = colorCorrection();
 
 			//fxaa
 			{
@@ -38936,6 +38963,12 @@ namespace gl3d
 			if (exposure.is_number())
 			{
 				setExposure(exposure);
+			}
+
+			auto colorCorrection = rez["colorCorrection"];
+			if (colorCorrection.is_number())
+			{
+				this->colorCorrection() = colorCorrection;
 			}
 
 			auto normalMapping = rez["normal mapping"];
@@ -39623,6 +39656,19 @@ namespace gl3d
 
 	};
 
+
+	ColorLookupTexture Renderer3D::loadColorLookupTextureFromFile(const char *path)
+	{
+		GpuTexture gpuTexture;
+		gpuTexture.loadTextureFromFile(path, fileOpener, -1, 3);
+		glBindTexture(GL_TEXTURE_2D, gpuTexture.id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		return {gpuTexture.id};
+	}
 
 	void Renderer3D::render(float deltaTime)
 	{
@@ -41732,9 +41778,9 @@ namespace gl3d
 		glViewport(0, 0, internal.w, internal.h);
 		
 
-		if (colorCorrection.colorCorrection)
+		if (colorCorrection())
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, colorCorrection.fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, internal.colorCorrection.fbo);
 		}
 		else
 		{
@@ -41776,18 +41822,18 @@ namespace gl3d
 
 	#pragma region color corection
 
-		if (colorCorrection.colorCorrection)
+		if (colorCorrection())
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
-			colorCorrection.shader.bind();
-			glUniform1i(colorCorrection.u_texture, 0);
+			internal.colorCorrection.shader.bind();
+			glUniform1i(internal.colorCorrection.u_texture, 0);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, colorCorrection.texture);
+			glBindTexture(GL_TEXTURE_2D, internal.colorCorrection.texture);
 
-			glUniform1i(colorCorrection.u_lookup, 1);
+			glUniform1i(internal.colorCorrection.u_lookup, 1);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, colorCorrection.currentTexture.id);
+			glBindTexture(GL_TEXTURE_2D, internal.colorCorrection.currentTexture.t.id);
 
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
@@ -41862,7 +41908,7 @@ namespace gl3d
 
 		adaptiveResolution.resize(internal.adaptiveW, internal.adaptiveH);
 		
-		colorCorrection.resize(x, y);
+		internal.colorCorrection.resize(x, y);
 	}
 
 	void Renderer3D::clearAllLoadedResource()
@@ -41957,7 +42003,7 @@ namespace gl3d
 		adaptiveResolution.clear();
 		internal.pBRtextureMaker.clear();
 		copyDepth.clear();
-		colorCorrection.clear();
+		internal.colorCorrection.clear();
 	}
 
 	SkyBox Renderer3D::loadSkyBox(const char *names[6])
