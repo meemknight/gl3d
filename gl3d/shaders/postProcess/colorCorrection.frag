@@ -12,6 +12,7 @@ int h=8;
 
 vec3 sampleBlueCube(int index, vec2 rg)
 {
+
 	ivec2 index2;
 	index2.x = index % w;
 	index2.y = index / w;
@@ -20,7 +21,7 @@ vec3 sampleBlueCube(int index, vec2 rg)
 
 	vec2 cellPos = cellSize * rg;
 
-	vec2 finalCellPos = cellPos + cellSize*index2;
+	vec2 finalCellPos = cellPos + cellSize*index2 +vec2(0.001);
 
 	finalCellPos.y = 1-finalCellPos.y;
 	return texture(u_lookup, finalCellPos).rgb;
@@ -34,9 +35,12 @@ void main()
 	int index1 = int(floor(color.b * w * h));
 	int index2 = int(ceil(color.b * w * h));
 
+	index2 = min(index2, w*h-1);
+
 	float decimal = indexFloat - index1;
 
 	a_color.rgb = mix(sampleBlueCube(index1, color.rg), sampleBlueCube(index2, color.rg), vec3(decimal));
+	//a_color.rgb = sampleBlueCube(index1, color.rg);
 	a_color.a = 1;
 
 }

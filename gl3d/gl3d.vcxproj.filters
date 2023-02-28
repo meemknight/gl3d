@@ -105,7 +105,6 @@
     <None Include="shaders\deferred\geometryPass.vert" />
     <None Include="shaders\deferred\geometryPass.frag" />
     <None Include="shaders\deferred\lightingPass.frag" />
-    <None Include="shaders\ssao\ssao.frag" />
     <None Include="shaders\ssao\blur.frag" />
     <None Include="shaders\postProcess\postProcess.frag" />
     <None Include="shaders\postProcess\gausianBlur.frag" />
@@ -133,5 +132,6 @@
     <None Include="shaders\hbao\hbao.frag" />
     <None Include="shaders\copyDepth.frag" />
     <None Include="shaders\postProcess\colorCorrection.frag" />
+    <None Include="shaders\ssao\ssao.frag" />
   </ItemGroup>
 </Project>

@@ -104,6 +104,10 @@ int main()
 
 	gl3d::GpuTexture lut;
 	lut.loadTextureFromFile("resources/testLut.png", renderer.fileOpener, 0, 4);
+	//lut.loadTextureFromFile("resources/neutral-lut.png", renderer.fileOpener, 0, 4);
+	glBindTexture(GL_TEXTURE_2D, lut.id);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	renderer.colorCorrection.currentTexture = lut;
 
