@@ -4259,14 +4259,14 @@ namespace gl3d
 							internal.directionalLights[lightIndex].changedThisFrame = false;
 
 							glm::vec3 lightDir = internal.directionalLights[lightIndex].direction;
-							//glm::mat4 lightView = lookAtSafe(-lightDir, {}, { 0.f,1.f,0.f });
 
-							glm::mat4 lightView = lookAtSafe(camera.position - (lightDir), camera.position, { 0.f,1.f,0.f });
-							//glm::mat4 lightView = lookAtSafe(camera.position, camera.position + lightDir, { 0.f,1.f,0.f });
+							glm::vec3 direction = lightDir;
+							glm::vec3 eye = camera.position - (direction);
+							glm::vec3 center = eye + direction;
+
+							glm::mat4 lightView = lookAtSafe(eye, center, {0.f,1.f,0.f});//todo option to add a custom vector direction
 
 							//zoffset is used to move the light further
-
-
 							float zOffsets[] = { 15 / 200.f,0,0 };
 
 							glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,

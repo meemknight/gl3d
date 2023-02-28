@@ -967,6 +967,11 @@ int main()
 				ImGui::DragInt("Directional light shadow texture size", &lightSize);
 				renderer.setDirectionalLightShadowSize(lightSize);
 
+				ImGui::DragFloat3("cascades", renderer.directionalShadows.frustumSplits, 0.01, 0, 1);
+
+				ImGui::DragFloat("camera far plane", &renderer.camera.farPlane, 1, 10, 500);
+
+
 				if (directionalLightSelector < -1)
 				{
 					directionalLightSelector = -1;
