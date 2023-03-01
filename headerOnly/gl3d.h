@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl32 --Vlad Luta -- 
-//built on 2023-02-28
+//built on 2023-03-01
 ////////////////////////////////////////////////
 
 
@@ -34926,7 +34926,7 @@ namespace gl3d
 
 			glm::ivec2 currentDimensions = {};
 
-			bool colorCorrection = 1;
+			bool colorCorrection = 0; //todo also check if texture is present
 
 			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
 

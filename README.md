@@ -79,6 +79,8 @@ Features and todos:
 ---
 - [x] Chromatic aberation
 ---
+- [x] Color correction (color grading)
+---
 - [x] Animations
 - [ ] Skinning matrix computed on the gpu
 ---

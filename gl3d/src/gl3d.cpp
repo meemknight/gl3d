@@ -3527,7 +3527,8 @@ namespace gl3d
 									float interpolate;
 								};
 
-								auto searchFrame = [&](auto& frames, float time)
+								//trans, rot, scale
+								auto searchFrame = [&](auto& frames, float time, int type)
 								{
 									
 									int size = frames.size();
@@ -3556,9 +3557,55 @@ namespace gl3d
 											}
 											else
 											{
-												float secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
-												float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
-												return FoundFrames{frame, frame + 1, interpolation};
+												float secondTime = 0;
+
+												if (type == 0)
+												{
+													if (animation.keyFramesTrans[b].size() <= frame + 1)
+													{
+														secondTime = 0;
+													}else
+													{
+														secondTime = animation.keyFramesTrans[b][frame + 1].timeStamp;
+													}
+												}
+												else if (type == 1)
+												{
+													if (animation.keyFramesRot[b].size() <= frame + 1)
+													{
+														secondTime = 0;
+													}
+													else
+													{
+														secondTime = animation.keyFramesRot[b][frame + 1].timeStamp;
+													}
+												}
+												else if (type == 2)
+												{
+													if (animation.keyFramesScale[b].size() <= frame + 1)
+													{
+														secondTime = 0;
+													}
+													else
+													{
+														secondTime = animation.keyFramesScale[b][frame + 1].timeStamp;
+													}
+												}
+												else
+												{
+													assert(0);
+												}
+
+												if (secondTime != 0)
+												{
+													float interpolation = (time - currentFrame.timeStamp) / (secondTime - currentFrame.timeStamp);
+													return FoundFrames{frame, frame + 1, interpolation};
+												}
+												else
+												{
+													//last frame reached
+													return FoundFrames{frame, frame, 0};
+												}
 											}
 										}
 										else //not found this time
@@ -3599,7 +3646,7 @@ namespace gl3d
 								{
 									if (!animation.keyFramesRot[b].empty())
 									{
-										auto foundFrames = searchFrame(animation.keyFramesRot[b], time);
+										auto foundFrames = searchFrame(animation.keyFramesRot[b], time, 1);
 
 										rotation = glm::slerp(
 											animation.keyFramesRot[b][foundFrames.id1].rotation,
@@ -3617,7 +3664,7 @@ namespace gl3d
 									if (!animation.keyFramesTrans[b].empty())
 									{
 
-										auto foundFrames = searchFrame(animation.keyFramesTrans[b], time);
+										auto foundFrames = searchFrame(animation.keyFramesTrans[b], time, 0);
 
 										translation = lerp(
 											animation.keyFramesTrans[b][foundFrames.id1].translation,
@@ -3636,7 +3683,7 @@ namespace gl3d
 									if (!animation.keyFramesScale[b].empty())
 									{
 
-										auto foundFrames = searchFrame(animation.keyFramesScale[b], time);
+										auto foundFrames = searchFrame(animation.keyFramesScale[b], time, 2);
 
 										scale = lerp(
 											animation.keyFramesScale[b][foundFrames.id1].scale,
@@ -3775,7 +3822,7 @@ namespace gl3d
 					{
 						if (!(potentialAnimations && j.hasBones))
 						{
-							if (shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
+							if (frustumCulling && shouldCullObject(j.minBoundary, j.maxBoundary, modelViewProjMat))
 							{
 								continue;
 							}

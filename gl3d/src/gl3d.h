@@ -424,7 +424,7 @@ namespace gl3d
 
 			glm::ivec2 currentDimensions = {};
 
-			bool colorCorrection = 1;
+			bool colorCorrection = 0; //todo also check if texture is present
 
 			void create(int w, int h, ErrorReporter &errorReporter, FileOpener &fileOpener);
 

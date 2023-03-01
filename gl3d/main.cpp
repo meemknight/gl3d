@@ -158,7 +158,7 @@ int main()
 		"resources/skyBoxes/ocean/back.jpg" };
 
 	renderer.skyBox = renderer.loadSkyBox(names);
-	//renderer.skyBox = renderer.atmosfericScattering({0,-1,0}, {0.2,0.2,0.5}, {0.6,0.2,0.1}, {}, false, 10);
+	//renderer.skyBox = renderer.atmosfericScattering(glm::normalize(glm::vec3{0,0.7,0.3}), {0.2,0.2,0.5}, {0.6,0.2,0.1}, {}, false, 10);
 
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/WinterForest_Ref.hdr");
 	//renderer.skyBox = renderer.loadHDRSkyBox("resources/skyBoxes/Newport_Loft_Ref.hdr");
@@ -422,9 +422,10 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	auto rockModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
+	auto sphereModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
+	auto rockModel = renderer.loadModel("resources/the_perfect_steve_rigged.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
-	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0);
+	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0, 1);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
 	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
@@ -438,7 +439,7 @@ int main()
 		cubeIndices);
 
 	
-	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
+	//auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
 
