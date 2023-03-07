@@ -290,7 +290,10 @@ namespace gl3d
 		void setEntityAnimate(Entity& e, bool animate); //true = display animations. To pause set the animation speed to 0.
 		bool getEntityAnimate(Entity& e); //returns true if it is animating
 		bool entityCanAnimate(Entity& e); //returns true if it is can be animated
+		int getEntityJointIndex(Entity &e, std::string name); //returns -1 on error
 
+		bool getEntityJointTransform(Entity &e, std::string boneName, Transform &t); //returns 0 on error
+		bool getEntityJointTransform(Entity &e, int boneIndex, Transform &t); //returns 0 on error
 
 		//this is used for apis like imgui.
 		std::vector<char*> *getEntityMeshesNames(Entity& e);

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
-//gl32 --Vlad Luta -- 
-//built on 2023-03-01
+//gl3D --Vlad Luta -- 
+//built on 2023-03-07
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -38619,6 +38619,52 @@ namespace gl3d
 		auto& en = internal.cpuEntities[i];
 
 		return en.canBeAnimated();
+	}
+
+	int Renderer3D::getEntityJointIndex(Entity &e, std::string name)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return -1; } //warn or sthing
+		
+		auto &en = internal.cpuEntities[i];
+
+		int index = 0;
+		for (auto &j : en.joints)
+		{
+			if (j.name == name)
+			{
+				return index;
+			}
+			index++;
+		}
+		return -1;
+	}
+
+	bool Renderer3D::getEntityJointTransform(Entity &e, std::string boneName, Transform &t)
+	{
+		return getEntityJointTransform(e, getEntityJointIndex(e, boneName), t);
+	}
+
+	bool Renderer3D::getEntityJointTransform(Entity &e, int boneIndex, Transform &t)
+	{
+		t = {};
+		if (boneIndex < 0) { return false; }
+
+
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return -1; } //warn or sthing
+		auto &en = internal.cpuEntities[i];
+		
+		if (en.joints.size() <= boneIndex)
+		{
+			return false;
+		}
+
+		t.position = en.joints[boneIndex].trans;
+		t.rotation = glm::eulerAngles(en.joints[boneIndex].rotation);
+		t.scale = glm::vec3{1.f};
+
+		return true;
 	}
 
 	void Renderer3D::setExposure(float exposure)

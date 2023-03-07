@@ -11,7 +11,7 @@ headerFiles = ["Core", "ErrorReporting", "Animations", "json", "stb_image_write"
 
 initialtext = \
 """////////////////////////////////////////////////
-//gl32 --Vlad Luta -- 
+//gl3D --Vlad Luta -- 
 //built on {date}
 ////////////////////////////////////////////////
 """

@@ -21,6 +21,7 @@ namespace gl3d
 		glm::quat rotation{ 0.f,0.f,0.f,1.f };
 		glm::vec3 trans{ 1.f,1.f,1.f };
 		glm::vec3 scale{ 1.f,1.f,1.f };
+		glm::mat4 worldMatrix; //for extracting position data per bone
 
 		//int index{};
 		//int root = 0;

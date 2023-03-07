@@ -422,10 +422,10 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/mutant/2/Biomech_Mutant_Skin_2.gltf", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
-	auto sphereModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
-	auto rockModel = renderer.loadModel("resources/the_perfect_steve_rigged.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
+	//auto sphereModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
+	auto rockModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
-	//auto sphereModel = renderer.loadModel("resources/obj/sphere.obj", 0, 1);
+	auto sphereModel = renderer.loadModel("resources/minecraft_sword.glb", 0, 1);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
 	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
@@ -1404,6 +1404,20 @@ int main()
 		//ImGui::ShowDemoWindow(0);
 
 	#pragma endregion
+
+
+		if (models.size() > 0)
+		{
+			gl3d::Transform t;
+			renderer.getEntityJointTransform(models[0], "arm.r", t);
+
+			if (models.size() > 1)
+			{
+				t.scale = glm::vec3(1);
+				renderer.setEntityTransform(models[1], t);
+			}
+		}
+
 
 
 	#pragma region camera

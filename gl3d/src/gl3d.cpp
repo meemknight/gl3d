@@ -4,6 +4,7 @@
 #include <random>
 #include <string>
 #include "json.h"
+#include <glm/gtx/matrix_decompose.hpp>
 
 #ifdef _MSC_VER
 //#pragma warning( disable : 4244 4305 4267 4996 4018)
@@ -2307,6 +2308,55 @@ namespace gl3d
 		return en.canBeAnimated();
 	}
 
+	int Renderer3D::getEntityJointIndex(Entity &e, std::string name)
+	{
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return -1; } //warn or sthing
+		
+		auto &en = internal.cpuEntities[i];
+
+		int index = 0;
+		for (auto &j : en.joints)
+		{
+			if (j.name == name)
+			{
+				return index;
+			}
+			index++;
+		}
+		return -1;
+	}
+
+	bool Renderer3D::getEntityJointTransform(Entity &e, std::string boneName, Transform &t)
+	{
+		return getEntityJointTransform(e, getEntityJointIndex(e, boneName), t);
+	}
+
+	bool Renderer3D::getEntityJointTransform(Entity &e, int boneIndex, Transform &t)
+	{
+		t = {};
+		if (boneIndex < 0) { return false; }
+
+
+		auto i = internal.getEntityIndex(e);
+		if (i < 0) { return -1; } //warn or sthing
+		auto &en = internal.cpuEntities[i];
+		
+		if (en.joints.size() <= boneIndex)
+		{
+			return false;
+		}
+
+		
+		glm::mat4 mat = en.joints[boneIndex].worldMatrix;
+
+		mat = getTransformMatrix(en.transform) * mat;
+
+		t.setFromMatrix(mat);
+
+		return true;
+	}
+
 	void Renderer3D::setExposure(float exposure)
 	{
 		internal.lightShader.lightPassUniformBlockCpuData.exposure =
@@ -3343,6 +3393,24 @@ namespace gl3d
 
 	};
 
+	void applyPoseToJointsForExtractingPositions(
+		std::vector<glm::mat4> &skinningMatrixes,
+		std::vector<Joint> &joints, int index,
+		glm::mat4 parentTransform
+	)
+	{
+		auto currentLocalTransform = skinningMatrixes[index];
+		auto worldSpaceTransform = parentTransform * currentLocalTransform;
+
+		auto &j = joints[index];
+		for (auto &c : j.children)
+		{
+			applyPoseToJointsForExtractingPositions(skinningMatrixes, joints, c, worldSpaceTransform);
+		}
+
+		joints[index].worldMatrix = worldSpaceTransform * j.localBindTransform;
+
+	};
 
 	ColorLookupTexture Renderer3D::loadColorLookupTextureFromFile(const char *path)
 	{
@@ -3762,6 +3830,11 @@ namespace gl3d
 						{
 							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
 								r, glm::mat4(1.f));
+						}
+
+						for (auto r : animation.root)
+						{
+							applyPoseToJointsForExtractingPositions(skinningMatrixes, entity.joints, r, glm::mat4(1.f));
 						}
 
 					#pragma region save animation data to the gpu

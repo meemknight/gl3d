@@ -86,25 +86,25 @@ int main()
 	//auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
 
 
-	gl3d::Model helmetModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
+	gl3d::Model sword = renderer.loadModel("resources/minecraft_sword.glb", gl3d::TextureLoadQuality::maxQuality, 1);
 	//gl3d::Model ballModel = renderer.loadModel("resources/sphere2.obj", 0);
-	gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj", 1);
-	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", 1);
-	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl");
+	//gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj", gl3d::TextureLoadQuality::maxQuality);
+	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1);
+	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl", gl3d::TextureLoadQuality::leastPossible);
 	
 
 	gl3d::Transform transform{};
 
 	//transform.rotation.x = glm::radians(90.f);
-	gl3d::Entity entity = renderer.createEntity(ballModel, transform);
+	gl3d::Entity entity = renderer.createEntity(steveModel, transform);
+
+	gl3d::Entity swordEntity = renderer.createEntity(steveModel, transform);
+
+
 	//renderer.setEntityMeshMaterial(entity, 0, steveMaterial[0]);
 
-	auto textures = renderer.getEntityMeshMaterialTextures(entity, 0);
-
-	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.albedoTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.emissiveTexture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-	gl3d::GpuTexture{ renderer.getTextureOpenglId(textures.pbrTexture.texture) }.setTextureQuality(gl3d::TextureLoadQuality::leastPossible);
-
+	renderer.setEntityAnimate(entity, true);
+	
 
 	//renderer.setEntityMeshMaterial(entity, 0, rockMaterialModel[0]);
 
@@ -140,6 +140,12 @@ int main()
 		}
 
 	#pragma endregion
+
+		gl3d::Transform t;
+		renderer.getEntityJointTransform(entity, "arm.r", t);
+		t.scale = glm::vec3(1);
+		renderer.setEntityTransform(swordEntity, t);
+
 
 
 	#pragma region camera
@@ -185,7 +191,7 @@ int main()
 
 
 		//rotate camera
-		if (1)
+		if (0)
 		{
 			static float rotation = 0;
 			rotation += 3.141592 * deltaTime * 0.7;
