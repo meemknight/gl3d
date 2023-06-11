@@ -24,7 +24,7 @@ vec3 sampleBlueCube(int index, vec2 rg)
 
 	vec2 cellPos = cellSize * rg;
 
-	vec2 finalCellPos = cellPos + cellSize*index2 +vec2(0.001);
+	vec2 finalCellPos = cellPos + cellSize*index2 + vec2(0.001);
 
 	finalCellPos.y = 1-finalCellPos.y;
 	return texture(u_lookup, finalCellPos).rgb;

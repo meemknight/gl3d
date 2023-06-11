@@ -100,7 +100,8 @@ void main()
 	//if(color.a < 0.5){discard;}
 
 
-	a_color.rgb = (bloom * u_bloomIntensity) + (bloomNotBlurred + color.rgb) * ssaof;
+	//a_color.rgb = (bloom * u_bloomIntensity) + (bloomNotBlurred + color.rgb) * ssaof;
+	a_color.rgb = (bloom * u_bloomIntensity) + (color.rgb) * ssaof;
 	//a_color = bloom;
 	
 	a_color.rgb = ACESFitted(a_color.rgb * u_exposure);

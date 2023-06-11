@@ -2347,14 +2347,28 @@ namespace gl3d
 			return false;
 		}
 
+		glm::mat4 beginPos = en.joints[boneIndex].localBindTransform;
+
+		if (!en.animate())
+		{
+			//t.position = en.joints[boneIndex].trans;
+			//t.scale = en.joints[boneIndex].scale;
+			//t.rotation = glm::eulerAngles(en.joints[boneIndex].rotation);
 		
-		glm::mat4 mat = en.joints[boneIndex].worldMatrix;
-
-		mat = getTransformMatrix(en.transform) * mat;
-
-		t.setFromMatrix(mat);
-
-		return true;
+			//glm::mat4 mat = t.getTransformMatrix();
+			glm::mat4 mat = beginPos;
+			mat = getTransformMatrix(en.transform) * mat;
+			t.setFromMatrix(mat);
+			return true;
+		}
+		else
+		{
+			glm::mat4 mat = en.joints[boneIndex].worldMatrix;
+			mat = getTransformMatrix(en.transform) * mat * beginPos;
+			t.setFromMatrix(mat);
+			return true;
+		}
+		
 	}
 
 	void Renderer3D::setExposure(float exposure)
@@ -3513,6 +3527,7 @@ namespace gl3d
 		auto projectionMatrix		= camera.getProjectionMatrix();
 		auto worldProjectionMatrix	= projectionMatrix * worldToViewMatrix;
 
+		//todo pass last and new camera matrix to the ssr to better calculate the ssr color
 		#pragma region check camera changes
 
 			bool cameraChanged = false;
@@ -3848,6 +3863,65 @@ namespace gl3d
 				}
 
 			}
+		#pragma endregion
+
+
+		#pragma region setup bindless textures
+			//todo cache stuff?
+			for (int i = 0; i < internal.materials.size(); i++)
+			{
+				auto &textures = internal.materialTexturesData[i];
+
+				auto &material = internal.materials[i];
+
+				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
+				if (albedoData >= 0)
+				{
+					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
+				}
+				else
+				{
+					material.albedoSampler = 0;
+				}
+
+				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
+				if (emmisiveData >= 0)
+				{
+					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
+				}
+				else
+				{
+					material.emmissiveSampler = 0;
+				}
+
+				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
+				if (materialData >= 0)
+				{
+					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
+					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
+				}
+				else
+				{
+					material.rmaSampler = 0;
+					material.rmaLoaded = 0;
+				}
+
+			}
+
+		#pragma endregion
+
+
+		#pragma region send material data
+			//material buffer //todo lazyness or sthing, don't forget to also change it on clearing all data
+			if (internal.materials.size())
+			{
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
+					, &internal.materials[0], GL_STREAM_DRAW);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
+					internal.lightShader.materialBlockBuffer);
+			}
+
 		#pragma endregion
 
 
@@ -4584,50 +4658,6 @@ namespace gl3d
 		#pragma endregion
 
 
-		#pragma region setup bindless textures
-			//todo cache stuff?
-			for (int i=0; i< internal.materials.size(); i++)
-			{
-				auto &textures = internal.materialTexturesData[i];
-
-				auto& material = internal.materials[i];
-
-				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
-				if (albedoData >= 0)
-				{
-					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
-				}
-				else
-				{
-					material.albedoSampler = 0;
-				}
-				
-				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
-				if (emmisiveData >= 0)
-				{
-					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
-				}
-				else
-				{
-					material.emmissiveSampler = 0;
-				}
-
-				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
-				if (materialData >= 0)
-				{
-					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
-					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
-				}
-				else
-				{
-					material.rmaSampler = 0;
-					material.rmaLoaded = 0;
-				}
-
-			}
-
-		#pragma endregion
-
 		#pragma region clear gbuffer
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
@@ -4764,18 +4794,6 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-	#pragma region send material data
-		//material buffer //todo lazyness or sthing, don't forget to also change it on clearing all data
-		if (internal.materials.size())
-		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) *internal.materials.size()
-				, &internal.materials[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
-				internal.lightShader.materialBlockBuffer);
-		}
-		
-	#pragma endregion
 
 		auto gBufferRender = [&](bool transparentPhaze)
 		{
@@ -5137,7 +5155,7 @@ namespace gl3d
 		if (internal.lightShader.useSSAO)
 		{
 
-			if (1)
+			if (internal.lightShader.useTheHbaoImplementation)
 			{
 				//ssao
 

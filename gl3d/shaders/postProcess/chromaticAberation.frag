@@ -24,7 +24,6 @@ float toDistance(vec2 coords)
 
 void main()
 {
-	
 
 	
 	vec2 strength = u_strength / u_windowSize;

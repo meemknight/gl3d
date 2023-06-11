@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl3D --Vlad Luta -- 
-//built on 2023-03-07
+//built on 2023-05-02
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -36318,6 +36318,7 @@ namespace gl3d
 #include <random>
 #include <string>
 
+#include <glm/gtx/matrix_decompose.hpp>
 
 #ifdef _MSC_VER
 //#pragma warning( disable : 4244 4305 4267 4996 4018)
@@ -38660,11 +38661,28 @@ namespace gl3d
 			return false;
 		}
 
-		t.position = en.joints[boneIndex].trans;
-		t.rotation = glm::eulerAngles(en.joints[boneIndex].rotation);
-		t.scale = glm::vec3{1.f};
+		glm::mat4 beginPos = en.joints[boneIndex].localBindTransform;
 
-		return true;
+		if (!en.animate())
+		{
+			//t.position = en.joints[boneIndex].trans;
+			//t.scale = en.joints[boneIndex].scale;
+			//t.rotation = glm::eulerAngles(en.joints[boneIndex].rotation);
+		
+			//glm::mat4 mat = t.getTransformMatrix();
+			glm::mat4 mat = beginPos;
+			mat = getTransformMatrix(en.transform) * mat;
+			t.setFromMatrix(mat);
+			return true;
+		}
+		else
+		{
+			glm::mat4 mat = en.joints[boneIndex].worldMatrix;
+			mat = getTransformMatrix(en.transform) * mat * beginPos;
+			t.setFromMatrix(mat);
+			return true;
+		}
+		
 	}
 
 	void Renderer3D::setExposure(float exposure)
@@ -39703,6 +39721,24 @@ namespace gl3d
 
 	};
 
+	void applyPoseToJointsForExtractingPositions(
+		std::vector<glm::mat4> &skinningMatrixes,
+		std::vector<Joint> &joints, int index,
+		glm::mat4 parentTransform
+	)
+	{
+		auto currentLocalTransform = skinningMatrixes[index];
+		auto worldSpaceTransform = parentTransform * currentLocalTransform;
+
+		auto &j = joints[index];
+		for (auto &c : j.children)
+		{
+			applyPoseToJointsForExtractingPositions(skinningMatrixes, joints, c, worldSpaceTransform);
+		}
+
+		joints[index].worldMatrix = worldSpaceTransform * j.localBindTransform;
+
+	};
 
 	ColorLookupTexture Renderer3D::loadColorLookupTextureFromFile(const char *path)
 	{
@@ -40122,6 +40158,11 @@ namespace gl3d
 						{
 							applyPoseToJoints(skinningMatrixes, appliedSkinningMatrixes, entity.joints,
 								r, glm::mat4(1.f));
+						}
+
+						for (auto r : animation.root)
+						{
+							applyPoseToJointsForExtractingPositions(skinningMatrixes, entity.joints, r, glm::mat4(1.f));
 						}
 
 					#pragma region save animation data to the gpu

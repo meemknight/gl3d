@@ -423,30 +423,30 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/amogus.glb", 0, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedModels/arrow.glb", 0,  1.f);
 	//auto sphereModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
-	auto rockModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
+	//auto rockModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
-	auto sphereModel = renderer.loadModel("resources/minecraft_sword.glb", 0, 1);
+	//auto sphereModel = renderer.loadModel("resources/diamond.glb", 0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
-	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb");
+	auto levelModel = renderer.loadModel("resources/gltf/jack.glb", gl3d::TextureLoadQuality::maxQuality, 1);
 	//auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
 	//auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
 	
 	auto defaultMat = renderer.createMaterial(gl3d::TextureLoadQuality::dontSet);
 
-	auto levelModel = renderer.createModelFromData(defaultMat, "test",
-		sizeof(cubePositionsNormals)/sizeof(float), cubePositionsNormals, sizeof(cubeIndices)/sizeof(int),
-		cubeIndices);
+	//auto levelModel = renderer.createModelFromData(defaultMat, "test",
+	//	sizeof(cubePositionsNormals)/sizeof(float), cubePositionsNormals, sizeof(cubeIndices)/sizeof(int),
+	//	cubeIndices);
 
 	
-	//auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
+	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
 
-	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj");
+	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj", gl3d::TextureLoadQuality::maxQuality, 1);
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
+	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj",0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj",0, 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
@@ -459,6 +459,7 @@ int main()
 	//auto rockModel = renderer.loadModel("resources/obj/sphere.obj");
 	auto barelModel = renderer.loadModel("resources/obj/sphere.obj", gl3d::TextureLoadQuality::maxQuality, 1.f);
 	
+
 	auto rez = loadProfiler.end();
 
 
@@ -798,6 +799,7 @@ int main()
 				ImGui::PushID(__COUNTER__);
 
 				ImGui::Checkbox("SSAO", &renderer.internal.lightShader.useSSAO);
+				ImGui::Checkbox("HBAO", &renderer.internal.lightShader.useTheHbaoImplementation);
 				ImGui::SliderFloat("SSAO bias", &renderer.internal.ssao.ssaoShaderUniformBlockData.bias, 0, 0.5);
 				ImGui::SliderFloat("SSAO radius", &renderer.internal.ssao.ssaoShaderUniformBlockData.radius, 0, 2);
 				ImGui::SliderInt("SSAO sample count", &renderer.internal.ssao.ssaoShaderUniformBlockData.samplesTestSize, 0, 64);
@@ -1208,8 +1210,8 @@ int main()
 			if(!models.empty() && itemCurrent < items.size())
 			{
 				auto transform = renderer.getEntityTransform(models[itemCurrent]);
-
-				auto mat = transform.getTransformMatrix();
+				//
+				//auto mat = transform.getTransformMatrix();
 				//transform.setFromMatrix(mat);
 
 				ImGui::NewLine();
@@ -1261,7 +1263,7 @@ int main()
 				{
 					transform.scale = glm::vec3(s);
 				}
-
+				
 				renderer.setEntityTransform(models[itemCurrent], transform);
 
 				if (subItemCurent < renderer.getEntityMeshesCount(models[itemCurrent]))
@@ -1406,17 +1408,17 @@ int main()
 	#pragma endregion
 
 
-		if (models.size() > 0)
-		{
-			gl3d::Transform t;
-			renderer.getEntityJointTransform(models[0], "arm.r", t);
-
-			if (models.size() > 1)
-			{
-				t.scale = glm::vec3(1);
-				renderer.setEntityTransform(models[1], t);
-			}
-		}
+		//if (models.size() > 0)
+		//{
+		//	gl3d::Transform t;
+		//	renderer.getEntityJointTransform(models[0], "arm.r", t);
+		//
+		//	if (models.size() > 1)
+		//	{
+		//		t.scale = glm::vec3(1);
+		//		renderer.setEntityTransform(models[1], t);
+		//	}
+		//}
 
 
 

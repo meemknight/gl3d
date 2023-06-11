@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl3D --Vlad Luta -- 
-//built on 2023-03-07
+//built on 2023-05-02
 ////////////////////////////////////////////////
 
 
@@ -318,7 +318,7 @@ namespace gl3d
 		glm::quat rotation{ 0.f,0.f,0.f,1.f };
 		glm::vec3 trans{ 1.f,1.f,1.f };
 		glm::vec3 scale{ 1.f,1.f,1.f };
-		//Transform currentAnimationTransform;
+		glm::mat4 worldMatrix; //for extracting position data per bone
 
 		//int index{};
 		//int root = 0;
