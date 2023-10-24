@@ -425,12 +425,12 @@ int main()
 	//auto sphereModel = renderer.loadModel("resources/knight/uploads_files_1950170_Solus_the_knight.gltf", gl3d::TextureLoadQuality::maxQuality, 1.f);
 	//auto rockModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1.f);
 	//auto rockModel = renderer.loadModel("resources/animatedSteve/scene.gltf", 0, 1.f);
-	//auto sphereModel = renderer.loadModel("resources/diamond.glb", 0, 0.1);
+	auto sphereModel = renderer.loadModel("resources/diamond.glb", 0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/gltf/steve.glb", 0);
 	//auto levelModel = renderer.loadModel("resources/gltf/boomBox/BoomBox.gltf");
-	auto levelModel = renderer.loadModel("resources/gltf/jack.glb", gl3d::TextureLoadQuality::maxQuality, 1);
+	//auto levelModel = renderer.loadModel("resources/gltf/jack.glb", gl3d::TextureLoadQuality::maxQuality, 1);
 	//auto levelModel = renderer.loadModel("resources/obj/jack/untitled.obj", 0, 1);
-	//auto levelModel = renderer.loadModel("resources/helmet/helmet.obj", 1);
+	auto levelModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
 	
 	auto defaultMat = renderer.createMaterial(gl3d::TextureLoadQuality::dontSet);
 
@@ -439,19 +439,19 @@ int main()
 	//	cubeIndices);
 
 	
-	auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
+	//auto sphereModel = renderer.loadModel("resources/sponza2/sponza.obj", gl3d::TextureLoadQuality::maxQuality, 0.008);
 	//auto sphereModel = renderer.loadModel("resources/katana/antique_katana_01_1k.gltf");
 	//auto rockModel = renderer.loadModel("resources/mutant/Biomech_Mutant_Skin_1.glb",0,  1.f);
 
 	//auto barelModel = renderer.loadModel("resources/barrel/Barrel_01.obj", gl3d::TextureLoadQuality::maxQuality, 1);
 	//auto barelModel = renderer.loadModel("resources/obj/AMG/AMG2.obj");
 	//auto barelModel = renderer.loadModel("resources/obj/backpack/backpack.obj");
-	auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
+	//auto rockModel = renderer.loadModel("resources/helmet/helmet.obj", 0, 1);
 	//auto rockModel = renderer.loadObject("resources/other/boulder.obj",0, 0.1);
 	//auto levelModel = renderer.loadModel("resources/city/city.obj",0, 0.01);
 	//auto levelModel = renderer.loadModel("resources/sponza/sponza.obj");
 	//auto rockModel = renderer.loadModel("resources/other/crate.obj",0, 0.01);
-	//auto rockModel = renderer.loadModel("resources/obj/sphere3.obj");
+	auto rockModel = renderer.loadModel("resources/obj/sphere2.obj", gl3d::TextureLoadQuality::maxQuality, 1.f);
 	//auto levelModel = renderer.loadModel("resources/planeta.glb");
 	//auto sphereModel = renderer.loadModel("resources/obj/sphere2.obj");
 	//auto sphereModel = renderer.loadModel("resources/birb.glb");
@@ -671,42 +671,43 @@ int main()
 			ImGui::PopID();
 		};
 		
-		//{
-		//	ImGui::Begin("skyBox");
-		//
-		//	static glm::vec3 color1 = glm::vec3(141 / 255.f, 217 / 255.f, 224 / 255.f);
-		//	static glm::vec3 color2 = glm::vec3(207 / 255.f, 196 / 255.f, 157 / 255.f);
-		//	static float g1 = 0.76;
-		//	static glm::vec3 direction = glm::normalize(glm::vec3{-1, 1, -1});
-		//
-		//	ImGui::DragFloat("g", &g1, 0.01, 0.01, 0.99);
-		//
-		//	ImGui::ColorEdit3("Color1 ##c1", &color1[0]);
-		//	ImGui::ColorEdit3("Color2 ##c2", &color2[0]);
-		//
-		//	ImGui::DragFloat3("Pos sun", &direction[0], 0.01, -1.f, 1.f);
-		//
-		//	if (glm::length(direction) == 0)
-		//	{
-		//		direction = glm::vec3{0, -1, 0};
-		//	}
-		//	else
-		//	{
-		//		direction = glm::normalize(direction);
-		//	}
-		//
-		//	//if (ImGui::Button("generate"))
-		//	{
-		//	
-		//		renderer.skyBox.clearTextures();
-		//		renderer.skyBox = renderer.atmosfericScattering(direction,
-		//			color1,
-		//			color2,
-		//			g1);
-		//	}
-		//
-		//	ImGui::End();
-		//}
+		{
+			ImGui::Begin("skyBox");
+		
+			static glm::vec3 color1 = glm::vec3(141 / 255.f, 217 / 255.f, 224 / 255.f);
+			static glm::vec3 color2 = glm::vec3(207 / 255.f, 196 / 255.f, 157 / 255.f);
+			static float g1 = 0.76;
+			static glm::vec3 direction = glm::normalize(glm::vec3{-1, 1, -1});
+		
+			ImGui::DragFloat("g", &g1, 0.01, 0.01, 0.99);
+		
+			ImGui::ColorEdit3("Color1 ##c1", &color1[0]);
+			ImGui::ColorEdit3("Color2 ##c2", &color2[0]);
+		
+			ImGui::DragFloat3("Pos sun", &direction[0], 0.01, -1.f, 1.f);
+		
+			if (glm::length(direction) == 0)
+			{
+				direction = glm::vec3{0, -1, 0};
+			}
+			else
+			{
+				direction = glm::normalize(direction);
+			}
+		
+			if (ImGui::Button("generate"))
+			{
+			
+				renderer.skyBox.clearTextures();
+				renderer.skyBox = renderer.atmosfericScattering(direction,
+					color1,
+					color2,
+					{}, false,
+					g1);
+			}
+		
+			ImGui::End();
+		}
 
 
 

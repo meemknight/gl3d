@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl3D --Vlad Luta -- 
-//built on 2023-05-02
+//built on 2023-10-19
 ////////////////////////////////////////////////
 
 
@@ -34087,6 +34087,7 @@ namespace gl3d
 
 		bool normalMap = 1; 
 		bool useSSAO = 1;
+		bool useTheHbaoImplementation = 1;
 		
 		//todo split stuff into separate things
 		bool bloom = 1;

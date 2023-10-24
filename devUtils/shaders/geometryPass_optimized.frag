@@ -16,6 +16,8 @@ in vec3 v_positionViewSpace;
 
 uniform sampler2D u_normalSampler;
 
+//todo remove uniform if possible
+//todo add another uniform to do this computation on the cpu if(albedoSampler.x == 0 && albedoSampler.y == 0)
 uniform int u_materialIndex;
 
 

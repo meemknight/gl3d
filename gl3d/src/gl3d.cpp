@@ -80,7 +80,7 @@ namespace gl3d
 
 	
 	Material Renderer3D::createMaterial(int quality, glm::vec4 kd,
-		float roughness, float metallic, float ao, std::string name,
+		float roughness, float metallic, float ao, float emissive, std::string name,
 		gl3d::Texture albedoTexture, gl3d::Texture normalTexture, gl3d::Texture roughnessTexture, gl3d::Texture metallicTexture,
 		gl3d::Texture occlusionTexture, gl3d::Texture emmisiveTexture)
 	{
@@ -92,6 +92,7 @@ namespace gl3d
 		gpuMaterial.roughness = roughness;
 		gpuMaterial.metallic = metallic;
 		gpuMaterial.ao = ao;
+		gpuMaterial.emmisive = emissive;
 
 		TextureDataForMaterial textureData{};
 
@@ -131,8 +132,9 @@ namespace gl3d
 	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, 
 		objl::Material &mat, const std::string &path, GLuint frameBuffer, int quality)
 	{
+		//todo mat.ke also mat. emissive texture
 		auto m = renderer.createMaterial(quality, mat.Kd, mat.roughness,
-			mat.metallic, mat.ao, mat.name);
+			mat.metallic, mat.ao, 0, mat.name);
 
 		stbi_set_flip_vertically_on_load(true);
 
@@ -937,7 +939,7 @@ namespace gl3d
 				}else
 				{
 					//if no material loaded for this object create a new default one
-					gm.material = createMaterial(quality, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
+					gm.material = createMaterial(quality, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, 0.f, "default material");
 				}
 				
 				gm.ownMaterial = true;
@@ -1954,7 +1956,7 @@ namespace gl3d
 				if (mat != data)
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, mat.kd, mat.roughness,
-						mat.metallic, mat.ao, name);
+						mat.metallic, mat.ao, mat.emmisive, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 
 					internal.materialTexturesData[newMatIndex] = textures;
@@ -2024,7 +2026,7 @@ namespace gl3d
 				if (name != oldName) //copy to new material
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, data.kd, data.roughness,
-						data.metallic, data.ao, name);
+						data.metallic, data.ao, data.emmisive, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = textures;
 
@@ -2119,7 +2121,7 @@ namespace gl3d
 				if (texture != oldTextures) //copy to new material
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, data.kd, data.roughness,
-						data.metallic, data.ao, oldName);
+						data.metallic, data.ao, data.emmisive, oldName);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = texture; //new textures
 
@@ -2617,7 +2619,7 @@ namespace gl3d
 			j["atmosphericScattering"] = a;
 		}
 
-		if (!skyBoxName.empty() || atmosphericScattering != nullptr)
+		//if (!skyBoxName.empty() || atmosphericScattering != nullptr)
 		{
 			j["ambientr"] = skyBox.color.r;
 			j["ambientg"] = skyBox.color.g;

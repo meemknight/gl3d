@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl3D --Vlad Luta -- 
-//built on 2023-05-02
+//built on 2023-10-19
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -32450,7 +32450,6 @@ namespace gl3d
 "noperspective in vec2 v_texCoords;\n"
 "uniform sampler2D u_colorTexture;\n"
 "uniform sampler2D u_bloomTexture;\n"
-"uniform sampler2D u_bloomNotBluredTexture;\n"
 "uniform float u_bloomIntensity;\n"
 "uniform float u_exposure;\n"
 "uniform int u_useSSAO;\n"
@@ -32467,7 +32466,7 @@ namespace gl3d
 "} else {\n"
 "ssaof_1 = 1.0;\n"
 "};\n"
-"a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));\n"
+"a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + (tmpvar_2.xyz * ssaof_1));\n"
 "vec3 color_3;\n"
 "color_3 = (a_color.xyz * u_exposure);\n"
 "mat3 tmpvar_4;\n"
@@ -33636,7 +33635,7 @@ namespace gl3d
 "}\n"
 "void main()\n"
 "{\n"
-"int materialIndex = texture(u_materialIndex, v_texCoords).r;\n"
+"int materialIndex = textureLod(u_materialIndex, v_texCoords, 0).r;\n"
 "if(materialIndex == 0)\n"
 "{\n"
 "if(u_transparentPass != 0)\n"
@@ -33806,15 +33805,16 @@ namespace gl3d
 "* ambientOcclution; \n"
 "if(u_transparentPass != 0)\n"
 "{\n"
-"a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);\n"
-"a_outBloom = vec4(emissive.rgb, albedoAlpha.a);\n"
+"float a = albedoAlpha.a;\n"
+"a = 1-a;\n"
+"a *= dot(viewDir, normal);\n"
+"a = 1-a;\n"
+"a_outColor = vec4(color.rgb + emissive.rgb, a);\n"
+"a_outBloom = vec4(emissive.rgb, a);\n"
 "}else\n"
 "{\n"
 "a_outColor = vec4(color.rgb + emissive.rgb, 1);\n"
 "a_outBloom = vec4(emissive.rgb, 1);\n"
-"}\n"
-"if(u_hasLastFrameTexture!=0)\n"
-"{\n"
 "}\n"
 "}\n"},
 
@@ -38931,7 +38931,7 @@ namespace gl3d
 			j["atmosphericScattering"] = a;
 		}
 
-		if (!skyBoxName.empty() || atmosphericScattering != nullptr)
+		//if (!skyBoxName.empty() || atmosphericScattering != nullptr)
 		{
 			j["ambientr"] = skyBox.color.r;
 			j["ambientg"] = skyBox.color.g;
@@ -39841,6 +39841,7 @@ namespace gl3d
 		auto projectionMatrix		= camera.getProjectionMatrix();
 		auto worldProjectionMatrix	= projectionMatrix * worldToViewMatrix;
 
+		//todo pass last and new camera matrix to the ssr to better calculate the ssr color
 		#pragma region check camera changes
 
 			bool cameraChanged = false;
@@ -40176,6 +40177,65 @@ namespace gl3d
 				}
 
 			}
+		#pragma endregion
+
+
+		#pragma region setup bindless textures
+			//todo cache stuff?
+			for (int i = 0; i < internal.materials.size(); i++)
+			{
+				auto &textures = internal.materialTexturesData[i];
+
+				auto &material = internal.materials[i];
+
+				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
+				if (albedoData >= 0)
+				{
+					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
+				}
+				else
+				{
+					material.albedoSampler = 0;
+				}
+
+				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
+				if (emmisiveData >= 0)
+				{
+					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
+				}
+				else
+				{
+					material.emmissiveSampler = 0;
+				}
+
+				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
+				if (materialData >= 0)
+				{
+					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
+					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
+				}
+				else
+				{
+					material.rmaSampler = 0;
+					material.rmaLoaded = 0;
+				}
+
+			}
+
+		#pragma endregion
+
+
+		#pragma region send material data
+			//material buffer //todo lazyness or sthing, don't forget to also change it on clearing all data
+			if (internal.materials.size())
+			{
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
+				glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) * internal.materials.size()
+					, &internal.materials[0], GL_STREAM_DRAW);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
+					internal.lightShader.materialBlockBuffer);
+			}
+
 		#pragma endregion
 
 
@@ -40912,50 +40972,6 @@ namespace gl3d
 		#pragma endregion
 
 
-		#pragma region setup bindless textures
-			//todo cache stuff?
-			for (int i=0; i< internal.materials.size(); i++)
-			{
-				auto &textures = internal.materialTexturesData[i];
-
-				auto& material = internal.materials[i];
-
-				auto albedoData = internal.getTextureIndex(textures.albedoTexture);
-				if (albedoData >= 0)
-				{
-					material.albedoSampler = internal.loadedTexturesBindlessHandle[albedoData];
-				}
-				else
-				{
-					material.albedoSampler = 0;
-				}
-				
-				auto emmisiveData = internal.getTextureIndex(textures.emissiveTexture);
-				if (emmisiveData >= 0)
-				{
-					material.emmissiveSampler = internal.loadedTexturesBindlessHandle[emmisiveData];
-				}
-				else
-				{
-					material.emmissiveSampler = 0;
-				}
-
-				auto materialData = internal.getTextureIndex(textures.pbrTexture.texture);
-				if (materialData >= 0)
-				{
-					material.rmaSampler = internal.loadedTexturesBindlessHandle[materialData];
-					material.rmaLoaded = textures.pbrTexture.RMA_loadedTextures;
-				}
-				else
-				{
-					material.rmaSampler = 0;
-					material.rmaLoaded = 0;
-				}
-
-			}
-
-		#pragma endregion
-
 		#pragma region clear gbuffer
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, internal.gBuffer.gBuffer);
@@ -41092,18 +41108,6 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-	#pragma region send material data
-		//material buffer //todo lazyness or sthing, don't forget to also change it on clearing all data
-		if (internal.materials.size())
-		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, internal.lightShader.materialBlockBuffer);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialValues) *internal.materials.size()
-				, &internal.materials[0], GL_STREAM_DRAW);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, internal::MaterialBlockBinding,
-				internal.lightShader.materialBlockBuffer);
-		}
-		
-	#pragma endregion
 
 		auto gBufferRender = [&](bool transparentPhaze)
 		{
@@ -41465,7 +41469,7 @@ namespace gl3d
 		if (internal.lightShader.useSSAO)
 		{
 
-			if (1)
+			if (internal.lightShader.useTheHbaoImplementation)
 			{
 				//ssao
 

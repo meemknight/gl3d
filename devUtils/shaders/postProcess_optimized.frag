@@ -3,7 +3,6 @@ out vec4 a_color;
 noperspective in vec2 v_texCoords;
 uniform sampler2D u_colorTexture;
 uniform sampler2D u_bloomTexture;
-uniform sampler2D u_bloomNotBluredTexture;
 uniform float u_bloomIntensity;
 uniform float u_exposure;
 uniform int u_useSSAO;
@@ -20,7 +19,7 @@ void main ()
   } else {
     ssaof_1 = 1.0;
   };
-  a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + ((texture (u_bloomNotBluredTexture, v_texCoords).xyz + tmpvar_2.xyz) * ssaof_1));
+  a_color.xyz = ((texture (u_bloomTexture, v_texCoords).xyz * u_bloomIntensity) + (tmpvar_2.xyz * ssaof_1));
   vec3 color_3;
   color_3 = (a_color.xyz * u_exposure);
   mat3 tmpvar_4;

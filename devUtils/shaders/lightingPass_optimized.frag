@@ -139,6 +139,7 @@ uniform int u_spotLightCount;
 
 const float PI = 3.14159265359;
 
+//todo reduce
 const float randomNumbers[100] = float[100](
 0.05535,	0.22262,	0.93768,	0.80063,	0.40089,	0.49459,	0.44997,	0.27060,	0.58789,	0.61765,
 0.87949,	0.38913,	0.23154,	0.27249,	0.93448,	0.71567,	0.26940,	0.32226,	0.73918,	0.30905,
@@ -215,7 +216,6 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
-
 //cosTheta is the dot between the normal and halfway
 //ratio between specular and diffuse reflection
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -268,7 +268,6 @@ vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
 }
 
 //https://mimosa-pudica.net/improved-oren-nayar.html
-
 vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
 {
 	float a = roughness;
@@ -1072,7 +1071,7 @@ float metallic, vec3 albedo, vec3 wp, vec3 viewPos, vec3 viewSpaceNormal, vec2 r
 
 void main()
 {
-	int materialIndex = texture(u_materialIndex, v_texCoords).r;
+	int materialIndex = textureLod(u_materialIndex, v_texCoords, 0).r;
 
 	if(materialIndex == 0)
 	{
@@ -1338,21 +1337,20 @@ void main()
 
 	if(u_transparentPass != 0)
 	{
-		a_outColor = vec4(color.rgb + emissive.rgb, albedoAlpha.a);
-		a_outBloom = vec4(emissive.rgb, albedoAlpha.a);
+		float a = albedoAlpha.a;
+		a = 1-a;
+		a *= dot(viewDir, normal);
+		a = 1-a;
+
+		a_outColor = vec4(color.rgb + emissive.rgb, a);
+		a_outBloom = vec4(emissive.rgb, a);
 	}else
 	{
 		a_outColor = vec4(color.rgb + emissive.rgb, 1);
 		a_outBloom = vec4(emissive.rgb, 1);
 	}
 	
-	if(u_hasLastFrameTexture!=0)
-	{
-		//vec3 lastFrameColor = texture(u_lastFrameTexture, v_texCoords).xyz;
-		//a_outColor.rgb = 0.7 * a_outColor.rgb + 0.3 * lastFrameColor;
-		//a_outColor.rgb = lastFrameColor;
-	}
-
+	
 
 
 	//a_outColor.rgb = vec3(albedoAlpha);

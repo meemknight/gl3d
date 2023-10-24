@@ -216,7 +216,6 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
-
 //cosTheta is the dot between the normal and halfway
 //ratio between specular and diffuse reflection
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -269,7 +268,6 @@ vec3 fDiffuseOrenNayar(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
 }
 
 //https://mimosa-pudica.net/improved-oren-nayar.html
-
 vec3 fDiffuseOrenNayar2(vec3 color, float roughness, vec3 L, vec3 V, vec3 N)
 {
 	float a = roughness;
