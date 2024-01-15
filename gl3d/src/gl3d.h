@@ -467,13 +467,13 @@ namespace gl3d
 			void renderSkyBox(Camera &c, SkyBox &s); //todo remove this later
 			void renderSkyBoxBefore(Camera& c, SkyBox& s);
 
-			int getMaterialIndex(Material m);
-			int getModelIndex(Model o);
-			int getTextureIndex(Texture t);
-			int getEntityIndex(Entity t);
-			int getSpotLightIndex(SpotLight l);
-			int getPointLightIndex(PointLight l);
-			int getDirectionalLightIndex(DirectionalLight l);
+			int getMaterialIndex(Material &m);
+			int getModelIndex(Model &o);
+			int getTextureIndex(Texture &t);
+			int getEntityIndex(Entity &e);
+			int getSpotLightIndex(SpotLight &l);
+			int getPointLightIndex(PointLight &l);
+			int getDirectionalLightIndex(DirectionalLight &l);
 
 			//material
 			std::vector<MaterialValues> materials;

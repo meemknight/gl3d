@@ -9,7 +9,10 @@
 
 #define GL3D_REMOVE_IOSTREAM 0 //you can remove this if neded to. It is just used for the default errorcallback
 #define GL3D_REMOVE_FSTREAM 0 //you can remove this if neded to. It is used for the default file callback, supply your own function for file oppening so the library still works :))
+#define GL3D_REMOVE_ASSERTS 0 //you can remove asserts in production
 
+
+#define GL3D_OPTIMIZE_CACHED_SEARCH 1 //this was used by the dev to test some things, if you are using the library just keep it to 1.
 
 #if GL3D_REMOVE_IOSTREAM == 0
 #include <iostream> 
@@ -43,11 +46,13 @@
 namespace gl3d
 {
 	//todo optimization also hold the last found position
+	//todo why id isn't unsigned?
 
 #define CREATE_RENDERER_OBJECT_HANDLE(x)	\
 	struct x								\
 	{										\
 		int id_ = {};						\
+		int lastFoundPos_ = {};				\
 		x (int id=0):id_(id){};				\
 	}
 
@@ -208,6 +213,9 @@ namespace gl3d
 
 };
 
+
+#if GL3D_REMOVE_ASSERTS == 0
+
 #define gl3dAssert(expression) (void)(											\
 			(!!(expression)) ||													\
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__)), 0)	\
@@ -217,3 +225,13 @@ namespace gl3d
 			(!!(expression)) ||														\
 			(gl3d::assertFunc(#expression, __FILE__, (unsigned)(__LINE__), comment), 0)\
 		)
+
+#else 
+
+#define gl3dAssert(expression) 
+
+#define gl3dAssertComment(expression, comment) 
+
+#endif
+
+

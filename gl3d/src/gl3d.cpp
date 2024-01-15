@@ -3117,116 +3117,82 @@ namespace gl3d
 
 	}
 
-	int Renderer3D::InternalStruct::getMaterialIndex(Material m)
+	template<class T>
+	bool tryCachedPosition(T &t, std::vector<int> &indexes)
 	{
-		int id = m.id_;
-		if (id <= 0) { return -1; }
+	#if GL3D_OPTIMIZE_CACHED_SEARCH == 1
 
-		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
-		if (found == materialIndexes.end())
+		if (t.lastFoundPos_ < indexes.size())
 		{
-			gl3dAssertComment(found != materialIndexes.end(), "invalid material");
-			return -1;
+			auto id = indexes[t.lastFoundPos_];
+			if (id == t.id_)
+			{
+				return true;
+			}
 		}
-		id = found - materialIndexes.begin();
-
-		return id;
+	#endif
+		return 0;
 	}
 
-	int Renderer3D::InternalStruct::getModelIndex(Model o)
+	template<class T>
+	int getIndex(T &t, std::vector<int> &indexes, const char *errMessage)
 	{
-		int id = o.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
-		if (found == graphicModelsIndexes.end())
+		if (tryCachedPosition(t, indexes))
 		{
-			gl3dAssertComment(found != graphicModelsIndexes.end(), "invalid object");
-			return -1;
+			return t.lastFoundPos_;
 		}
-		id = found - graphicModelsIndexes.begin();
-	
-		return id;
-	}
 
-	int Renderer3D::InternalStruct::getTextureIndex(Texture t)
-	{
 		int id = t.id_;
 		if (id <= 0) { return -1; }
 
-		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
-		if (found == loadedTexturesIndexes.end())
+		auto found = std::find(indexes.begin(), indexes.end(), id);
+		if (found == indexes.end())
 		{
-			gl3dAssertComment(found != loadedTexturesIndexes.end(), "invalid texture");
+			gl3dAssertComment(found != indexes.end(), errMessage);
 			return -1;
 		}
-		id = found - loadedTexturesIndexes.begin();
+		int pos = found - indexes.begin();
 
-		return id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH == 1
+		t.lastFoundPos_ = pos;
+	#endif
+
+		return pos;
 	}
 
-	int Renderer3D::InternalStruct::getEntityIndex(Entity t)
+	int Renderer3D::InternalStruct::getMaterialIndex(Material &m)
 	{
-		int id = t.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(entitiesIndexes.begin(), entitiesIndexes.end(), id);
-		if (found == entitiesIndexes.end())
-		{
-			gl3dAssertComment(found != entitiesIndexes.end(), "invalid entity");
-			return -1;
-		}
-		id = found - entitiesIndexes.begin();
-
-		return id;
+		return getIndex(m, materialIndexes, "invalid material");
 	}
 
-	int Renderer3D::InternalStruct::getSpotLightIndex(SpotLight l)
+	int Renderer3D::InternalStruct::getModelIndex(Model &o)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(spotLightIndexes.begin(), spotLightIndexes.end(), id);
-		if (found == spotLightIndexes.end())
-		{
-			gl3dAssertComment(found != spotLightIndexes.end(), "invalid spot light");
-			return -1;
-		}
-		id = found - spotLightIndexes.begin();
-
-		return id;
+		return getIndex(o, graphicModelsIndexes, "invalid model");
 	}
 
-	int Renderer3D::InternalStruct::getPointLightIndex(PointLight l)
+	int Renderer3D::InternalStruct::getTextureIndex(Texture &t)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(pointLightIndexes.begin(), pointLightIndexes.end(), id);
-		if (found == pointLightIndexes.end())
-		{
-			gl3dAssertComment(found != pointLightIndexes.end(), "invalid point light");
-			return -1;
-		}
-		id = found - pointLightIndexes.begin();
-
-		return id;
+		return getIndex(t, loadedTexturesIndexes, "invalid texture");
 	}
 
-	int Renderer3D::InternalStruct::getDirectionalLightIndex(DirectionalLight l)
+	int Renderer3D::InternalStruct::getEntityIndex(Entity &e)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
+		return getIndex(e, entitiesIndexes, "invalid entity");
+	}
 
-		auto found = std::find(directionalLightIndexes.begin(), directionalLightIndexes.end(), id);
-		if (found == directionalLightIndexes.end())
-		{
-			gl3dAssertComment(found != directionalLightIndexes.end(), "invalid directional light");
-			return -1;
-		}
-		id = found - directionalLightIndexes.begin();
+	int Renderer3D::InternalStruct::getSpotLightIndex(SpotLight &l)
+	{
+		return getIndex(l, spotLightIndexes, "invalid enspot lighttity");
+	}
 
-		return id;
+	int Renderer3D::InternalStruct::getPointLightIndex(PointLight &l)
+	{
+		return getIndex(l, pointLightIndexes, "invalid point light");
+	}
+
+	int Renderer3D::InternalStruct::getDirectionalLightIndex(DirectionalLight &l)
+	{
+		return getIndex(l, directionalLightIndexes, "invalid directional light");
 	}
 
 	bool Renderer3D::InternalStruct::getMaterialData(Material m, MaterialValues* gpuMaterial, std::string* name, TextureDataForMaterial* textureData)

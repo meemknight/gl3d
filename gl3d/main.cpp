@@ -20,7 +20,7 @@
 int w = 840;
 int h = 640;
 
-#define USE_GPU_ENGINE 0
+#define USE_GPU_ENGINE 1
 #define DEBUG_OUTPUT 1
 
 #pragma region gpu
@@ -1335,7 +1335,7 @@ int main()
 							//if (ImGui::RadioButton("linearMipmap", quality == gl3d::linearMipmap)) { quality = gl3d::linearMipmap; }
 							//if (ImGui::RadioButton("maxQuality", quality == gl3d::maxQuality)) { quality = gl3d::maxQuality; }
 
-							static const char const* items[] =
+							static const char * items[] =
 							{
 							"leastPossible",
 							"nearestMipmap",
@@ -1575,7 +1575,6 @@ int main()
 	#pragma endregion
 
 	}
-	
 
 	std::string save = renderer.saveSettingsToJson(1);
 
