@@ -13,8 +13,8 @@
 
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
 
-#include <gl/glew.h>
-#include <stb_image.h>
+#include <glad/glad.h>
+#include <stb_image/stb_image.h>
 
 
 #define GL3D_REMOVE_IOSTREAM 0 //you can remove this if neded to. It is just used for the default errorcallback
@@ -22,7 +22,7 @@
 #define GL3D_REMOVE_ASSERTS 0 //you can remove asserts in production
 
 
-#define GL3D_OPTIMIZE_CACHED_SEARCH 0 //this was used by the dev to test some things, if you are using the library just keep it to 1.
+#define GL3D_OPTIMIZE_CACHED_SEARCH 1 //this was used by the dev to test some things, if you are using the library just keep it to 1.
 
 #if GL3D_REMOVE_IOSTREAM == 0
 #include <iostream> 

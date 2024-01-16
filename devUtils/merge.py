@@ -25,7 +25,7 @@ perFileText = \
 
 os.chdir("../")
 
-os.chdir("gl3d/shaders")
+os.chdir("src/shaders")
 
 
 #shaders
@@ -68,7 +68,7 @@ finalHFile.write(initialtext.format(date = date.today()))
 finalHFile.write("\n\n")
 
 for i in headerFiles:
-    f = open(os.path.join("gl3d", "src", i + ".h"))
+    f = open(os.path.join("src", "src", i + ".h"))
 
     content = f.read()
 
@@ -109,7 +109,7 @@ finalCppFile.write("""
 headerOnlyFiles = ["json.h", "stb_image_write.h", "tiny_gltf.h"]
 
 for i in headerOnlyFiles:
-    f = open(os.path.join("gl3d", "src", i))
+    f = open(os.path.join("src", "src", i))
     content = f.read()
     for j in headerFiles:
         content = content.replace(f"#include <{j}.h>","")
@@ -121,7 +121,7 @@ for i in headerOnlyFiles:
     f.close()
 
 for i in cppFiles:
-    f = open(os.path.join("gl3d", "src", i + ".cpp"))
+    f = open(os.path.join("src", "src", i + ".cpp"))
 
     content = f.read()
 

@@ -34488,7 +34488,7 @@ namespace gl3d
 	GLint createShaderFromFile(const char* name, GLenum shaderType, ErrorReporter &errorReporter, FileOpener &fileOpener)
 	{
 		bool err = 0;
-		auto fileContent = fileOpener(name, err);
+		auto fileContent = fileOpener((std::string("../../../src/") + name).c_str(), err);
 
 		if (err)
 		{
@@ -41107,7 +41107,7 @@ namespace gl3d
 		}
 		#pragma endregion 
 
-
+		//todo check if all shaders are loaded of not return 0 on init func
 		auto gBufferRender = [&](bool transparentPhaze)
 		{
 			#pragma region stuff to be bound for rendering the geometry

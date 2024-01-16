@@ -1,13 +1,7 @@
-
-#builds
+/out
 bin/
-binInt/
-
-#visual studio
-**.user
-.vs/
-
-dependences/
-
-imgui.ini
-merge.bat
+build/
+/.vs
+.idea/
+CMakeSettings.json
+Makefile
