@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////
 //gl3D --Vlad Luta -- 
-//built on 2023-10-19
+//built on 2024-01-16
 ////////////////////////////////////////////////
 
 #include "gl3d.h"
@@ -36394,7 +36394,7 @@ namespace gl3d
 
 	
 	Material Renderer3D::createMaterial(int quality, glm::vec4 kd,
-		float roughness, float metallic, float ao, std::string name,
+		float roughness, float metallic, float ao, float emissive, std::string name,
 		gl3d::Texture albedoTexture, gl3d::Texture normalTexture, gl3d::Texture roughnessTexture, gl3d::Texture metallicTexture,
 		gl3d::Texture occlusionTexture, gl3d::Texture emmisiveTexture)
 	{
@@ -36406,6 +36406,7 @@ namespace gl3d
 		gpuMaterial.roughness = roughness;
 		gpuMaterial.metallic = metallic;
 		gpuMaterial.ao = ao;
+		gpuMaterial.emmisive = emissive;
 
 		TextureDataForMaterial textureData{};
 
@@ -36424,6 +36425,9 @@ namespace gl3d
 
 		Material m;
 		m.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		m.lastFoundPos_ = internal.materialIndexes.size()-1;
+	#endif
 		return m;
 
 	}
@@ -36445,8 +36449,9 @@ namespace gl3d
 	gl3d::Material createMaterialFromLoadedData(gl3d::Renderer3D &renderer, 
 		objl::Material &mat, const std::string &path, GLuint frameBuffer, int quality)
 	{
+		//todo mat.ke also mat. emissive texture
 		auto m = renderer.createMaterial(quality, mat.Kd, mat.roughness,
-			mat.metallic, mat.ao, mat.name);
+			mat.metallic, mat.ao, 0, mat.name);
 
 		stbi_set_flip_vertically_on_load(true);
 
@@ -37151,6 +37156,9 @@ namespace gl3d
 		internal.graphicModels.push_back(returnModel);
 		Model m;
 		m.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		m.lastFoundPos_ = internal.graphicModelsIndexes.size() - 1;
+	#endif
 		return m;
 	}
 
@@ -37251,7 +37259,7 @@ namespace gl3d
 				}else
 				{
 					//if no material loaded for this object create a new default one
-					gm.material = createMaterial(quality, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, "default material");
+					gm.material = createMaterial(quality, glm::vec4{ 0.8f,0.8f,0.8f, 1.0f }, 0.5f, 0.f, 1.f, 0.f, "default material");
 				}
 				
 				gm.ownMaterial = true;
@@ -37379,7 +37387,13 @@ namespace gl3d
 
 		internal.perFrameFlags.shouldUpdatePointShadows = true;
 
-		return { id };
+		PointLight pl = {};
+		pl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		pl.lastFoundPos_ = internal.pointLightIndexes.size() - 1;
+	#endif
+
+		return { pl };
 	}
 
 	void Renderer3D::detletePointLight(PointLight& l)
@@ -37574,7 +37588,13 @@ namespace gl3d
 
 		internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
 
-		return { id };
+		DirectionalLight dl = {};
+		dl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		dl.lastFoundPos_ = internal.directionalLightIndexes.size() - 1;
+	#endif
+
+		return {dl};
 	}
 
 	void Renderer3D::deleteDirectionalLight(DirectionalLight& l)
@@ -37749,7 +37769,13 @@ namespace gl3d
 		internal.spotLightIndexes.push_back(id);
 		internal.spotLights.push_back(light);
 
-		return { id };
+		SpotLight sl = {};
+		sl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		sl.lastFoundPos_ = internal.spotLightIndexes.size() - 1;
+	#endif
+
+		return {sl};
 	}
 
 	//todo check
@@ -37999,7 +38025,10 @@ namespace gl3d
 
 		Entity e;
 		e.id_ = id;
-		
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		e.lastFoundPos_ = internal.entitiesIndexes.size() - 1;
+	#endif
+
 		setEntityModel(e, m);
 		
 		return e;
@@ -38050,7 +38079,11 @@ namespace gl3d
 
 		Entity ret;
 		ret.id_ = id;
-		return ret;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		ret.lastFoundPos_ = internal.entitiesIndexes.size() - 1;
+	#endif
+
+		return {ret};
 	}
 
 	void Renderer3D::setEntityModel(Entity& e, Model m)
@@ -38268,7 +38301,7 @@ namespace gl3d
 				if (mat != data)
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, mat.kd, mat.roughness,
-						mat.metallic, mat.ao, name);
+						mat.metallic, mat.ao, mat.emmisive, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 
 					internal.materialTexturesData[newMatIndex] = textures;
@@ -38338,7 +38371,7 @@ namespace gl3d
 				if (name != oldName) //copy to new material
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, data.kd, data.roughness,
-						data.metallic, data.ao, name);
+						data.metallic, data.ao, data.emmisive, name);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = textures;
 
@@ -38433,7 +38466,7 @@ namespace gl3d
 				if (texture != oldTextures) //copy to new material
 				{
 					Material newMat = this->createMaterial(TextureLoadQuality::dontSet, data.kd, data.roughness,
-						data.metallic, data.ao, oldName);
+						data.metallic, data.ao, data.emmisive, oldName);
 					int newMatIndex = internal.getMaterialIndex(newMat); //this should not fail
 					internal.materialTexturesData[newMatIndex] = texture; //new textures
 
@@ -39429,116 +39462,82 @@ namespace gl3d
 
 	}
 
-	int Renderer3D::InternalStruct::getMaterialIndex(Material m)
+	template<class T>
+	bool tryCachedPosition(T &t, std::vector<int> &indexes)
 	{
-		int id = m.id_;
-		if (id <= 0) { return -1; }
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
 
-		auto found = std::find(materialIndexes.begin(), materialIndexes.end(), id);
-		if (found == materialIndexes.end())
+		if (t.lastFoundPos_ < indexes.size())
 		{
-			gl3dAssertComment(found != materialIndexes.end(), "invalid material");
-			return -1;
+			auto id = indexes[t.lastFoundPos_];
+			if (id == t.id_)
+			{
+				return true;
+			}
 		}
-		id = found - materialIndexes.begin();
-
-		return id;
+	#endif
+		return 0;
 	}
 
-	int Renderer3D::InternalStruct::getModelIndex(Model o)
+	template<class T>
+	int getIndex(T &t, std::vector<int> &indexes, const char *errMessage)
 	{
-		int id = o.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(graphicModelsIndexes.begin(), graphicModelsIndexes.end(), id);
-		if (found == graphicModelsIndexes.end())
+		if (tryCachedPosition(t, indexes))
 		{
-			gl3dAssertComment(found != graphicModelsIndexes.end(), "invalid object");
-			return -1;
+			return t.lastFoundPos_;
 		}
-		id = found - graphicModelsIndexes.begin();
-	
-		return id;
-	}
 
-	int Renderer3D::InternalStruct::getTextureIndex(Texture t)
-	{
 		int id = t.id_;
 		if (id <= 0) { return -1; }
 
-		auto found = std::find(loadedTexturesIndexes.begin(), loadedTexturesIndexes.end(), id);
-		if (found == loadedTexturesIndexes.end())
+		auto found = std::find(indexes.begin(), indexes.end(), id);
+		if (found == indexes.end())
 		{
-			gl3dAssertComment(found != loadedTexturesIndexes.end(), "invalid texture");
+			gl3dAssertComment(found != indexes.end(), errMessage);
 			return -1;
 		}
-		id = found - loadedTexturesIndexes.begin();
+		int pos = found - indexes.begin();
 
-		return id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		t.lastFoundPos_ = pos;
+	#endif
+
+		return pos;
 	}
 
-	int Renderer3D::InternalStruct::getEntityIndex(Entity t)
+	int Renderer3D::InternalStruct::getMaterialIndex(Material &m)
 	{
-		int id = t.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(entitiesIndexes.begin(), entitiesIndexes.end(), id);
-		if (found == entitiesIndexes.end())
-		{
-			gl3dAssertComment(found != entitiesIndexes.end(), "invalid entity");
-			return -1;
-		}
-		id = found - entitiesIndexes.begin();
-
-		return id;
+		return getIndex(m, materialIndexes, "invalid material");
 	}
 
-	int Renderer3D::InternalStruct::getSpotLightIndex(SpotLight l)
+	int Renderer3D::InternalStruct::getModelIndex(Model &o)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(spotLightIndexes.begin(), spotLightIndexes.end(), id);
-		if (found == spotLightIndexes.end())
-		{
-			gl3dAssertComment(found != spotLightIndexes.end(), "invalid spot light");
-			return -1;
-		}
-		id = found - spotLightIndexes.begin();
-
-		return id;
+		return getIndex(o, graphicModelsIndexes, "invalid model");
 	}
 
-	int Renderer3D::InternalStruct::getPointLightIndex(PointLight l)
+	int Renderer3D::InternalStruct::getTextureIndex(Texture &t)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
-
-		auto found = std::find(pointLightIndexes.begin(), pointLightIndexes.end(), id);
-		if (found == pointLightIndexes.end())
-		{
-			gl3dAssertComment(found != pointLightIndexes.end(), "invalid point light");
-			return -1;
-		}
-		id = found - pointLightIndexes.begin();
-
-		return id;
+		return getIndex(t, loadedTexturesIndexes, "invalid texture");
 	}
 
-	int Renderer3D::InternalStruct::getDirectionalLightIndex(DirectionalLight l)
+	int Renderer3D::InternalStruct::getEntityIndex(Entity &e)
 	{
-		int id = l.id_;
-		if (id <= 0) { return -1; }
+		return getIndex(e, entitiesIndexes, "invalid entity");
+	}
 
-		auto found = std::find(directionalLightIndexes.begin(), directionalLightIndexes.end(), id);
-		if (found == directionalLightIndexes.end())
-		{
-			gl3dAssertComment(found != directionalLightIndexes.end(), "invalid directional light");
-			return -1;
-		}
-		id = found - directionalLightIndexes.begin();
+	int Renderer3D::InternalStruct::getSpotLightIndex(SpotLight &l)
+	{
+		return getIndex(l, spotLightIndexes, "invalid enspot lighttity");
+	}
 
-		return id;
+	int Renderer3D::InternalStruct::getPointLightIndex(PointLight &l)
+	{
+		return getIndex(l, pointLightIndexes, "invalid point light");
+	}
+
+	int Renderer3D::InternalStruct::getDirectionalLightIndex(DirectionalLight &l)
+	{
+		return getIndex(l, directionalLightIndexes, "invalid directional light");
 	}
 
 	bool Renderer3D::InternalStruct::getMaterialData(Material m, MaterialValues* gpuMaterial, std::string* name, TextureDataForMaterial* textureData)

@@ -28,6 +28,8 @@ extern "C"
 #pragma endregion
 
 
+std::vector<gl3d::Entity> balls;
+
 int main()
 {
 #pragma region init
@@ -84,26 +86,25 @@ int main()
 	//renderer.skyBox.color = {0.2,0.3,0.8};
 
 	//auto rockMaterialModel = renderer.loadMaterial("resources/rock/rock.mtl", 0);
+	auto model = renderer.loadModel("resources/sphere.obj", gl3d::TextureLoadQuality::maxQuality, 1.f);
 
+	for (int x = -10; x < 10; x++)
+		for (int y = -10; y < 10; y++)
+			for (int z = 0; z < 20; z++)
+			{				
+				gl3d::Transform transform{};
+				transform.position = glm::vec3(x,y,z)*2.2f;
 
-	gl3d::Model sword = renderer.loadModel("resources/minecraft_sword.glb", gl3d::TextureLoadQuality::maxQuality, 1);
-	//gl3d::Model ballModel = renderer.loadModel("resources/sphere2.obj", 0);
-	//gl3d::Model ballModel = renderer.loadModel("resources/metal/sphere3.obj", gl3d::TextureLoadQuality::maxQuality);
-	gl3d::Model steveModel = renderer.loadModel("resources/steve.glb", gl3d::TextureLoadQuality::leastPossible, 1);
-	auto steveMaterial = renderer.loadMaterial("resources/adventurer/adventurer.mtl", gl3d::TextureLoadQuality::leastPossible);
-	
+				auto entity = renderer.createEntity(model, transform, false);
+				balls.push_back(entity);
+			}
 
-	gl3d::Transform transform{};
-
+	std::cout << "Balls cound: " << balls.size() << "\n";
 	//transform.rotation.x = glm::radians(90.f);
-	gl3d::Entity entity = renderer.createEntity(steveModel, transform);
-
-	gl3d::Entity swordEntity = renderer.createEntity(steveModel, transform);
 
 
 	//renderer.setEntityMeshMaterial(entity, 0, steveMaterial[0]);
 
-	renderer.setEntityAnimate(entity, true);
 	
 
 	//renderer.setEntityMeshMaterial(entity, 0, rockMaterialModel[0]);
@@ -141,31 +142,42 @@ int main()
 
 	#pragma endregion
 
-		gl3d::Transform t;
-		renderer.getEntityJointTransform(entity, "arm.r", t);
-		t.scale = glm::vec3(1);
-		renderer.setEntityTransform(swordEntity, t);
-
-
-
 	#pragma region camera
+		int a = 0;
+		//change position
+		if (1)
+		{
 
+			for (int i = 0; i < balls.size(); i++)
+			{
+				auto t = renderer.getEntityTransform(balls[i]);
+			
+				renderer.setEntityTransform(balls[i], t);
+			}
+
+		}
 
 		//change material
-		if (0)
+		if (1 && !balls.empty())
 		{
-			static float timer;
-			timer += deltaTime;
-			if (timer >= 1)
+			static int counter = 0;
+
+			//static float timer;
+			//timer += deltaTime;
+			//if (timer >= 1)
+			for(int i=0; i<4; i++)
 			{
-				timer -= 1;
-				auto m = renderer.getEntityMeshMaterialValues(entity, 0);
+				//timer -= 1;
+				//auto m = renderer.getEntityMeshMaterialValues(balls[counter], 0);
+				auto m = gl3d::MaterialValues{};
 
 				auto getRandomFloat = []()
 				{
-					std::uniform_real_distribution<float> dist(0, 1.f);
-					std::random_device d;
-					return dist(d);
+					return (rand() % 1000) / 1000.f;
+
+					//std::uniform_real_distribution<float> dist(0, 1.f);
+					//std::random_device d;
+					//return dist(d);
 				};
 
 				m.metallic = getRandomFloat();
@@ -183,7 +195,10 @@ int main()
 					m.emmisive = 0;
 				}
 
-				renderer.setEntityMeshMaterialValues(entity, 0, m);
+				renderer.setEntityMeshMaterialValues(balls[counter], 0, m);
+
+				counter++;
+				if (counter >= balls.size()) { counter = 0; }
 			}
 
 
@@ -210,7 +225,9 @@ int main()
 		}
 
 
-		float speed = 4;
+		float speed = 40;
+
+
 		glm::vec3 dir = {};
 		if (GetAsyncKeyState('W'))
 		{
@@ -248,7 +265,7 @@ int main()
 				glm::dvec2 currentMousePos = {};
 				glfwGetCursorPos(wind, &currentMousePos.x, &currentMousePos.y);
 		
-				float speed = 0.8f;
+				float speed = 0.7f;
 		
 				glm::vec2 delta = lastMousePos - currentMousePos;
 				delta *= speed * deltaTime;

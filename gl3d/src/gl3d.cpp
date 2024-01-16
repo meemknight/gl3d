@@ -111,6 +111,9 @@ namespace gl3d
 
 		Material m;
 		m.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		m.lastFoundPos_ = internal.materialIndexes.size()-1;
+	#endif
 		return m;
 
 	}
@@ -839,6 +842,9 @@ namespace gl3d
 		internal.graphicModels.push_back(returnModel);
 		Model m;
 		m.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		m.lastFoundPos_ = internal.graphicModelsIndexes.size() - 1;
+	#endif
 		return m;
 	}
 
@@ -1067,7 +1073,13 @@ namespace gl3d
 
 		internal.perFrameFlags.shouldUpdatePointShadows = true;
 
-		return { id };
+		PointLight pl = {};
+		pl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		pl.lastFoundPos_ = internal.pointLightIndexes.size() - 1;
+	#endif
+
+		return { pl };
 	}
 
 	void Renderer3D::detletePointLight(PointLight& l)
@@ -1262,7 +1274,13 @@ namespace gl3d
 
 		internal.perFrameFlags.shouldUpdateDirectionalShadows = true;
 
-		return { id };
+		DirectionalLight dl = {};
+		dl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		dl.lastFoundPos_ = internal.directionalLightIndexes.size() - 1;
+	#endif
+
+		return {dl};
 	}
 
 	void Renderer3D::deleteDirectionalLight(DirectionalLight& l)
@@ -1437,7 +1455,13 @@ namespace gl3d
 		internal.spotLightIndexes.push_back(id);
 		internal.spotLights.push_back(light);
 
-		return { id };
+		SpotLight sl = {};
+		sl.id_ = id;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		sl.lastFoundPos_ = internal.spotLightIndexes.size() - 1;
+	#endif
+
+		return {sl};
 	}
 
 	//todo check
@@ -1687,7 +1711,10 @@ namespace gl3d
 
 		Entity e;
 		e.id_ = id;
-		
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		e.lastFoundPos_ = internal.entitiesIndexes.size() - 1;
+	#endif
+
 		setEntityModel(e, m);
 		
 		return e;
@@ -1738,7 +1765,11 @@ namespace gl3d
 
 		Entity ret;
 		ret.id_ = id;
-		return ret;
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
+		ret.lastFoundPos_ = internal.entitiesIndexes.size() - 1;
+	#endif
+
+		return {ret};
 	}
 
 	void Renderer3D::setEntityModel(Entity& e, Model m)
@@ -3120,7 +3151,7 @@ namespace gl3d
 	template<class T>
 	bool tryCachedPosition(T &t, std::vector<int> &indexes)
 	{
-	#if GL3D_OPTIMIZE_CACHED_SEARCH == 1
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
 
 		if (t.lastFoundPos_ < indexes.size())
 		{
@@ -3153,7 +3184,7 @@ namespace gl3d
 		}
 		int pos = found - indexes.begin();
 
-	#if GL3D_OPTIMIZE_CACHED_SEARCH == 1
+	#if GL3D_OPTIMIZE_CACHED_SEARCH != 0
 		t.lastFoundPos_ = pos;
 	#endif
 

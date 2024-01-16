@@ -12,7 +12,7 @@
 #define GL3D_REMOVE_ASSERTS 0 //you can remove asserts in production
 
 
-#define GL3D_OPTIMIZE_CACHED_SEARCH 1 //this was used by the dev to test some things, if you are using the library just keep it to 1.
+#define GL3D_OPTIMIZE_CACHED_SEARCH 0 //this was used by the dev to test some things, if you are using the library just keep it to 1.
 
 #if GL3D_REMOVE_IOSTREAM == 0
 #include <iostream> 
