@@ -5260,6 +5260,8 @@ namespace gl3d
 				internal.lightShader.lightPassUniformBlockCpuData.exposure);
 			glUniform1f(postProcess.filterShader.u_tresshold,
 				internal.lightShader.lightPassUniformBlockCpuData.bloomTresshold);
+			glUniform1i(postProcess.filterShader.u_tonemapper,
+				tonemapper);
 			glUniform1i(postProcess.filterShader.u_texture, 0);
 
 			glActiveTexture(GL_TEXTURE0);
@@ -5494,6 +5496,9 @@ namespace gl3d
 		}
 
 		glUseProgram(postProcess.postProcessShader.id);
+
+
+		glUniform1i(postProcess.u_tonemapper, tonemapper);
 
 		//color data
 		glUniform1i(postProcess.u_colorTexture, 0);
@@ -6048,7 +6053,7 @@ namespace gl3d
 		u_useSSAO = getUniform(postProcessShader.id, "u_useSSAO", errorReporter);
 		u_ssaoExponent = getUniform(postProcessShader.id, "u_ssaoExponent", errorReporter);
 		u_ssao = getUniform(postProcessShader.id, "u_ssao", errorReporter);
-
+		u_tonemapper = getUniform(postProcessShader.id, "u_tonemapper", errorReporter);
 
 		gausianBLurShader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/gausianBlur.frag", errorReporter, fileOpener);
 		u_toBlurcolorInput = getUniform(gausianBLurShader.id, "u_toBlurcolorInput", errorReporter);
@@ -6060,6 +6065,7 @@ namespace gl3d
 		filterShader.u_exposure = getUniform(filterShader.shader.id, "u_exposure", errorReporter);
 		filterShader.u_texture = getUniform(filterShader.shader.id, "u_texture", errorReporter);
 		filterShader.u_tresshold = getUniform(filterShader.shader.id, "u_tresshold", errorReporter);
+		filterShader.u_tonemapper = getUniform(filterShader.shader.id, "u_tonemapper", errorReporter);
 
 		addMips.shader.loadShaderProgramFromFile("shaders/drawQuads.vert", "shaders/postProcess/addMips.frag", errorReporter, fileOpener);
 		addMips.u_mip = getUniform(addMips.shader.id, "u_mip", errorReporter);

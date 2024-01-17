@@ -405,6 +405,8 @@ namespace gl3d
 		Camera camera;
 		SkyBox skyBox;
 
+		int tonemapper = 1; //todo add enum, todo save data
+
 		//debug stuff todo
 		void renderModelNormals(Model o, glm::vec3 position, glm::vec3 rotation = {},
 			glm::vec3 scale = { 1,1,1 }, float normalSize = 0.5, glm::vec3 normalColor = {0.7, 0.7, 0.1});
@@ -642,6 +644,7 @@ namespace gl3d
 				GLint u_texture;
 				GLint u_exposure;
 				GLint u_tresshold;
+				GLint u_tonemapper;
 			}filterShader;
 
 			struct
@@ -688,7 +691,7 @@ namespace gl3d
 			GLint u_useSSAO;	//post process shader
 			GLint u_ssaoExponent;	//post process shader
 			GLint u_ssao;	//post process shader
-
+			GLint u_tonemapper; //post process shader
 
 			GLint u_toBlurcolorInput;
 			GLint u_horizontal;

@@ -683,8 +683,8 @@ int main()
 		
 			ImGui::DragFloat("g", &g1, 0.01, 0.01, 0.99);
 		
-			ImGui::ColorEdit3("Color1 ##c1", &color1[0]);
-			ImGui::ColorEdit3("Color2 ##c2", &color2[0]);
+			ImGui::ColorEdit3("Color1 ##c1", &color1[0], ImGuiColorEditFlags_HDR);
+			ImGui::ColorEdit3("Color2 ##c2", &color2[0], ImGuiColorEditFlags_HDR);
 		
 			ImGui::DragFloat3("Pos sun", &direction[0], 0.01, -1.f, 1.f);
 		
@@ -725,6 +725,7 @@ int main()
 			ImGui::Text("Settings");
 			ImGui::SliderFloat("Gama Corections", &gamaCorection, 1, 3);
 			ImGui::SliderFloat("Exposure", &renderer.internal.lightShader.lightPassUniformBlockCpuData.exposure , 0.1, 10);
+			ImGui::Combo("Tonemapper", &renderer.tonemapper, "Simple\0Aces\0ZCAM\0");
 
 
 			//static bool antiAliasing = 0;
@@ -939,7 +940,7 @@ int main()
 				ImGui::PushID(12);
 				
 				glm::vec3 color = renderer.getPointLightColor(pointLights[pointLightSelector]);
-				ImGui::ColorEdit3("Color", &color[0]);
+				ImGui::ColorEdit3("Color", &color[0], ImGuiColorEditFlags_HDR);
 				renderer.setPointLightColor(pointLights[pointLightSelector], color);
 
 				glm::vec3 position = renderer.getPointLightPosition(pointLights[pointLightSelector]);
@@ -1015,7 +1016,7 @@ int main()
 					ImGui::PushID(13);
 
 					glm::vec3 color = renderer.getDirectionalLightColor(directionalLights[directionalLightSelector]);
-					ImGui::ColorEdit3("Color##dir", &color[0]);
+					ImGui::ColorEdit3("Color##dir", &color[0], ImGuiColorEditFlags_HDR);
 					renderer.setDirectionalLightColor(directionalLights[directionalLightSelector], color);
 
 					glm::vec3 direction = renderer.getDirectionalLightDirection(directionalLights[directionalLightSelector]);
@@ -1088,7 +1089,7 @@ int main()
 					ImGui::PushID(14);
 
 					glm::vec3 color = renderer.getSpotLightColor(spotLights[spotLightSelector]);
-					ImGui::ColorEdit3("Color##spot", &color[0]);
+					ImGui::ColorEdit3("Color##spot", &color[0], ImGuiColorEditFlags_HDR);
 					renderer.setSpotLightColor(spotLights[spotLightSelector], color);
 
 					glm::vec3 position = renderer.getSpotLightPosition(spotLights[spotLightSelector]);
@@ -1127,7 +1128,7 @@ int main()
 
 			ImGui::NewLine();
 			ImGui::NewLine();
-			ImGui::ColorEdit3("Global Ambient color", &renderer.skyBox.color[0]);
+			ImGui::ColorEdit3("Global Ambient color", &renderer.skyBox.color[0], ImGuiColorEditFlags_HDR);
 			
 
 
@@ -1289,7 +1290,7 @@ int main()
 					//ImGui::Text("Max boundary %f, %f, %f", modelData.maxBoundary.x, modelData.maxBoundary.y, modelData.maxBoundary.z);
 					ImGui::Text("Object material");
 					ImGui::Text(name.c_str());
-					ImGui::ColorEdit4("difuse", &materialData.kd[0]);
+					ImGui::ColorEdit4("difuse", &materialData.kd[0], ImGuiColorEditFlags_HDR);
 					ImGui::SliderFloat("emmisive", &materialData.emmisive, 0, 1);
 					ImGui::SliderFloat("roughness", &materialData.roughness, 0, 1);
 					ImGui::SliderFloat("metallic", &materialData.metallic, 0, 1);

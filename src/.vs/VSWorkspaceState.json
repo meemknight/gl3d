@@ -1,0 +1,10 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\shaders",
+    "\\shaders\\postProcess",
+    "\\src"
+  ],
+  "SelectedNode": "\\shaders\\postProcess\\filter.frag",
+  "PreviewInSolutionExplorer": false
+}
