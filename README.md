@@ -56,8 +56,8 @@ Features and todos:
 - [x] Adaptive resolution
 - [ ] TAA
 ---
-- [ ] Store all the render data before rendering (used for depth pre pass)
-- [ ] Improve the deferred rendering by adding bindless things
+- [x] Store all the render data before rendering (used for depth pre pass)
+- [x] Improve the deferred rendering by adding bindless things
 - [ ] Only one geometry buffer and a dynamic index buffer
 ---
 - [x] SSAO
