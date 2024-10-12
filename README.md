@@ -39,7 +39,7 @@ Features and todos:
 - [x] Sky box (can load many formats)
 - [x] Image based lighting
 - [x] Light sub scattering for IBL as described here http://jcgt.org/published/0008/01/03/
-- [ ] Screen space reflections
+- [x] Screen space reflections
 - [ ] Environment probes
 ---
 - [x] Deferred rendering
