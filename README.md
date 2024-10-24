@@ -8,6 +8,7 @@ Retained mode, deferred BPR 3D renderer.
 ![](https://github.com/meemknight/photos/blob/master/gl3d.gif)
 <img width="1280" alt="Screenshot 2024-01-17 110310" src="https://github.com/meemknight/gl3d/assets/36445656/58051b68-0ec0-484c-af4e-440c76f1ee31">
 
+## Or check out my [2D rendering library](https://github.com/meemknight/gl2d)!
 
 <h3>How to integrate the library in your project:</h3>
 
